@@ -5,21 +5,13 @@ import { useViewportHeight } from "@/hooks/useViewportHeight"
 import { Howl } from "howler";
 import Lenis from "lenis";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInstagram, faGithub, faFacebookF, faXTwitter } from "@fortawesome/free-brands-svg-icons";
 import { faDollarSign, faHouse, faUsers, faPlus, faGamepad } from "@fortawesome/free-solid-svg-icons"
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CardFeatures from "./tests/home/_components/cardFeatures";
 import MusicPlayer from "./tests/home/_components/musicPlayer";
-
-const menuOptions = [
-  { text: "Loja", url: "/loja" },
-  { text: "Recompensas", url: "/recompensas" },
-  { text: "Saiba Mais", url: "/saibamais" },
-  { text: "Como Jogar", url: "/comojogar" },
-]
+import Footer from "@/components/Footer";
+import Header from "@/components/Header";
 
 export default function Home() {
 
@@ -76,25 +68,8 @@ export default function Home() {
 
   return (
     <main className="w-full bg-black">
-      <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-3 justify-between items-center px-10 z-999">
-        <div className="">
-          <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
-        </div>
-        <nav className="w-full flex justify-center items-center">
-          <ul className="w-full flex justify-center items-center gap-10">
-            {menuOptions.map((option, index) => (
-              <li key={index} className="font-jaro text-zinc-100 hover:scale-120 transition-all duration-100 cursor-pointer"><Link href={option.url}>{option.text}</Link></li>
-            ))}
-          </ul>
-        </nav>
-        <nav className="flex justify-end items-center gap-4">
-          <Button1
-            size="lg"
-            color="green"
-            handle={() => router.push('/sessions')}
-            className="z-20">Jogar</Button1>
-        </nav>
-      </header>
+
+      <Header />
 
       <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.png')] bg-bottom bg-cover bg-no-repeat z-10">
         <div className="w-full h-full flex flex-col justify-center items-center gap-6">
@@ -103,8 +78,8 @@ export default function Home() {
             <h1 className="bg-linear-to-r from-[#FFA600] via-[#FFDEA1] to-[#FFA600] bg-clip-text text-transparent text-shadow-sm">₿ank</h1>
           </div>
           <p className="w-4/5 lg:w-150 font-inconsolata text-sm text-center text-zinc-100 text-shadow-sm tracking-wider z-20">Seu banco dentro do tabuleiro. Controle depósitos, saques e transferências entre jogadores com agilidade e transparência.</p>
-          
-          <div className="flex gap-6 z-20">
+
+          <div className="flex flex-col justify-center items-center lg:flex-row gap-6 z-20">
             <Button1
               size="md"
               color="blue"
@@ -142,43 +117,14 @@ export default function Home() {
 
       </section>
 
-      <MusicPlayer 
-        isPlaying={playing} 
+      <MusicPlayer
+        isPlaying={playing}
         onToggle={toggleMusic}
         volume={volume}
         onVolumeChange={setVolume}
       />
 
-      <footer className="w-full bg-zinc-950 py-8 px-10">
-        <div className="w-full flex flex-col items-center gap-6">
-          <nav>
-            <ul className="flex justify-center items-center gap-8">
-              {menuOptions.map((option, index) => (
-                <li key={index} className="font-inconsolata text-zinc-400 hover:text-zinc-100 hover:scale-105 transition-all duration-100 cursor-pointer">
-                  <Link href={option.url}>{option.text}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="flex justify-center items-center gap-6">
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-pink-500 transition-colors">
-              <FontAwesomeIcon icon={faInstagram} className="text-xl" />
-            </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-blue-500 transition-colors">
-              <FontAwesomeIcon icon={faFacebookF} className="text-xl" />
-            </a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
-              <FontAwesomeIcon icon={faGithub} className="text-xl" />
-            </a>
-            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
-              <FontAwesomeIcon icon={faXTwitter} className="text-xl" />
-            </a>
-          </div>
-
-          <p className="font-inconsolata text-zinc-500 text-sm - v1.3.0">© 2026 GameBank. Todos os direitos reservados.</p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   )
 }

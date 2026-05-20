@@ -44,7 +44,7 @@ export default function Button1({ handle, type, color, className, size, ref, chi
         type={type === "submit" ? "submit" : "button"}
         disabled={disabled}
         className={`
-          relative font-jaro font-bold text-base py-2 uppercase tracking-wider
+          relative font-jaro font-bold text-sm lg:text-base py-2 uppercase tracking-wider
           ${sizeBtn}
           ${colorBtn.bg}
           ${colorBtn.border}

@@ -32,17 +32,17 @@ export default function CardFeatures({ color, icon, title, description }: Props)
   return (
     <div className="w-full h-full flex flex-col items-center space-y-4">
       <div 
-        className="w-50 h-50 border-3 border-zinc-50 flex justify-center items-center rounded-full"
+        className="w-20 h-20 lg:w-50 lg:h-50 border-3 border-zinc-50 flex justify-center items-center rounded-full"
         style={{ backgroundColor: colorConfig.circleBg }}
       >
         <FontAwesomeIcon 
           icon={icon} 
-          className="text-8xl"
+          className="text-4xl lg:text-8xl"
           style={{ color: colorConfig.iconColor, filter: `drop-shadow(0px 0px 20px ${colorConfig.iconColor})` }}
         />
       </div>
-      <h1 className={`text-2xl font-bold font-jaro ${colorConfig.title}`}>{title}</h1>
-      <p className="w-2/4 text-lg font-inconsolata text-zinc-500 text-center">{description}</p>
+      <h1 className={`text-base lg:text-2xl font-bold font-jaro ${colorConfig.title} text-center`}>{title}</h1>
+      <p className="w-3/4 lg:w-2/4 text-xs lg:text-lg font-inconsolata text-zinc-500 text-center">{description}</p>
     </div>
   )
 }

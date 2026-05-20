@@ -16,18 +16,15 @@ import { Propriedade, PROPERTY_COLORS } from "@/types/game"
 import ConfirmationModal from "../ConfirmationModal"
 
 const COLOR_HEX: Record<string, string> = {
-  blue:       "#1D4ED8",
-  red:        "#dc2626",
-  green:      "#16a34a",
-  purple:     "#7c3aed",
-  orange:     "#ea580c",
-  amber:     "#ca8a04",
-  pink:       "#db2777",
-  cyan:       "#0891b2",
-  brown:      "#92400e",
-  gray:       "#6b7280",
-  black:      "#18181b",
-  white:      "#a1a1aa",
+  lime:    "#84cc16",  // Verde-Claro  (bg-lime-500)
+  green:   "#15803d",  // Verde-Escuro (bg-green-700)
+  red:     "#dc2626",  // Vermelho     (bg-red-600)
+  blue:    "#2563eb",  // Azul         (bg-blue-600)
+  amber:   "#fcd34d",  // Amarelo      (bg-amber-300)
+  orange:  "#ea580c",  // Laranja      (bg-orange-600)
+  pink:    "#db2777",  // Rosa         (bg-pink-600)
+  purple:  "#7e22ce",  // Roxo         (bg-purple-700)
+  zinc:    "#fafafa",  // Preto        (bg-zinc-50)
 }
 
 function getAccentHex(grupoCor: string | null): string {

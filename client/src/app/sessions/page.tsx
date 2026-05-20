@@ -11,6 +11,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Footer from "@/components/Footer";
+import Header from "@/components/Header";
 
 const menuOptions = [
   { text: "Loja", url: "/loja" },
@@ -57,27 +59,8 @@ export default function Sessions() {
 
   return (
     <main className="w-full bg-black">
-      <header className="w-full h-25 grid grid-cols-3 justify-between items-center px-10 z-999 bg-zinc-950/50 backdrop-blur-sm">
-        <div className="">
-          <Link href="/">
-            <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
-          </Link>
-        </div>
-        <nav className="w-full flex justify-center items-center">
-          <ul className="w-full flex justify-center items-center gap-10">
-            {menuOptions.map((option, index) => (
-              <li key={index} className="font-jaro text-zinc-100 hover:scale-120 transition-all duration-100 cursor-pointer"><Link href={option.url}>{option.text}</Link></li>
-            ))}
-          </ul>
-        </nav>
-        <nav className="flex justify-end items-center gap-4">
-          <Button1
-            size="sm"
-            color="green"
-            handle={() => router.push('/new-session')}
-            className="z-20">Nova Sessão</Button1>
-        </nav>
-      </header>
+      
+      <Header />
 
       <section className="w-full min-h-[calc(100vh-200px)] py-12 px-10">
         <h1 className="text-green-500 text-4xl font-bold font-jaro text-center tracking-wide mb-4">Sessões</h1>
@@ -139,36 +122,7 @@ export default function Sessions() {
         )}
       </section>
 
-      <footer className="w-full bg-zinc-950 py-8 px-10">
-        <div className="w-full flex flex-col items-center gap-6">
-          <nav>
-            <ul className="flex justify-center items-center gap-8">
-              {menuOptions.map((option, index) => (
-                <li key={index} className="font-inconsolata text-zinc-400 hover:text-zinc-100 hover:scale-105 transition-all duration-100 cursor-pointer">
-                  <Link href={option.url}>{option.text}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="flex justify-center items-center gap-6">
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-pink-500 transition-colors">
-              <FontAwesomeIcon icon={faInstagram} className="text-xl" />
-            </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-blue-500 transition-colors">
-              <FontAwesomeIcon icon={faFacebookF} className="text-xl" />
-            </a>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
-              <FontAwesomeIcon icon={faGithub} className="text-xl" />
-            </a>
-            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
-              <FontAwesomeIcon icon={faXTwitter} className="text-xl" />
-            </a>
-          </div>
-
-          <p className="font-inconsolata text-zinc-500 text-sm">© 2026 GameBank. Todos os direitos reservados.</p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   )
 }
