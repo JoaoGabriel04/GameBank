@@ -9,12 +9,13 @@ import Button1 from '../Button01'
 import { useRouter } from 'next/navigation'
 
 interface MobileMenuProps {
+  aba?: string;
   isOpen: boolean
   onClose: () => void
   menuOptions: { text: string; url: string }[]
 }
 
-export function MobileMenu({ isOpen, onClose, menuOptions }: MobileMenuProps) {
+export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -100,14 +101,23 @@ export function MobileMenu({ isOpen, onClose, menuOptions }: MobileMenuProps) {
             ))}
           </div>
 
-
-          <Button1
-            size="lg"
-            color="green"
-            handle={() => router.push('/sessions')}
-            className="z-20">
-            Jogar
-          </Button1>
+          {aba === "Sessions" ? (
+            <Button1
+              size="lg"
+              color="green"
+              handle={() => router.push('/new-session')}
+              className="z-20">
+              Criar Sessão
+            </Button1>
+          ) : (
+            <Button1
+              size="lg"
+              color="green"
+              handle={() => router.push('/sessions')}
+              className="z-20">
+              Jogar
+            </Button1>
+          )}
         </Card>
       </div>
     </div>

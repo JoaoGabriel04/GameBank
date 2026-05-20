@@ -7,18 +7,24 @@ import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 
-export default function Header() {
+type HeaderProps = {
+  aba?: string;
+}
+
+export default function Header({ aba }: HeaderProps) {
 
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState(false);
 
   return (
     <>
-      <MobileMenu isOpen={openMenu} onClose={() => setOpenMenu(false)} menuOptions={menuOptions} />
+      <MobileMenu isOpen={openMenu} onClose={() => setOpenMenu(false)} menuOptions={menuOptions} aba={aba}/>
 
       <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-2 lg:grid-cols-3 justify-between items-center px-10 z-999">
         <div className="">
-          <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
+          <Link href={'/'}>
+            <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
+          </Link>
         </div>
         <nav className="hidden w-full lg:flex justify-center items-center">
           <ul className="w-full flex justify-center items-center gap-10">
@@ -28,13 +34,23 @@ export default function Header() {
           </ul>
         </nav>
         <nav className="hidden lg:flex w-full justify-end items-center gap-4">
-          <Button1
-            size="lg"
-            color="green"
-            handle={() => router.push('/sessions')}
-            className="z-20">
-            Jogar
-          </Button1>
+          {aba === "Sessions" ? (
+            <Button1
+              size="lg"
+              color="green"
+              handle={() => router.push('/new-session')}
+              className="z-20">
+              Criar Sessão
+            </Button1>
+          ) : (
+            <Button1
+              size="lg"
+              color="green"
+              handle={() => router.push('/sessions')}
+              className="z-20">
+              Jogar
+            </Button1>
+          )}
         </nav>
 
         <button className="flex lg:hidden w-full justify-end items-center">

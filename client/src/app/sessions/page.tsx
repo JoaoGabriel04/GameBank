@@ -3,23 +3,13 @@
 import Button1 from "@/components/Button01";
 import { useSessions } from "@/hooks/useApi"
 import Lenis from "lenis";
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInstagram, faGithub, faFacebookF, faXTwitter } from "@fortawesome/free-brands-svg-icons";
 import { faPlus, faUsers, faClock } from "@fortawesome/free-solid-svg-icons"
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-
-const menuOptions = [
-  { text: "Loja", url: "/loja" },
-  { text: "Recompensas", url: "/recompensas" },
-  { text: "Saiba Mais", url: "/saibamais" },
-  { text: "Como Jogar", url: "/comojogar" },
-]
 
 export default function Sessions() {
 
@@ -60,9 +50,9 @@ export default function Sessions() {
   return (
     <main className="w-full bg-black">
       
-      <Header />
+      <Header aba={"Sessions"}/>
 
-      <section className="w-full min-h-[calc(100vh-200px)] py-12 px-10">
+      <section className="w-full min-h-[calc(100vh-200px)] py-16 lg:py-20 px-10">
         <h1 className="text-green-500 text-4xl font-bold font-jaro text-center tracking-wide mb-4">Sessões</h1>
         <p className="text-zinc-400 text-center mb-10 font-inconsolata">Gerencie suas sessões de jogo</p>
 

@@ -83,7 +83,7 @@ export default function Home() {
             <Button1
               size="md"
               color="blue"
-              handle={() => router.push('/sessions')}
+              handle={() => router.push('/new-session')}
               className="z-20"
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />

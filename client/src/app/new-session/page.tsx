@@ -181,15 +181,15 @@ export default function NewSession() {
               <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-zinc-400" />
             </button>
           </Link>
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex justify-center items-center mr-4">
-              <FontAwesomeIcon icon={faUsers} className="text-white text-xl" />
+          <div className="w-full flex items-center">
+            <div className="w-13 h-9 md:w-10 md:h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex justify-center items-center mr-4">
+              <FontAwesomeIcon icon={faUsers} className="text-white text-lg lg:text-xl" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold font-jaro text-zinc-100">Nova Sessão</h1>
-<p className="text-zinc-500 font-inconsolata">
-              Configure os jogadores para começar uma nova partida
-            </p>
+              <h1 className="text-2xl lg:text-3xl font-bold font-jaro text-zinc-100">Nova Sessão</h1>
+              <p className="text-zinc-500 text-sm lg:text-base font-inconsolata">
+                Configure os jogadores para começar uma nova partida
+              </p>
             </div>
           </div>
         </div>
