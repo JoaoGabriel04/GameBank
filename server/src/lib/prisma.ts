@@ -1,17 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient } from "../../generated/prisma/index.js"
+import { PrismaPg } from "@prisma/adapter-pg"
 
-// Adiciona o 'prisma' ao objeto global do Node.js
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
-}
+const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL
+})
 
-// Evita múltiplas instâncias do PrismaClient em desenvolvimento
-export const prisma =
-  global.prisma ||
-  new PrismaClient({
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
-}
+export const prisma = new PrismaClient({ adapter })

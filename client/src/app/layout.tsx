@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ToastContainer } from "react-toastify";
+import { Jaro, Inconsolata } from 'next/font/google'
+import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "Super Gerenciador de Partidas",
   description: "Gerenciador de partidas do tabuleiro Super Banco Imobiliário",
 };
+
+const jaro = Jaro({
+  subsets: ['latin'],
+})
+
+const inconsolata = Inconsolata({
+  subsets: ['latin'],
+})
 
 export default function RootLayout({
   children,
@@ -13,11 +22,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`dark ${jaro.className} ${inconsolata.className}`}>
       <body>
-        <ToastContainer />
-        {children}
-        </body>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   );
 }

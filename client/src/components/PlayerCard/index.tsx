@@ -1,237 +1,311 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { DollarSign } from "lucide-react";
+import { useState, useEffect, useCallback } from "react"
 import {
   Player,
   PLAYER_COLORS,
   PROPERTY_COLORS,
   Propriedade,
   SessionPropriedade,
-} from "@/types/game";
-import { useGameStore } from "@/stores/gameStore";
-import MenuOptions from "../MenuOptions";
-import Modal from "../Modal";
-import { toast } from "react-toastify";
+} from "@/types/game"
+import { useGameStore } from "@/stores/gameStore"
+import MenuOptions from "../MenuOptions"
+import Modal from "../Modal"
+import ConfirmationModal from "../ConfirmationModal"
+import { useToast } from "@/components/Toast"
+import PropertyCard from "../PropertyCard"
 
 interface PlayerCardProps {
-  player: Player;
-  totalPropertyValue: number;
+  player: Player
+  totalPropertyValue: number
 }
 
-type ColorInfo = {
-  value: string;
-  label?: string;
-  bg?: string;
-  border?: string;
-  text?: string;
-  total?: number;
-};
-
 type Group = {
-  color: ColorInfo;
-  sessionPosses: SessionPropriedade[];
-  properties: Propriedade[];
-};
+  color: typeof PROPERTY_COLORS[0]
+  sessionPosses: SessionPropriedade[]
+  properties: Propriedade[]
+}
 
-export default function PlayerCard({
-  player,
-  totalPropertyValue,
-}: PlayerCardProps) {
+type PendingAction = {
+  type: 'buyHouse' | 'sellHouse' | 'hipotecar' | 'vender'
+  propId: number
+  title: string
+  message: string
+  confirmText: string
+  color: 'green' | 'orange' | 'purple' | 'red'
+  optimisticFn: () => void
+  rollbackFn: () => void
+  apiFn: () => Promise<void>
+}
+
+export default function PlayerCard({ player, totalPropertyValue }: PlayerCardProps) {
+  const { success: toastSuccess, error: toastError } = useToast()
+
   const {
     currentSession,
-    getAluguel,
-    loadSession,
     sellPropriedade,
     hipotecarProp,
     getPropertyById,
+    getAluguel,
     buyHouse,
     sellHouse,
-  } = useGameStore();
+  } = useGameStore()
 
-  // ===== Estados =====
-  const [modalStack, setModalStack] = useState<("properties" | "options")[]>(
-    []
-  );
-  const [propertiesByColor, setPropertiesByColor] = useState<
-    Record<string, Group>
-  >({});
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [selectedPropForAction, setSelectedPropForAction] =
-    useState<Propriedade | null>(null);
-  const [reqLoading, setReqLoading] = useState(false);
+  const [propertiesByColor, setPropertiesByColor] = useState<Record<string, Group>>({})
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  const [showMenu, setShowMenu] = useState(false);
-  const playerColor = PLAYER_COLORS.find((color) => color.value === player.cor);
-  const activeModal = modalStack[modalStack.length - 1] || null;
-
-  // ===== Funções Auxiliares =====
-  const resetModals = () => {
-    setModalStack([]);
-    setSelectedGroup(null);
-    setSelectedPropForAction(null);
-  };
-
-  const handleGoBack = () => {
-    setModalStack((prev) => prev.slice(0, -1));
-  };
+  const playerColor = PLAYER_COLORS.find((c) => c.value === player.cor)
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
 
-  // Agrupa propriedades por cor
+  const loadProperties = useCallback(async () => {
+    if (!currentSession) return
+
+    const playerProperties = currentSession.sessionPosses.filter(
+      (p) => p.playerId === player.id
+    )
+    const grouped: Record<string, Group> = {}
+
+    for (const prop of playerProperties) {
+      const propData = await getPropertyById(prop.possesId)
+      if (!propData) continue
+
+      const colorKey = propData.grupo_cor ?? "other"
+      const colorInfo = PROPERTY_COLORS.find((c) => c.value === colorKey)
+      const resolvedColor = colorInfo ?? {
+        value: colorKey,
+        label: colorKey,
+        text: "text-zinc-400",
+        bg: "bg-zinc-500",
+        border: "border-zinc-500",
+        total: 0,
+      }
+
+      if (!grouped[colorKey]) {
+        grouped[colorKey] = { color: resolvedColor, properties: [], sessionPosses: [] }
+      }
+
+      grouped[colorKey].properties.push(propData)
+      grouped[colorKey].sessionPosses.push(prop)
+    }
+
+    for (const group of Object.values(grouped)) {
+      const sorted = group.properties
+        .map((p, i) => ({ prop: p, sess: group.sessionPosses[i] }))
+        .sort((a, b) => a.prop.nome.localeCompare(b.prop.nome, 'pt-BR'))
+
+      group.properties = sorted.map(s => s.prop)
+      group.sessionPosses = sorted.map(s => s.sess)
+    }
+
+    setPropertiesByColor(grouped)
+  }, [currentSession, player.id, getPropertyById])
+
   useEffect(() => {
-    if (!currentSession) return;
+    loadProperties()
+  }, [loadProperties])
 
-    let isMounted = true;
+  // ── Optimistic helpers ─────────────────────────────────────────────────────
 
-    const groupProperties = async () => {
-      const playerProperties = currentSession.sessionPosses.filter(
-        (p) => p.playerId === player.id
-      );
-
-      const grouped: Record<string, Group> = {};
-
-      for (const prop of playerProperties) {
-        const propData: Propriedade | null = await getPropertyById(
-          prop.possesId
-        );
-        if (!propData) continue;
-
-        const colorInfo = PROPERTY_COLORS.find(
-          (c) => c.value === propData.grupo_cor
-        );
-        if (!colorInfo) continue;
-
-        if (!grouped[colorInfo.value]) {
-          grouped[colorInfo.value] = {
-            color: colorInfo,
-            properties: [],
-            sessionPosses: [],
-          };
+  const updateCasasOptimistic = useCallback((propId: number, delta: 1 | -1) => {
+    setPropertiesByColor((prev) => {
+      const next = structuredClone(prev)
+      for (const group of Object.values(next)) {
+        const idx = group.properties.findIndex((p) => p.id === propId)
+        if (idx !== -1) {
+          group.sessionPosses[idx] = {
+            ...group.sessionPosses[idx],
+            casas: group.sessionPosses[idx].casas + delta,
+          }
+          break
         }
-
-        grouped[colorInfo.value].properties.push(propData);
-        grouped[colorInfo.value].sessionPosses.push(prop);
       }
+      return next
+    })
+  }, [])
 
-      if (isMounted) {
-        setPropertiesByColor(grouped);
-        setSelectedGroup((currentGroup) =>
-          currentGroup ? grouped[currentGroup.color.value] || null : null
-        );
+  const removePropertyOptimistic = useCallback((propId: number) => {
+    setPropertiesByColor((prev) => {
+      const next = structuredClone(prev)
+      for (const [key, group] of Object.entries(next)) {
+        const idx = group.properties.findIndex((p) => p.id === propId)
+        if (idx !== -1) {
+          group.properties.splice(idx, 1)
+          group.sessionPosses.splice(idx, 1)
+          if (group.properties.length === 0) delete next[key]
+          break
+        }
       }
-    };
+      return next
+    })
+  }, [])
 
-    groupProperties();
+  // ── Preparar ação (abre modal de confirmação) ──────────────────────────────
+  // Os dados do modal são calculados AGORA, com o estado atual.
+  // O modal apenas exibe — não re-calcula nada.
 
-    return () => {
-      isMounted = false;
-    };
-  }, [currentSession, getPropertyById, player.id]);
+  const prepareComprarCasa = (prop: Propriedade, sessionProp: SessionPropriedade) => {
+    const casasDepois = sessionProp.casas + 1
+    setPendingAction({
+      type: 'buyHouse',
+      propId: prop.id,
+      title: 'Comprar Casa',
+      message: `CASA em ${prop.nome.toUpperCase()}\n\nCusto: M$ ${prop.custo_casa.toLocaleString('pt-BR')}\nAluguel após compra: M$ ${getAluguel(prop, casasDepois).toLocaleString('pt-BR')}`,
+      confirmText: 'Comprar',
+      color: 'green',
+      optimisticFn: () => updateCasasOptimistic(prop.id, 1),
+      rollbackFn: () => updateCasasOptimistic(prop.id, -1),
+      apiFn: () => buyHouse({ userId: player.id, sessionId: currentSession!.id, propriedadeId: prop.id }),
+    })
+  }
 
-  // Estatísticas
-  const totalGroupsComplete = Object.values(propertiesByColor).filter(
-    (group) => {
-      const totalInGroup = group.color.total ?? 0;
-      return totalInGroup > 0 && group.properties.length === totalInGroup;
-    }
-  ).length;
+  const prepareVenderCasa = (prop: Propriedade, sessionProp: SessionPropriedade) => {
+    const casasDepois = sessionProp.casas - 1
+    setPendingAction({
+      type: 'sellHouse',
+      propId: prop.id,
+      title: 'Vender Casa',
+      message: `Vender 1 casa de ${prop.nome.toUpperCase()}\n\nVocê recebe: M$ ${Math.floor(prop.custo_casa / 2).toLocaleString('pt-BR')}\nNovo aluguel: M$ ${getAluguel(prop, casasDepois).toLocaleString('pt-BR')}`,
+      confirmText: 'Vender',
+      color: 'orange',
+      optimisticFn: () => updateCasasOptimistic(prop.id, -1),
+      rollbackFn: () => updateCasasOptimistic(prop.id, 1),
+      apiFn: () => sellHouse({ userId: player.id, sessionId: currentSession!.id, propriedadeId: prop.id }),
+    })
+  }
 
-  // ===== Funções de venda/hipoteca =====
-  const handleVenderPropriedade = async (
-    propriedadeId: number,
-    userId: number
-  ) => {
-    if (!currentSession) return;
-    setReqLoading(true);
+  const prepareHipotecar = (prop: Propriedade) => {
+    setPendingAction({
+      type: 'hipotecar',
+      propId: prop.id,
+      title: 'Hipotecar Propriedade',
+      message: `Hipotecar ${prop.nome.toUpperCase()}\n\nVocê recebe: M$ ${prop.hipoteca.toLocaleString('pt-BR')}\nPerde a propriedade se não quitar a dívida`,
+      confirmText: 'Hipotecar',
+      color: 'purple',
+      optimisticFn: () => removePropertyOptimistic(prop.id),
+      rollbackFn: () => loadProperties(),
+      apiFn: () => hipotecarProp(prop.id, currentSession!.id, player.id),
+    })
+  }
+
+  const prepareVender = (prop: Propriedade) => {
+    setPendingAction({
+      type: 'vender',
+      propId: prop.id,
+      title: 'Vender Propriedade',
+      message: `Vender ${prop.nome.toUpperCase()}\n\nVocê recebe: M$ ${prop.custo_compra.toLocaleString('pt-BR')}\nCuidado: ação irreversível!`,
+      confirmText: 'Vender',
+      color: 'red',
+      optimisticFn: () => removePropertyOptimistic(prop.id),
+      rollbackFn: () => loadProperties(),
+      apiFn: () => sellPropriedade(prop.id, currentSession!.id, player.id),
+    })
+  }
+
+  // ── Confirmar ação ─────────────────────────────────────────────────────────
+
+  const handleConfirm = async () => {
+    if (!pendingAction || !currentSession) return
+    setActionLoading(true)
+    pendingAction.optimisticFn()
+    setPendingAction(null) // fecha modal imediatamente
     try {
-      await sellPropriedade(propriedadeId, currentSession.id, userId);
-      toast.success("Propriedade vendida com sucesso!");
-      await loadSession(currentSession.id);
-      resetModals();
-      handleGoBack();
-    } catch (error) {
-      console.error("Erro ao vender propriedade!", error);
-      toast.error("Falha ao vender propriedade.");
+      await pendingAction.apiFn()
+      toastSuccess(
+        pendingAction.type === 'buyHouse' ? 'Casa comprada!' :
+          pendingAction.type === 'sellHouse' ? 'Casa vendida!' :
+            pendingAction.type === 'hipotecar' ? 'Propriedade hipotecada!' :
+              'Propriedade vendida!'
+      )
+      console.log('sessão atualizada:',
+        useGameStore.getState().currentSession?.sessionPosses.find(
+          p => p.possesId === pendingAction.propId  // ← possesId
+        )?.casas
+      )
+    } catch {
+      pendingAction.rollbackFn()
+      toastError(
+        pendingAction.type === 'buyHouse' ? 'Erro ao comprar casa' :
+          pendingAction.type === 'sellHouse' ? 'Erro ao vender casa' :
+            pendingAction.type === 'hipotecar' ? 'Erro ao hipotecar' :
+              'Erro ao vender propriedade'
+      )
     } finally {
-      setReqLoading(false);
-    }
-  };
-
-  const handleHipotecarPropriedade = async (
-    propriedadeId: number,
-    userId: number
-  ) => {
-    if (!currentSession) return;
-    setReqLoading(true);
-    try {
-      await hipotecarProp(propriedadeId, currentSession.id, userId);
-      toast.success("Propriedade hipotecada com sucesso!");
-      await loadSession(currentSession.id);
-      resetModals();
-      handleGoBack();
-    } catch (error) {
-      console.error("Erro ao hipotecar propriedade!", error);
-      toast.error("Falha ao hipotecar propriedade.");
-    } finally {
-      setReqLoading(false);
-    }
-  };
-
-  async function handleComprarCasa(propriedadeId: number, userId: number) {
-    if (!currentSession) return;
-    setReqLoading(true);
-    try {
-      await buyHouse({ userId, sessionId: currentSession.id, propriedadeId });
-      toast.success("Casa comprada com sucesso!");
-      await loadSession(currentSession.id);
-      handleGoBack();
-    } catch (error) {
-      console.error("Erro ao comprar casa!", error);
-      toast.error("Falha ao comprar casa.");
-    } finally {
-      setReqLoading(false);
+      setActionLoading(false)
     }
   }
 
-  async function handleVenderCasa(propriedadeId: number, userId: number) {
-    if (!currentSession) return;
-    setReqLoading(true);
-    try {
-      await sellHouse({ userId, sessionId: currentSession.id, propriedadeId });
-      toast.success("Casa vendida com sucesso!");
-      await loadSession(currentSession.id);
-      handleGoBack();
-    } catch (error) {
-      console.error("Erro ao vender casa!", error);
-      toast.error("Falha ao vender casa.");
-    } finally {
-      setReqLoading(false);
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const getPropertyActionsInfo = (
+    group: Group,
+    propData: Propriedade,
+    sessionProp: SessionPropriedade
+  ) => {
+    const hasAllInGroup = group.properties.length === (group.color.total || 0)
+    const hasHouses = sessionProp.casas > 0
+    return {
+      podeComprar: hasAllInGroup && sessionProp.casas < 5 && player.saldo >= propData.custo_casa,
+      podeVenderCasa: hasHouses,
+      podeHipotecar: !hasHouses && !sessionProp.hipotecada,
+      podeVenderPropriedade: !hasHouses && !sessionProp.hipotecada,
     }
+  }
+
+  const totalProperties = Object.values(propertiesByColor).reduce(
+    (acc, g) => acc + g.properties.length, 0
+  )
+
+  const totalGroupsComplete = Object.values(propertiesByColor).filter((group) => {
+    const totalInGroup = group.color.total || 0
+    return totalInGroup > 0 && group.properties.length === totalInGroup
+  }).length
+
+  const renderPropertyCard = (
+    prop: Propriedade,
+    sessionProp: SessionPropriedade,
+    group: Group
+  ) => {
+    const actions = getPropertyActionsInfo(group, prop, sessionProp)
+    return (
+      <PropertyCard
+        key={prop.id}
+        nome={prop.nome}
+        grupoCor={prop.grupo_cor}
+        casas={sessionProp.casas}
+        maxCasas={5}
+        aluguel={getAluguel(prop, sessionProp.casas)}
+        custoCasa={prop.custo_casa}
+        valorVendaCasa={Math.floor(prop.custo_casa / 2)}
+        valorHipoteca={prop.hipoteca}
+        valorVendaPropriedade={prop.custo_compra}
+        onComprarCasa={() => prepareComprarCasa(prop, sessionProp)}
+        onVenderCasa={() => prepareVenderCasa(prop, sessionProp)}
+        onHipotecar={() => prepareHipotecar(prop)}
+        onVenderPropriedade={() => prepareVender(prop)}
+        {...actions}
+      />
+    )
   }
 
   return (
     <main
-      className={`relative bg-white rounded-lg shadow-md border-2 ${
-        playerColor?.bg?.replace("bg-", "border-") || "border-gray-300"
-      } overflow-hidden`}
+      className="relative bg-zinc-900 border-2 overflow-hidden rounded-xl"
+      style={{ borderColor: playerColor?.bg?.replace("bg-", "") || "#525252" }}
     >
-      {/* Cabeçalho */}
-      <div
-        className={`${playerColor?.bg || "bg-gray-400"} px-4 py-3 text-white`}
-      >
+      <div className={`${playerColor?.bg || "bg-zinc-500"} px-4 py-3`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
-              <span className="text-sm font-bold">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold">
                 {player.nome.charAt(0).toUpperCase()}
               </span>
             </div>
-            <h3 className="text-lg font-semibold">{player.nome}</h3>
+            <h3 className="text-lg font-jaro text-white">{player.nome}</h3>
           </div>
           <MenuOptions
             playerId={player.id}
@@ -242,258 +316,102 @@ export default function PlayerCard({
         </div>
       </div>
 
-      {/* Corpo */}
       <div className="p-4">
-        {/* Saldo */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <DollarSign className="w-5 h-5 text-green-600 mr-2" />
-            <span className="text-sm font-medium text-gray-600">Saldo</span>
-          </div>
-          <span className="text-xl font-bold text-green-600">
+          <span className="text-sm font-inconsolata text-zinc-400">Saldo</span>
+          <span className="text-xl font-bold text-green-400 font-jaro">
             {formatCurrency(player.saldo)}
           </span>
         </div>
 
-        {/* Propriedades */}
-        <div className="space-y-2">
-          {Object.keys(propertiesByColor).length > 0 ? (
+        {totalProperties > 0 ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(propertiesByColor)
+                .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+                .slice(0, 4)
+                .map(([, group]) => {
+                  const prop = group.properties[0]
+                  const sessionProp = group.sessionPosses[0]
+                  return renderPropertyCard(prop, sessionProp, group)
+                })}
+            </div>
             <button
-              onClick={() => setModalStack(["properties"])}
-              className="w-full text-center p-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors cursor-pointer"
+              onClick={() => setShowPropertiesModal(true)}
+              className="w-full py-2 text-center text-sm font-inconsolata text-zinc-400 hover:text-green-400 border border-zinc-700 hover:border-green-500 rounded-lg transition-colors cursor-pointer"
             >
-              Ver Propriedades (
-              {Object.values(propertiesByColor).reduce(
-                (acc, group) => acc + group.properties.length,
-                0
-              )}
-              )
+              Ver todas as {totalProperties} propriedades →
             </button>
-          ) : (
-            <p className="text-xs text-gray-500 italic text-center py-2">
-              Nenhuma propriedade
-            </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-500 italic text-center py-2 font-inconsolata">
+            Nenhuma propriedade
+          </p>
+        )}
 
-        {/* Estatísticas */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-zinc-800">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p className="text-xs text-gray-500">Valor Total</p>
-              <p className="text-sm font-semibold text-gray-800">
+              <p className="text-xs text-zinc-500 font-inconsolata">Valor Total</p>
+              <p className="text-sm font-semibold text-zinc-100 font-jaro">
                 {formatCurrency(totalPropertyValue)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Grupos Completos</p>
-              <p className="text-sm font-semibold text-gray-800">
-                {totalGroupsComplete}
+              <p className="text-xs text-zinc-500 font-inconsolata">Grupos</p>
+              <p className="text-sm font-semibold text-zinc-100 font-jaro">
+                {totalGroupsComplete}/{Object.keys(propertiesByColor).length}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modais */}
-
       {/* Modal de propriedades */}
       <Modal
         size="lg"
         title={`Propriedades de ${player.nome}`}
-        isOpen={activeModal === "properties"}
-        onClose={resetModals}
+        isOpen={showPropertiesModal}
+        onClose={() => setShowPropertiesModal(false)}
       >
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
           {Object.entries(propertiesByColor)
             .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-            .map(([colorKey, group]) => (
-              <div key={colorKey}>
-                <h3
-                  className={`text-lg font-semibold mb-2 flex items-center ${group.color.text}`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full ${group.color.bg} mr-2`}
-                  />
-                  {group.color.label}
-                </h3>
-
-                <ul className="flex flex-col lg:flex-row lg:justify-between gap-4">
-                  {group.properties?.map((prop: Propriedade) => {
-                    const casas =
-                      group.sessionPosses?.find((sp) => sp.possesId === prop.id)
-                        ?.casas ?? 0;
-                    const aluguel = getAluguel(prop, casas);
-
-                    return (
-                      <li
-                        key={prop.id}
-                        onClick={() => {
-                          setSelectedPropForAction(prop);
-                          setSelectedGroup(group);
-                          setModalStack((prev) => [...prev, "options"]);
-                        }}
-                        className={`w-full lg:w-1/3 h-30 border border-t-4 ${group.color.border} rounded p-2 text-sm text-gray-700 flex flex-col gap-2 lg:items-center lg:justify-between cursor-pointer hover:bg-gray-100 transition-colors`}
-                      >
-                        <div className="flex flex-col lg:items-center">
-                          <span>{prop.nome}</span>
-                          <span className="text-xs text-gray-500">
-                            Casas: {casas}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Aluguel: {aluguel}
-                          </span>
-                        </div>
-                        <div className="flex flex-col lg:items-center">
-                          <span className="font-bold text-green-500">
-                            Valor casa: R$ {prop.custo_casa}
-                          </span>
-                          <span className="text-xs text-red-500">
-                            Hipoteca: {prop.hipoteca}
-                          </span>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
+            .map(([colorKey, group]) => {
+              const hasAll = group.properties.length === (group.color.total || 0)
+              return (
+                <div key={colorKey}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-jaro text-zinc-100 flex items-center gap-3 px-2">
+                      <div className={`w-4 h-4 rotate-45 ${group.color.bg}`} />
+                      {group.color.label}
+                    </h3>
+                    {hasAll && (
+                      <span className="text-green-400 text-sm font-inconsolata">✅</span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {group.properties.map((prop, idx) =>
+                      renderPropertyCard(prop, group.sessionPosses[idx], group)
+                    )}
+                  </div>
+                </div>
+              )
+            })}
         </div>
       </Modal>
 
-      {/* Modal de ações */}
-      <Modal
-        size="sm"
-        title={`${selectedPropForAction?.nome}`}
-        isOpen={activeModal === "options"}
-        onClose={resetModals}
-        onBack={handleGoBack}
-      >
-        <nav className="mt-4 flex flex-col gap-4">
-          <button
-            disabled={!selectedPropForAction || reqLoading}
-            onClick={() => {
-              if (!selectedPropForAction) return;
-
-              const total = selectedGroup?.color?.total ?? 0;
-              const qtd = selectedGroup?.properties?.length ?? 0;
-              if (total === 0 || qtd !== total) {
-                toast.warning(
-                  "Você precisa ter todas as propriedades desse grupo para comprar casas!"
-                );
-                return;
-              }
-
-              const casas =
-                selectedGroup?.sessionPosses.find(
-                  (sp) => sp.possesId === selectedPropForAction.id
-                )?.casas ?? 0;
-
-              if (casas === 5) {
-                toast.warning(
-                  "Essa propriedade já atingiu o número máximo de casas!"
-                );
-                return;
-              }
-
-              if (
-                confirm(
-                  `Deseja comprar uma casa em "${selectedPropForAction.nome}"?`
-                )
-              ) {
-                handleComprarCasa(selectedPropForAction.id, player.id);
-              }
-            }}
-            className="w-full lg:w-auto py-2 lg:px-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {reqLoading ? "Comprando..." : "Comprar Casa"}
-          </button>
-
-          <button
-            disabled={!selectedPropForAction || reqLoading}
-            onClick={() => {
-              if (!selectedPropForAction) return;
-
-              const casas =
-                selectedGroup?.sessionPosses.find(
-                  (sp) => sp.possesId === selectedPropForAction.id
-                )?.casas ?? 0;
-
-              if (casas === 0) {
-                toast.error("Essa propriedade não possui casas para vender!");
-                return;
-              }
-
-              if (
-                confirm(
-                  `Deseja vender uma casa de "${selectedPropForAction.nome}"?`
-                )
-              ) {
-                handleVenderCasa(selectedPropForAction.id, player.id);
-              }
-            }}
-            className="w-full lg:w-auto py-2 lg:px-2 bg-amber-500 text-white rounded cursor-pointer hover:bg-amber-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {reqLoading ? "Vendendo..." : "Vender Casa"}
-          </button>
-
-          <button
-            disabled={!selectedPropForAction || reqLoading}
-            onClick={() => {
-              if (!selectedPropForAction) return;
-              const hasHouses = selectedGroup?.sessionPosses?.some(
-                (p) => p.casas > 0
-              );
-              if (hasHouses) {
-                toast.warning(
-                  "Venda todas as casas do grupo antes de vender uma propriedade!"
-                );
-                return;
-              }
-              if (
-                window.confirm(
-                  `Tem certeza que deseja vender "${
-                    selectedPropForAction.nome
-                  }" por ${formatCurrency(selectedPropForAction.hipoteca)}?`
-                )
-              ) {
-                handleVenderPropriedade(selectedPropForAction.id, player.id);
-              }
-            }}
-            className="w-full lg:w-auto py-2 lg:px-2 bg-red-500 text-white rounded cursor-pointer hover:bg-red-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {reqLoading ? "Vendendo..." : "Vender Propriedade"}
-          </button>
-
-          <button
-            disabled={!selectedPropForAction || reqLoading}
-            onClick={() => {
-              if (!selectedPropForAction) return;
-              const hasHouses = selectedGroup?.sessionPosses?.some(
-                (p) => p.casas > 0
-              );
-              if (hasHouses) {
-                toast.warning(
-                  "Venda todas as casas do grupo antes de hipotecar uma propriedade!"
-                );
-                return;
-              }
-              if (
-                window.confirm(
-                  `Tem certeza que deseja hipotecar "${
-                    selectedPropForAction.nome
-                  }" por ${formatCurrency(selectedPropForAction.hipoteca)}?`
-                )
-              ) {
-                handleHipotecarPropriedade(selectedPropForAction.id, player.id);
-              }
-            }}
-            className="w-full lg:w-auto py-2 lg:px-2 bg-indigo-500 text-white rounded cursor-pointer hover:bg-indigo-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {reqLoading ? "Hipotecando..." : "Hipotecar"}
-          </button>
-        </nav>
-      </Modal>
+      {/* Modal de confirmação — único, centralizado aqui */}
+      <ConfirmationModal
+        isOpen={!!pendingAction}
+        onClose={() => setPendingAction(null)}
+        onConfirm={handleConfirm}
+        title={pendingAction?.title ?? ''}
+        message={pendingAction?.message ?? ''}
+        confirmText={pendingAction?.confirmText ?? ''}
+        color={pendingAction?.color ?? 'green'}
+        loading={actionLoading}
+      />
     </main>
-  );
+  )
 }

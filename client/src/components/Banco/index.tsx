@@ -16,9 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { toast } from "react-toastify";
+import { useToast } from "@/components/Toast";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Receipt } from "lucide-react";
 
 export default function Banco() {
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
+  
   const {
     currentSession,
     getPropertyById,
@@ -86,10 +89,9 @@ export default function Banco() {
   }
 
   function getBorderClass(grupo_cor?: string) {
-    if (!grupo_cor) return "border-gray-300 border-2";
+    if (!grupo_cor) return "border-zinc-600 border-2";
     const colorInfo = PROPERTY_COLORS.find((c) => c.value === grupo_cor);
-    if (!colorInfo) return "border-gray-300 border-2";
-    // usa border-t-4 para destaque superior (pode ajustar)
+    if (!colorInfo) return "border-zinc-600 border-2";
     return `${colorInfo.border} border-t-4 border-2`;
   }
 
@@ -102,23 +104,23 @@ export default function Banco() {
 
   async function depositar(userId: number | undefined, valor: number) {
     if (userId == null || valor <= 0)
-      return toast.error("Campos vazios ou valor inválido!");
+      return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
 
-    if (valor >= 10000000) return toast.warning("Valor muito alto!");
+    if (valor >= 10000000) return toastWarning("Valor muito alto!");
 
     try {
       setReqLoading(true);
       await deposito({ userId, sessionId: currentSession.id, valor });
 
-      toast.success("Depósito realizado com sucesso!");
+      toastSuccess("Depósito realizado com sucesso!");
       await loadSession(currentSession.id);
       setModalDeposito(false);
       setReqLoading(false);
       resetarValores();
     } catch (error) {
       console.error("Erro no depósito!", error);
-      toast.error("Erro no depósito!");
+      toastError("Erro no depósito!");
       setModalDeposito(false);
       resetarValores();
     }
@@ -126,25 +128,25 @@ export default function Banco() {
 
   async function retirar(userId: number | undefined, valor: number) {
     if (userId == null || valor <= 0)
-      return toast.error("Campos vazios ou valor inválido!");
+      return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
 
     try {
       const player = currentSession.jogadores.find((p) => p.id === userId);
-      if (!player) return toast.error("Jogador não encontrado!");
-      if (player?.saldo < valor) return toast.error("Saldo insuficiente!");
+      if (!player) return toastError("Jogador não encontrado!");
+      if (player?.saldo < valor) return toastError("Saldo insuficiente!");
 
       setReqLoading(true);
       await saque({ userId, sessionId: currentSession.id, valor });
 
-      toast.success("Saque realizado com sucesso!");
+      toastSuccess("Saque realizado com sucesso!");
       await loadSession(currentSession.id);
       setModalSaque(false);
       setReqLoading(false);
       resetarValores();
     } catch (error) {
       console.error("Erro no saque!", error);
-      toast.error("Erro no saque!");
+      toastError("Erro no saque!");
       setModalSaque(false);
       resetarValores();
     }
@@ -162,13 +164,13 @@ export default function Banco() {
       pagador === 0 ||
       recebedor === 0
     )
-      return toast.error("Campos vazios ou valor inválido!");
+      return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
 
     try {
       const player = currentSession.jogadores.find((p) => p.id === pagador);
-      if (!player) return toast.error("Jogador não encontrado!");
-      if (player.saldo < valor) return toast.error("Saldo insuficiente!");
+      if (!player) return toastError("Jogador não encontrado!");
+      if (player.saldo < valor) return toastError("Saldo insuficiente!");
 
       setReqLoading(true);
       await transferencia({
@@ -178,14 +180,14 @@ export default function Banco() {
         valor,
       });
 
-      toast.success("Transferência realizada com sucesso!");
+      toastSuccess("Transferência realizada com sucesso!");
       await loadSession(currentSession.id);
       setModalTransferencia(false);
       setReqLoading(false);
       resetarValores();
     } catch (error) {
       console.error("Erro na transferencia!", error);
-      toast.error("Erro na transferência!");
+      toastError("Erro na transferência!");
       setModalTransferencia(false);
       resetarValores();
     }
@@ -195,7 +197,7 @@ export default function Banco() {
     pagadorId: number | undefined,
     propriedadeId: number | undefined
   ) {
-    if (!pagadorId || !propriedadeId) return toast.error("Campos vazios!");
+    if (!pagadorId || !propriedadeId) return toastError("Campos vazios!");
     if (!currentSession) return;
 
     try {
@@ -207,7 +209,7 @@ export default function Banco() {
           sessionPossesId: propriedadeId,
           numDados: numeroDados,
         });
-        toast.success("Aluguel pago com sucesso!");
+        toastSuccess("Aluguel pago com sucesso!");
         await loadSession(currentSession.id);
         setModalAluguel(false);
         resetarValores();
@@ -220,14 +222,14 @@ export default function Banco() {
         pagadorId,
         sessionPossesId: propriedadeId,
       });
-      toast.success("Aluguel pago com sucesso!");
+      toastSuccess("Aluguel pago com sucesso!");
       await loadSession(currentSession.id);
       setModalAluguel(false);
       setReqLoading(false);
       resetarValores();
     } catch (error) {
       console.error("Erro ao pagar o aluguel.", error);
-      toast.error("Erro ao pagar o aluguel.");
+      toastError("Erro ao pagar o aluguel.");
       setModalAluguel(false);
       resetarValores();
     }
@@ -235,43 +237,61 @@ export default function Banco() {
 
   return (
     <main className="w-full px-10">
-      <nav className="flex flex-col lg:flex-row items-center gap-4">
+      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
           onClick={() => setModalDeposito(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-green-500 hover:bg-green-400/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-green-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Deposite um determinado valor para o jogador selecionado
-          </span>
-          <span className="text-green-500 font-bold">Depositar</span>
+          <div className="h-1.5 w-full bg-green-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <ArrowDownToLine className="w-8 h-8 text-green-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Depositar</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Adicione saldo ao jogador
+            </span>
+          </div>
         </button>
+        
         <button
           onClick={() => setModalSaque(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-red-500 hover:bg-red-400/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-red-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Retire um determinado valor para o jogador selecionado
-          </span>
-          <span className="text-red-500 font-bold">Retirar</span>
+          <div className="h-1.5 w-full bg-red-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <ArrowUpFromLine className="w-8 h-8 text-red-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Retirar</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Retire saldo do jogador
+            </span>
+          </div>
         </button>
+        
         <button
           onClick={() => setModalTransferencia(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-sky-600 hover:bg-sky-500/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-sky-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Transfira um determinado valor de um jogador para outro
-          </span>
-          <span className="text-sky-600 font-bold">Transferir</span>
+          <div className="h-1.5 w-full bg-sky-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <ArrowRightLeft className="w-8 h-8 text-sky-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Transferir</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Mova dinheiro entre jogadores
+            </span>
+          </div>
         </button>
+        
         <button
           onClick={() => setModalAluguel(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-amber-500 hover:bg-amber-400/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-amber-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Permita que um jogador pague o aluguel de uma determinada
-            propriedade
-          </span>
-          <span className="text-amber-500 font-bold">Pagar Aluguel</span>
+          <div className="h-1.5 w-full bg-amber-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <Receipt className="w-8 h-8 text-amber-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Pagar Aluguel</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Pague aluguel de propriedade
+            </span>
+          </div>
         </button>
       </nav>
 
@@ -550,21 +570,21 @@ export default function Banco() {
             const borderClass = getBorderClass(propData?.grupo_cor);
 
             return (
-              <div className={`mt-4 p-3 rounded-md bg-gray-50 ${borderClass}`}>
+              <div className={`mt-4 p-3 rounded-md bg-zinc-800 ${borderClass}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-lg">
+                    <h3 className="font-semibold text-lg text-zinc-100">
                       {propData?.nome ??
                         `Propriedade #${propsDetails.possesId}`}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-zinc-400">
                       Cor: {propData?.grupo_cor ?? "—"}
                     </p>
-                    <p className="text-sm text-gray-600">Casas: {casas}</p>
+                    <p className="text-sm text-zinc-400">Casas: {casas}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">Aluguel atual</div>
-                    <div className="text-xl font-bold text-green-600">
+                    <div className="text-sm text-zinc-500">Aluguel atual</div>
+                    <div className="text-xl font-bold text-green-400">
                       {formatCurrency(aluguelAtual)}
                     </div>
                   </div>

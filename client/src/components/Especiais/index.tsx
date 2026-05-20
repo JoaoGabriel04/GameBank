@@ -16,9 +16,12 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useGameStore } from "@/stores/gameStore";
-import { toast } from "react-toastify";
+import { useToast } from "@/components/Toast";
+import { ArrowLeftRight, Coins } from "lucide-react";
 
 export default function Especiais() {
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
+  
   const {
     currentSession,
     loadSession,
@@ -75,10 +78,9 @@ export default function Especiais() {
   }
 
   function getBorderClass(grupo_cor?: string) {
-    if (!grupo_cor) return "border-gray-300 border-2";
+    if (!grupo_cor) return "border-zinc-600 border-2";
     const colorInfo = PROPERTY_COLORS.find((c) => c.value === grupo_cor);
-    if (!colorInfo) return "border-gray-300 border-2";
-    // usa border-t-4 para destaque superior (pode ajustar)
+    if (!colorInfo) return "border-zinc-600 border-2";
     return `${colorInfo.border} border-t-4 border-2`;
   }
 
@@ -93,7 +95,7 @@ export default function Especiais() {
     userId: number | undefined,
     propriedadeId: number | undefined
   ) {
-    if (userId == null || propriedadeId == null || userId === 0) return toast.warning("Campos Vazios!");
+    if (userId == null || propriedadeId == null || userId === 0) return toastWarning("Campos Vazios!");
     if (!currentSession) return;
 
     try {
@@ -102,7 +104,7 @@ export default function Especiais() {
       );
 
       if (propSelected?.casas)
-        return toast.warning("Essa propriedade ainda possui casas!");
+        return toastWarning("Essa propriedade ainda possui casas!");
 
       setReqLoading(true);
       await trocaPropriedades({
@@ -111,25 +113,25 @@ export default function Especiais() {
         propriedadeId,
       });
 
-      toast.success("Transferência realizada com sucesso!");
+      toastSuccess("Transferência realizada com sucesso!");
       await loadSession(currentSession.id);
       setModalTroca(false);
       setReqLoading(false);
       resetarValores();
     } catch (error) {
       console.error("Erro ao trocar propriedade!", error);
-      toast.error("Erro ao trocar propriedade!");
+      toastError("Erro ao trocar propriedade!");
       setModalTroca(false);
     }
   }
 
   async function handleReceberDeTodos(userId: number | undefined) {
     
-    if (userId == null) return toast.warning("Campos Vazios!");
+    if (userId == null) return toastWarning("Campos Vazios!");
     if (!currentSession) return;
 
     currentSession.jogadores.filter((p)=> p.id !== userId).map((player)=>{
-      if (player.saldo < 500) return toast.error(`O Jogador ${player.nome} não tem saldo suficiente!`)
+      if (player.saldo < 500) return toastError(`O Jogador ${player.nome} não tem saldo suficiente!`)
     })
 
     try {
@@ -139,14 +141,14 @@ export default function Especiais() {
         sessionId: currentSession.id
       });
 
-      toast.success("Transferências realizadas com sucesso!");
+      toastSuccess("Transferências realizadas com sucesso!");
       await loadSession(currentSession.id);
       setModalReceber(false);
       setReqLoading(false);
       resetarValores();
     }catch (error){
       console.error("Erro ao trocar propriedade!", error);
-      toast.error("Erro ao trocar propriedade!");
+      toastError("Erro ao trocar propriedade!");
       setModalTroca(false);
     }
 
@@ -154,25 +156,33 @@ export default function Especiais() {
 
   return (
     <main className="w-full px-10">
-      <nav className="flex flex-col lg:flex-row items-center gap-4">
+      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
           onClick={() => setModalTroca(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-indigo-500 hover:bg-indigo-400/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-purple-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Faça trocas de propriedades entre jogadores
-          </span>
-          <span className="text-indigo-500 font-bold">Trocar</span>
+          <div className="h-1.5 w-full bg-purple-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <ArrowLeftRight className="w-8 h-8 text-purple-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Trocar</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Troque propriedades entre jogadores
+            </span>
+          </div>
         </button>
 
         <button
           onClick={() => setModalReceber(true)}
-          className="w-full lg:w-[150px] h-30 lg:h-[200px] p-2 border-2 border-t-5 border-fuchsia-500 hover:bg-fuchsia-400/20 rounded-md transition-colors cursor-pointer flex flex-col justify-between items-center"
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-pink-500 transition-colors cursor-pointer"
         >
-          <span className="text-sm font-light text-zinc-500">
-            Um jogador receberá R$ 500,00 de todos os jogadores
-          </span>
-          <span className="text-fuchsia-500 font-bold">Receber</span>
+          <div className="h-1.5 w-full bg-pink-500" />
+          <div className="p-4 flex flex-col items-center gap-2">
+            <Coins className="w-8 h-8 text-pink-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Receber</span>
+            <span className="text-zinc-500 text-xs font-inconsolata text-center">
+              Receba R$ 500 de todos os jogadores
+            </span>
+          </div>
         </button>
       </nav>
 
@@ -274,21 +284,21 @@ export default function Especiais() {
             const borderClass = getBorderClass(propData?.grupo_cor);
 
             return (
-              <div className={`mt-4 p-3 rounded-md bg-gray-50 ${borderClass}`}>
+              <div className={`mt-4 p-3 rounded-md bg-zinc-800 ${borderClass}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-lg">
+                    <h3 className="font-semibold text-lg text-zinc-100">
                       {propData?.nome ??
                         `Propriedade #${propsDetails.possesId}`}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-zinc-400">
                       Cor: {propData?.grupo_cor ?? "—"}
                     </p>
-                    <p className="text-sm text-gray-600">Casas: {casas}</p>
+                    <p className="text-sm text-zinc-400">Casas: {casas}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">Aluguel atual</div>
-                    <div className="text-xl font-bold text-green-600">
+                    <div className="text-sm text-zinc-500">Aluguel atual</div>
+                    <div className="text-xl font-bold text-green-400">
                       {formatCurrency(aluguelAtual)}
                     </div>
                   </div>

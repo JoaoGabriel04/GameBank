@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { PlayerColor, PLAYER_COLORS } from '@/types/game';
 
@@ -18,6 +18,7 @@ export default function ColorDropdown({
   placeholder = "Selecione uma cor" 
 }: ColorDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedColor = value ? PLAYER_COLORS.find(c => c.value === value) : null;
   const filteredColors = PLAYER_COLORS.filter(color => availableColors.includes(color.value));
@@ -27,38 +28,48 @@ export default function ColorDropdown({
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+        className="w-full flex items-center justify-between rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-left shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer font-inconsolata"
       >
         <div className="flex items-center">
           {selectedColor ? (
             <>
-              <div className={`w-4 h-4 rounded-full ${selectedColor.bg} mr-2`} />
-              <span className="text-gray-900">{selectedColor.label}</span>
+              <div className={`w-4 h-4 rotate-45 border-2 border-zinc-600 ${selectedColor.bg} mr-2`} />
+              <span className="text-zinc-100">{selectedColor.label}</span>
             </>
           ) : (
-            <span className="text-gray-500">{placeholder}</span>
+            <span className="text-zinc-500">{placeholder}</span>
           )}
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200">
+        <div className="absolute z-10 mt-1 w-full rounded-md bg-zinc-900 shadow-lg border border-zinc-700">
           <div className="max-h-60 overflow-auto py-1">
             {filteredColors.map((color) => (
               <button
                 key={color.value}
                 type="button"
                 onClick={() => handleSelect(color.value)}
-                className="w-full flex items-center px-3 py-2 text-left hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center px-3 py-2 text-left hover:bg-zinc-800 transition-colors font-inconsolata cursor-pointer"
               >
-                <div className={`w-4 h-4 rounded-full ${color.bg} mr-2`} />
-                <span className="text-gray-900">{color.label}</span>
+                <div className={`w-4 h-4 rotate-45 border-2 border-zinc-600 ${color.bg} mr-2`} />
+                <span className="text-zinc-100">{color.label}</span>
               </button>
             ))}
           </div>

@@ -23,12 +23,14 @@ export default function Inicio() {
 
       let propertyValue = 0;
       for (const sessionProp of playerProperties) {
-        const propData: Propriedade | null = await getPropertyById(
-          sessionProp.possesId
-        );
+        const propData: Propriedade | null = await getPropertyById(sessionProp.possesId);
         if (propData) {
-          propertyValue += propData.hipoteca;
-          propertyValue += sessionProp.casas * propData.custo_casa;
+          if (sessionProp.hipotecada) {
+            propertyValue += propData.hipoteca;
+          } else {
+            propertyValue += propData.custo_compra;
+            propertyValue += sessionProp.casas * propData.custo_casa;
+          }
         }
       }
 

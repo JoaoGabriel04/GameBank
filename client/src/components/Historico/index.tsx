@@ -43,7 +43,7 @@ export default function Historico() {
           placeholder="Pesquisar no histórico por ID, tipo ou detalhes..."
           value={termoPesquisa}
           onChange={(e) => setTermoPesquisa(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className="w-full p-2 border border-zinc-700 bg-zinc-800 text-zinc-100 rounded-md placeholder:text-zinc-500"
         />
       </div>
       {historicoFiltradoEOrdenado.length > 0 ? (
@@ -69,7 +69,7 @@ export default function Historico() {
           </TableBody>
         </Table>
       ) : (
-        <p className="text-center text-gray-500 mt-4">
+        <p className="text-center text-zinc-500 mt-4">
           Nenhuma transação encontrada para a sua pesquisa.
         </p>
       )}

@@ -1,7 +1,9 @@
 "use client";
+
 import ColorDropdown from "@/components/ColorDropdown";
 import Loading from "@/components/Loading";
 import { useGameStore } from "@/stores/gameStore";
+import Lenis from "lenis";
 import {
   INITIAL_BALANCE,
   MAX_PLAYERS,
@@ -9,11 +11,13 @@ import {
   PLAYER_COLORS,
   PlayerColor,
 } from "@/types/game";
-import { ArrowLeft, GamepadIcon, Minus, Pencil, Plus, Users } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faUsers, faPencil, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { toast } from "react-toastify";
+import { useEffect, useState } from "react";
+import { useToast } from "@/components/Toast";
+import Button1 from "@/components/Button01";
 
 interface PlayerForm {
   nome: string;
@@ -23,6 +27,7 @@ interface PlayerForm {
 
 export default function NewSession() {
   const router = useRouter();
+  const { success: toastSuccess, error: toastError } = useToast()
   const { createSession } = useGameStore();
 
   const [reqLoading, setReqLoading] = useState(false);
@@ -34,20 +39,37 @@ export default function NewSession() {
     { nome: "", cor: null, saldo: 0 },
   ]);
 
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    })
+
+    function raf(time: number) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    return () => {
+      lenis.destroy()
+    }
+  }, [])
+
   const handleNumPlayersChange = (newNum: number) => {
     if (newNum < MIN_PLAYERS || newNum > MAX_PLAYERS) return;
 
     setNumPlayers(newNum);
 
     if (newNum > players.length) {
-      // Adicionar novos jogadores
       const newPlayers = [...players];
       for (let i = players.length; i < newNum; i++) {
         newPlayers.push({ nome: "", cor: null, saldo: 0 });
       }
       setPlayers(newPlayers);
     } else if (newNum < players.length) {
-      // Remover jogadores excedentes
       setPlayers(players.slice(0, newNum));
     }
   };
@@ -66,7 +88,7 @@ export default function NewSession() {
     const usedColors = players
       .filter((_, index) => index !== playerIndex)
       .map((p) => p.cor)
-      .filter(Boolean) as PlayerColor[]; // <--- cast para PlayerColor[]
+      .filter(Boolean) as PlayerColor[];
 
     const allColors: PlayerColor[] = [
       "red",
@@ -85,44 +107,40 @@ export default function NewSession() {
 
   const validateForm = (): boolean => {
     if (sessionName.trim().length < 3) {
-      toast.error("Nome da sessão deve ter pelo menos 3 caracteres");
+      toastError("Nome da sessão deve ter pelo menos 3 caracteres");
       return false;
     }
 
-    // Verificar se todos os nomes estão preenchidos
     for (let i = 0; i < numPlayers; i++) {
       if (!players[i]?.nome.trim()) {
-        toast.error(`Nome do jogador ${i + 1} é obrigatório`);
+        toastError(`Nome do jogador ${i + 1} é obrigatório`);
         return false;
       }
     }
 
-    // Verificar se todas as cores estão selecionadas
     for (let i = 0; i < numPlayers; i++) {
       if (!players[i]?.cor) {
-        toast.error(`Cor do jogador ${i + 1} é obrigatória`);
+        toastError(`Cor do jogador ${i + 1} é obrigatória`);
         return false;
       }
     }
 
-    // Verificar se não há nomes duplicados
     const names = players
       .slice(0, numPlayers)
       .map((p) => p.nome.trim().toLowerCase());
     const uniqueNames = new Set(names);
     if (names.length !== uniqueNames.size) {
-      toast.error("Não pode haver nomes duplicados");
+      toastError("Não pode haver nomes duplicados");
       return false;
     }
 
-    // Verificar se não há cores duplicadas
     const colors = players
       .slice(0, numPlayers)
       .map((p) => p.cor)
       .filter(Boolean);
     const uniqueColors = new Set(colors);
     if (colors.length !== uniqueColors.size) {
-      toast.error("Não pode haver cores duplicadas");
+      toastError("Não pode haver cores duplicadas");
       return false;
     }
 
@@ -140,53 +158,51 @@ export default function NewSession() {
 
     try {
       setReqLoading(true);
-      const sessionId = await createSession(sessionName, validPlayers); // ✅ await
+      const sessionId = await createSession(sessionName, validPlayers);
       if (sessionId) {
-        toast.success("Sessão criada com sucesso!");
+        toastSuccess("Sessão criada com sucesso!");
         setReqLoading(false);
         router.push(`/game/${sessionId}`);
       } else {
-        toast.error("Erro ao criar sessão");
+        toastError("Erro ao criar sessão");
       }
     } catch (error) {
-      toast.error("Erro ao criar sessão");
+      toastError("Erro ao criar sessão");
       console.error("Erro ao criar sessão:", error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-black">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex items-center mb-8">
-          <Link href="/" className="mr-4">
-            <button className="p-2 rounded-full hover:bg-white hover:shadow-md transition-all">
-              <ArrowLeft className="w-6 h-6 text-gray-600" />
+          <Link href="/sessions" className="mr-4">
+            <button className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-green-500 transition-all cursor-pointer">
+              <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-zinc-400" />
             </button>
           </Link>
           <div className="flex items-center">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-full mr-4">
-              <GamepadIcon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex justify-center items-center mr-4">
+              <FontAwesomeIcon icon={faUsers} className="text-white text-xl" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Nova Sessão</h1>
-              <p className="text-gray-600">
-                Configure os jogadores para começar uma nova partida
-              </p>
+              <h1 className="text-3xl font-bold font-jaro text-zinc-100">Nova Sessão</h1>
+<p className="text-zinc-500 font-inconsolata">
+              Configure os jogadores para começar uma nova partida
+            </p>
             </div>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* Configuração do Número de Jogadores */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center mb-4">
-              <Users className="w-6 h-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">
+              <FontAwesomeIcon icon={faUsers} className="w-6 h-6 text-green-500 mr-2" />
+              <h2 className="text-xl font-semibold font-jaro text-zinc-100">
                 Número de Jogadores
               </h2>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-zinc-500 mb-6 font-inconsolata">
               Escolha quantos jogadores participarão da partida
             </p>
 
@@ -194,16 +210,16 @@ export default function NewSession() {
               <button
                 onClick={() => handleNumPlayersChange(numPlayers - 1)}
                 disabled={numPlayers <= MIN_PLAYERS}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
-                <Minus className="w-5 h-5 text-gray-600" />
+                <FontAwesomeIcon icon={faMinus} className="w-5 h-5 text-zinc-400" />
               </button>
 
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-1">
+                <div className="text-4xl font-bold text-green-500 mb-1">
                   {numPlayers}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-zinc-500 font-inconsolata">
                   Mínimo: {MIN_PLAYERS} • Máximo: {MAX_PLAYERS}
                 </div>
               </div>
@@ -211,33 +227,32 @@ export default function NewSession() {
               <button
                 onClick={() => handleNumPlayersChange(numPlayers + 1)}
                 disabled={numPlayers >= MAX_PLAYERS}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
-                <Plus className="w-5 h-5 text-gray-600" />
+                <FontAwesomeIcon icon={faPlus} className="w-5 h-5 text-zinc-400" />
               </button>
             </div>
 
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                <Pencil className="inline w-5 h-5 text-green-600 mr-2 rotate-y-180" />
+              <h1 className="text-xl font-semibold font-jaro text-zinc-100 mb-2">
+                <FontAwesomeIcon icon={faPencil} className="w-5 h-5 text-green-500 mr-2" />
                 Nome da Sessão
               </h1>
               <input
                 type="text"
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-md bg-zinc-950 border border-zinc-700 px-3 py-2 text-zinc-100 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 placeholder-zinc-600 font-inconsolata"
                 placeholder="Digite o nome da sessão"
               />
             </div>
           </div>
 
-          {/* Configuração dos Jogadores */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <h2 className="text-xl font-semibold font-jaro text-zinc-100 mb-4">
               Configuração dos Jogadores
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="text-zinc-500 mb-6 font-inconsolata">
               Defina o nome e a cor de cada jogador
             </p>
 
@@ -250,15 +265,15 @@ export default function NewSession() {
                 return (
                   <div
                     key={index}
-                    className="p-4 border border-gray-200 rounded-lg"
+                    className="p-4 border border-zinc-700 rounded-lg bg-zinc-950/50"
                   >
-                    <h3 className="font-semibold text-gray-900 mb-4">
+                    <h3 className="font-semibold font-jaro text-zinc-100 mb-4">
                       Jogador {index + 1}
                     </h3>
 
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">
                           Nome
                         </label>
                         <input
@@ -267,13 +282,13 @@ export default function NewSession() {
                           onChange={(e) =>
                             handlePlayerChange(index, "nome", e.target.value)
                           }
-                          className="w-full rounded-md text-zinc-800/60 border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-zinc-100 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 placeholder-zinc-600 font-inconsolata"
                           placeholder="Digite o nome do jogador"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">
                           Cor
                         </label>
                         <ColorDropdown
@@ -287,9 +302,8 @@ export default function NewSession() {
                       </div>
                     </div>
 
-                    {/* Preview do jogador */}
                     {players[index]?.nome && playerColorInfo && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="mt-4 p-3 bg-zinc-800 rounded-lg">
                         <div className="flex items-center">
                           <div
                             className={`w-8 h-8 rounded-full ${playerColorInfo.bg} mr-3 flex items-center justify-center`}
@@ -299,10 +313,10 @@ export default function NewSession() {
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-zinc-100 font-inconsolata">
                               {players[index].nome}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-zinc-500 font-inconsolata">
                               Saldo inicial:{" "}
                               {new Intl.NumberFormat("pt-BR", {
                                 style: "currency",
@@ -319,21 +333,20 @@ export default function NewSession() {
             </div>
           </div>
 
-          {/* Resumo da Sessão */}
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="lg:col-span-1 bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <h2 className="text-xl font-semibold font-jaro text-zinc-100 mb-4">
               Resumo da Sessão
             </h2>
 
             <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Jogadores:</span>
-                <span className="font-semibold">{numPlayers}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 font-inconsolata">Jogadores:</span>
+                <span className="text-lg font-semibold text-zinc-100 font-inconsolata">{numPlayers}</span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-gray-600">Saldo inicial:</span>
-                <span className="font-semibold">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 font-inconsolata">Saldo inicial:</span>
+                <span className="text-lg font-semibold text-green-400 font-inconsolata">
                   {new Intl.NumberFormat("pt-BR", {
                     style: "currency",
                     currency: "BRL",
@@ -341,19 +354,20 @@ export default function NewSession() {
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-gray-600">Propriedades:</span>
-                <span className="font-semibold">28 disponíveis</span>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 font-inconsolata">Propriedades:</span>
+                <span className="text-lg font-semibold text-zinc-100 font-inconsolata">28 disponíveis</span>
               </div>
             </div>
 
-            <button
-              disabled={reqLoading}
-              onClick={handleCreateSession}
-              className="w-full mt-6 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-105 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            <Button1
+              size="full"
+              color="green"
+              handle={reqLoading ? undefined : handleCreateSession}
+              className="w-full mt-6"
             >
               Iniciar Jogo
-            </button>
+            </Button1>
           </div>
         </div>
       </div>

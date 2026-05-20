@@ -26,9 +26,16 @@ export interface SessionPropriedade {
   id: number;
   sessionId: number;
   possesId: number;
-  playerId: number | null; // corresponde ao backend
+  playerId: number | null;
   casas: number;
   hipotecada: boolean;
+  posses?: {
+    id: number;
+    id_prop: number;
+    casas: number;
+    hipotecada: boolean;
+    propriedade?: Propriedade;
+  };
 }
 
 // ========================
@@ -111,15 +118,15 @@ export type CorPropriedade =
   | 'Preto'
 
 export const PROPERTY_COLORS: { value: CorPropriedade; text: string; label: string; bg: string, border: string; total: number }[] = [
-  { value: 'Verde-Claro', text: 'text-lime-500', label: 'Verde-Claro', bg: 'bg-lime-500/20', border: 'border-lime-500', total: 3 },
-  { value: 'Verde-Escuro', text: 'text-green-700', label: 'Verde-Escuro', bg: 'bg-green-700/20', border: 'border-green-700', total: 3},
-  { value: 'Vermelho', text: 'text-red-600', label: 'Vermelho', bg: 'bg-red-600/20', border: 'border-red-600', total: 3},
-  { value: 'Azul', text: 'text-blue-600', label: 'Azul', bg: 'bg-blue-600/20', border: 'border-blue-600', total: 3},
-  { value: 'Amarelo', text: 'text-amber-300', label: 'Amarelo', bg: 'bg-amber-300/20', border: 'border-amber-300', total: 3},
-  { value: 'Laranja', text: 'text-orange-600', label: 'Laranja', bg: 'bg-orange-600/20', border: 'border-orange-600', total: 3},
-  { value: 'Rosa', text: 'text-pink-600', label: 'Rosa', bg: 'bg-pink-600/20', border: 'border-pink-600', total: 2},
-  { value: 'Roxo', text: "text-purple-700", label: 'Roxo', bg: 'bg-purple-700/20', border: 'border-purple-700', total: 2},
-  { value: 'Preto', text: 'text-zinc-800', label: 'Preto', bg: 'bg-zinc-800/20', border: 'border-zinc-800', total: 6},
+  { value: 'Verde-Claro', text: 'text-lime-500', label: 'Verde-Claro', bg: 'bg-lime-500', border: 'border-lime-500', total: 3 },
+  { value: 'Verde-Escuro', text: 'text-green-700', label: 'Verde-Escuro', bg: 'bg-green-700', border: 'border-green-700', total: 3},
+  { value: 'Vermelho', text: 'text-red-600', label: 'Vermelho', bg: 'bg-red-600', border: 'border-red-600', total: 3},
+  { value: 'Azul', text: 'text-blue-600', label: 'Azul', bg: 'bg-blue-600', border: 'border-blue-600', total: 3},
+  { value: 'Amarelo', text: 'text-amber-300', label: 'Amarelo', bg: 'bg-amber-300', border: 'border-amber-300', total: 3},
+  { value: 'Laranja', text: 'text-orange-600', label: 'Laranja', bg: 'bg-orange-600', border: 'border-orange-600', total: 3},
+  { value: 'Rosa', text: 'text-pink-600', label: 'Rosa', bg: 'bg-pink-600', border: 'border-pink-600', total: 2},
+  { value: 'Roxo', text: "text-purple-700", label: 'Roxo', bg: 'bg-purple-700', border: 'border-purple-700', total: 2},
+  { value: 'Preto', text: 'text-zinc-50', label: 'Preto', bg: 'bg-zinc-50', border: 'border-zinc-50', total: 6},
 ];
 
 // ========================

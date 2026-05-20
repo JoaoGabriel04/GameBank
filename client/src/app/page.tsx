@@ -1,206 +1,184 @@
-"use client";
-import Modal from "@/components/Modal";
-import { useGameStore } from "@/stores/gameStore";
-import {
-  DollarSign,
-  Gamepad2,
-  GamepadIcon,
-  House,
-  Play,
-  Users,
-} from "lucide-react";
+'use client'
+
+import Button1 from "@/components/Button01";
+import { useViewportHeight } from "@/hooks/useViewportHeight"
+import { Howl } from "howler";
+import Lenis from "lenis";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faInstagram, faGithub, faFacebookF, faXTwitter } from "@fortawesome/free-brands-svg-icons";
+import { faDollarSign, faHouse, faUsers, faPlus, faGamepad } from "@fortawesome/free-solid-svg-icons"
+import Image from "next/image";
 import Link from "next/link";
-import { SVGProps, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import CardFeatures from "./tests/home/_components/cardFeatures";
+import MusicPlayer from "./tests/home/_components/musicPlayer";
+
+const menuOptions = [
+  { text: "Loja", url: "/loja" },
+  { text: "Recompensas", url: "/recompensas" },
+  { text: "Saiba Mais", url: "/saibamais" },
+  { text: "Como Jogar", url: "/comojogar" },
+]
 
 export default function Home() {
-  const [sessionsModal, setSessionsModal] = useState(false);
 
-  const { getSessions, sessions } = useGameStore();
+  const vh = useViewportHeight();
+  const router = useRouter();
+
+  const [playing, setPlaying] = useState(false)
+  const [volume, setVolume] = useState(0.5)
+
+  const musicRef = useRef(
+    new Howl({
+      src: ["/sounds/airs-of-change.mp3"],
+      loop: true,
+      volume: 0.5
+    })
+  )
 
   useEffect(() => {
-    // Buscar sessões do backend quando o componente monta
-    const fetchSessions = async () => {
-      await getSessions();
-    };
-    fetchSessions();
-  }, [getSessions]);
+    if (musicRef.current) {
+      musicRef.current.volume(volume)
+    }
+  }, [volume])
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    })
 
-  const activeSessions = sessions ?? [];
-  if (process.env.NODE_ENV === "development") {
-    console.log("Sessões ativas:", activeSessions);
+    function raf(time: number) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    return () => {
+      lenis.destroy()
+    }
+  }, [])
+
+  function toggleMusic() {
+    const music = musicRef.current
+
+    if (music.playing()) {
+      music.pause()
+      setPlaying(false)
+    } else {
+      music.play()
+      setPlaying(true)
+    }
   }
 
   return (
-    <main className="w-full min-h-screen flex flex-col py-4 px-4 lg:px-10 bg-indigo-100/40">
-      <header className="w-full flex flex-col items-center py-4">
-        <div className="w-20 h-20 p-3 bg-gradient-to-b from-[#003CFF] to-[#D600F3] rounded-full">
-          <Gamepad2 className="w-full h-full text-zinc-50" />
+    <main className="w-full bg-black">
+      <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-3 justify-between items-center px-10 z-999">
+        <div className="">
+          <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
         </div>
-        <h1 className="text-4xl font-bold mt-4 tracking-wide">
-          Super<span className="text-blue-700">Máquina</span>
-        </h1>
-        <p className="w-full lg:w-[500px] text-center mt-4 text-zinc-800/40">
-          O jogo de tabuleiro digital que transforma suas partidas em
-          experiências inesquecíveis. Gerencie propriedades, negocie com amigos
-          e construa seu império imobiliário!
-        </p>
+        <nav className="w-full flex justify-center items-center">
+          <ul className="w-full flex justify-center items-center gap-10">
+            {menuOptions.map((option, index) => (
+              <li key={index} className="font-jaro text-zinc-100 hover:scale-120 transition-all duration-100 cursor-pointer"><Link href={option.url}>{option.text}</Link></li>
+            ))}
+          </ul>
+        </nav>
+        <nav className="flex justify-end items-center gap-4">
+          <Button1
+            size="lg"
+            color="green"
+            handle={() => router.push('/sessions')}
+            className="z-20">Jogar</Button1>
+        </nav>
       </header>
 
-      <section className="w-full flex flex-col items-center mt-10">
-        <div className="w-full lg:w-[500px] h-[300px] flex flex-col items-center justify-center gap-2 px-10 bg-white shadow-lg rounded-lg">
-          <h1 className="text-zinc-800/70 mt-[-24px]">Crie um novo jogo</h1>
-          <Link
-            href="/new-session"
-            className="w-full flex items-center justify-center gap-3 py-2 bg-green-600 hover:bg-green-700 text-zinc-100 font-semibold rounded cursor-pointer transition-colors"
-          >
-            <Play />
-            Criar Jogo
-          </Link>
-          <h1 className="text-zinc-800/70 mt-6">
-            Carregue um jogo em andamento
-          </h1>
-          <button
-            onClick={() => setSessionsModal(true)}
-            className="w-full flex items-center justify-center gap-3 py-2 bg-blue-600 hover:bg-blue-700 text-zinc-100 font-semibold rounded cursor-pointer transition-colors"
-          >
-            <Play />
-            Carregar Jogo
-          </button>
+      <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.png')] bg-bottom bg-cover bg-no-repeat z-10">
+        <div className="w-full h-full flex flex-col justify-center items-center gap-6">
+          <div className="flex w-full justify-center items-center font-jaro text-6xl z-20">
+            <h1 className="bg-linear-to-r from-[#1F9900] via-[#33FF00] to-[#00BE39] bg-clip-text text-transparent text-shadow-sm">Game</h1>
+            <h1 className="bg-linear-to-r from-[#FFA600] via-[#FFDEA1] to-[#FFA600] bg-clip-text text-transparent text-shadow-sm">₿ank</h1>
+          </div>
+          <p className="w-4/5 lg:w-150 font-inconsolata text-sm text-center text-zinc-100 text-shadow-sm tracking-wider z-20">Seu banco dentro do tabuleiro. Controle depósitos, saques e transferências entre jogadores com agilidade e transparência.</p>
+          
+          <div className="flex gap-6 z-20">
+            <Button1
+              size="md"
+              color="blue"
+              handle={() => router.push('/sessions')}
+              className="z-20"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              Criar Nova Sessão
+            </Button1>
+            <Button1
+              size="md"
+              color="green"
+              handle={() => router.push('/sessions')}
+              className="z-20"
+            >
+              <FontAwesomeIcon icon={faGamepad} className="mr-2" />
+              Ver Sessões
+            </Button1>
+          </div>
         </div>
 
-        <h1 className="mt-10 text-xl font-semibold text-zinc-800/70">
-          Funcionalidades
-        </h1>
-
-        <div className="w-full lg:grid grid-cols-3 justify-between mt-10 gap-6">
-          <FeatureCard
-            Icon={Users}
-            colorClass="bg-purple-700/20"
-            iconColor="text-purple-700"
-            title="Multiplayer"
-            description="Jogue com até 6 amigos simultaneamente, cada um com sua cor personalizada"
-          />
-          <FeatureCard
-            Icon={DollarSign}
-            colorClass="bg-green-500/20"
-            iconColor="text-green-700"
-            title="Gestão Financeira"
-            description="Sistema completo de transações, transferências e histórico detalhado"
-          />
-          <FeatureCard
-            Icon={House}
-            colorClass="bg-orange-600/20"
-            iconColor="text-orange-600"
-            title="Propriedades"
-            description="22 propriedades baseadas no Rio de Janeiro com sistema de casas e hotéis"
-          />
-        </div>
+        <div className="w-full h-full absolute top-0 left-0 bg-black/30 backdrop-blur-[3px] z-1"></div>
+        <div className="absolute w-full h-20 bottom-0 left-0 z-2 bg-linear-to-b from-zinc-900/0 to-black"></div>
       </section>
 
-      <footer className="w-full h-25 flex flex-col justify-center items-center mt-10 border-t border-zinc-800/10 text-zinc-800/40 text-sm text-center">
-        <span>SuperMáquina - Versão Digital do Clássico Jogo de Tabuleiro</span>
-        <span>v1.2.6</span>
+      <section className="w-full min-h-100 py-4">
+
+        <h1 className="text-green-500 text-3xl font-bold font-jaro text-center tracking-wide">Funcionalidades</h1>
+
+        <div className="w-full grid grid-cols-3 mt-16">
+          <CardFeatures color="purple" icon={faUsers} title="Multiplayer" description="Jogue com até 6 amigos simultaneamente, cada um com sua cor personalizada." />
+          <CardFeatures color="green" icon={faDollarSign} title="Gestão Financeira" description="Sistema completo de transações, transferências e histórico detalhado." />
+          <CardFeatures color="amber" icon={faHouse} title="Propriedades" description="26 propriedades baseadas no tabuleiro real com sistema de casas e hotéis." />
+        </div>
+
+      </section>
+
+      <MusicPlayer 
+        isPlaying={playing} 
+        onToggle={toggleMusic}
+        volume={volume}
+        onVolumeChange={setVolume}
+      />
+
+      <footer className="w-full bg-zinc-950 py-8 px-10">
+        <div className="w-full flex flex-col items-center gap-6">
+          <nav>
+            <ul className="flex justify-center items-center gap-8">
+              {menuOptions.map((option, index) => (
+                <li key={index} className="font-inconsolata text-zinc-400 hover:text-zinc-100 hover:scale-105 transition-all duration-100 cursor-pointer">
+                  <Link href={option.url}>{option.text}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div className="flex justify-center items-center gap-6">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-pink-500 transition-colors">
+              <FontAwesomeIcon icon={faInstagram} className="text-xl" />
+            </a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-blue-500 transition-colors">
+              <FontAwesomeIcon icon={faFacebookF} className="text-xl" />
+            </a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
+              <FontAwesomeIcon icon={faGithub} className="text-xl" />
+            </a>
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">
+              <FontAwesomeIcon icon={faXTwitter} className="text-xl" />
+            </a>
+          </div>
+
+          <p className="font-inconsolata text-zinc-500 text-sm - v1.3.0">© 2026 GameBank. Todos os direitos reservados.</p>
+        </div>
       </footer>
-
-      <Modal
-        isOpen={sessionsModal}
-        onClose={() => setSessionsModal(false)}
-        title="Sessões Ativas"
-        size="md"
-      >
-        {activeSessions.length > 0 ? (
-          <div className="max-h-64 overflow-y-auto flex flex-col gap-2">
-            {activeSessions.map((session) => (
-              <Link key={session.id} href={`/game/${session.id}`}>
-                <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {session.nome}
-                      </h3>
-                      <div className="flex items-center text-sm text-gray-500 mt-1">
-                        <Users className="w-4 h-4 mr-1" />
-                        {session.jogadores.length} jogadores
-                        <span className="mx-2">•</span>
-                        <span>{formatDate(session.dataInicio)}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-500">
-                        {session.historico.length} transações
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {session.sessionPosses && session.sessionPosses.length > 0
-                          ? `${
-                              session.sessionPosses.filter((p) => p.playerId)
-                                .length
-                            } propriedades vendidas`
-                          : "0 propriedades vendidas"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="bg-gray-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <GamepadIcon className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Sem jogos em andamento
-            </h3>
-            <p className="text-gray-500 mb-4">
-              Crie uma nova sessão para começar a jogar com seus amigos!
-            </p>
-            <button
-              disabled
-              className="bg-gray-300 text-gray-500 px-6 py-2 rounded-lg cursor-not-allowed"
-            >
-              Nenhum Jogo Ativo
-            </button>
-          </div>
-        )}
-      </Modal>
     </main>
-  );
-}
-
-// Componente reutilizável para cards de funcionalidade
-interface FeatureCardProps {
-  Icon: React.ComponentType<SVGProps<SVGSVGElement>>;
-  colorClass: string;
-  iconColor: string;
-  title: string;
-  description: string;
-}
-function FeatureCard({
-  Icon,
-  colorClass,
-  iconColor,
-  title,
-  description,
-}: FeatureCardProps) {
-  return (
-    <div className="w-full flex flex-col gap-2 items-center">
-      <div
-        className={`w-20 h-20 p-4 flex justify-center items-center ${colorClass} rounded-full`}
-      >
-        <Icon className={`w-full h-full ${iconColor}`} />
-      </div>
-      <h1 className="text-xl font-semibold mt-4">{title}</h1>
-      <p className="w-2/3 text-center text-zinc-800/50">{description}</p>
-    </div>
-  );
+  )
 }

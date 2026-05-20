@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import apiRouter from "./api/routes/index.js";
+import { ensureGameData } from "./utils/ensureGameData.js";
 
 const PORT = process.env.PORT || 7000;
 const app = express();
@@ -13,8 +14,8 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: function(origin, callback){
-      if(!origin || allowedOrigins.includes(origin)){
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -23,12 +24,17 @@ app.use(
   })
 );
 
+async function start() {
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  app.use("/api", apiRouter);
 
-app.use("/api", apiRouter);
+  await ensureGameData();
 
-app.listen(PORT, ()=>{
-  console.log(`Servidor rodando na porta ${PORT}!`)
-})
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}!`)
+  })
+}
+
+start()
