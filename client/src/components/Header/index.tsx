@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MobileMenu } from "../MobileMenu";
 import { menuOptions } from "@/utils/menuOptions";
 import Image from "next/image";
 import Button1 from "../Button01";
 import { useRouter } from "next/navigation";
-import { Menu } from "lucide-react";
+import { Menu, LogOut, User } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/stores/authStore";
 
 type HeaderProps = {
   aba?: string;
@@ -15,6 +16,11 @@ export default function Header({ aba }: HeaderProps) {
 
   const router = useRouter();
   const [openMenu, setOpenMenu] = useState(false);
+  const { user, logout, loadFromStorage } = useAuthStore();
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
 
   return (
     <>
@@ -34,22 +40,31 @@ export default function Header({ aba }: HeaderProps) {
           </ul>
         </nav>
         <nav className="hidden lg:flex w-full justify-end items-center gap-4">
-          {aba === "Sessions" ? (
-            <Button1
-              size="lg"
-              color="green"
-              handle={() => router.push('/new-session')}
-              className="z-20">
-              Criar Sessão
-            </Button1>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-zinc-300 font-jaro text-sm truncate max-w-32">{user.nome}</span>
+              {aba === "Sessions" ? (
+                <Button1 size="lg" color="green" handle={() => router.push('/new-session')} className="z-20">
+                  Criar Sessão
+                </Button1>
+              ) : (
+                <Button1 size="lg" color="green" handle={() => router.push('/sessions')} className="z-20">
+                  Jogar
+                </Button1>
+              )}
+              <button onClick={() => { logout(); router.push('/'); }} className="text-zinc-400 hover:text-red-400 transition-colors" title="Sair">
+                <LogOut size={20} />
+              </button>
+            </div>
           ) : (
-            <Button1
-              size="lg"
-              color="green"
-              handle={() => router.push('/sessions')}
-              className="z-20">
-              Jogar
-            </Button1>
+            <div className="flex items-center gap-3">
+              <button onClick={() => router.push('/login')} className="text-zinc-300 hover:text-green-400 font-jaro transition-colors">
+                Entrar
+              </button>
+              <Button1 size="md" color="green" handle={() => router.push('/register')}>
+                Cadastrar
+              </Button1>
+            </div>
           )}
         </nav>
 

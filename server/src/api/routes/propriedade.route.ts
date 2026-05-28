@@ -11,5 +11,7 @@ propRouter.put('/hipotecar', propsController.hipotecarPropriedade)
 propRouter.put('/buyHouse', propsController.buyHouse)
 propRouter.put('/sellHouse', propsController.sellHouse)
 propRouter.put('/trocar', propsController.trocarPropriedade)
+propRouter.put('/comprar-hipotecada', propsController.comprarHipotecada)
+propRouter.put('/responder-notificacao/:id', propsController.responderNotificacao)
 
 export default propRouter;

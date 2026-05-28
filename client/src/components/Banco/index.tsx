@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import Modal from "../Modal";
 import { useGameStore } from "@/stores/gameStore";
-import {
-  Player,
-  PROPERTY_COLORS,
-  Propriedade,
-  SessionPropriedade,
-} from "@/types/game";
+import { useAuthStore } from "@/stores/authStore";
+import { PROPERTY_COLORS } from "@/types/game";
 import {
   Select,
   SelectContent,
@@ -21,10 +17,10 @@ import { ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Receipt } from "lucid
 
 export default function Banco() {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  
+  const authUser = useAuthStore((s) => s.user)
+
   const {
     currentSession,
-    getPropertyById,
     loadSession,
     deposito,
     saque,
@@ -33,59 +29,31 @@ export default function Banco() {
     aluguelAcao,
     getAluguel,
   } = useGameStore();
-  const [propsDetails, setPropsDetails] = useState<SessionPropriedade | null>(
-    null
-  );
-  const [propsCache, setPropsCache] = useState<
-    Record<number, Propriedade | null>
-  >({});
+
+  const currentPlayer = useMemo(
+    () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
+    [currentSession?.jogadores, authUser?.id]
+  )
 
   const [modalDeposito, setModalDeposito] = useState(false);
   const [modalSaque, setModalSaque] = useState(false);
   const [modalTransferencia, setModalTransferencia] = useState(false);
   const [modalAlguel, setModalAluguel] = useState(false);
 
-  const [selectedPlayer1, setSelectedPlayer1] = useState<Player | null>(null);
-  const [selectedPlayer2, setSelectedPlayer2] = useState<Player | null>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<number | null>(null);
+  const [selectedPropriedade, setSelectedPropriedade] = useState<number | null>(null);
   const [valorOperacao, setValorOperacao] = useState(0);
   const [numeroDados, setNumeroDados] = useState(0);
 
   const [reqLoading, setReqLoading] = useState(false);
 
-  useEffect(() => {
-    console.log(selectedPlayer1, valorOperacao);
-  }, [selectedPlayer1, valorOperacao]);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadProps() {
-      if (!currentSession) return;
-      const ids = Array.from(
-        new Set(currentSession.sessionPosses.map((p) => p.possesId))
-      );
-      const cache: Record<number, Propriedade | null> = {};
-      await Promise.all(
-        ids.map(async (id) => {
-          try {
-            const prop = await getPropertyById(id);
-            if (mounted) cache[id] = prop ?? null;
-          } catch {
-            if (mounted) cache[id] = null;
-          }
-        })
-      );
-      if (mounted) setPropsCache((prev) => ({ ...prev, ...cache }));
-    }
-    loadProps();
-    return () => {
-      mounted = false;
-    };
-  }, [currentSession, getPropertyById]);
+  const jogadores = useMemo(() => currentSession?.jogadores ?? [], [currentSession?.jogadores])
 
   function resetarValores() {
-    setSelectedPlayer1(null);
-    setSelectedPlayer2(null);
+    setSelectedRecipient(null);
+    setSelectedPropriedade(null);
     setValorOperacao(0);
+    setNumeroDados(0);
   }
 
   function getBorderClass(grupo_cor?: string) {
@@ -102,80 +70,65 @@ export default function Banco() {
     }).format(value);
   }
 
-  async function depositar(userId: number | undefined, valor: number) {
-    if (userId == null || valor <= 0)
+  async function depositar(valor: number) {
+    if (!currentPlayer || valor <= 0)
       return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
-
     if (valor >= 10000000) return toastWarning("Valor muito alto!");
 
     try {
       setReqLoading(true);
-      await deposito({ userId, sessionId: currentSession.id, valor });
+      await deposito({ userId: currentPlayer.id, sessionId: currentSession.id, valor });
 
       toastSuccess("Depósito realizado com sucesso!");
       await loadSession(currentSession.id);
       setModalDeposito(false);
-      setReqLoading(false);
       resetarValores();
-    } catch (error) {
-      console.error("Erro no depósito!", error);
+    } catch {
       toastError("Erro no depósito!");
       setModalDeposito(false);
       resetarValores();
+    } finally {
+      setReqLoading(false);
     }
   }
 
-  async function retirar(userId: number | undefined, valor: number) {
-    if (userId == null || valor <= 0)
+  async function retirar(valor: number) {
+    if (!currentPlayer || valor <= 0)
       return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
+    if (currentPlayer.saldo < valor) return toastError("Saldo insuficiente!");
 
     try {
-      const player = currentSession.jogadores.find((p) => p.id === userId);
-      if (!player) return toastError("Jogador não encontrado!");
-      if (player?.saldo < valor) return toastError("Saldo insuficiente!");
-
       setReqLoading(true);
-      await saque({ userId, sessionId: currentSession.id, valor });
+      await saque({ userId: currentPlayer.id, sessionId: currentSession.id, valor });
 
       toastSuccess("Saque realizado com sucesso!");
       await loadSession(currentSession.id);
       setModalSaque(false);
-      setReqLoading(false);
       resetarValores();
-    } catch (error) {
-      console.error("Erro no saque!", error);
+    } catch {
       toastError("Erro no saque!");
       setModalSaque(false);
       resetarValores();
+    } finally {
+      setReqLoading(false);
     }
   }
 
-  async function transferir(
-    pagador: number | undefined,
-    recebedor: number | undefined,
-    valor: number
-  ) {
-    if (
-      pagador == null ||
-      recebedor == null ||
-      valor <= 0 ||
-      pagador === 0 ||
-      recebedor === 0
-    )
+  async function transferir(recebedor: number | null, valor: number) {
+    if (!currentPlayer || recebedor == null || valor <= 0)
       return toastError("Campos vazios ou valor inválido!");
     if (!currentSession) return;
+    if (currentPlayer.saldo < valor) return toastError("Saldo insuficiente!");
+    if (currentPlayer.id === recebedor)
+      return toastError("Você não pode transferir para si mesmo!");
 
     try {
-      const player = currentSession.jogadores.find((p) => p.id === pagador);
-      if (!player) return toastError("Jogador não encontrado!");
-      if (player.saldo < valor) return toastError("Saldo insuficiente!");
-
       setReqLoading(true);
       await transferencia({
         recebedorId: recebedor,
-        pagadorId: pagador,
+        pagadorId: currentPlayer.id,
         sessionId: currentSession.id,
         valor,
       });
@@ -183,57 +136,60 @@ export default function Banco() {
       toastSuccess("Transferência realizada com sucesso!");
       await loadSession(currentSession.id);
       setModalTransferencia(false);
-      setReqLoading(false);
       resetarValores();
-    } catch (error) {
-      console.error("Erro na transferencia!", error);
+    } catch {
       toastError("Erro na transferência!");
       setModalTransferencia(false);
       resetarValores();
+    } finally {
+      setReqLoading(false);
     }
   }
 
-  async function pagarAluguel(
-    pagadorId: number | undefined,
-    propriedadeId: number | undefined
-  ) {
-    if (!pagadorId || !propriedadeId) return toastError("Campos vazios!");
+  async function pagarAluguel(propriedadeId: number | undefined) {
+    if (!currentPlayer || !propriedadeId) return toastError("Campos vazios!");
     if (!currentSession) return;
 
+    const selectedProp = currentSession.sessionPosses.find(p => p.id === propriedadeId)
+    if (!selectedProp) return toastError("Propriedade não encontrada!");
+
     try {
-      if (propsDetails && propsCache[propsDetails.possesId]?.tipo === "ação") {
-        setReqLoading(true);
+      setReqLoading(true);
+
+      if (selectedProp.posses?.propriedade?.tipo === "ação") {
         await aluguelAcao({
           sessionId: currentSession.id,
-          pagadorId,
+          pagadorId: currentPlayer.id,
           sessionPossesId: propriedadeId,
           numDados: numeroDados,
         });
-        toastSuccess("Aluguel pago com sucesso!");
-        await loadSession(currentSession.id);
-        setModalAluguel(false);
-        resetarValores();
-        return;
+      } else {
+        await aluguel({
+          sessionId: currentSession.id,
+          pagadorId: currentPlayer.id,
+          sessionPossesId: propriedadeId,
+        });
       }
 
-      setReqLoading(true);
-      await aluguel({
-        sessionId: currentSession.id,
-        pagadorId,
-        sessionPossesId: propriedadeId,
-      });
       toastSuccess("Aluguel pago com sucesso!");
       await loadSession(currentSession.id);
       setModalAluguel(false);
-      setReqLoading(false);
       resetarValores();
-    } catch (error) {
-      console.error("Erro ao pagar o aluguel.", error);
+    } catch {
       toastError("Erro ao pagar o aluguel.");
       setModalAluguel(false);
       resetarValores();
+    } finally {
+      setReqLoading(false);
     }
   }
+
+  const selectedPropData = useMemo(() => {
+    if (!selectedPropriedade || !currentSession) return null
+    const sp = currentSession.sessionPosses.find(p => p.id === selectedPropriedade)
+    if (!sp) return null
+    return { sessionPosses: sp, propriedade: sp.posses?.propriedade ?? null }
+  }, [selectedPropriedade, currentSession?.sessionPosses])
 
   return (
     <main className="w-full px-10">
@@ -251,7 +207,7 @@ export default function Banco() {
             </span>
           </div>
         </button>
-        
+
         <button
           onClick={() => setModalSaque(true)}
           className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-red-500 transition-colors cursor-pointer"
@@ -265,7 +221,7 @@ export default function Banco() {
             </span>
           </div>
         </button>
-        
+
         <button
           onClick={() => setModalTransferencia(true)}
           className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-sky-500 transition-colors cursor-pointer"
@@ -279,7 +235,7 @@ export default function Banco() {
             </span>
           </div>
         </button>
-        
+
         <button
           onClick={() => setModalAluguel(true)}
           className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-amber-500 transition-colors cursor-pointer"
@@ -295,313 +251,207 @@ export default function Banco() {
         </button>
       </nav>
 
+      {/* Modal Depósito */}
       <Modal
         size="md"
-        title="Deposito"
+        title="Depósito"
         isOpen={modalDeposito}
         onClose={() => setModalDeposito(false)}
       >
-        <h1 className="mb-3">
-          Escolha o Jogador que vai realizar a transação:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSession?.jogadores
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              ))
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
+        <p className="mb-3 font-inconsolata text-zinc-300">
+          Depositar para: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+        </p>
 
-        <h1 className="mt-4 mb-1">Digite o valor que ele irá receber:</h1>
+        <label className="block text-sm font-inconsolata text-zinc-400 mb-1">Valor do depósito:</label>
         <input
           type="number"
           value={valorOperacao}
           onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded"
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
         />
 
-        <div className="w-full flex justify-center items-center">
+        <div className="w-full flex justify-center items-center mt-5">
           <button
-            disabled={reqLoading || !selectedPlayer1 || valorOperacao <= 0}
-            onClick={() => depositar(selectedPlayer1?.id, valorOperacao)}
-            className="px-16 py-1 mt-5 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={reqLoading || !currentPlayer || valorOperacao <= 0}
+            onClick={() => depositar(valorOperacao)}
+            className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar
+            {reqLoading ? "Depositando..." : "Confirmar"}
           </button>
         </div>
       </Modal>
 
+      {/* Modal Saque */}
       <Modal
         size="md"
         title="Saque"
         isOpen={modalSaque}
         onClose={() => setModalSaque(false)}
       >
-        <h1 className="mb-3">
-          Escolha o Jogador que vai realizar a transação:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSession?.jogadores
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              ))
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
+        <p className="mb-3 font-inconsolata text-zinc-300">
+          Sacar de: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+        </p>
 
-        <h1 className="mt-4 mb-1">Digite o valor que ele irá pagar:</h1>
+        <label className="block text-sm font-inconsolata text-zinc-400 mb-1">Valor do saque:</label>
         <input
           type="number"
           value={valorOperacao}
           onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded"
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
         />
 
-        <div className="w-full flex justify-center items-center">
+        <div className="w-full flex justify-center items-center mt-5">
           <button
-            disabled={reqLoading || !selectedPlayer1 || valorOperacao <= 0}
-            onClick={() => retirar(selectedPlayer1?.id, valorOperacao)}
-            className="px-16 py-1 mt-5 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={reqLoading || !currentPlayer || valorOperacao <= 0}
+            onClick={() => retirar(valorOperacao)}
+            className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar
+            {reqLoading ? "Sacando..." : "Confirmar"}
           </button>
         </div>
       </Modal>
 
+      {/* Modal Transferência */}
       <Modal
         size="md"
-        title="Transferencia"
+        title="Transferência"
         isOpen={modalTransferencia}
         onClose={() => setModalTransferencia(false)}
       >
-        <h1 className="mb-1">Esolha o jogador que vai pagar:</h1>
+        <p className="mb-3 font-inconsolata text-zinc-300">
+          Pagador: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+        </p>
+
+        <label className="block text-sm font-inconsolata text-zinc-400 mb-1">Recebedor:</label>
         <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
+          onValueChange={(value) => setSelectedRecipient(Number(value))}
+          value={selectedRecipient?.toString()}
         >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
+          <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-zinc-100">
+            <SelectValue placeholder="Selecione o recebedor" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">Selecione</SelectItem>
-            {currentSession?.jogadores
-              .filter((p) => p.id !== selectedPlayer2?.id)
+          <SelectContent className="bg-zinc-900 border-zinc-700">
+            {jogadores
+              .filter((p) => p.id !== currentPlayer?.id)
               .map((player) => (
                 <SelectItem key={player.id} value={String(player.id)}>
                   {player.nome}
                 </SelectItem>
-              ))
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
+              ))}
           </SelectContent>
         </Select>
 
-        <h1 className="mt-4 mb-1">Esolha o jogador que vai receber:</h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer2(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">Selecione</SelectItem>
-            {currentSession?.jogadores
-              .filter((p) => p.id !== selectedPlayer1?.id)
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              ))
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
-
-        <h1 className="mt-4 mb-1">Digite o valor que ele irá pagar:</h1>
+        <label className="block text-sm font-inconsolata text-zinc-400 mt-4 mb-1">Valor:</label>
         <input
           type="number"
           value={valorOperacao}
           onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded"
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
         />
 
-        <div className="w-full flex justify-center items-center">
+        <div className="w-full flex justify-center items-center mt-5">
           <button
-            disabled={
-              reqLoading ||
-              !selectedPlayer1 ||
-              !selectedPlayer2 ||
-              valorOperacao <= 0
-            }
-            onClick={() =>
-              transferir(
-                selectedPlayer1?.id,
-                selectedPlayer2?.id,
-                valorOperacao
-              )
-            }
-            className="px-16 py-1 mt-5 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={reqLoading || !currentPlayer || !selectedRecipient || valorOperacao <= 0}
+            onClick={() => transferir(selectedRecipient, valorOperacao)}
+            className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar
+            {reqLoading ? "Transferindo..." : "Confirmar"}
           </button>
         </div>
       </Modal>
 
+      {/* Modal Pagar Aluguel */}
       <Modal
         size="md"
-        title="Pagar aluguel"
+        title="Pagar Aluguel"
         isOpen={modalAlguel}
         onClose={() => {
           setModalAluguel(false);
           resetarValores();
-          setPropsDetails(null);
         }}
       >
-        <h1 className="mb-2">Escolha o jogador que vai pagar:</h1>
+        <p className="mb-3 font-inconsolata text-zinc-300">
+          Pagador: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+        </p>
 
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSession?.jogadores
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              ))
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
-
-        <h1 className="mt-4 mb-2">
+        <label className="block text-sm font-inconsolata text-zinc-400 mb-1">
           Selecione a propriedade que o jogador caiu:
-        </h1>
+        </label>
         <Select
-          onValueChange={(value) => {
-            const propriedade = currentSession?.sessionPosses.find(
-              (p) => p.id === Number(value)
-            );
-            setPropsDetails(propriedade ?? null);
-          }}
+          onValueChange={(value) => setSelectedPropriedade(Number(value))}
+          value={selectedPropriedade?.toString()}
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a propriedade!" />
+          <SelectTrigger className="w-full bg-zinc-900 border-zinc-700 text-zinc-100">
+            <SelectValue placeholder="Selecione a propriedade" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-zinc-900 border-zinc-700">
             {currentSession?.sessionPosses
               .filter((p) => !!p.playerId)
-              .filter((p) => p.playerId !== selectedPlayer1?.id)
+              .filter((p) => p.playerId !== currentPlayer?.id)
               .map((poss) => {
-                const propData = propsCache[poss.possesId];
-                const label = propData?.nome ?? `Carregando...`;
+                const propData = poss.posses?.propriedade;
+                const label = propData?.nome ?? `Propriedade #${poss.possesId}`;
                 return (
                   <SelectItem key={poss.id} value={String(poss.id)}>
                     {label}
                   </SelectItem>
                 );
-              })
-              .sort((a, b) => a.props.children.localeCompare(b.props.children))}
+              })}
           </SelectContent>
         </Select>
 
-        {/* Verifica se é Ação ou não */}
-        {propsDetails && propsCache[propsDetails.possesId]?.tipo === "ação" && (
-          <div>
-            <h1 className="mt-4 mb-1">
-              Digite o número que o jogador tirou nos dados:
-            </h1>
+        {/* Input para ações */}
+        {selectedPropData?.propriedade?.tipo === "ação" && (
+          <div className="mt-4">
+            <label className="block text-sm font-inconsolata text-zinc-400 mb-1">
+              Número tirado nos dados:
+            </label>
             <input
               type="number"
               value={numeroDados}
               onChange={(e) => setNumeroDados(Number(e.target.value))}
-              className="bg-zinc-400/20 py-1 px-2 rounded"
+              className="bg-zinc-400/20 py-1 px-2 rounded w-full"
             />
           </div>
         )}
 
-        {/* Card com informações da propriedade selecionada */}
-        {propsDetails &&
-          (() => {
-            const propData = propsCache[propsDetails.possesId];
-            const casas = propsDetails.casas ?? 0;
-            const aluguelAtual = propData ? getAluguel(propData, casas) : 0;
-            const borderClass = getBorderClass(propData?.grupo_cor);
+        {/* Card de informação da propriedade */}
+        {selectedPropData && (() => {
+          const { sessionPosses: sp, propriedade: propData } = selectedPropData
+          const casas = sp.casas ?? 0;
+          const aluguelAtual = propData ? getAluguel(propData, casas) : 0;
+          const borderClass = getBorderClass(propData?.grupo_cor);
 
-            return (
-              <div className={`mt-4 p-3 rounded-md bg-zinc-800 ${borderClass}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg text-zinc-100">
-                      {propData?.nome ??
-                        `Propriedade #${propsDetails.possesId}`}
-                    </h3>
-                    <p className="text-sm text-zinc-400">
-                      Cor: {propData?.grupo_cor ?? "—"}
-                    </p>
-                    <p className="text-sm text-zinc-400">Casas: {casas}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-zinc-500">Aluguel atual</div>
-                    <div className="text-xl font-bold text-green-400">
-                      {formatCurrency(aluguelAtual)}
-                    </div>
+          return (
+            <div className={`mt-4 p-3 rounded-md bg-zinc-800 ${borderClass}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg text-zinc-100">
+                    {propData?.nome ?? `Propriedade #${sp.possesId}`}
+                  </h3>
+                  <p className="text-sm text-zinc-400">
+                    Cor: {propData?.grupo_cor ?? "—"}
+                  </p>
+                  <p className="text-sm text-zinc-400">Casas: {casas}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-zinc-500">Aluguel atual</div>
+                  <div className="text-xl font-bold text-green-400">
+                    {formatCurrency(aluguelAtual)}
                   </div>
                 </div>
               </div>
-            );
-          })()}
+            </div>
+          );
+        })()}
 
         <div className="w-full flex justify-center items-center mt-4">
           <button
-            onClick={() => {
-              pagarAluguel(selectedPlayer1?.id, propsDetails?.id);
-            }}
-            disabled={reqLoading || !selectedPlayer1 || !propsDetails}
+            onClick={() => pagarAluguel(selectedPropriedade ?? undefined)}
+            disabled={reqLoading || !currentPlayer || !selectedPropriedade}
             className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar
+            {reqLoading ? "Pagando..." : "Confirmar"}
           </button>
         </div>
       </Modal>

@@ -18,6 +18,7 @@ import PropertyCard from "../PropertyCard"
 interface PlayerCardProps {
   player: Player
   totalPropertyValue: number
+  isOwner: boolean
 }
 
 type Group = {
@@ -38,7 +39,7 @@ type PendingAction = {
   apiFn: () => Promise<void>
 }
 
-export default function PlayerCard({ player, totalPropertyValue }: PlayerCardProps) {
+export default function PlayerCard({ player, totalPropertyValue, isOwner }: PlayerCardProps) {
   const { success: toastSuccess, error: toastError } = useToast()
 
   const {
@@ -226,13 +227,14 @@ export default function PlayerCard({ player, totalPropertyValue }: PlayerCardPro
           p => p.possesId === pendingAction.propId  // ← possesId
         )?.casas
       )
-    } catch {
+    } catch (err: any) {
       pendingAction.rollbackFn()
       toastError(
-        pendingAction.type === 'buyHouse' ? 'Erro ao comprar casa' :
+        err?.response?.data?.message ??
+        (pendingAction.type === 'buyHouse' ? 'Erro ao comprar casa' :
           pendingAction.type === 'sellHouse' ? 'Erro ao vender casa' :
             pendingAction.type === 'hipotecar' ? 'Erro ao hipotecar' :
-              'Erro ao vender propriedade'
+              'Erro ao vender propriedade')
       )
     } finally {
       setActionLoading(false)
@@ -311,6 +313,7 @@ export default function PlayerCard({ player, totalPropertyValue }: PlayerCardPro
             playerId={player.id}
             playerName={player.nome}
             show={showMenu}
+            isOwner={isOwner}
             onToggle={() => setShowMenu(!showMenu)}
           />
         </div>

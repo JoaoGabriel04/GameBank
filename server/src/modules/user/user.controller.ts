@@ -1,21 +1,29 @@
-import { Request, Response } from "express";
-import { prisma } from "../../lib/prisma.js";
+import type { Request, Response } from "express";
+import { UserService } from "./user.service.js";
+import { SessionService } from "../session/session.service.js";
+import { AppError } from "../../middleware/error-handler.middleware.js";
+import { emitSessionUpdated } from "../socket/socket.handler.js";
 
-const userController = {
+const userService = new UserService();
+const sessionService = new SessionService();
+
+async function emitUpdatedSession(sessionId: number) {
+  const session = await sessionService.loadSession(sessionId);
+  emitSessionUpdated(sessionId, session);
+}
+
+export const userController = {
   getById: async (req: Request, res: Response) => {
     const { playerId } = req.params;
 
     try {
-      const player = await prisma.sessionPlayer.findUnique({
-        where: { id: parseInt(playerId) },
-        include: {
-          sessionPosses: true,
-        },
-      });
-
+      const player = await userService.getPlayerById(parseInt(playerId));
       res.status(200).json(player);
-    } catch (error) {
-      console.error("Erro ao buscar jogador:", error);
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message: err.message });
+      }
+      console.error("Erro ao buscar jogador:", err);
       res.status(500).json({ message: "Erro ao buscar jogador" });
     }
   },
@@ -25,58 +33,33 @@ const userController = {
     const { nome, cor } = req.body;
 
     try {
-      const player = await prisma.sessionPlayer.update({
-        where: { id: parseInt(playerId) },
-        data: {
-          nome,
-          cor,
-        },
-      });
-
+      const player = await userService.editPlayer(parseInt(playerId), nome, cor);
+      const sessionId = (player as any).sessionId;
+      if (sessionId) await emitUpdatedSession(sessionId);
       res.status(200).json(player);
-    } catch (error) {
-      console.error("Erro ao buscar jogador:", error);
-      res.status(500).json({ message: "Erro ao buscar jogador" });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message: err.message });
+      }
+      console.error("Erro ao editar jogador:", err);
+      res.status(500).json({ message: "Erro ao editar jogador" });
     }
   },
 
   removePlayer: async (req: Request, res: Response) => {
     const { playerId } = req.params;
+    const requesterUserId = req.user!.userId;
 
     try {
-
-      const selectPlayer = await prisma.sessionPlayer.findUnique({
-        where: { id: parseInt(playerId) },
-        include: {
-          sessionPosses: true,
-        },
-      });
-
-      if (!selectPlayer) return res.status(404).json({ message: "Jogador não encontrado" })
-      
-      if (selectPlayer.sessionPosses.length > 0) {
-        // Excluir posses associadas ao jogador
-        await prisma.sessionPosses.updateMany({
-          where: { playerId: selectPlayer.id },
-          data: {
-            playerId: null,
-            casas: 0,
-          },
-        });
+      const result = await userService.removePlayer(parseInt(playerId), requesterUserId);
+      if (result.sessionId) await emitUpdatedSession(result.sessionId);
+      res.status(200).json({ message: "Jogador removido com sucesso", player: result });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message: err.message });
       }
-
-      const player = await prisma.sessionPlayer.delete({
-        where: { id: parseInt(playerId) },
-        include: {
-          session: true,
-          sessionPosses: true,
-        },
-      });
-
-      res.status(200).json({ message: "Jogador removido com sucesso", player });
-    } catch (error) {
-      console.error("Erro ao buscar jogador:", error);
-      res.status(500).json({ message: "Erro ao buscar jogador" });
+      console.error("Erro ao remover jogador:", err);
+      res.status(500).json({ message: "Erro ao remover jogador" });
     }
   },
 };

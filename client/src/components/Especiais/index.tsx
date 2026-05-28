@@ -1,172 +1,179 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import Modal from "../Modal";
-import {
-  Player,
-  PROPERTY_COLORS,
-  Propriedade,
-  SessionPropriedade,
-} from "@/types/game";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { useGameStore } from "@/stores/gameStore";
+import { useAuthStore } from "@/stores/authStore";
+import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useToast } from "@/components/Toast";
-import { ArrowLeftRight, Coins } from "lucide-react";
+import { Coins, Handshake, Building2, ArrowRight, ArrowLeft, Ban, Gavel, Plus, Minus, Check } from "lucide-react";
+import { PROPERTY_COLORS } from "@/types/game";
+import { criarNegociacaoApi } from "@/services/api/negotiations";
+
+const COLOR_HEX: Record<string, string> = {
+  lime:    "#84cc16",
+  green:   "#15803d",
+  red:     "#dc2626",
+  blue:    "#2563eb",
+  amber:   "#fcd34d",
+  orange:  "#ea580c",
+  pink:    "#db2777",
+  purple:  "#7e22ce",
+  zinc:    "#fafafa",
+}
+
+function getAccentHex(grupoCor: string | null): string {
+  if (!grupoCor) return "#52525b"
+  const found = PROPERTY_COLORS.find((c) => c.value === grupoCor)
+  if (!found) return COLOR_HEX[grupoCor] ?? "#52525b"
+  const match = found.bg?.match(/bg-(\w+)/)
+  if (match) return COLOR_HEX[match[1]] ?? "#52525b"
+  return "#52525b"
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR")
+}
+
+interface ItemInput {
+  sessionPossesId?: number | null;
+  fromSide: boolean;
+  valor?: number | null;
+}
 
 export default function Especiais() {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  
-  const {
-    currentSession,
-    loadSession,
-    trocaPropriedades,
-    getAluguel,
-    getPropertyById,
-    receberDeTodos,
-  } = useGameStore();
+  const authUser = useAuthStore((s) => s.user)
+  const { currentSession, loadSession, receberDeTodos } = useGameStore();
+  const { pendentes } = useNegotiationStore();
 
-  const [modalTroca, setModalTroca] = useState(false);
+  const currentPlayer = useMemo(
+    () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
+    [currentSession?.jogadores, authUser?.id]
+  )
+
+  const [modalNegociar, setModalNegociar] = useState(false);
   const [modalReceber, setModalReceber] = useState(false);
-
   const [reqLoading, setReqLoading] = useState(false);
 
-  const [selectedPlayer1, setSelectedPlayer1] = useState<Player | null>(null);
-  const [selectedPlayer2, setSelectedPlayer2] = useState<Player | null>(null);
+  // Create negotiation state
+  const [targetPlayer, setTargetPlayer] = useState<number | null>(null);
+  const [offerPropIds, setOfferPropIds] = useState<number[]>([]);
+  const [offerMoney, setOfferMoney] = useState(0);
+  const [wantPropIds, setWantPropIds] = useState<number[]>([]);
+  const [wantMoney, setWantMoney] = useState(0);
 
-  const [propsDetails, setPropsDetails] = useState<SessionPropriedade | null>(
-    null
-  );
-  const [propsCache, setPropsCache] = useState<
-    Record<number, Propriedade | null>
-  >({});
+  const jogadores = useMemo(() => currentSession?.jogadores ?? [], [currentSession?.jogadores])
 
-  useEffect(() => {
-    let mounted = true;
-    async function loadProps() {
-      if (!currentSession) return;
-      const ids = Array.from(
-        new Set(currentSession.sessionPosses.map((p) => p.possesId))
-      );
-      const cache: Record<number, Propriedade | null> = {};
-      await Promise.all(
-        ids.map(async (id) => {
-          try {
-            const prop = await getPropertyById(id);
-            if (mounted) cache[id] = prop ?? null;
-          } catch {
-            if (mounted) cache[id] = null;
-          }
-        })
-      );
-      if (mounted) setPropsCache((prev) => ({ ...prev, ...cache }));
+  const mySessionPosses = useMemo(
+    () => currentSession?.sessionPosses
+      .filter((p) => p.playerId === currentPlayer?.id && !p.hipotecada && !p.negociando) ?? [],
+    [currentSession?.sessionPosses, currentPlayer?.id]
+  )
+
+  const targetPlayerPosses = useMemo(() => {
+    if (!targetPlayer || !currentSession) return [];
+    return currentSession.sessionPosses
+      .filter((p) => p.playerId === targetPlayer && !p.hipotecada && !p.negociando);
+  }, [targetPlayer, currentSession?.sessionPosses])
+
+  function resetCreate() {
+    setTargetPlayer(null);
+    setOfferPropIds([]);
+    setOfferMoney(0);
+    setWantPropIds([]);
+    setWantMoney(0);
+  }
+
+  function toggleOfferProp(id: number) {
+    setOfferPropIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleWantProp(id: number) {
+    setWantPropIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function handleCriarNegociacao() {
+    if (!currentPlayer || !targetPlayer || !currentSession) return;
+    if (offerPropIds.length === 0 && wantPropIds.length === 0 && offerMoney <= 0 && wantMoney <= 0) {
+      return toastWarning("Adicione pelo menos um item à negociação!");
     }
-    loadProps();
-    return () => {
-      mounted = false;
-    };
-  }, [currentSession, getPropertyById]);
+    if (offerPropIds.length === 0 && wantPropIds.length === 0 && offerMoney === wantMoney) {
+      return toastWarning("A negociação precisa ter pelo menos uma propriedade ou diferença de dinheiro!");
+    }
 
-  function resetarValores() {
-    setSelectedPlayer1(null);
-    setSelectedPlayer2(null);
-  }
-
-  function getBorderClass(grupo_cor?: string) {
-    if (!grupo_cor) return "border-zinc-600 border-2";
-    const colorInfo = PROPERTY_COLORS.find((c) => c.value === grupo_cor);
-    if (!colorInfo) return "border-zinc-600 border-2";
-    return `${colorInfo.border} border-t-4 border-2`;
-  }
-
-  function formatCurrency(value: number) {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  }
-
-  async function trocarPropriedade(
-    userId: number | undefined,
-    propriedadeId: number | undefined
-  ) {
-    if (userId == null || propriedadeId == null || userId === 0) return toastWarning("Campos Vazios!");
-    if (!currentSession) return;
-
+    setReqLoading(true);
     try {
-      const propSelected = await currentSession.sessionPosses.find(
-        (p) => p.possesId === propriedadeId
-      );
+      const offerItems: ItemInput[] = [
+        ...offerPropIds.map((id) => ({ sessionPossesId: id, fromSide: true })),
+        ...(offerMoney > 0 ? [{ fromSide: true, valor: offerMoney } as ItemInput] : []),
+      ];
+      const wantItems: ItemInput[] = [
+        ...wantPropIds.map((id) => ({ sessionPossesId: id, fromSide: false })),
+        ...(wantMoney > 0 ? [{ fromSide: false, valor: wantMoney } as ItemInput] : []),
+      ];
 
-      if (propSelected?.casas)
-        return toastWarning("Essa propriedade ainda possui casas!");
-
-      setReqLoading(true);
-      await trocaPropriedades({
-        userId,
-        sessionId: currentSession.id,
-        propriedadeId,
-      });
-
-      toastSuccess("Transferência realizada com sucesso!");
+      await criarNegociacaoApi(currentSession.id, currentPlayer.id, targetPlayer, offerItems, wantItems);
+      toastSuccess("Negociação enviada!");
       await loadSession(currentSession.id);
-      setModalTroca(false);
+      setModalNegociar(false);
+      resetCreate();
+    } catch (err: any) {
+      toastError(err?.response?.data?.message || "Erro ao criar negociação");
+    } finally {
       setReqLoading(false);
-      resetarValores();
-    } catch (error) {
-      console.error("Erro ao trocar propriedade!", error);
-      toastError("Erro ao trocar propriedade!");
-      setModalTroca(false);
     }
   }
 
-  async function handleReceberDeTodos(userId: number | undefined) {
-    
-    if (userId == null) return toastWarning("Campos Vazios!");
+  async function handleReceberDeTodos() {
+    if (!currentPlayer) return toastWarning("Campos Vazios!");
     if (!currentSession) return;
 
-    currentSession.jogadores.filter((p)=> p.id !== userId).map((player)=>{
-      if (player.saldo < 500) return toastError(`O Jogador ${player.nome} não tem saldo suficiente!`)
-    })
+    for (const player of jogadores) {
+      if (player.id !== currentPlayer.id && player.saldo < 500) {
+        return toastError(`O Jogador ${player.nome} não tem saldo suficiente!`)
+      }
+    }
 
     try {
       setReqLoading(true);
       await receberDeTodos({
-        userId,
-        sessionId: currentSession.id
+        userId: currentPlayer.id,
+        sessionId: currentSession.id,
       });
-
-      toastSuccess("Transferências realizadas com sucesso!");
+      toastSuccess("Pagamentos recebidos com sucesso!");
       await loadSession(currentSession.id);
       setModalReceber(false);
+    } catch (err: any) {
+      toastError(err?.response?.data?.message || "Erro ao receber de todos!");
+      setModalReceber(false);
+    } finally {
       setReqLoading(false);
-      resetarValores();
-    }catch (error){
-      console.error("Erro ao trocar propriedade!", error);
-      toastError("Erro ao trocar propriedade!");
-      setModalTroca(false);
     }
-
   }
 
   return (
     <main className="w-full px-10">
       <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
-          onClick={() => setModalTroca(true)}
-          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-purple-500 transition-colors cursor-pointer"
+          onClick={() => setModalNegociar(true)}
+          className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-purple-500 transition-colors cursor-pointer relative"
         >
+          {pendentes.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center z-10">
+              {pendentes.length}
+            </span>
+          )}
           <div className="h-1.5 w-full bg-purple-500" />
           <div className="p-4 flex flex-col items-center gap-2">
-            <ArrowLeftRight className="w-8 h-8 text-purple-500" />
-            <span className="text-zinc-100 font-jaro text-lg">Trocar</span>
+            <Handshake className="w-8 h-8 text-purple-500" />
+            <span className="text-zinc-100 font-jaro text-lg">Negociar</span>
             <span className="text-zinc-500 text-xs font-inconsolata text-center">
-              Troque propriedades entre jogadores
+              Negocie propriedades entre jogadores
             </span>
           </div>
         </button>
@@ -186,179 +193,310 @@ export default function Especiais() {
         </button>
       </nav>
 
+      {/* Modal de Criação de Negociação */}
       <Modal
-        size="md"
-        title="Troca de Propriedades"
-        isOpen={modalTroca}
-        onClose={() => setModalTroca(false)}
+        size="lg"
+        title="Nova Negociação"
+        isOpen={modalNegociar}
+        onClose={() => { setModalNegociar(false); resetCreate(); }}
       >
-        <h1 className="mb-1">
-          Selecione o jogador que vai receber a propriedade:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">Selecione</SelectItem>
-            {currentSession?.jogadores
-              .filter((p) => p.id !== selectedPlayer2?.id)
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              )).sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3 px-1 py-2 mb-4 bg-zinc-800/50 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+            <Handshake className="w-4 h-4 text-purple-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-inconsolata text-zinc-400">
+              Proponente: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
+            <p className="text-sm font-inconsolata text-green-400">R$ {formatCurrency(currentPlayer?.saldo ?? 0)}</p>
+          </div>
+        </div>
 
-        <h1 className="mt-4 mb-1">
-          Selecione o jogador que vai entregar a propriedade:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer2(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">Selecione</SelectItem>
-            {currentSession?.jogadores
-              .filter((p) => p.id !== selectedPlayer1?.id)
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              )).sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
+        {!targetPlayer ? (
+          <div className="space-y-3 mb-4">
+            <p className="text-sm font-inconsolata text-zinc-400 mb-2">Selecione o jogador alvo:</p>
+            <div className="grid grid-cols-2 gap-3">
+              {jogadores
+                .filter((p) => p.id !== currentPlayer?.id)
+                .map((player) => {
+                  const propCount = currentSession?.sessionPosses.filter(
+                    (sp) => sp.playerId === player.id && !sp.hipotecada && !sp.negociando
+                  ).length ?? 0;
+                  return (
+                    <button
+                      key={player.id}
+                      onClick={() => setTargetPlayer(player.id)}
+                      className="flex items-center gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 hover:bg-zinc-800/80 transition-all cursor-pointer text-left"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg font-jaro text-zinc-100">{player.nome.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-jaro text-zinc-100 truncate">{player.nome}</p>
+                        <p className="text-xs font-inconsolata text-zinc-500">
+                          R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-zinc-600 flex-shrink-0" />
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-inconsolata text-zinc-400">Negociando com:</span>
+                <span className="text-sm font-jaro text-purple-400">
+                  {jogadores.find((p) => p.id === targetPlayer)?.nome}
+                </span>
+              </div>
+              <button
+                onClick={() => setTargetPlayer(null)}
+                className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                Trocar alvo
+              </button>
+            </div>
 
-        <h1 className="mt-4 mb-2">
-          Selecione a propriedade que o jogador quer trocar:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const propriedade = currentSession?.sessionPosses.find(
-              (p) => p.id === Number(value)
-            );
-            setPropsDetails(propriedade ?? null);
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a propriedade!" />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSession?.sessionPosses
-              .filter((p) => !!p.playerId)
-              .filter((p) => p.playerId !== selectedPlayer1?.id)
-              .filter((p) => p.playerId === selectedPlayer2?.id)
-              .map((poss) => {
-                const propData = propsCache[poss.possesId];
-                const label = propData?.nome ?? `Carregando...`;
-                return (
-                  <SelectItem key={poss.id} value={String(poss.id)}>
-                    {label}
-                  </SelectItem>
-                );
-              }).sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
-
-        {/* Card com informações da propriedade selecionada */}
-        {propsDetails &&
-          (() => {
-            const propData = propsCache[propsDetails.possesId];
-            const casas = propsDetails.casas ?? 0;
-            const aluguelAtual = propData ? getAluguel(propData, casas) : 0;
-            const borderClass = getBorderClass(propData?.grupo_cor);
-
-            return (
-              <div className={`mt-4 p-3 rounded-md bg-zinc-800 ${borderClass}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg text-zinc-100">
-                      {propData?.nome ??
-                        `Propriedade #${propsDetails.possesId}`}
-                    </h3>
-                    <p className="text-sm text-zinc-400">
-                      Cor: {propData?.grupo_cor ?? "—"}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* O que eu ofereço */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 border-b border-zinc-700 pb-2">
+                  <ArrowLeft className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-sm font-jaro text-zinc-200">O que eu ofereço</h3>
+                </div>
+                <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+                  {mySessionPosses.length === 0 && (
+                    <p className="text-xs font-inconsolata text-zinc-600 italic py-3 text-center">
+                      Nenhuma propriedade disponível
                     </p>
-                    <p className="text-sm text-zinc-400">Casas: {casas}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-zinc-500">Aluguel atual</div>
-                    <div className="text-xl font-bold text-green-400">
-                      {formatCurrency(aluguelAtual)}
-                    </div>
+                  )}
+                  {mySessionPosses.map((sp) => {
+                    const propData = sp.posses?.propriedade;
+                    const casas = sp.casas ?? 0;
+                    const selected = offerPropIds.includes(sp.id);
+                    const accent = propData?.grupo_cor ? getAccentHex(propData.grupo_cor) : "#52525b";
+                    return (
+                      <button
+                        key={sp.id}
+                        type="button"
+                        onClick={() => toggleOfferProp(sp.id)}
+                        className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all text-left ${
+                          selected
+                            ? "bg-purple-500/15 border border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                            : "bg-zinc-800/60 border border-zinc-700/60 hover:border-zinc-500 hover:bg-zinc-800"
+                        }`}
+                      >
+                        <div
+                          className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border transition-colors"
+                          style={{
+                            borderColor: selected ? accent : "transparent",
+                            backgroundColor: selected ? `${accent}22` : "transparent",
+                          }}
+                        >
+                          {selected ? (
+                            <Check className="w-3.5 h-3.5 text-white" />
+                          ) : (
+                            <Building2 className="w-3.5 h-3.5 text-zinc-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-inconsolata text-zinc-200 truncate block">
+                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                          </span>
+                          <span className="text-[10px] font-inconsolata text-zinc-500">
+                            Aluguel base: R$ {formatCurrency(propData?.aluguel_base ?? 0)}
+                            {casas > 0 && ` · ${casas} casa${casas > 1 ? "s" : ""}`}
+                          </span>
+                        </div>
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: accent }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2 bg-zinc-800/40 rounded-lg p-2 border border-zinc-700/50">
+                  <span className="text-xs font-inconsolata text-zinc-400">+ R$</span>
+                  <div className="flex-1 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setOfferMoney(Math.max(0, offerMoney - 500))}
+                      disabled={offerMoney <= 0}
+                      className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <Minus className="w-3 h-3 text-zinc-300" />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={String(offerMoney)}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, "");
+                        setOfferMoney(cleaned ? Number(cleaned) : 0);
+                      }}
+                      className="w-full bg-zinc-800 border border-zinc-600 rounded px-2.5 py-1.5 text-sm text-zinc-100 font-inconsolata text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setOfferMoney(offerMoney + 500)}
+                      className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-zinc-300" />
+                    </button>
                   </div>
                 </div>
               </div>
-            );
-          })()}
 
-        <div className="w-full flex justify-center items-center mt-4">
-          <button
-            onClick={() => {
-              trocarPropriedade(selectedPlayer1?.id, propsDetails?.possesId);
-            }}
-            disabled={reqLoading || !selectedPlayer1 || !propsDetails}
-            className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Confirmar
-          </button>
-        </div>
+              {/* O que eu quero */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 border-b border-zinc-700 pb-2">
+                  <ArrowRight className="w-4 h-4 text-green-400" />
+                  <h3 className="text-sm font-jaro text-zinc-200">O que eu quero</h3>
+                </div>
+                <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+                  {targetPlayerPosses.length === 0 && (
+                    <p className="text-xs font-inconsolata text-zinc-600 italic py-3 text-center">
+                      Nenhuma propriedade disponível
+                    </p>
+                  )}
+                  {targetPlayerPosses.map((sp) => {
+                    const propData = sp.posses?.propriedade;
+                    const casas = sp.casas ?? 0;
+                    const selected = wantPropIds.includes(sp.id);
+                    const accent = propData?.grupo_cor ? getAccentHex(propData.grupo_cor) : "#52525b";
+                    return (
+                      <button
+                        key={sp.id}
+                        type="button"
+                        onClick={() => toggleWantProp(sp.id)}
+                        className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer transition-all text-left ${
+                          selected
+                            ? "bg-green-500/15 border border-green-500/60 shadow-[0_0_12px_rgba(34,197,94,0.15)]"
+                            : "bg-zinc-800/60 border border-zinc-700/60 hover:border-zinc-500 hover:bg-zinc-800"
+                        }`}
+                      >
+                        <div
+                          className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border transition-colors"
+                          style={{
+                            borderColor: selected ? accent : "transparent",
+                            backgroundColor: selected ? `${accent}22` : "transparent",
+                          }}
+                        >
+                          {selected ? (
+                            <Check className="w-3.5 h-3.5 text-white" />
+                          ) : (
+                            <Building2 className="w-3.5 h-3.5 text-zinc-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-inconsolata text-zinc-200 truncate block">
+                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                          </span>
+                          <span className="text-[10px] font-inconsolata text-zinc-500">
+                            Aluguel base: R$ {formatCurrency(propData?.aluguel_base ?? 0)}
+                            {casas > 0 && ` · ${casas} casa${casas > 1 ? "s" : ""}`}
+                          </span>
+                        </div>
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: accent }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2 bg-zinc-800/40 rounded-lg p-2 border border-zinc-700/50">
+                  <span className="text-xs font-inconsolata text-zinc-400">+ R$</span>
+                  <div className="flex-1 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setWantMoney(Math.max(0, wantMoney - 500))}
+                      disabled={wantMoney <= 0}
+                      className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      <Minus className="w-3 h-3 text-zinc-300" />
+                    </button>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={String(wantMoney)}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\D/g, "");
+                        setWantMoney(cleaned ? Number(cleaned) : 0);
+                      }}
+                      className="w-full bg-zinc-800 border border-zinc-600 rounded px-2.5 py-1.5 text-sm text-zinc-100 font-inconsolata text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setWantMoney(wantMoney + 500)}
+                      className="p-1 rounded bg-zinc-700 hover:bg-zinc-600 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3 text-zinc-300" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="border-t border-zinc-700/50 pt-3 mt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-zinc-800/40 rounded-lg p-3">
+                <div className="flex items-center gap-3 text-xs font-inconsolata">
+                  <span className="text-zinc-400">
+                    Oferecendo: <strong className="text-purple-400">
+                      {offerPropIds.length} propriedade{offerPropIds.length !== 1 ? "s" : ""}
+                      {offerMoney > 0 && ` + R$ ${formatCurrency(offerMoney)}`}
+                    </strong>
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-zinc-600" />
+                  <span className="text-zinc-400">
+                    Recebendo: <strong className="text-green-400">
+                      {wantPropIds.length} propriedade{wantPropIds.length !== 1 ? "s" : ""}
+                      {wantMoney > 0 && ` + R$ ${formatCurrency(wantMoney)}`}
+                    </strong>
+                  </span>
+                </div>
+                <button
+                  onClick={handleCriarNegociacao}
+                  disabled={reqLoading}
+                  className="px-6 py-1.5 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 disabled:from-zinc-700 disabled:to-zinc-700 text-white text-sm font-inconsolata rounded-lg transition-all cursor-pointer disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
+                >
+                  {reqLoading ? "Enviando..." : "Enviar Proposta"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
 
+      {/* Modal Receber de Todos */}
       <Modal
         size="md"
         title="Receber de Todos"
         isOpen={modalReceber}
         onClose={() => setModalReceber(false)}
       >
-        <h1 className="mb-1">
-          Selecione o jogador que vai receber o dinheiro:
-        </h1>
-        <Select
-          onValueChange={(value) => {
-            const player = currentSession?.jogadores.find(
-              (p) => p.id === Number(value)
-            );
-            setSelectedPlayer1(player ?? null);
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione o Jogador!" />
-          </SelectTrigger>
-          <SelectContent>
-            {currentSession?.jogadores
-              .map((player) => (
-                <SelectItem key={player.id} value={String(player.id)}>
-                  {player.nome}
-                </SelectItem>
-              )).sort((a, b) => a.props.children.localeCompare(b.props.children))}
-          </SelectContent>
-        </Select>
+        <p className="mb-3 font-inconsolata text-zinc-300">
+          Jogador: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+        </p>
+        <p className="text-sm font-inconsolata text-zinc-400 mb-4">
+          Este jogador receberá R$ 500 de cada um dos outros jogadores.
+        </p>
 
         <div className="w-full flex justify-center items-center mt-4">
           <button
-            onClick={() => {
-              handleReceberDeTodos(selectedPlayer1?.id);
-            }}
-            disabled={reqLoading || !selectedPlayer1}
+            onClick={handleReceberDeTodos}
+            disabled={reqLoading || !currentPlayer}
             className="px-16 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirmar
+            {reqLoading ? "Processando..." : "Confirmar"}
           </button>
         </div>
       </Modal>

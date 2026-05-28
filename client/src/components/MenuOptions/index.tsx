@@ -12,6 +12,7 @@ interface MenuOptionsProps {
   playerId: number;
   playerName: string;
   show: boolean;
+  isOwner: boolean;
   onToggle: () => void;
 }
 
@@ -19,6 +20,7 @@ export default function MenuOptions({
   playerId,
   playerName,
   show,
+  isOwner,
   onToggle,
 }: MenuOptionsProps) {
   const { success: toastSuccess, error: toastError } = useToast()
@@ -113,13 +115,15 @@ export default function MenuOptions({
               <Edit2 className="w-4 h-4 mr-2" />
               Editar Jogador
             </button>
-            <button
-              onClick={handleRemove}
-              className="w-full flex items-center px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 transition-colors"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Remover Jogador
-            </button>
+            {isOwner && (
+              <button
+                onClick={handleRemove}
+                className="w-full flex items-center px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 transition-colors"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Remover Jogador
+              </button>
+            )}
           </div>
         )}
       </div>

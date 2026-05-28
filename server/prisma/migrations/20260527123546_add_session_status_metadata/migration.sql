@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "sessions" ADD COLUMN     "maxJogadores" INTEGER NOT NULL DEFAULT 6,
+ADD COLUMN     "saldoInicial" DOUBLE PRECISION NOT NULL DEFAULT 25000,
+ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'Esperando';

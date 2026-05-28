@@ -23,17 +23,21 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
   const router = useRouter();
 
   useEffect(() => {
-    if (isOpen) {
-      gsap.set([backdropRef.current, menuRef.current], { opacity: 0 })
-      gsap.set(menuRef.current, { scale: 0.9 })
+    const menu = menuRef.current
+    const backdrop = backdropRef.current
+    if (!menu || !backdrop) return
 
-      gsap.to(backdropRef.current, {
+    if (isOpen) {
+      gsap.set([backdrop, menu], { opacity: 0 })
+      gsap.set(menu, { scale: 0.9 })
+
+      gsap.to(backdrop, {
         opacity: 1,
         duration: 0.3,
         ease: 'power2.out'
       })
 
-      gsap.to(menuRef.current, {
+      gsap.to(menu, {
         opacity: 1,
         scale: 1,
         duration: 0.3,
@@ -42,18 +46,18 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
     } else {
       const tl = gsap.timeline({
         onComplete: () => {
-          gsap.set([backdropRef.current, menuRef.current], { opacity: 0 })
-          gsap.set(menuRef.current, { scale: 0.9 })
+          gsap.set([backdrop, menu], { opacity: 0 })
+          gsap.set(menu, { scale: 0.9 })
         }
       })
 
-      tl.to(menuRef.current, {
+      tl.to(menu, {
         opacity: 0,
         scale: 0.9,
         duration: 0.25,
         ease: 'power2.in'
       })
-        .to(backdropRef.current, {
+        .to(backdrop, {
           opacity: 0,
           duration: 0.25,
           ease: 'power2.in'

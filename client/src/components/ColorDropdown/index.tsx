@@ -59,7 +59,7 @@ export default function ColorDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full rounded-md bg-zinc-900 shadow-lg border border-zinc-700">
+        <div className="absolute z-50 mt-1 w-full rounded-md bg-zinc-900 shadow-lg border border-zinc-700">
           <div className="max-h-60 overflow-auto py-1">
             {filteredColors.map((color) => (
               <button

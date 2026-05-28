@@ -33,14 +33,42 @@ model Propriedade {
   @@map("propriedades")
 }
 
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String?
+  nome         String
+  googleId     String?   @unique
+  discordId    String?   @unique
+  avatarUrl    String?
+  createdAt    DateTime  @default(now())
+
+  sessions     Session[]       // sessões que este usuário criou
+  players      SessionPlayer[] // jogadores fictícios deste usuário em sessões
+
+  @@map("users")
+}
+
 model Session {
-  id         Int      @id @default(autoincrement())
-  nome       String? // opcional
-  dataInicio DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  nome         String? // opcional
+  senha        String? // bcrypt hash, null = sala pública
+  modo         String  @default("individual") // "individual" | "duplas"
+  status       String  @default("Esperando")  // "Esperando" | "Em Andamento" | "Finalizada"
+  maxJogadores Int     @default(6)
+  saldoInicial Float   @default(25000)
+  dataInicio   DateTime @default(now())
+  ownerId      Int?
+  owner        User?    @relation(fields: [ownerId], references: [id])
 
   sessionPosses SessionPosses[]
   historico     Historico[]
   jogadores     SessionPlayer[]
+  times         SessionTeam[]
+  messages      Message[]
+  notifications Notification[]
+  negotiations Negotiation[]
+  debts        Debt[]
 
   @@map("sessions")
 }
@@ -50,14 +78,40 @@ model SessionPlayer {
   id        Int     @id @default(autoincrement()) // id único da sessão
   sessionId Int
   session   Session @relation(fields: [sessionId], references: [id])
+  userId    Int?    // link para User (dono do jogador)
+  user      User?   @relation(fields: [userId], references: [id])
 
-  nome  String
-  cor   String
-  saldo Float
+  nome   String
+  cor    String
+  saldo  Float
+  teamId Int? // null = modo individual
+  team   SessionTeam? @relation(fields: [teamId], references: [id])
 
   sessionPosses SessionPosses[] // para referenciar quais posses pertencem a esse jogador
+  lastOwned     SessionPosses[] @relation("LastOwner") // propriedades que já foram suas (hipotecadas)
+  messages      Message[]
+  notificationsFrom Notification[] @relation("NotificationFromPlayer")
+  notificationsTo   Notification[] @relation("NotificationToPlayer")
+  carta_prisao      Boolean @default(false)
+  negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
+  negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
+  debts             Debt[]
 
   @@map("session_players")
+}
+
+// Times para modo duplas
+model SessionTeam {
+  id        Int     @id @default(autoincrement())
+  sessionId Int
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  nome      String
+  cor       String
+  saldo     Float     @default(25000)
+  jogadores SessionPlayer[]
+
+  @@map("session_teams")
 }
 
 // Posses base do jogo (globais)
@@ -86,8 +140,12 @@ model SessionPosses {
   playerId Int? // jogador fictício dono dessa posse
   player   SessionPlayer? @relation(fields: [playerId], references: [id])
 
+  lastOwnerId Int? // dono antes de hipotecar
+  lastOwner    SessionPlayer? @relation("LastOwner", fields: [lastOwnerId], references: [id])
+
   casas      Int     @default(0) // sobrescreve da posse base
   hipotecada Boolean @default(false)
+  negociando Boolean @default(false)
 }
 
 // Histórico de transações
@@ -101,4 +159,78 @@ model Historico {
   detalhes String
 
   @@map("historico")
+}
+
+// Mensagens de chat da sala
+model Message {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+  playerId  Int
+  player    SessionPlayer @relation(fields: [playerId], references: [id])
+  texto     String
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}
+
+// Notificações entre jogadores (compra de hipotecada, etc)
+model Notification {
+  id              Int         @id @default(autoincrement())
+  sessionId       Int
+  session         Session     @relation(fields: [sessionId], references: [id])
+  tipo            String
+  fromPlayerId    Int
+  fromPlayer      SessionPlayer @relation("NotificationFromPlayer", fields: [fromPlayerId], references: [id])
+  toPlayerId      Int
+  toPlayer        SessionPlayer @relation("NotificationToPlayer", fields: [toPlayerId], references: [id])
+  sessionPossesId Int
+  status          String      @default("pendente") // "pendente" | "aceita" | "recusada"
+  createdAt       DateTime    @default(now())
+  respondedAt     DateTime?
+
+  @@map("notifications")
+}
+
+model Negotiation {
+  id              Int      @id @default(autoincrement())
+  sessionId       Int
+  session         Session  @relation(fields: [sessionId], references: [id])
+  fromPlayerId    Int
+  fromPlayer      SessionPlayer @relation("NegotiationFromPlayer", fields: [fromPlayerId], references: [id])
+  toPlayerId      Int
+  toPlayer        SessionPlayer @relation("NegotiationToPlayer", fields: [toPlayerId], references: [id])
+  status          String   @default("pendente")
+  createdAt       DateTime @default(now())
+  respondedAt     DateTime?
+
+  items NegotiationItem[]
+
+  @@map("negociacoes")
+}
+
+model NegotiationItem {
+  id              Int     @id @default(autoincrement())
+  negotiationId   Int
+  negotiation     Negotiation @relation(fields: [negotiationId], references: [id])
+  sessionPossesId Int?
+  fromSide        Boolean
+  valor           Float?
+
+  @@map("negociacao_itens")
+}
+
+model Debt {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+  playerId  Int
+  player    SessionPlayer @relation(fields: [playerId], references: [id])
+  valor     Float
+  descricao String
+  pago      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  paidAt    DateTime?
+
+  @@map("dividas")
 }

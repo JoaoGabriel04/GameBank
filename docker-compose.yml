@@ -1,0 +1,90 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sgp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    container_name: sgp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD nao definido no .env}
+      POSTGRES_DB: ${DB_NAME:-supermaquina}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migration:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: deps
+    container_name: sgp-migration
+    restart: no
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?}@db:5432/${DB_NAME:-supermaquina}
+    working_dir: /app
+    volumes:
+      - ./server/prisma:/app/prisma
+      - ./server/prisma.config.ts:/app/prisma.config.ts
+    command: >
+      sh -c "npx prisma generate && npx prisma migrate deploy"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?}@db:5432/${DB_NAME:-supermaquina}
+    container_name: sgp-server
+    restart: unless-stopped
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?}@db:5432/${DB_NAME:-supermaquina}
+      NODE_ENV: production
+      PORT: 7000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "${SERVER_PORT:-7000}:7000"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:7000/api}
+    container_name: sgp-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+
+volumes:
+  pgdata:
+  redisdata:

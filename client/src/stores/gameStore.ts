@@ -11,6 +11,7 @@ import {
   createSessionApi,
   endSessionApi,
   loadSessionApi,
+  startSessionApi,
 } from "@/services/api/sessions";
 import {
   editPlayerApi,
@@ -27,6 +28,10 @@ import {
   trocaPropriedadeApi,
 } from "@/services/api/properties";
 import {
+  comprarHipotecadaApi,
+  responderNotificacaoApi,
+} from "@/services/api/notifications";
+import {
   aluguelAcaoApi,
   aluguelApi,
   depositoApi,
@@ -34,6 +39,13 @@ import {
   saqueApi,
   transferenciaApi,
 } from "@/services/api/banco";
+import {
+  sortearCartaApi,
+  usarCartaPrisaoApi,
+} from "@/services/api/cartas";
+import {
+  pagarDividaApi,
+} from "@/services/api/dividas";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -46,8 +58,9 @@ interface GameStore {
   error: string | null;
   propertiesCache: Record<number, Propriedade>;
 
-  createSession: (nome: string, players: { nome: string; cor: PlayerColor }[]) => Promise<number | undefined>;
+  createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number) => Promise<number | undefined>;
   loadSession: (sessionId: number) => Promise<void>;
+  startSession: (sessionId: number) => Promise<void>;
   endSession: (sessionId: number) => Promise<void>;
   getPlayerById: (playerId: number) => Promise<Player | undefined>;
   editPlayer: (playerId: number, nome: string, cor: PlayerColor) => Promise<void>;
@@ -65,6 +78,11 @@ interface GameStore {
   aluguelAcao: (params: { sessionId: number; pagadorId: number; sessionPossesId: number; numDados: number }) => Promise<void>;
   trocaPropriedades: (params: { propriedadeId: number; sessionId: number; userId: number }) => Promise<void>;
   receberDeTodos: (params: { sessionId: number; userId: number }) => Promise<void>;
+  comprarHipotecada: (sessionPossesId: number, sessionId: number, compradorId: number) => Promise<void>;
+  responderNotificacao: (notificationId: number, aceitar: boolean, respondedorId: number, sessionId: number) => Promise<void>;
+  sortearCarta: (sessionId: number, playerId: number) => Promise<any>;
+  usarCartaPrisao: (sessionId: number, playerId: number) => Promise<void>;
+  pagarDivida: (debtId: number, playerId: number, sessionId: number) => Promise<void>;
 
   getAvailableColors: (excludePlayerId?: number) => PlayerColor[];
   getAluguel: (propriedade: Propriedade, casas: number) => number;
@@ -87,6 +105,7 @@ function handleError(
   err: unknown
 ) {
   set({ error: extractErrorMessage(err), loading: false });
+  throw err;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -102,10 +121,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Sessões ──────────────────────────────────────────────────────────────
 
-  createSession: async (nome, players) => {
+  createSession: async (nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex) => {
     set({ loading: true, error: null });
     try {
-      const newSession = await createSessionApi(nome, players);
+      const newSession = await createSessionApi(nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex);
       if (!newSession) return;
 
       set((state) => ({
@@ -135,6 +154,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     } catch (err) {
       if (!networkError) set({ networkError: true });
+      set({ error: extractErrorMessage(err), loading: false });
+    }
+  },
+
+  startSession: async (sessionId) => {
+    set({ loading: true, error: null });
+    try {
+      const session = await startSessionApi(sessionId);
+      set((state) => ({
+        currentSession: session,
+        sessions: state.sessions.map((s) => s.id === sessionId ? session : s),
+        loading: false,
+      }));
+    } catch (err) {
       handleError(set, err);
     }
   },
@@ -163,8 +196,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ loadingProperty: false });
       return player;
     } catch (err) {
-      set({ loadingProperty: false });
-      handleError(set, err);
+      set({ loadingProperty: false, error: extractErrorMessage(err) });
     }
   },
 
@@ -224,8 +256,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
       return propriedade ?? null;
     } catch (err) {
-      set({ loadingProperty: false });
-      handleError(set, err);
+      set({ loadingProperty: false, error: extractErrorMessage(err) });
       return null;
     }
   },
@@ -234,7 +265,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await buyPropApi(propriedadeId, sessionId, userId);
-      await get().loadSession(sessionId);
+      set((state) => {
+        if (!state.currentSession) return { loading: false };
+        const jogadores = state.currentSession.jogadores.map((j) =>
+          j.id === userId ? { ...j } : j
+        );
+        const sessionPosses = state.currentSession.sessionPosses.map((sp) =>
+          sp.possesId === propriedadeId ? { ...sp, playerId: userId } : sp
+        );
+        return {
+          currentSession: { ...state.currentSession, jogadores, sessionPosses },
+          loading: false,
+        };
+      });
     } catch (err) {
       handleError(set, err);
     }
@@ -244,7 +287,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await sellPropriedadeApi(propriedadeId, sessionId, userId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -254,7 +297,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await hipotecarPropApi(propriedadeId, sessionId, userId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -264,7 +307,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await buyHouseApi(userId, sessionId, propriedadeId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -274,7 +317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await sellHouseApi(userId, sessionId, propriedadeId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -286,7 +329,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await depositoApi(userId, sessionId, valor);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -296,7 +339,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await saqueApi(userId, sessionId, valor);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -306,7 +349,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await transferenciaApi(pagadorId, recebedorId, sessionId, valor);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -316,7 +359,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await aluguelApi(sessionId, pagadorId, sessionPossesId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -326,7 +369,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await aluguelAcaoApi(sessionId, pagadorId, sessionPossesId, numDados);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -336,7 +379,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await trocaPropriedadeApi(propriedadeId, sessionId, userId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }
@@ -346,7 +389,61 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await receberDeTodosApi(sessionId, userId);
-      await get().loadSession(sessionId);
+      set({ loading: false });
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  comprarHipotecada: async (sessionPossesId, sessionId, compradorId) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await comprarHipotecadaApi(sessionPossesId, sessionId, compradorId);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  responderNotificacao: async (notificationId, aceitar, respondedorId, sessionId) => {
+    set({ loading: true, error: null });
+    try {
+      await responderNotificacaoApi(notificationId, aceitar, respondedorId, sessionId);
+      set({ loading: false });
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  // ── Sorte e Revés ────────────────────────────────────────────────────────
+
+  sortearCarta: async (sessionId, playerId) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await sortearCartaApi(sessionId, playerId);
+      set({ loading: false });
+      return result;
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  usarCartaPrisao: async (sessionId, playerId) => {
+    set({ loading: true, error: null });
+    try {
+      await usarCartaPrisaoApi(sessionId, playerId);
+      set({ loading: false });
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  pagarDivida: async (debtId, playerId, sessionId) => {
+    set({ loading: true, error: null });
+    try {
+      await pagarDividaApi(debtId, playerId, sessionId);
+      set({ loading: false });
     } catch (err) {
       handleError(set, err);
     }

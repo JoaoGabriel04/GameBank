@@ -1,0 +1,101 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sgp-redis-dev
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata-dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    container_name: sgp-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jg110104}
+      POSTGRES_DB: ${DB_NAME:-supermaquina}
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migration:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: sgp-migration-dev
+    restart: no
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-jg110104}@db:5432/${DB_NAME:-supermaquina}
+    working_dir: /app
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: >
+      sh -c "npx prisma generate && npx prisma migrate deploy"
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: sgp-server-dev
+    restart: unless-stopped
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-jg110104}@db:5432/${DB_NAME:-supermaquina}
+      NODE_ENV: development
+      PORT: 7000
+      CORS_ORIGIN: "http://localhost:3000"
+      API_URL: http://localhost:7000
+      JWT_SECRET: ${JWT_SECRET:-supermaquina-jwt-dev-secret-2024}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      REDIS_URL: redis://redis:6379
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+    ports:
+      - "${SERVER_PORT:-7000}:7000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    entrypoint: ["/bin/sh", "/app/scripts/entrypoint.dev.sh"]
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: sgp-client-dev
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:7000/api}
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+volumes:
+  pgdata-dev:
+  redisdata-dev:

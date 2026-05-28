@@ -29,6 +29,7 @@ export interface SessionPropriedade {
   playerId: number | null;
   casas: number;
   hipotecada: boolean;
+  negociando?: boolean;
   posses?: {
     id: number;
     id_prop: number;
@@ -42,12 +43,31 @@ export interface SessionPropriedade {
 // Jogador na sessão
 // ========================
 
+export interface Team {
+  id: number;
+  nome: string;
+  cor: string;
+  sessionId: number;
+  saldo?: number;
+}
+
 export interface Player {
-  id: number;                  // id da sessão
+  id: number;
+  userId?: number | null;
   nome: string;
   cor: PlayerColor;
   saldo: number;
-  posses: SessionPropriedade[]; // posses/ações do jogador
+  posses: SessionPropriedade[];
+  teamId?: number;
+  team?: Team;
+  carta_prisao?: boolean;
+}
+
+export interface SorteRevesCard {
+  id: number;
+  texto: string;
+  tipo: "ganhar_dinheiro" | "perder_dinheiro" | "receber_jogadores" | "pagar_jogadores" | "carta_prisao" | "prisao";
+  valor: number;
 }
 
 // ========================
@@ -69,9 +89,17 @@ export interface Transacao {
 export interface GameSession {
   id: number;
   nome?: string;
+  modo?: 'individual' | 'duplas';
+  status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
+  protegida?: boolean;
+  maxJogadores?: number;
+  saldoInicial?: number;
+  ownerId?: number | null;
   jogadores: Player[];
+  times?: Team[];
   sessionPosses: SessionPropriedade[];
   historico: Transacao[];
+  debts?: Debt[];
   dataInicio: number;
 }
 
@@ -136,3 +164,70 @@ export const PROPERTY_COLORS: { value: CorPropriedade; text: string; label: stri
 export const INITIAL_BALANCE = 25000;
 export const MAX_PLAYERS = 6;
 export const MIN_PLAYERS = 2;
+
+// ========================
+// Chat
+// ========================
+
+export interface ChatMessage {
+  id: number;
+  playerId: number;
+  playerNome: string;
+  texto: string;
+  createdAt: string;
+}
+
+// ========================
+// Notificações
+// ========================
+
+export interface NegotiationItem {
+  id: number;
+  negotiationId: number;
+  sessionPossesId: number | null;
+  fromSide: boolean;
+  valor: number | null;
+}
+
+export interface Negotiation {
+  id: number;
+  sessionId: number;
+  fromPlayerId: number;
+  toPlayerId: number;
+  status: "pendente" | "aceita" | "recusada" | "expirada";
+  createdAt: string;
+  respondedAt: string | null;
+  items: NegotiationItem[];
+  fromPlayer?: Player;
+  toPlayer?: Player;
+}
+
+export interface GameNotification {
+  id: number;
+  sessionId: number;
+  tipo: string;
+  fromPlayerId: number;
+  toPlayerId: number;
+  sessionPossesId: number;
+  status: string;
+  createdAt: string;
+  respondedAt?: string;
+  fromPlayer?: Player;
+  toPlayer?: Player;
+}
+
+// ========================
+// Dívidas
+// ========================
+
+export interface Debt {
+  id: number;
+  sessionId: number;
+  playerId: number;
+  valor: number;
+  descricao: string;
+  pago: boolean;
+  createdAt: string;
+  paidAt: string | null;
+  player?: { id: number; nome: string };
+}
