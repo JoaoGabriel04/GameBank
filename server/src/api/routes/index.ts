@@ -7,7 +7,7 @@ import bancoRouter from "./banco.route.js"
 import cartaRouter from "./carta.route.js"
 import negociacaoRouter from "./negociacao.route.js"
 import dividaRouter from "./divida.route.js"
-import authRouter from "../../modules/auth/auth.routes"
+import authRouter from "../../modules/auth/auth.routes.js"
 
 const apiRouter = Router()
 
