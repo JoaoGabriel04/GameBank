@@ -86,7 +86,24 @@ export async function initSocket(httpServer: HttpServer) {
           return;
         }
 
-        // Sala com senha — valida token (cookie específico da sala ou token do auth)
+        // Sala com senha — exige token, a menos que usuário JWT já seja jogador
+        const userId = socket.data.userId;
+        if (userId) {
+          const isPlayer = await prisma.sessionPlayer.findFirst({
+            where: { userId, sessionId },
+            select: { id: true },
+          });
+          if (isPlayer) {
+            socket.join(`session:${sessionId}`);
+            socket.data.sessionId = sessionId;
+            await registerActiveSocket(socket);
+            await setSocketPlayerId(socket, sessionId);
+            await loadChatHistory(socket, sessionId);
+            return;
+          }
+        }
+
+        // Valida token de sala (cookie ou auth)
         const cookies = socket.handshake.headers.cookie || "";
         const roomCookieMatch = cookies.match(new RegExp(`room_token_${sessionId}=([^;]+)`));
         const token = roomCookieMatch?.[1] || socket.handshake.auth?.roomToken;
