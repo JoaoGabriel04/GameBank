@@ -116,7 +116,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
                 size="lg"
                 color="green"
                 handle={() => router.push(aba === "Sessions" ? '/new-session' : '/sessions')}
-                className="z-20 w-full"
+                className="z-20"
               >
                 {aba === "Sessions" ? "Criar Sessão" : "Jogar"}
               </Button1>
@@ -140,7 +140,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
                 size="lg"
                 color="green"
                 handle={() => router.push('/register')}
-                className="z-20 w-full"
+                className="z-20"
               >
                 Cadastrar
               </Button1>

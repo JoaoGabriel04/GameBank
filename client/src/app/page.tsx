@@ -91,12 +91,12 @@ export default function Home() {
           </div>
           <p className="w-[90%] sm:w-4/5 lg:w-150 font-inconsolata text-sm sm:text-base text-center text-zinc-100 text-shadow-sm tracking-wider z-20 px-4">Seu banco dentro do tabuleiro. Controle depósitos, saques e transferências entre jogadores com agilidade e transparência.</p>
 
-          <div className="flex flex-col justify-center items-center lg:flex-row gap-4 sm:gap-6 z-20 w-full px-4">
+          <div className="flex flex-col justify-center items-center lg:flex-row gap-4 sm:gap-6 z-20">
             <Button1
               size="md"
               color="blue"
               handle={() => handleNavigate('/new-session')}
-              className="z-20 w-full sm:w-auto"
+              className="z-20"
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               Criar Nova Sessão
@@ -105,7 +105,7 @@ export default function Home() {
               size="md"
               color="green"
               handle={() => handleNavigate('/sessions')}
-              className="z-20 w-full sm:w-auto"
+              className="z-20"
             >
               <FontAwesomeIcon icon={faGamepad} className="mr-2" />
               Ver Sessões
