@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import type { GameSession } from "@/types/game";
 import { PLAYER_COLORS, PlayerColor } from "@/types/game";
 import ColorDropdown from "@/components/ColorDropdown";
+import AuthGuard from "@/components/AuthGuard";
 import { useAuthStore } from "@/stores/authStore";
 
 export default function Sessions() {
@@ -31,10 +32,7 @@ export default function Sessions() {
   const [checkingActive, setCheckingActive] = useState(true);
 
   useEffect(() => {
-    if (!authUser) {
-      setCheckingActive(false);
-      return;
-    }
+    if (!authUser) return;
     sessionsApi.getMyActive()
       .then(res => {
         const s = res.data?.session;
@@ -86,8 +84,8 @@ export default function Sessions() {
   async function handleJoin() {
     const session = joinModal.session;
     if (!session) return;
-    if (!authUser) { setJoinError("Você precisa estar logado"); return; }
     if (!playerColor) { setJoinError("Cor é obrigatória"); return; }
+    if (!authUser) return;
 
     setJoinLoading(true);
     setJoinError("");
@@ -123,6 +121,7 @@ export default function Sessions() {
   const activeSessions = sessions ?? []
 
   return (
+    <AuthGuard>
     <main className="w-full bg-black">
       
       <Header aba={"Sessions"}/>
@@ -291,5 +290,6 @@ export default function Sessions() {
 
       <Footer />
     </main>
+    </AuthGuard>
   )
 }

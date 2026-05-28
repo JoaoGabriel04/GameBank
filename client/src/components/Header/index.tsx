@@ -22,6 +22,14 @@ export default function Header({ aba }: HeaderProps) {
     loadFromStorage();
   }, [loadFromStorage]);
 
+  function handleNavigate(path: string) {
+    if (user) {
+      router.push(path);
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent(path)}`);
+    }
+  }
+
   return (
     <>
       <MobileMenu isOpen={openMenu} onClose={() => setOpenMenu(false)} menuOptions={menuOptions} aba={aba}/>
@@ -44,11 +52,11 @@ export default function Header({ aba }: HeaderProps) {
             <div className="flex items-center gap-4">
               <span className="text-zinc-300 font-jaro text-sm truncate max-w-32">{user.nome}</span>
               {aba === "Sessions" ? (
-                <Button1 size="lg" color="green" handle={() => router.push('/new-session')} className="z-20">
+                <Button1 size="lg" color="green" handle={() => handleNavigate('/new-session')} className="z-20">
                   Criar Sessão
                 </Button1>
               ) : (
-                <Button1 size="lg" color="green" handle={() => router.push('/sessions')} className="z-20">
+                <Button1 size="lg" color="green" handle={() => handleNavigate('/sessions')} className="z-20">
                   Jogar
                 </Button1>
               )}

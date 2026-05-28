@@ -5,6 +5,7 @@ import Inicio from "@/components/Inicio";
 import Loja from "@/components/Loja";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
+import AuthGuard from "@/components/AuthGuard";
 import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, useCardStore } from "@/stores/socketStore";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
@@ -379,7 +380,7 @@ export default function Game() {
   const isWaiting = currentSession.status === "Esperando";
 
   return (
-    <main className="w-full flex flex-col px-4 pb-6 min-h-screen bg-zinc-950">
+    <AuthGuard><main className="w-full flex flex-col px-4 pb-6 min-h-screen bg-zinc-950">
       <header className="w-full py-2 flex flex-col items-center">
         <Link
           href={"/"}
@@ -506,6 +507,6 @@ export default function Game() {
         color="red"
         loading={quitLoading}
       />
-    </main>
+    </main></AuthGuard>
   );
 }

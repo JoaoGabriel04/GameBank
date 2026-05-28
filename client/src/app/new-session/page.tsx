@@ -4,6 +4,7 @@ import ColorDropdown from "@/components/ColorDropdown";
 import Loading from "@/components/Loading";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
+import AuthGuard from "@/components/AuthGuard";
 import Lenis from "lenis";
 import { INITIAL_BALANCE } from "@/types/game";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -144,10 +145,11 @@ export default function NewSession() {
 
   const handleCreateSession = async () => {
     if (!validateForm()) return;
+    if (!authUser) return;
 
     try {
       setReqLoading(true);
-      if (!authUser) { toastError("Você precisa estar logado"); return; }
+      
       const sessionId = await createSession(
         sessionName,
         senha || undefined,
@@ -173,7 +175,7 @@ export default function NewSession() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <AuthGuard><div className="min-h-screen bg-black">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center mb-8">
           <Link href="/sessions" className="mr-4">
@@ -457,6 +459,6 @@ export default function NewSession() {
         </div>
       </div>
       {reqLoading && <Loading label="Criando sala..." />}
-    </div>
+    </div></AuthGuard>
   );
 }

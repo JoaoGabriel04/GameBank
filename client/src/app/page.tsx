@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDollarSign, faHouse, faUsers, faPlus, faGamepad } from "@fortawesome/free-solid-svg-icons"
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
 import CardFeatures from "./tests/home/_components/cardFeatures";
 import MusicPlayer from "./tests/home/_components/musicPlayer";
 import Footer from "@/components/Footer";
@@ -17,6 +18,17 @@ export default function Home() {
 
   const vh = useViewportHeight();
   const router = useRouter();
+  const { user, loadFromStorage } = useAuthStore();
+
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
+
+  function handleNavigate(path: string) {
+    if (user) {
+      router.push(path);
+    } else {
+      router.push(`/login?redirect=${encodeURIComponent(path)}`);
+    }
+  }
 
   const [playing, setPlaying] = useState(false)
   const [volume, setVolume] = useState(0.5)
@@ -73,18 +85,18 @@ export default function Home() {
 
       <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.png')] bg-bottom bg-cover bg-no-repeat z-10">
         <div className="w-full h-full flex flex-col justify-center items-center gap-6">
-          <div className="flex w-full justify-center items-center font-jaro text-6xl z-20">
+          <div className="flex w-full justify-center items-center font-jaro text-4xl sm:text-5xl lg:text-7xl z-20 px-4">
             <h1 className="bg-linear-to-r from-[#1F9900] via-[#33FF00] to-[#00BE39] bg-clip-text text-transparent text-shadow-sm">Game</h1>
             <h1 className="bg-linear-to-r from-[#FFA600] via-[#FFDEA1] to-[#FFA600] bg-clip-text text-transparent text-shadow-sm">₿ank</h1>
           </div>
-          <p className="w-4/5 lg:w-150 font-inconsolata text-sm text-center text-zinc-100 text-shadow-sm tracking-wider z-20">Seu banco dentro do tabuleiro. Controle depósitos, saques e transferências entre jogadores com agilidade e transparência.</p>
+          <p className="w-[90%] sm:w-4/5 lg:w-150 font-inconsolata text-sm sm:text-base text-center text-zinc-100 text-shadow-sm tracking-wider z-20 px-4">Seu banco dentro do tabuleiro. Controle depósitos, saques e transferências entre jogadores com agilidade e transparência.</p>
 
-          <div className="flex flex-col justify-center items-center lg:flex-row gap-6 z-20">
+          <div className="flex flex-col justify-center items-center lg:flex-row gap-4 sm:gap-6 z-20 w-full px-4">
             <Button1
               size="md"
               color="blue"
-              handle={() => router.push('/new-session')}
-              className="z-20"
+              handle={() => handleNavigate('/new-session')}
+              className="z-20 w-full sm:w-auto"
             >
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               Criar Nova Sessão
@@ -92,8 +104,8 @@ export default function Home() {
             <Button1
               size="md"
               color="green"
-              handle={() => router.push('/sessions')}
-              className="z-20"
+              handle={() => handleNavigate('/sessions')}
+              className="z-20 w-full sm:w-auto"
             >
               <FontAwesomeIcon icon={faGamepad} className="mr-2" />
               Ver Sessões
@@ -105,11 +117,11 @@ export default function Home() {
         <div className="absolute w-full h-20 bottom-0 left-0 z-2 bg-linear-to-b from-zinc-900/0 to-black"></div>
       </section>
 
-      <section className="w-full min-h-100 py-4">
+      <section className="w-full min-h-100 py-8 sm:py-12 px-4">
 
-        <h1 className="text-green-500 text-3xl font-bold font-jaro text-center tracking-wide">Funcionalidades</h1>
+        <h1 className="text-green-500 text-2xl sm:text-3xl font-bold font-jaro text-center tracking-wide">Funcionalidades</h1>
 
-        <div className="w-full grid grid-cols-3 mt-16">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 mt-8 sm:mt-16">
           <CardFeatures color="purple" icon={faUsers} title="Multiplayer" description="Jogue com até 6 amigos simultaneamente, cada um com sua cor personalizada." />
           <CardFeatures color="green" icon={faDollarSign} title="Gestão Financeira" description="Sistema completo de transações, transferências e histórico detalhado." />
           <CardFeatures color="amber" icon={faHouse} title="Propriedades" description="26 propriedades baseadas no tabuleiro real com sistema de casas e hotéis." />

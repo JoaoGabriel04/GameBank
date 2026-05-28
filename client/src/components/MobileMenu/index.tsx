@@ -2,11 +2,12 @@
 
 import { useEffect, useRef } from 'react'
 import { Card } from '@/components/ui/card'
-import { X } from 'lucide-react'
+import { X, LogOut, User } from 'lucide-react'
 import Link from 'next/link'
 import gsap from 'gsap'
 import Button1 from '../Button01'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/stores/authStore'
 
 interface MobileMenuProps {
   aba?: string;
@@ -21,6 +22,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
   const containerRef = useRef<HTMLDivElement>(null)
 
   const router = useRouter();
+  const { user, logout } = useAuthStore();
 
   useEffect(() => {
     const menu = menuRef.current
@@ -105,22 +107,44 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
             ))}
           </div>
 
-          {aba === "Sessions" ? (
-            <Button1
-              size="lg"
-              color="green"
-              handle={() => router.push('/new-session')}
-              className="z-20">
-              Criar Sessão
-            </Button1>
+          {user ? (
+            <div className="w-full flex flex-col items-center gap-3 px-4 mt-2">
+              <span className="text-zinc-300 font-jaro text-sm truncate max-w-40 flex items-center gap-2">
+                <User size={16} /> {user.nome}
+              </span>
+              <Button1
+                size="lg"
+                color="green"
+                handle={() => router.push(aba === "Sessions" ? '/new-session' : '/sessions')}
+                className="z-20 w-full"
+              >
+                {aba === "Sessions" ? "Criar Sessão" : "Jogar"}
+              </Button1>
+              <button
+                onClick={() => { logout(); router.push('/'); onClose(); }}
+                className="flex items-center gap-2 text-zinc-400 hover:text-red-400 transition-colors font-inconsolata text-sm"
+              >
+                <LogOut size={16} /> Sair
+              </button>
+            </div>
           ) : (
-            <Button1
-              size="lg"
-              color="green"
-              handle={() => router.push('/sessions')}
-              className="z-20">
-              Jogar
-            </Button1>
+            <div className="w-full flex flex-col items-center gap-3 px-4 mt-2">
+              <Link
+                href="/login"
+                onClick={handleNavigate}
+                className="w-full text-center py-2 text-zinc-300 hover:text-green-400 font-jaro transition-colors border border-zinc-700 rounded-lg"
+              >
+                Entrar
+              </Link>
+              <Button1
+                size="lg"
+                color="green"
+                handle={() => router.push('/register')}
+                className="z-20 w-full"
+              >
+                Cadastrar
+              </Button1>
+            </div>
           )}
         </Card>
       </div>
