@@ -146,4 +146,7 @@
     font-family: Inconsolata, ui-sans-serif;
     background-color: var(--color-background);
   }
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
