@@ -359,6 +359,11 @@ export class SessionService {
     await this.invalidateCache(sessionId);
 
     await prisma.$transaction([
+      prisma.negotiationItem.deleteMany({ where: { negotiation: { sessionId } } }),
+      prisma.negotiation.deleteMany({ where: { sessionId } }),
+      prisma.notification.deleteMany({ where: { sessionId } }),
+      prisma.message.deleteMany({ where: { sessionId } }),
+      prisma.debt.deleteMany({ where: { sessionId } }),
       prisma.sessionPlayer.deleteMany({ where: { sessionId } }),
       prisma.sessionTeam.deleteMany({ where: { sessionId } }),
       prisma.sessionPosses.deleteMany({ where: { sessionId } }),

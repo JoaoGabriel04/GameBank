@@ -149,7 +149,7 @@ export default function NewSession() {
 
     try {
       setReqLoading(true);
-      
+
       const sessionId = await createSession(
         sessionName,
         senha || undefined,
@@ -204,25 +204,23 @@ export default function NewSession() {
             <div className="flex gap-4">
               <button
                 onClick={() => handleModoChange('individual')}
-                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                  modo === 'individual'
-                    ? 'border-green-500 bg-green-500/10'
-                    : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
-                }`}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${modo === 'individual'
+                  ? 'border-green-500 bg-green-500/10'
+                  : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
+                  }`}
               >
                 <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Individual</div>
                 <p className="text-sm text-zinc-500 font-inconsolata">Cada jogador por si</p>
               </button>
               <button
-                onClick={() => handleModoChange('duplas')}
-                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                  modo === 'duplas'
-                    ? 'border-green-500 bg-green-500/10'
-                    : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
-                }`}
+                disabled
+                className="flex-1 p-4 rounded-lg border-2 transition-all cursor-not-allowed border-zinc-800 bg-zinc-950/30 opacity-60 relative"
               >
-                <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Duplas</div>
-                <p className="text-sm text-zinc-500 font-inconsolata">Jogadores em times</p>
+                <div className="text-lg font-semibold font-jaro text-zinc-500 mb-1">Duplas</div>
+                <p className="text-sm text-zinc-600 font-inconsolata">Jogadores em times</p>
+                <span className="absolute top-2 right-2 text-xs font-inconsolata text-amber-500 border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                  Em breve
+                </span>
               </button>
             </div>
           </div>
@@ -251,13 +249,13 @@ export default function NewSession() {
               )}
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Cor</label>
-                  <ColorDropdown
-                    value={criadorCor as any}
-                    onChange={(color) => setCriadorCor(color)}
-                    availableColors={['red','blue','green','yellow','purple','orange','pink','black','emerald'] as any}
-                    placeholder="Sua cor"
-                  />
-                </div>
+                <ColorDropdown
+                  value={criadorCor as any}
+                  onChange={(color) => setCriadorCor(color)}
+                  availableColors={['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'emerald'] as any}
+                  placeholder="Sua cor"
+                />
+              </div>
               {modo === 'duplas' && (
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Time</label>
@@ -325,9 +323,13 @@ export default function NewSession() {
               <input
                 type="number"
                 value={saldoInicial}
-                onChange={(e) => setSaldoInicial(Number(e.target.value))}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  if (raw.length <= 6) setSaldoInicial(Number(raw));
+                }}
                 min={1000}
                 step={1000}
+                maxLength={6}
                 className="w-full rounded-md bg-zinc-950 border border-zinc-700 px-3 py-2 text-zinc-100 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 placeholder-zinc-600 font-inconsolata"
               />
             </div>
@@ -387,7 +389,7 @@ export default function NewSession() {
                           <ColorDropdown
                             value={team.cor as any}
                             onChange={(color) => handleTeamChange(index, "cor", color)}
-                            availableColors={['red','blue','green','yellow','purple','orange','pink','black','emerald'] as any}
+                            availableColors={['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'emerald'] as any}
                             placeholder="Cor"
                           />
                         </div>
