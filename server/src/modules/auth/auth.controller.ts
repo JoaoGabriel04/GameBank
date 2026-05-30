@@ -69,13 +69,14 @@ export const authController = {
   completeProfile: async (req: Request, res: Response) => {
     try {
       const userId = req.user!.userId;
+      const email = req.user!.email;
       const parsed = CompleteProfileSchema.parse({
         nome: req.body.nome,
         avatarPreset: req.body.avatarPreset || undefined,
       });
 
       const file = req.file;
-      const result = await authService.completeProfile(userId, parsed.nome, {
+      const result = await authService.completeProfile(userId, email, parsed.nome, {
         avatarPreset: parsed.avatarPreset,
         fileBuffer: file?.buffer,
         fileMime: file?.mimetype,

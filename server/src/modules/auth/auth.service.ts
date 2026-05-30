@@ -89,11 +89,11 @@ export class AuthService {
 
   async completeProfile(
     userId: number,
+    email: string,
     nome: string,
     options: { avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string }
   ) {
     const current = await prisma.user.findUnique({ where: { id: userId } });
-    if (!current) throw new AppError(404, "Usuário não encontrado");
 
     let newAvatarUrl: string;
     let newPublicId: string | null = null;
@@ -113,12 +113,21 @@ export class AuthService {
       throw new AppError(400, "Escolha um avatar ou envie uma foto");
     }
 
-    const oldPublicId = current.avatarPublicId;
+    const oldPublicId = current?.avatarPublicId ?? null;
 
     try {
-      const user = await prisma.user.update({
+      const user = await prisma.user.upsert({
         where: { id: userId },
-        data: {
+        create: {
+          id: userId,
+          email,
+          nome,
+          avatarUrl: newAvatarUrl,
+          avatarPublicId: newPublicId,
+          avatarUpdatedAt: new Date(),
+          profileComplete: true,
+        },
+        update: {
           nome,
           avatarUrl: newAvatarUrl,
           avatarPublicId: newPublicId,
