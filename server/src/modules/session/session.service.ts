@@ -327,6 +327,37 @@ export class SessionService {
           data: { saldo: 0 },
         });
 
+        await tx.message.deleteMany({
+          where: { sessionId, playerId: player.id },
+        });
+
+        await tx.notification.deleteMany({
+          where: {
+            sessionId,
+            OR: [{ fromPlayerId: player.id }, { toPlayerId: player.id }],
+          },
+        });
+
+        await tx.negotiationItem.deleteMany({
+          where: {
+            negotiation: {
+              sessionId,
+              OR: [{ fromPlayerId: player.id }, { toPlayerId: player.id }],
+            },
+          },
+        });
+
+        await tx.negotiation.deleteMany({
+          where: {
+            sessionId,
+            OR: [{ fromPlayerId: player.id }, { toPlayerId: player.id }],
+          },
+        });
+
+        await tx.debt.deleteMany({
+          where: { sessionId, playerId: player.id },
+        });
+
         await tx.sessionPlayer.delete({
           where: { id: player.id },
         });
