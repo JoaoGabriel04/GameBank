@@ -57,11 +57,15 @@ export interface Player {
   nome: string;
   cor: PlayerColor;
   saldo: number;
+  avatarUrl?: string | null;
+  avatarUpdatedAt?: string | null;
+  banner?: string | null;
   posses: SessionPropriedade[];
   teamId?: number;
   team?: Team;
   carta_prisao?: boolean;
   desistiu?: boolean;
+  patrimonyAtDesistir?: number | null;
 }
 
 export interface SorteRevesCard {
@@ -167,6 +171,14 @@ export const PROPERTY_COLORS: { value: CorPropriedade; text: string; label: stri
 export const INITIAL_BALANCE = 25000;
 export const MAX_PLAYERS = 6;
 export const MIN_PLAYERS = 2;
+
+export interface RankedPlayer {
+  position: number
+  player: { id: number; nome: string; cor?: string; userId?: number | null; desistiu?: boolean; avatarUrl?: string | null; avatarUpdatedAt?: string | null; banner?: string | null }
+  patrimony: number
+  xpEarned: number
+  coinsEarned: number
+}
 
 // ========================
 // Chat

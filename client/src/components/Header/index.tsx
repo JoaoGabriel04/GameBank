@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
-import { MobileMenu } from "../MobileMenu";
+"use client";
+
+import { useEffect } from "react";
 import { menuOptions } from "@/utils/menuOptions";
 import Image from "next/image";
 import Button1 from "../Button01";
 import { useRouter } from "next/navigation";
-import { Menu, LogOut, User } from "lucide-react";
+import { User } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
+import SiteBottomNav from "../SiteBottomNav";
+import UserAvatar from "../UserAvatar";
 
 type HeaderProps = {
   aba?: string;
@@ -15,8 +18,7 @@ type HeaderProps = {
 export default function Header({ aba }: HeaderProps) {
 
   const router = useRouter();
-  const [openMenu, setOpenMenu] = useState(false);
-  const { user, logout, loadFromStorage } = useAuthStore();
+  const { user, loadFromStorage } = useAuthStore();
 
   useEffect(() => {
     loadFromStorage();
@@ -32,10 +34,8 @@ export default function Header({ aba }: HeaderProps) {
 
   return (
     <>
-      <MobileMenu isOpen={openMenu} onClose={() => setOpenMenu(false)} menuOptions={menuOptions} aba={aba}/>
-
-      <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-2 lg:grid-cols-3 justify-between items-center px-10 z-999">
-        <div className="">
+      <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-1 lg:grid-cols-3 justify-between items-center px-10 z-100">
+        <div className="flex justify-center lg:justify-start">
           <Link href={'/'}>
             <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
           </Link>
@@ -45,11 +45,15 @@ export default function Header({ aba }: HeaderProps) {
             {menuOptions.map((option, index) => (
               <li key={index} className="font-jaro text-zinc-100 hover:scale-120 transition-all duration-100 cursor-pointer"><Link href={option.url}>{option.text}</Link></li>
             ))}
+            <li onClick={() => handleNavigate('/perfil')} className="font-jaro text-zinc-100 hover:scale-120 transition-all duration-100 cursor-pointer flex items-center gap-1.5">
+              <User size={14} /> Perfil
+            </li>
           </ul>
         </nav>
         <nav className="hidden lg:flex w-full justify-end items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
+              <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" />
               <span className="text-zinc-300 font-jaro text-sm truncate max-w-32">{user.nome}</span>
               {aba === "Sessions" ? (
                 <Button1 size="lg" color="green" handle={() => handleNavigate('/new-session')} className="z-20">
@@ -60,9 +64,6 @@ export default function Header({ aba }: HeaderProps) {
                   Jogar
                 </Button1>
               )}
-              <button onClick={() => { logout(); router.push('/'); }} className="text-zinc-400 hover:text-red-400 transition-colors" title="Sair">
-                <LogOut size={20} />
-              </button>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -75,11 +76,9 @@ export default function Header({ aba }: HeaderProps) {
             </div>
           )}
         </nav>
-
-        <button className="flex lg:hidden w-full justify-end items-center">
-          <Menu size={25} onClick={() => setOpenMenu(true)} className="text-zinc-100 cursor-pointer" />
-        </button>
       </header>
+
+      <SiteBottomNav aba={aba} />
     </>
   )
 }

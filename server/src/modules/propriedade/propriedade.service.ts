@@ -2,8 +2,10 @@ import { PropriedadeRepository } from "./propriedade.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
+import { MissionsService } from "../missions/missions.service.js";
 
 export class PropriedadeService {
+  private missionService = new MissionsService();
   constructor(private repo = new PropriedadeRepository()) {}
 
   async getPropById(propriedadeId: number) {
@@ -50,6 +52,10 @@ export class PropriedadeService {
         }),
       ]);
 
+      if (player.userId) {
+        try { await this.missionService.track(player.userId, "properties_bought", 1); } catch {}
+      }
+
       return this.repo.findSessionPosses(sessionId, possesId);
     });
   }
@@ -93,6 +99,10 @@ export class PropriedadeService {
           },
         }),
       ]);
+
+      if (player.userId) {
+        try { await this.missionService.track(player.userId, "houses_built", 1); } catch {}
+      }
     });
   }
 
@@ -156,6 +166,10 @@ export class PropriedadeService {
           },
         }),
       ]);
+
+      if (player.userId) {
+        try { await this.missionService.track(player.userId, "houses_built", properties.length); } catch {}
+      }
     });
   }
 

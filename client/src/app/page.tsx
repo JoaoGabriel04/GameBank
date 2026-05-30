@@ -2,17 +2,39 @@
 
 import Button1 from "@/components/Button01";
 import { useViewportHeight } from "@/hooks/useViewportHeight"
-import { Howl } from "howler";
 import Lenis from "lenis";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDollarSign, faHouse, faUsers, faPlus, faGamepad } from "@fortawesome/free-solid-svg-icons"
+import {
+  faDollarSign, faHouse, faUsers, faPlus, faGamepad,
+  faBolt, faArrowRight,
+  faUserPlus, faPalette, faStore, faStar, faTrophy,
+} from "@fortawesome/free-solid-svg-icons"
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import CardFeatures from "./tests/home/_components/cardFeatures";
-import MusicPlayer from "./tests/home/_components/musicPlayer";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+
+const tutorialSteps = [
+  { num: "01", icon: faUserPlus, title: "Crie sua Conta", desc: "Cadastre-se com email ou entre com Google/Discord em segundos." },
+  { num: "02", icon: faGamepad,  title: "Crie ou Entre em uma Sala", desc: "Monte sua sala com nome, senha e número de jogadores. Compartilhe o link!" },
+  { num: "03", icon: faPalette,  title: "Personalize-se", desc: "Escolha sua cor e, em modo duplas, forme times com saldo compartilhado." },
+  { num: "04", icon: faDollarSign, title: "Gerencie seu Dinheiro", desc: "A aba Início mostra saldo, propriedades, aluguéis, cartas e transações." },
+  { num: "05", icon: faStore,    title: "Compre e Construa", desc: "Adquira propriedades na Loja e construa casas quando tiver monopólio." },
+  { num: "06", icon: faStar,     title: "Cartas e Negociações", desc: "Sorteie Sorte/Revés com efeitos automáticos. Negocie com outros jogadores." },
+  { num: "07", icon: faTrophy,   title: "Ranking e Vitória", desc: "Acompanhe o patrimônio de todos em tempo real. Quem será o melhor estrategista?" },
+];
+
+const stepColors = [
+  "text-green-400 border-green-500/30 bg-green-500/10",
+  "text-purple-400 border-purple-500/30 bg-purple-500/10",
+  "text-amber-400 border-amber-500/30 bg-amber-500/10",
+  "text-blue-400 border-blue-500/30 bg-blue-500/10",
+  "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
+  "text-pink-400 border-pink-500/30 bg-pink-500/10",
+  "text-cyan-400 border-cyan-500/30 bg-cyan-500/10",
+];
 
 export default function Home() {
 
@@ -29,23 +51,6 @@ export default function Home() {
       router.push(`/login?redirect=${encodeURIComponent(path)}`);
     }
   }
-
-  const [playing, setPlaying] = useState(false)
-  const [volume, setVolume] = useState(0.5)
-
-  const musicRef = useRef(
-    new Howl({
-      src: ["/sounds/airs-of-change.mp3"],
-      loop: true,
-      volume: 0.5
-    })
-  )
-
-  useEffect(() => {
-    if (musicRef.current) {
-      musicRef.current.volume(volume)
-    }
-  }, [volume])
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -66,20 +71,8 @@ export default function Home() {
     }
   }, [])
 
-  function toggleMusic() {
-    const music = musicRef.current
-
-    if (music.playing()) {
-      music.pause()
-      setPlaying(false)
-    } else {
-      music.play()
-      setPlaying(true)
-    }
-  }
-
   return (
-    <main className="w-full bg-black">
+    <main className="w-full bg-black pb-24 lg:pb-0">
 
       <Header />
 
@@ -117,24 +110,84 @@ export default function Home() {
         <div className="absolute w-full h-20 bottom-0 left-0 z-2 bg-linear-to-b from-zinc-900/0 to-black"></div>
       </section>
 
-      <section className="w-full min-h-100 py-8 sm:py-12 px-4">
-
-        <h1 className="text-green-500 text-2xl sm:text-3xl font-bold font-jaro text-center tracking-wide">Funcionalidades</h1>
-
-        <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 mt-8 sm:mt-16">
-          <CardFeatures color="purple" icon={faUsers} title="Multiplayer" description="Jogue com até 6 amigos simultaneamente, cada um com sua cor personalizada." />
-          <CardFeatures color="green" icon={faDollarSign} title="Gestão Financeira" description="Sistema completo de transações, transferências e histórico detalhado." />
-          <CardFeatures color="amber" icon={faHouse} title="Propriedades" description="26 propriedades baseadas no tabuleiro real com sistema de casas e hotéis." />
+      <section className="w-full max-w-5xl mx-auto py-16 sm:py-20 px-6">
+        <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+          <div className="flex-shrink-0 w-20 h-20 lg:w-36 lg:h-36 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-2 border-green-500/40 flex items-center justify-center">
+            <FontAwesomeIcon icon={faBolt} className="text-3xl lg:text-5xl text-green-400" />
+          </div>
+          <div className="text-center lg:text-left">
+            <h2 className="text-2xl sm:text-3xl font-jaro text-zinc-100 mb-3">
+              Como Funciona?
+            </h2>
+            <p className="text-zinc-400 font-inconsolata text-sm sm:text-base leading-relaxed max-w-2xl">
+              GameBank substitui todo o dinheiro físico, cartas de propriedade e registros do Banco Imobiliário.
+              Cada jogador tem saldo digital, as propriedades são compradas com um clique, aluguéis são pagos
+              automaticamente e as cartas de Sorte/Revés são sorteadas na hora. Tudo sincronizado em tempo real
+              entre todos os jogadores — pelo celular, tablet ou computador.
+            </p>
+            <a
+              href="/saibamais"
+              className="inline-flex items-center gap-2 mt-4 text-green-400 hover:text-green-300 font-inconsolata text-sm transition-colors"
+            >
+              Saiba mais <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
+            </a>
+          </div>
         </div>
-
       </section>
 
-      <MusicPlayer
-        isPlaying={playing}
-        onToggle={toggleMusic}
-        volume={volume}
-        onVolumeChange={setVolume}
-      />
+      <section className="w-full py-8 sm:py-12 px-4">
+        <h1 className="text-green-500 text-2xl sm:text-3xl font-bold font-jaro text-center tracking-wide">Funcionalidades</h1>
+
+        <div className="w-full max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 mt-8 sm:mt-16">
+          <CardFeatures color="purple" icon={faUsers} title="Multiplayer" description="Jogue com até 6 amigos simultaneamente, cada um com sua cor personalizada." />
+          <CardFeatures color="green" icon={faDollarSign} title="Gestão Financeira" description="Sistema completo de transações, transferências e histórico detalhado." />
+          <CardFeatures color="amber" icon={faHouse} title="Propriedades" description="28 propriedades baseadas no tabuleiro real com sistema de casas e hotéis." />
+        </div>
+      </section>
+
+      <section className="w-full py-16 sm:py-20 px-6 bg-zinc-900/20 border-t border-zinc-800/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-jaro text-zinc-100 mb-3">
+              Como Jogar
+            </h2>
+            <p className="text-zinc-500 font-inconsolata text-sm sm:text-base">
+              Em 7 passos simples você e seus amigos estarão jogando
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {tutorialSteps.map((step, i) => (
+              <div
+                key={i}
+                className={`rounded-xl border p-5 ${stepColors[i]} transition-all duration-200 hover:scale-[1.03]`}
+              >
+                <div className="flex items-start gap-4">
+                  <span className={`text-2xl sm:text-3xl font-jaro font-bold opacity-30 select-none ${stepColors[i].split(" ")[0]}`}>
+                    {step.num}
+                  </span>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-black/30 flex items-center justify-center">
+                    <FontAwesomeIcon icon={step.icon} className={`w-5 h-5 ${stepColors[i].split(" ")[0]}`} />
+                  </div>
+                </div>
+                <h3 className={`text-base font-jaro mt-3 mb-1 ${stepColors[i].split(" ")[0]}`}>
+                  {step.title}
+                </h3>
+                <p className="text-zinc-500 font-inconsolata text-xs leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Button1 size="lg" color="green" handle={() => handleNavigate('/new-session')}>
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              Criar Sala e Jogar
+            </Button1>
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </main>

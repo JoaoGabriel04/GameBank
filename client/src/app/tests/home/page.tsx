@@ -2,7 +2,6 @@
 
 import Button1 from "@/components/Button01";
 import { useViewportHeight } from "@/hooks/useViewportHeight"
-import { Howl } from "howler";
 import Lenis from "lenis";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInstagram, faGithub, faFacebookF, faXTwitter } from "@fortawesome/free-brands-svg-icons";
@@ -10,9 +9,8 @@ import { faDollarSign, faHouse, faUsers } from "@fortawesome/free-solid-svg-icon
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import CardFeatures from "./_components/cardFeatures";
-import MusicPlayer from "./_components/musicPlayer";
 
 const menuOptions = [
   { text: "Loja", url: "/loja" },
@@ -25,23 +23,6 @@ export default function Home() {
 
   const vh = useViewportHeight();
   const router = useRouter();
-
-  const [playing, setPlaying] = useState(false)
-  const [volume, setVolume] = useState(0.5)
-
-  const musicRef = useRef(
-    new Howl({
-      src: ["/sounds/airs-of-change.mp3"],
-      loop: true,
-      volume: 0.5
-    })
-  )
-
-  useEffect(() => {
-    if (musicRef.current) {
-      musicRef.current.volume(volume)
-    }
-  }, [volume])
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -62,18 +43,6 @@ export default function Home() {
     }
   }, [])
 
-  function toggleMusic() {
-    const music = musicRef.current
-
-    if (music.playing()) {
-      music.pause()
-      setPlaying(false)
-    } else {
-      music.play()
-      setPlaying(true)
-    }
-  }
-
   return (
     <main className="w-full bg-black">
       <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-3 justify-between items-center px-10 z-999">
@@ -91,10 +60,7 @@ export default function Home() {
           <Button1
             size="md"
             color="green"
-            handle={() => {
-              router.push('/new-session')
-              toggleMusic()
-            }}
+            handle={() => router.push('/new-session')}
             className="z-20">Entrar</Button1>
         </nav>
       </header>
@@ -109,10 +75,7 @@ export default function Home() {
           <Button1
             size="md"
             color="blue"
-            handle={() => {
-              router.push('/new-session')
-              toggleMusic()
-            }}
+            handle={() => router.push('/new-session')}
             className="z-20">Começar Agora</Button1>
         </div>
 
@@ -131,13 +94,6 @@ export default function Home() {
         </div>
 
       </section>
-
-      <MusicPlayer 
-        isPlaying={playing} 
-        onToggle={toggleMusic}
-        volume={volume}
-        onVolumeChange={setVolume}
-      />
 
       <footer className="w-full bg-zinc-950 py-8 px-10">
         <div className="w-full flex flex-col items-center gap-6">

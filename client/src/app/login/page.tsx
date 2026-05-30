@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import api from "@/services/api";
 import Link from "next/link";
+import { getPostAuthPath } from "@/utils/authRedirect";
 
 function LoginForm() {
   const router = useRouter();
@@ -20,7 +21,8 @@ function LoginForm() {
     try {
       const res = await api.post("/auth/login", { email, senha });
       setAuth(res.data.token, res.data.user);
-      router.push("/sessions");
+      const redirect = searchParams.get("redirect");
+      router.push(getPostAuthPath(res.data.user, redirect));
     } catch (err: any) {
       setError(err.response?.data?.error || "Erro ao entrar");
     }

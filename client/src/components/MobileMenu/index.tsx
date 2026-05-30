@@ -2,10 +2,12 @@
 
 import { useEffect, useRef } from 'react'
 import { Card } from '@/components/ui/card'
-import { X, LogOut, User } from 'lucide-react'
+import { X, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import gsap from 'gsap'
 import Button1 from '../Button01'
+import UserAvatar from '@/components/UserAvatar'
+import UserBanner from '@/components/UserBanner'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -74,7 +76,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-50 ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      className={`fixed inset-0 z-[200] ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}
     >
       <div
         ref={backdropRef}
@@ -108,10 +110,15 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
           </div>
 
           {user ? (
-            <div className="w-full flex flex-col items-center gap-3 px-4 mt-2">
-              <span className="text-zinc-300 font-jaro text-sm truncate max-w-40 flex items-center gap-2">
-                <User size={16} /> {user.nome}
-              </span>
+            <div className="w-full flex flex-col items-center gap-3 mt-2">
+              <div className="w-full overflow-hidden rounded-xl">
+                <UserBanner banner={user.banner} className="h-14 w-full" />
+                <div className="flex items-center gap-3 px-4 py-2 bg-zinc-800 -mt-5">
+                  <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" ring />
+                  <span className="text-zinc-100 font-jaro text-sm truncate">{user.nome}</span>
+                </div>
+              </div>
+              <div className="w-full px-4 flex flex-col items-center gap-3">
               <Button1
                 size="lg"
                 color="green"
@@ -126,6 +133,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
               >
                 <LogOut size={16} /> Sair
               </button>
+              </div>
             </div>
           ) : (
             <div className="w-full flex flex-col items-center gap-3 px-4 mt-2">

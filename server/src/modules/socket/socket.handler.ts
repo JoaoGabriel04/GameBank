@@ -16,8 +16,8 @@ export function emitHistoryNew(sessionId: number, data: unknown) {
   getIO().of("/game").to(`session:${sessionId}`).emit("history:new", data);
 }
 
-export function emitSessionClosed(sessionId: number) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("session:closed", { sessionId });
+export function emitSessionClosed(sessionId: number, ranking?: unknown) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("session:closed", { sessionId, ranking });
 }
 
 export function emitChatMessage(sessionId: number, data: { id: number; playerId: number; playerNome: string; texto: string; createdAt: string }) {

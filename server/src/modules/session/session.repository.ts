@@ -16,7 +16,10 @@ export class SessionRepository {
         dataInicio: true,
         ownerId: true,
         jogadores: {
-          include: { team: true },
+          include: {
+            team: true,
+            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+          },
         },
         times: true,
         sessionPosses: {
@@ -51,7 +54,10 @@ export class SessionRepository {
         dataInicio: true,
         ownerId: true,
         jogadores: {
-          include: { team: true },
+          include: {
+            team: true,
+            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+          },
         },
         times: true,
         sessionPosses: {
@@ -80,7 +86,10 @@ export class SessionRepository {
         dataInicio: true,
         ownerId: true,
         jogadores: {
-          include: { team: true },
+          include: {
+            team: true,
+            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+          },
         },
         times: true,
         sessionPosses: {

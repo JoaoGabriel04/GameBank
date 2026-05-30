@@ -14,6 +14,7 @@ import Modal from "../Modal"
 import ConfirmationModal from "../ConfirmationModal"
 import { useToast } from "@/components/Toast"
 import PropertyCard from "../PropertyCard"
+import UserAvatar from "../UserAvatar"
 
 interface PlayerCardProps {
   player: Player
@@ -302,11 +303,13 @@ export default function PlayerCard({ player, totalPropertyValue, isOwner }: Play
       <div className={`${playerColor?.bg || "bg-zinc-500"} px-4 py-3`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">
-                {player.nome.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <UserAvatar
+              avatarUrl={player.avatarUrl}
+              avatarUpdatedAt={player.avatarUpdatedAt}
+              nome={player.nome}
+              size="md"
+              className="ring-2 ring-white/30"
+            />
             <h3 className="text-lg font-jaro text-white">{player.nome}</h3>
           </div>
           <MenuOptions

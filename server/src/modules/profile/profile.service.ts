@@ -1,0 +1,181 @@
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../middleware/error-handler.middleware.js";
+import { validateAndProcessAvatar } from "../../lib/image-validation.js";
+import {
+  uploadAvatarToCloudinary,
+  deleteCloudinaryAvatar,
+  rollbackCloudinaryUpload,
+} from "../avatar/avatar.service.js";
+import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants/avatars.js";
+import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
+
+export class ProfileService {
+  async getProfile(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        items: {
+          include: { item: true },
+        },
+        missions: {
+          include: { mission: true },
+        },
+      },
+    });
+    if (!user) throw new AppError(404, "Usuário não encontrado");
+
+    // Sync level so it always reflects actual total XP
+    const correctLevel = this.getLevelFromXp(user.xp);
+    if (correctLevel !== user.level) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { level: correctLevel },
+      });
+    }
+
+    const equippedTitle = user.items.find((i) => i.equipped && i.item.type === "title")?.item.value;
+    const parsedTitle = equippedTitle ? JSON.parse(equippedTitle) : null;
+
+    return {
+      id: user.id,
+      nome: user.nome,
+      avatarUrl: user.avatarUrl,
+      avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
+      banner: user.banner ?? null,
+      level: correctLevel,
+      xp: user.xp,
+      coins: user.coins,
+      totalGames: user.totalGames,
+      totalWins: user.totalWins,
+      totalTop3: user.totalTop3,
+      title: parsedTitle?.title || null,
+      items: user.items.map((i) => ({
+        id: i.item.id,
+        name: i.item.name,
+        description: i.item.description,
+        icon: i.item.icon,
+        type: i.item.type,
+        equipped: i.equipped,
+      })),
+      missions: user.missions.map((m) => ({
+        id: m.mission.id,
+        name: m.mission.name,
+        description: m.mission.description,
+        metric: m.mission.metric,
+        target: m.mission.target,
+        progress: m.progress,
+        completed: m.completed,
+        xpReward: m.mission.xpReward,
+        coinReward: m.mission.coinReward,
+      })),
+    };
+  }
+
+  async getHistory(userId: number, limit = 20) {
+    const results = await prisma.gameResult.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+
+    return results.map((r) => ({
+      id: r.id,
+      sessionId: r.sessionId,
+      position: r.position,
+      patrimony: r.patrimony,
+      xpEarned: r.xpEarned,
+      coinsEarned: r.coinsEarned,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  async updateProfile(
+    userId: number,
+    data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string; banner?: string }
+  ) {
+    const current = await prisma.user.findUnique({ where: { id: userId } });
+    if (!current) throw new AppError(404, "Usuário não encontrado");
+
+    if (data.nome !== undefined && (data.nome.length < 1 || data.nome.length > 30)) {
+      throw new AppError(400, "Apelido deve ter entre 1 e 30 caracteres");
+    }
+
+    if (data.banner !== undefined && !isAllowedBannerPreset(data.banner)) {
+      throw new AppError(400, "Banner inválido");
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (data.nome !== undefined) updateData.nome = data.nome;
+    if (data.banner !== undefined) updateData.banner = `preset:${data.banner}`;
+
+    let newPublicId: string | null = null;
+
+    if (data.fileBuffer) {
+      const processed = await validateAndProcessAvatar(data.fileBuffer, data.fileMime);
+      const uploaded = await uploadAvatarToCloudinary(userId, processed.buffer);
+      updateData.avatarUrl = uploaded.url;
+      newPublicId = uploaded.publicId;
+      updateData.avatarPublicId = newPublicId;
+      updateData.avatarUpdatedAt = new Date();
+    } else if (data.avatarPreset) {
+      if (!isAllowedAvatarPreset(data.avatarPreset)) throw new AppError(400, "Avatar preset inválido");
+      updateData.avatarUrl = presetAvatarValue(data.avatarPreset);
+      updateData.avatarPublicId = null;
+      updateData.avatarUpdatedAt = new Date();
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return {
+        id: current.id,
+        nome: current.nome,
+        avatarUrl: current.avatarUrl,
+        avatarUpdatedAt: current.avatarUpdatedAt?.toISOString() ?? null,
+        banner: current.banner ?? null,
+      };
+    }
+
+    const oldPublicId = current.avatarPublicId;
+    try {
+      const user = await prisma.user.update({ where: { id: userId }, data: updateData });
+
+      if (oldPublicId && oldPublicId !== newPublicId && updateData.avatarUrl !== undefined) {
+        deleteCloudinaryAvatar(oldPublicId).catch((err) =>
+          console.error("[avatar] Exclusão antiga falhou:", oldPublicId, err)
+        );
+      }
+
+      return {
+        id: user.id,
+        nome: user.nome,
+        avatarUrl: user.avatarUrl,
+        avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
+        banner: user.banner ?? null,
+      };
+    } catch (err) {
+      if (newPublicId) await rollbackCloudinaryUpload(newPublicId);
+      throw err;
+    }
+  }
+
+  xpForLevel(level: number): number {
+    return Math.floor(200 * Math.pow(1.04, level - 1));
+  }
+
+  totalXpForLevel(level: number): number {
+    let total = 0;
+    for (let i = 1; i < level; i++) {
+      total += this.xpForLevel(i);
+    }
+    return total;
+  }
+
+  getLevelFromXp(totalXp: number): number {
+    let level = 1;
+    let xpNeeded = 0;
+    while (true) {
+      xpNeeded += this.xpForLevel(level);
+      if (totalXp < xpNeeded) return level;
+      level++;
+    }
+  }
+}

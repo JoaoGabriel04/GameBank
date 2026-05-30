@@ -15,6 +15,8 @@ import PropertyDetailModal from "../PropertyDetailModal";
 import ConfirmationModal from "../ConfirmationModal";
 import Modal from "../Modal";
 import { useToast } from "@/components/Toast";
+import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
 import {
   Eye,
   EyeOff,
@@ -109,29 +111,28 @@ function ValorInput({ value, onChange, max }: { value: number; onChange: (v: num
 }
 
 function PlayerCard({ player, selected, onClick }: { player: Player; selected: boolean; onClick: () => void }) {
-  const pColor = PLAYER_COLORS.find((c) => c.value === player.cor)
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer text-left ${
-        selected
-          ? "border-green-500 bg-green-500/10"
-          : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-500"
+      className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer text-left ${
+        selected ? "border-green-500" : "border-zinc-700 hover:border-zinc-500"
       }`}
     >
-      <div className={`w-10 h-10 rounded-full ${pColor?.bg || "bg-zinc-600"} flex items-center justify-center shrink-0`}>
-        <span className="text-white text-sm font-bold">{player.nome.charAt(0).toUpperCase()}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-inconsolata text-zinc-200 truncate">{player.nome}</p>
-        <p className="text-xs font-inconsolata text-zinc-500">R$ {formatCurrency(player.saldo)}</p>
-      </div>
-      {selected && (
-        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-          <span className="text-white text-xs font-bold">✓</span>
+      <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="relative z-10 flex items-center gap-3 p-3">
+        <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-inconsolata text-zinc-100 truncate">{player.nome}</p>
+          <p className="text-xs font-inconsolata text-zinc-400">R$ {formatCurrency(player.saldo)}</p>
         </div>
-      )}
+        {selected && (
+          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-bold">✓</span>
+          </div>
+        )}
+      </div>
     </button>
   )
 }
@@ -470,31 +471,35 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-10">
       {/* ── Balance Widget ── */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            {playerColor && (
-              <div className={`w-6 h-6 rounded-full ${playerColor.bg} flex items-center justify-center`}>
-                <span className="text-white text-xs font-bold">
-                  {currentPlayer?.nome.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-            <p className="text-sm font-inconsolata text-zinc-500">
-              {currentPlayer?.nome || "Você"}
-            </p>
+      <div className="relative overflow-hidden border border-zinc-800 rounded-xl">
+        <UserBanner banner={currentPlayer?.banner} className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 p-6">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <UserAvatar
+                avatarUrl={currentPlayer?.avatarUrl}
+                avatarUpdatedAt={currentPlayer?.avatarUpdatedAt}
+                nome={currentPlayer?.nome || "?"}
+                size="sm"
+                ring
+              />
+              <p className="text-sm font-inconsolata text-zinc-300">
+                {currentPlayer?.nome || "Você"}
+              </p>
+            </div>
+            <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer">
+              {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
-          <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
-            {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        <p className="text-3xl font-jaro font-bold text-green-400 mb-4">
-          {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
-        </p>
-        <div className="border-t border-zinc-800 pt-3">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-inconsolata text-zinc-500">Patrimônio Total</span>
-            <span className="text-lg font-jaro text-zinc-100">R$ {formatCurrency(patrimonio)}</span>
+          <p className="text-3xl font-jaro font-bold text-green-400 mb-4">
+            {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
+          </p>
+          <div className="border-t border-white/10 pt-3">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-inconsolata text-zinc-400">Patrimônio Total</span>
+              <span className="text-lg font-jaro text-zinc-100">R$ {formatCurrency(patrimonio)}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -531,9 +536,9 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
             <h4 className="text-xs font-inconsolata text-zinc-600 uppercase tracking-wider mb-2.5">Propriedades</h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10" },
                 { icon: Home, label: "Comprar Casas", modal: "casas" as const, color: "text-teal-400 bg-teal-500/10" },
                 { icon: Banknote, label: "Vender Casas", modal: "venderCasas" as const, color: "text-orange-400 bg-orange-500/10" },
+                { icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10" }
               ].map((action) => (
                 <button
                   key={action.label}

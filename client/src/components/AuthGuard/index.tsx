@@ -23,6 +23,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     if (!user) {
       const redirect = encodeURIComponent(pathname);
       router.replace(`/login?redirect=${redirect}`);
+      return;
+    }
+    if (!user.profileComplete) {
+      router.replace("/onboarding");
     }
   }, [loading, user, router, pathname]);
 
@@ -30,7 +34,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     return <Loading label="Verificando autenticação..." />;
   }
 
-  if (!user) {
+  if (!user || !user.profileComplete) {
     return <Loading label="Redirecionando..." />;
   }
 

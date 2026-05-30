@@ -1,7 +1,7 @@
 "use client";
 
-import ColorDropdown from "@/components/ColorDropdown";
 import Loading from "@/components/Loading";
+import UserAvatar from "@/components/UserAvatar";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import AuthGuard from "@/components/AuthGuard";
@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import Button1 from "@/components/Button01";
+import ColorDropdown from "@/components/ColorDropdown";
 
 interface TeamForm {
   nome: string;
@@ -33,7 +34,6 @@ export default function NewSession() {
   const [senha, setSenha] = useState("");
   const [maxJogadores, setMaxJogadores] = useState(6);
   const [saldoInicial, setSaldoInicial] = useState(INITIAL_BALANCE);
-  const [criadorCor, setCriadorCor] = useState<string | null>(null);
   const [criadorTeamIndex, setCriadorTeamIndex] = useState(0);
 
   const [times, setTimes] = useState<TeamForm[]>([
@@ -102,11 +102,6 @@ export default function NewSession() {
       return false;
     }
 
-    if (!criadorCor) {
-      toastError("Sua cor é obrigatória");
-      return false;
-    }
-
     if (maxJogadores < 2) {
       toastError("Mínimo de 2 jogadores");
       return false;
@@ -157,8 +152,8 @@ export default function NewSession() {
         maxJogadores,
         saldoInicial,
         modo === 'duplas' ? times : undefined,
-        authUser.nome,
-        criadorCor!,
+        undefined,
+        undefined,
         modo === 'duplas' ? criadorTeamIndex : undefined
       );
       if (sessionId) {
@@ -238,24 +233,13 @@ export default function NewSession() {
               </p>
               {authUser && (
                 <div className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                    <span className="text-white text-sm font-bold">{authUser.nome.charAt(0).toUpperCase()}</span>
-                  </div>
+                  <UserAvatar avatarUrl={authUser.avatarUrl} avatarUpdatedAt={authUser.avatarUpdatedAt} nome={authUser.nome} size="md" />
                   <div>
                     <p className="text-zinc-100 font-inconsolata font-medium">{authUser.nome}</p>
-                    <p className="text-zinc-500 text-xs font-inconsolata">Logado</p>
+                    <p className="text-zinc-500 text-xs font-inconsolata">Seu perfil na partida</p>
                   </div>
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Cor</label>
-                <ColorDropdown
-                  value={criadorCor as any}
-                  onChange={(color) => setCriadorCor(color)}
-                  availableColors={['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'emerald'] as any}
-                  placeholder="Sua cor"
-                />
-              </div>
               {modo === 'duplas' && (
                 <div className="mt-3">
                   <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Time</label>

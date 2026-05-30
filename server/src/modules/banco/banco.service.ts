@@ -1,12 +1,14 @@
 import { BancoRepository } from "./banco.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
+import { MissionsService } from "../missions/missions.service.js";
 
 const ALUGUEL_ACAO_MULTIPLICADOR = 500;
 const RECEBER_DE_TODOS_VALOR = 500;
 const MAX_VALOR = 9999999;
 
 export class BancoService {
+  private missionService = new MissionsService();
   constructor(private repo = new BancoRepository()) {}
 
   async deposito(userId: number, sessionId: number, valor: number) {
@@ -150,6 +152,10 @@ export class BancoService {
         },
       }),
     ]);
+
+    if (poss.player.userId) {
+      try { await this.missionService.track(poss.player.userId, "rent_earned", valorAluguel); } catch {}
+    }
 
     return { valor: valorAluguel, pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, propriedadeNome: prop.nome };
   }

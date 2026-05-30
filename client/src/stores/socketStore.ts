@@ -2,6 +2,7 @@ import { io, Socket } from "socket.io-client";
 import { useGameStore } from "./gameStore";
 import { useNegotiationStore } from "./negotiationStore";
 import { getRoomToken } from "./roomTokenStore";
+import { toast } from "@/lib/toast";
 import type { ChatMessage, GameNotification, Negotiation } from "@/types/game";
 
 const API_URL =
@@ -15,8 +16,9 @@ const BASE_URL = API_URL.replace(/\/api\/?$/, "");
 
 let socket: Socket | null = null;
 let currentSessionId: number | null = null;
+let sessionEnded = false;
 let reconnectCallbacks: (() => void)[] = [];
-let sessionClosedCallbacks: (() => void)[] = [];
+let sessionClosedCallbacks: ((ranking?: any[]) => void)[] = [];
 
 function getToken(): string {
   return typeof window !== "undefined"
@@ -32,7 +34,7 @@ export function clearReconnectCallbacks() {
   reconnectCallbacks = [];
 }
 
-export function onSessionClosed(cb: () => void) {
+export function onSessionClosed(cb: (ranking?: any[]) => void) {
   sessionClosedCallbacks.push(cb);
 }
 
@@ -46,6 +48,7 @@ export function connectSocket(sessionId: number) {
   disconnectSocket();
 
   currentSessionId = sessionId;
+  sessionEnded = false;
 
   socket = io(`${BASE_URL}/game`, {
     auth: { token: getToken(), roomToken: getRoomToken() },
@@ -56,10 +59,12 @@ export function connectSocket(sessionId: number) {
   });
 
   socket.on("connect", () => {
+    if (sessionEnded) return;
     socket?.emit("session:join", { sessionId });
   });
 
   socket.on("reconnect", () => {
+    if (sessionEnded) return;
     socket?.emit("session:join", { sessionId });
     reconnectCallbacks.forEach((cb) => cb());
   });
@@ -70,10 +75,11 @@ export function connectSocket(sessionId: number) {
     useGameStore.setState({ currentSession: data });
   });
 
-  socket.on("session:closed", ({ sessionId: closedId }) => {
+  socket.on("session:closed", ({ sessionId: closedId, ranking }) => {
     if (closedId === sessionId) {
+      sessionEnded = true;
       useGameStore.setState({ currentSession: null });
-      sessionClosedCallbacks.forEach((cb) => cb());
+      sessionClosedCallbacks.forEach((cb) => cb(ranking));
     }
   });
 
@@ -133,25 +139,43 @@ export function connectSocket(sessionId: number) {
 
   // Negociação — aceita
   socket.on("negotiation:accepted", (data: Negotiation) => {
-    useNegotiationStore.getState().removePendente(data.id);
+    const store = useNegotiationStore.getState();
+    const wasProposer = store.minhaNegociacaoPendente?.id === data.id;
+    const wasTarget   = store.pendentes.some((n) => n.id === data.id);
+    store.removePendente(data.id);
+    store.setMinhaNegociacao(null);
+    store.setMinhaNegociacaoAberto(false);
+    if (wasProposer) toast.success("Sua negociação foi aceita!");
+    else if (wasTarget) toast.success("Negociação concluída com sucesso!");
   });
 
-  // Negociação — recusada
+  // Negociação — recusada (só o proponente recebe este evento)
   socket.on("negotiation:rejected", ({ negotiationId }: { negotiationId: number }) => {
-    useNegotiationStore.getState().removePendente(negotiationId);
+    const store = useNegotiationStore.getState();
+    store.removePendente(negotiationId);
+    store.setMinhaNegociacao(null);
+    store.setMinhaNegociacaoAberto(false);
     if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    toast.error("Sua negociação foi recusada.");
   });
 
   // Negociação — expirada
   socket.on("negotiation:expired", ({ negotiationId }: { negotiationId: number }) => {
-    useNegotiationStore.getState().removePendente(negotiationId);
+    const store = useNegotiationStore.getState();
+    store.removePendente(negotiationId);
+    store.setMinhaNegociacao(null);
+    store.setMinhaNegociacaoAberto(false);
     if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    toast.warning("Sua negociação expirou por tempo limite.");
   });
 
-  // Negociação — contra-oferta
+  // Negociação — contra-oferta (proponente original recebe; substitui o estado pendente)
   socket.on("negotiation:counter", (data: Negotiation) => {
-    useNegotiationStore.getState().addPendente(data);
-    useNegotiationStore.getState().setActive(data);
+    const store = useNegotiationStore.getState();
+    store.setMinhaNegociacao(null);
+    store.setMinhaNegociacaoAberto(false);
+    store.addPendente(data);
+    store.setActive(data);
   });
 }
 

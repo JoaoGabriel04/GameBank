@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useRef, useEffect } from "react";
 import { useChatStore, sendChatMessage } from "@/stores/socketStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -37,13 +39,13 @@ export default function Chat() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 left-6 z-50 w-14 h-14 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-full flex items-center justify-center hover:border-green-500 transition-colors cursor-pointer"
+        className="fixed bottom-20 lg:bottom-6 left-6 z-50 w-14 h-14 bg-zinc-900/90 backdrop-blur-sm border border-zinc-700 rounded-full flex items-center justify-center hover:border-green-500 transition-colors cursor-pointer"
       >
         <MessageCircle className="text-zinc-300 w-6 h-6" />
       </button>
 
       {open && (
-        <div className="fixed bottom-24 left-6 z-50 w-80 h-96 bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl flex flex-col shadow-xl">
+        <div className="fixed bottom-40 lg:bottom-24 left-6 z-50 w-80 h-96 bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl flex flex-col shadow-xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
             <span className="text-zinc-100 font-jaro text-sm">Chat</span>
             <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">

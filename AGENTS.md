@@ -58,6 +58,22 @@ Após npm install: `docker compose -f docker-compose.dev.yml build --no-cache se
 - Controllers chamam `emitSessionUpdated(id, data)` após mutações. Client escuta `session:updated` → Zustand.
 - **`socket.data.userId` = `User.id` (JWT)** — não confundir com `SessionPlayer.id`. Handlers buscam `SessionPlayer` via `findFirst({ where: { sessionId, userId } })`.
 
+## Next.js App Router — regras do cliente
+
+- **Todo componente que usa hooks (`useState`, `useEffect`, `useRouter`, stores Zustand, etc.) precisa de `'use client'` no topo do arquivo.** Sem a diretiva, a assinatura reativa do Zustand não é configurada corretamente — o componente renderiza uma vez com o estado inicial e não recebe notificações de mudança. Componentes sem `'use client'` que "funcionam" por estarem dentro de um boundary cliente são frágeis.
+- **Variáveis de ambiente públicas do cliente** (`NEXT_PUBLIC_*`) são injetadas via `environment:` no `docker-compose.dev.yml`, lendo do `.env` raiz (ex.: `NEXT_PUBLIC_FOO: ${FOO:-default}`). Para expor uma nova variável: adicionar ao `.env` + `.env.example` raiz **e** ao bloco `environment:` do serviço `client` no compose. O client não possui `.env.local` próprio.
+
+## Z-index (hierarquia de camadas)
+
+| Camada | Valor | Exemplos |
+|---|---|---|
+| Navbars fixas | `z-40` | `SiteBottomNav`, `GameBottomNav` |
+| Header | `z-100` | `Header` |
+| Modais / overlays full-screen | `z-[200]` | `EditProfileModal`, `Modal`, `ConfirmationModal`, `PodiumModal`, `MobileMenu`, `Loading` |
+| Toast | `z-[100000]` | `ToastProvider` |
+
+**Regra:** qualquer novo modal/overlay que cubra a tela inteira deve usar `z-[200]`. Usar `z-50` (padrão Tailwind) faz o overlay ficar atrás do Header.
+
 ## Bugs conhecidos (não repetir)
 
 | Sintoma | Causa | Correção |
@@ -66,6 +82,8 @@ Após npm install: `docker compose -f docker-compose.dev.yml build --no-cache se
 | `ERR_NETWORK` no `loadSession` sem resposta HTTP | `authenticateRoom` async sem try/catch — Express 4 não trata async rejection | Corpo inteiro do middleware envolto em try/catch |
 | 429/Network Error em toda rota `/api` | `rate-limit-redis` incompatível + `passOnError` não existe em express-rate-limit v8.5.2 | Store in-memory, sem `passOnError` |
 | `setMessages is not a function` | Zustand criado antes do hot-reload; método novo ausente | Usar `useXxxStore.setState()` em vez de método do store |
+| `ERR_ERL_KEY_GEN_IPV6` no rate-limiter | `keyGenerator` usando `req.ip` direto — express-rate-limit v8 exige o helper para IPv6 | `ipKeyGenerator(req.ip ?? "")` — a função recebe `string`, não o objeto `Request` |
+| Import `Cannot find module '…/lib/cloudinary.js'` | Caminho relativo errado ao mover arquivo entre pastas de módulo | Contar os `../` a partir do arquivo de origem; `modules/avatar/` → `../../lib/` |
 
 ## CSP (helmet)
 

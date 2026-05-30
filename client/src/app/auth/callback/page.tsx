@@ -4,6 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import api from "@/services/api";
+import { getPostAuthPath } from "@/utils/authRedirect";
 
 function CallbackContent() {
   const router = useRouter();
@@ -13,6 +14,7 @@ function CallbackContent() {
   useEffect(() => {
     const token = searchParams.get("token");
     const error = searchParams.get("error");
+    const needsSetup = searchParams.get("setup") === "1";
 
     if (error || !token) {
       router.push("/login?error=" + (error || "auth_falhou"));
@@ -25,7 +27,11 @@ function CallbackContent() {
       .get("/auth/me", { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
         setAuth(token, res.data);
-        router.push("/sessions");
+        if (needsSetup || !res.data.profileComplete) {
+          router.push("/onboarding");
+        } else {
+          router.push(getPostAuthPath(res.data));
+        }
       })
       .catch(() => {
         localStorage.removeItem("jwt_token");
@@ -34,14 +40,14 @@ function CallbackContent() {
   }, [searchParams, router, setAuth]);
 
   return (
-    <p className="text-zinc-400">Autenticando...</p>
+    <p className="text-zinc-400 font-inconsolata">Autenticando...</p>
   );
 }
 
 export default function AuthCallback() {
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <Suspense fallback={<p className="text-zinc-400">Autenticando...</p>}>
+      <Suspense fallback={<p className="text-zinc-400 font-inconsolata">Autenticando...</p>}>
         <CallbackContent />
       </Suspense>
     </div>

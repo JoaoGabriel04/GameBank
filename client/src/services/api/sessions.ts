@@ -25,7 +25,7 @@ export const sessionsApi = {
   create: (data: CreateSessionOptions) =>
     api.post<GameSession & { roomToken?: string }>('/sessions/new-session', data),
   
-  join: (sessionId: number, data: { senha?: string; nome: string; cor: string; teamId?: number; spectator?: boolean }) =>
+  join: (sessionId: number, data: { senha?: string; nome?: string; cor?: string; teamId?: number; spectator?: boolean }) =>
     api.post<GameSession & { roomToken?: string }>(`/sessions/${sessionId}/join`, data),
   
   start: (sessionId: number) =>

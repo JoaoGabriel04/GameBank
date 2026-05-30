@@ -40,11 +40,25 @@ model User {
   nome         String
   googleId     String?   @unique
   discordId    String?   @unique
-  avatarUrl    String?
-  createdAt    DateTime  @default(now())
+  avatarUrl        String?
+  avatarPublicId   String?
+  avatarUpdatedAt  DateTime?
+  banner           String?   @default("preset:banner-01")
+  profileComplete  Boolean   @default(false)
+  createdAt        DateTime  @default(now())
 
-  sessions     Session[]       // sessões que este usuário criou
-  players      SessionPlayer[] // jogadores fictícios deste usuário em sessões
+  level        Int       @default(1)
+  xp           Int       @default(0)
+  coins        Int       @default(0)
+  totalGames   Int       @default(0)
+  totalWins    Int       @default(0)
+  totalTop3    Int       @default(0)
+
+  sessions        Session[]
+  players         SessionPlayer[]
+  missions        UserMission[]
+  items           UserItem[]
+  gameResults     GameResult[]
 
   @@map("users")
 }
@@ -94,6 +108,7 @@ model SessionPlayer {
   notificationsTo   Notification[] @relation("NotificationToPlayer")
   carta_prisao      Boolean @default(false)
   desistiu          Boolean @default(false)
+  patrimonyAtDesistir Float?
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
@@ -234,4 +249,80 @@ model Debt {
   paidAt    DateTime?
 
   @@map("dividas")
+}
+
+model Mission {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  metric      String   // properties_bought | houses_built | rent_earned | games_played | wins | top3
+  target      Float
+  xpReward    Int
+  coinReward  Int
+  perGame     Boolean  @default(false)
+  active      Boolean  @default(true)
+
+  userMissions UserMission[]
+
+  @@map("missoes")
+}
+
+model UserMission {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  missionId   Int
+  progress    Float     @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id])
+  mission Mission @relation(fields: [missionId], references: [id])
+
+  @@unique([userId, missionId])
+  @@map("usuario_missoes")
+}
+
+model ShopItem {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  price       Int
+  icon        String?
+  type        String   // title | badge | color
+  value       String?
+  available   Boolean  @default(true)
+
+  userItems UserItem[]
+
+  @@map("loja_itens")
+}
+
+model UserItem {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  itemId     Int
+  equipped   Boolean   @default(false)
+  acquiredAt DateTime  @default(now())
+
+  user User     @relation(fields: [userId], references: [id])
+  item ShopItem @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, itemId])
+  @@map("usuario_itens")
+}
+
+model GameResult {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int
+  userId      Int
+  position    Int
+  patrimony   Float
+  xpEarned    Int      @default(0)
+  coinsEarned Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("resultados_partidas")
 }

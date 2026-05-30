@@ -7,6 +7,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useToast } from "@/components/Toast";
 import { Eye, Coins, Handshake, Building2, ArrowRight, ArrowLeft, Ban, Gavel, Plus, Minus, Check } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
 import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
 import { sortSessionPosses } from "@/utils/properties";
@@ -46,7 +48,7 @@ export default function Especiais() {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
   const authUser = useAuthStore((s) => s.user)
   const { currentSession, loadSession, receberDeTodos } = useGameStore();
-  const { pendentes } = useNegotiationStore();
+  const { pendentes, setMinhaNegociacao, setMinhaNegociacaoAberto, minhaNegociacaoPendente } = useNegotiationStore();
 
   const currentPlayer = useMemo(
     () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
@@ -123,9 +125,10 @@ export default function Especiais() {
         ...(wantMoney > 0 ? [{ fromSide: false, valor: wantMoney } as ItemInput] : []),
       ];
 
-      await criarNegociacaoApi(currentSession.id, currentPlayer.id, targetPlayer, offerItems, wantItems);
+      const negotiation = await criarNegociacaoApi(currentSession.id, currentPlayer.id, targetPlayer, offerItems, wantItems);
+      setMinhaNegociacao(negotiation);
+      setMinhaNegociacaoAberto(true);
       await loadSession(currentSession.id);
-      toastSuccess("Negociação enviada!");
       setModalNegociar(false);
       resetCreate();
     } catch (err: any) {
@@ -174,12 +177,12 @@ export default function Especiais() {
       ) : (
       <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
-          onClick={() => setModalNegociar(true)}
+          onClick={() => minhaNegociacaoPendente ? setMinhaNegociacaoAberto(true) : setModalNegociar(true)}
           className="w-full min-w-[200px] bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden hover:border-purple-500 transition-colors cursor-pointer relative"
         >
-          {pendentes.length > 0 && (
+          {(pendentes.length > 0 || minhaNegociacaoPendente) && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center z-10">
-              {pendentes.length}
+              {pendentes.length + (minhaNegociacaoPendente ? 1 : 0)}
             </span>
           )}
           <div className="h-1.5 w-full bg-purple-500" />
@@ -215,18 +218,25 @@ export default function Especiais() {
         isOpen={modalNegociar}
         onClose={() => { setModalNegociar(false); resetCreate(); }}
       >
-        <div className="flex items-center gap-3 px-1 py-2 mb-4 bg-zinc-800/50 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-            <Handshake className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-inconsolata text-zinc-400">
-              Proponente: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
-            <p className="text-sm font-inconsolata text-green-400">R$ {formatCurrency(currentPlayer?.saldo ?? 0)}</p>
+        <div className="relative overflow-hidden rounded-xl border border-zinc-700 mb-4">
+          <UserBanner banner={currentPlayer?.banner} className="absolute inset-0 w-full h-full" />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="relative z-10 flex items-center gap-3 p-3">
+            <UserAvatar
+              avatarUrl={currentPlayer?.avatarUrl}
+              avatarUpdatedAt={currentPlayer?.avatarUpdatedAt}
+              nome={currentPlayer?.nome || "?"}
+              size="sm"
+              ring
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-inconsolata text-zinc-400">Proponente</p>
+              <p className="text-sm font-inconsolata text-zinc-100 font-semibold truncate">{currentPlayer?.nome ?? "—"}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
+              <p className="text-sm font-inconsolata text-green-400">R$ {formatCurrency(currentPlayer?.saldo ?? 0)}</p>
+            </div>
           </div>
         </div>
 
@@ -244,18 +254,25 @@ export default function Especiais() {
                     <button
                       key={player.id}
                       onClick={() => setTargetPlayer(player.id)}
-                      className="flex items-center gap-3 p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 hover:bg-zinc-800/80 transition-all cursor-pointer text-left"
+                      className="relative overflow-hidden rounded-xl border border-zinc-700 hover:border-purple-500 transition-all cursor-pointer text-left"
                     >
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg font-jaro text-zinc-100">{player.nome.charAt(0).toUpperCase()}</span>
+                      <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
+                      <div className="absolute inset-0 bg-black/60" />
+                      <div className="relative z-10 flex items-center gap-3 p-4">
+                        <UserAvatar
+                          avatarUrl={player.avatarUrl}
+                          avatarUpdatedAt={player.avatarUpdatedAt}
+                          nome={player.nome}
+                          size="md"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-jaro text-zinc-100 truncate">{player.nome}</p>
+                          <p className="text-xs font-inconsolata text-zinc-400">
+                            R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-jaro text-zinc-100 truncate">{player.nome}</p>
-                        <p className="text-xs font-inconsolata text-zinc-500">
-                          R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-zinc-600 flex-shrink-0" />
                     </button>
                   );
                 })}
@@ -263,20 +280,28 @@ export default function Especiais() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-inconsolata text-zinc-400">Negociando com:</span>
-                <span className="text-sm font-jaro text-purple-400">
-                  {jogadores.find((p) => p.id === targetPlayer)?.nome}
-                </span>
-              </div>
-              <button
-                onClick={() => setTargetPlayer(null)}
-                className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-              >
-                Trocar alvo
-              </button>
-            </div>
+            {(() => {
+              const target = jogadores.find((p) => p.id === targetPlayer);
+              return target ? (
+                <div className="relative overflow-hidden rounded-xl border border-purple-500/40 mb-2">
+                  <UserBanner banner={target.banner} className="absolute inset-0 w-full h-full" />
+                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="relative z-10 flex items-center gap-3 p-3">
+                    <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-inconsolata text-zinc-400">Negociando com</p>
+                      <p className="text-sm font-jaro text-purple-300 truncate">{target.nome}</p>
+                    </div>
+                    <button
+                      onClick={() => setTargetPlayer(null)}
+                      className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                    >
+                      Trocar
+                    </button>
+                  </div>
+                </div>
+              ) : null;
+            })()}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* O que eu ofereço */}

@@ -1,269 +1,443 @@
-# Planos Futuros — sgpController
+# Sistema de Avatar de Usuário com Cloudinary
 
-## 1. Sistema de Negociação entre Jogadores
+## Objetivo
 
-### Problema Atual
-A aba "Especiais" existe mas o fluxo é limitado (troca 1:1 via `trocarPropriedade`). Não permite negociações complexas com múltiplas propriedades + dinheiro.
-
----
-
-### 1.1 Fluxo Proposto
-
-#### Abertura da Negociação
-1. Jogador 1 (proponente) clica em "Negociar" — acesso por um botão no menu **Especiais** (remover a lógica simples de troca atual) ou diretamente no **Início** como uma ação rápida
-2. Seleciona um jogador alvo (dropdown/exclusive select com os jogadores da sala, exceto ele mesmo)
-3. Monta a oferta em duas seções visuais lado a lado ou empilhadas:
-   - **O que eu ofereço**: grid de propriedades dele com checkbox (multiselect) + input de valor em dinheiro
-   - **O que eu quero**: grid de propriedades do alvo com checkbox (multiselect) + input de valor em dinheiro
-4. Pelo menos um dos lados precisa ter pelo menos um item (propriedade ou dinheiro). Pode ser:
-   - Só dinheiro de um lado (ex: ofereço R$ 2.000 por uma propriedade)
-   - Só propriedades (ex: troco uma propriedade por outra)
-   - Propriedades + dinheiro (ex: ofereço 2 propriedades + R$ 1.000 por 1 propriedade do alvo)
-   - Dinheiro dos dois lados (ex: ofereço R$ 500 e quero R$ 200 — improbable mas possível)
-5. Envia → notificação em tempo real pro jogador alvo via socket `negotiation:new`
-
-#### Travamento de Propriedades
-- Propriedades ofertadas pelo proponente ficam **travadas** imediatamente ao enviar a oferta
-- Enquanto travadas: não podem ser vendidas (`sellProp`), hipotecadas (`hipotecar`), nem incluídas em outra negociação
-- Destravam automaticamente quando a oferta: **expira** (60s sem resposta), é **recusada**, ou é **respondida** (aceita ou contra-oferta)
-- Implementação: adicionar campo `negociando: Boolean @default(false)` em `SessionPosses`, ou usar uma tabela separada de locks com expiração
-
-#### Resposta do Alvo
-O jogador alvo recebe a notificação e vê um resumo no formato de modal com:
-- Cards das propriedades que receberia (com cor, nome, número de casas)
-- Cards das propriedades que daria (com cor, nome, número de casas)
-- Valores em dinheiro envolvidos (quanto recebe / quanto paga)
-- Três botões de ação:
-
-| Ação | Comportamento |
-|---|---|
-| **Aceitar** | Executa a troca: atualiza `playerId` das propriedades envolvidas, ajusta saldos, notifica ambos com `negotiation:accepted`, broadcast de `session:updated` |
-| **Recusar** | Oferta descartada. Propriedades do proponente são destravadas. Nada mais acontece |
-| **Contra-ofertar** | Reabre o modal de criação pré-preenchido com os termos atuais. O alvo vira o novo proponente, ajusta o que quiser e reenvia como nova negociação (novo ID, novo timer de 60s) |
-
-#### Timeout
-- 60 segundos para responder
-- Se expirar: oferta é cancelada automaticamente, propriedades destravadas
-- O proponente é notificado com `negotiation:expired`
-- Implementação: `setTimeout` no servidor ao criar a oferta, armazenar o `timerId` ou usar `createdAt` + verificação
-
-#### Visibilidade
-- A negociação é **particular** entre os dois jogadores envolvidos
-- Ninguém mais vê os detalhes da oferta
-- Apenas o resultado final (aceitação) gera um `session:updated` que todos veem (as propriedades mudam de dono)
+Implementar um sistema completo de upload, atualização e remoção de avatar de usuário utilizando Cloudinary como armazenamento e banco de dados para persistência da URL da imagem.
 
 ---
 
-### 1.2 Models Prisma Necessários
+# Fluxo de Upload
 
-```prisma
-model Negotiation {
-  id              Int      @id @default(autoincrement())
-  sessionId       Int
-  session         Session  @relation(fields: [sessionId], references: [id])
-  fromPlayerId    Int
-  fromPlayer      SessionPlayer @relation("NegotiationFrom", fields: [fromPlayerId], references: [id])
-  toPlayerId      Int
-  toPlayer        SessionPlayer @relation("NegotiationTo", fields: [toPlayerId], references: [id])
-  status          String   @default("pendente") // "pendente" | "aceita" | "recusada" | "expirada"
-  createdAt       DateTime @default(now())
-  respondedAt     DateTime?
+O sistema **NÃO** deve enviar a imagem para o Cloudinary imediatamente após o usuário selecioná-la.
 
-  @@map("negociacoes")
-}
+Fluxo esperado:
 
-model NegotiationItem {
-  id              Int     @id @default(autoincrement())
-  negotiationId   Int
-  negotiation     Negotiation @relation(fields: [negotiationId], references: [id])
-  sessionPossesId Int?   // null se for apenas dinheiro
-  fromSide        Boolean // true = "o que ofereço", false = "o que quero"
-  valor           Float?  // valor em dinheiro (se sessionPossesId for null, ou complemento)
+1. O usuário seleciona uma imagem.
+2. O sistema gera apenas um preview local da imagem.
+3. Nenhum upload deve ocorrer nesse momento.
+4. O upload para o Cloudinary deve acontecer SOMENTE após o usuário confirmar e salvar as alterações.
+5. Após upload bem-sucedido, a URL da imagem deve ser salva no banco de dados.
+6. Apenas após a confirmação da atualização no banco, o avatar anterior deve ser removido do Cloudinary.
 
-  @@map("negociacao_itens")
-}
+---
+
+# Preview Local
+
+O preview deve ser gerado localmente utilizando mecanismos como:
+
+- `URL.createObjectURL()`
+- `FileReader`
+
+O preview não deve depender de upload prévio.
+
+Ao cancelar a edição:
+
+- Nenhum arquivo deve ser enviado ao Cloudinary.
+- Nenhuma alteração deve ser persistida.
+
+---
+
+# Validação de Arquivos
+
+## Tipos Permitidos
+
+Permitir apenas formatos configurados pelo sistema, por exemplo:
+
+- JPG
+- JPEG
+- PNG
+- WEBP
+
+Bloquear formatos potencialmente perigosos como:
+
+- SVG (a menos que seja sanitizado)
+- EXE
+- BAT
+- SCR
+- Outros executáveis
+
+### Importante
+
+Nunca confiar apenas na extensão do arquivo.
+
+Validar:
+
+- MIME Type
+- Extensão
+- Conteúdo real do arquivo
+
+---
+
+## Limite de Tamanho
+
+Definir tamanho máximo configurável.
+
+Exemplo:
+
+```text
+5 MB
+10 MB
 ```
 
-E em `SessionPosses` adicionar:
-```prisma
-negociando  Boolean @default(false)
+Arquivos acima do limite devem ser rejeitados antes do upload.
+
+---
+
+## Resolução Máxima
+
+Definir resolução máxima aceitável.
+
+Exemplo:
+
+```text
+4096x4096
+```
+
+Imagens excessivamente grandes devem ser redimensionadas antes do upload ou rejeitadas.
+
+---
+
+## Resolução Mínima
+
+Definir resolução mínima aceitável.
+
+Exemplo:
+
+```text
+100x100
+```
+
+Imagens muito pequenas devem ser rejeitadas.
+
+---
+
+# Processamento de Imagem
+
+## Correção EXIF
+
+Corrigir automaticamente a orientação de imagens vindas de dispositivos móveis.
+
+Evitar:
+
+- Imagem deitada
+- Imagem invertida
+- Rotação incorreta
+
+---
+
+## Compressão
+
+Aplicar compressão e otimização de imagem para reduzir:
+
+- Uso de armazenamento
+- Consumo de banda
+- Tempo de carregamento
+
+---
+
+## Padronização
+
+Opcionalmente gerar versões padronizadas:
+
+```text
+128x128
+256x256
+512x512
+```
+
+para uso em diferentes partes da aplicação.
+
+---
+
+# Atualização de Avatar
+
+Ao trocar o avatar:
+
+1. Upload da nova imagem.
+2. Atualização do banco.
+3. Exclusão da imagem anterior.
+
+### Regra obrigatória
+
+Nunca excluir a imagem antiga antes da nova estar salva e registrada com sucesso.
+
+---
+
+# Tratamento de Falhas
+
+## Upload realizado mas banco falhou
+
+Cenário:
+
+```text
+Upload Cloudinary = sucesso
+Banco = falha
+```
+
+O sistema deve:
+
+- Registrar erro.
+- Remover a imagem recém-enviada.
+
+ou
+
+- Marcar como arquivo órfão para limpeza posterior.
+
+---
+
+## Banco atualizado mas exclusão da imagem antiga falhou
+
+O sistema deve:
+
+- Manter a nova imagem funcionando.
+- Registrar erro.
+- Agendar nova tentativa de remoção.
+
+---
+
+# Limpeza de Arquivos Órfãos
+
+Criar mecanismo de limpeza periódica.
+
+Objetivo:
+
+Identificar imagens existentes no Cloudinary que não possuem referência no banco.
+
+Essas imagens devem:
+
+- Ser registradas em log.
+- Ser removidas após validação.
+
+---
+
+# Cache
+
+Após atualizar o avatar:
+
+O usuário deve visualizar imediatamente a nova imagem.
+
+Evitar problemas de cache do navegador.
+
+Utilizar:
+
+- Versionamento de URL
+- Timestamp
+- Recursos nativos do Cloudinary
+
+Exemplo:
+
+```text
+avatar.jpg?v=123
 ```
 
 ---
 
-### 1.3 Endpoints
+# Avatar Padrão
 
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/api/negociacoes/criar` | Cria nova negociação + trava propriedades |
-| POST | `/api/negociacoes/:id/aceitar` | Aceita e executa a troca |
-| POST | `/api/negociacoes/:id/recusar` | Recusa e destrava |
-| POST | `/api/negociacoes/:id/contra-oferta` | Cria nova negociação com base na atual |
-| GET | `/api/negociacoes/pendentes/:playerId` | Lista negociações pendentes do jogador |
+Caso o usuário não possua avatar:
 
----
+Exibir avatar padrão configurável.
 
-### 1.4 Eventos Socket
+O sistema não deve quebrar caso:
 
-| Evento | Direção | Descrição |
-|---|---|---|
-| `negotiation:new` | Server → Jogador alvo | Notifica nova oferta recebida |
-| `negotiation:accepted` | Server → Ambos | Notifica que a oferta foi aceita |
-| `negotiation:rejected` | Server → Proponente | Notifica que a oferta foi recusada |
-| `negotiation:expired` | Server → Proponente | Notifica que a oferta expirou |
-| `negotiation:counter` | Server → Novo alvo | Notifica contra-oferta (mesmo fluxo de `negotiation:new`) |
+- URL esteja vazia
+- URL seja inválida
+- Imagem tenha sido removida
 
 ---
 
-### 1.5 UI
+# Exclusão de Conta
 
-- **Modal de criação**: duas grids lado a lado (minhas propriedades / propriedades do alvo) com checkbox + inputs de valor. Cada grid com cabeçalho mostrando o nome do jogador e o saldo atual
-- **Modal de resposta**: resumo visual com cards das propriedades + valores, três botões (Aceitar, Recusar, Contra-ofertar). Timer visível de 60s regressivo
-- **Badge de notificação**: ícone de sino ou alerta no menu indicando negociações pendentes
+Ao excluir uma conta:
+
+1. Remover registro do usuário.
+2. Remover avatar associado do Cloudinary.
+3. Garantir que não restem arquivos órfãos.
 
 ---
 
----
+# Segurança
 
-## 2. Sistema de Sorte e Revés
+## Rate Limiting
 
-### 2.1 Baralho
-Arquivo `server/data/cartas.json` contendo todas as cartas de Sorte e Revés.
+Implementar limite de uploads por usuário.
 
-### 2.2 Tipos de Carta
+Exemplo:
 
-| Tipo | Efeito | Aplicação |
-|---|---|---|
-| `ganhar_dinheiro` | Jogador recebe X reais do banco | Automática |
-| `perder_dinheiro` | Jogador paga X reais ao banco | Automática |
-| `pagar_jogadores` | Jogador paga X reais para **cada** adversário | Automática (ver regra de saldo) |
-| `receber_jogadores` | Jogador recebe X reais de **cada** adversário | Automática (ver regra de saldo) |
-| `prisao` | "Vá para a Prisão" — apenas notificação | Manual (só aviso) |
-| `carta_prisao` | Jogador ganha carta "Saia da Prisão" | Automática (adiciona ao inventário) |
-
-### 2.3 Regra de Saldo Insuficiente (para `pagar_jogadores` e `receber_jogadores`)
-
-Quando uma carta obriga um pagador a transferir X reais para cada adversário, e o pagador não tem saldo suficiente:
-
-1. Para **cada** adversário individualmente:
-   - Se o pagador tem saldo ≥ X: transfere X normalmente
-   - Se o pagador tem saldo < X: paga **tudo que tem** (saldo = 0), o **banco complementa** a diferença para o recebedor receber o valor integral
-2. Isso garante que:
-   - Nenhum saldo fica negativo (nunca)
-   - Quem recebe nunca recebe menos do que a carta determina
-   - O jogo nunca quebra por falta de saldo
-
-**Exemplo**: Carta "Receba R$ 500 de cada jogador".
-   - Jogador 1 (pagador) tem R$ 100 → paga R$ 100, banco complementa R$ 400
-   - Jogador 2 (pagador) tem R$ 800 → paga R$ 500 integral
-   - Jogador 3 (pagador) tem R$ 1.000 → paga R$ 500 integral
-   - Receptor final: recebe R$ 1.500 (R$ 500 × 3)
-
-### 2.4 Carta "Saia da Prisão"
-
-- Quando um jogador tira a carta `carta_prisao`, ela vai para o inventário dele
-- Armazenada em `SessionPlayer.carta_prisao: Boolean @default(false)` no Prisma
-- Aparece em uma nova aba **"Cartas Especiais"** no menu inicial do jogador
-- A aba mostra a carta com um botão **"Usar"**:
-  - Clicar em "Usar" apenas consome a carta (marca `carta_prisao = false`)
-  - A carta não tem efeito automático no sistema — o uso é **informativo** (o jogador se livra da prisão no tabuleiro real)
-- A carta é de **uso único**: ao usar, some do inventário
-- Não pode ser acumulada: se o jogador já tem `carta_prisao = true` e tira outra, a segunda carta é descartada (ou convertida em dinheiro, a definir)
-
-### 2.5 Carta "Vá para a Prisão"
-
-- Quando um jogador tira a carta `prisao`, um modal aparece com o aviso "Você foi preso! Vá para a prisão."
-- Apenas **informativo** — nenhuma lógica de rodadas perdidas, fiança, ou dados é implementada
-- O jogador se vira no tabuleiro real
-
-### 2.6 Fluxo do Sorteio
-
-1. Botão **"Sortear Carta"** na interface principal, disponível quando for a vez do jogador
-2. Pode ter dois botões separados: "Sortear Sorte" e "Sortear Revés" cada um com seu baralho
-3. Sorteia aleatoriamente do baralho correspondente
-4. Efeito aplicado automaticamente (exceto `prisao` e `carta_prisao`)
-5. Broadcast `card:drawn` para **todos os jogadores da sala** com:
-   - Nome do jogador que sorteou
-   - Tipo da carta (Sorte ou Revés)
-   - Texto da carta
-   - Efeito aplicado (ex: "João recebeu R$ 500", "Maria pagou R$ 200 para cada jogador")
-6. Modal com animação mostrando a carta (opcional)
-7. Baralho é **embaralhado** no início de cada partida
-
-### 2.7 Models Prisma Necessários
-
-Adicionar em `SessionPlayer`:
-```prisma
-carta_prisao Boolean @default(false)
+```text
+5 uploads por minuto
 ```
 
-### 2.8 Endpoints
-
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/api/cartas/sortear/:sessionId/:playerId` | Sorteia uma carta, aplica efeito, broadcast |
-| GET | `/api/cartas/:sessionId` | Lista as cartas disponíveis (útil para debug) |
-
-### 2.9 Eventos Socket
-
-| Evento | Direção | Descrição |
-|---|---|---|
-| `card:drawn` | Server → Sala toda | Broadcast com dados da carta sorteada e efeito aplicado |
-| `card:prisao` | Server → Sala toda | Broadcast específico para carta de prisão (ênfase no aviso) |
-| `carta_prisao:usada` | Server → Sala toda | Broadcast quando alguém usa a carta de sair da prisão |
+ou configuração equivalente.
 
 ---
 
-## 3. Models Prisma — Resumo de Todos os Campos Novos
+## Autenticação
 
-### SessionPlayer (adições)
-```prisma
-carta_prisao Boolean @default(false)
-```
+Somente usuários autenticados podem:
 
-### SessionPosses (adição)
-```prisma
-negociando  Boolean @default(false)
-```
-
-### Novos Models
-```prisma
-model Negotiation { ... }       // negociações
-model NegotiationItem { ... }   // itens da negociação
-```
+- Enviar avatar
+- Atualizar avatar
+- Remover avatar
 
 ---
 
-## 4. Observações Técnicas
+## Autorização
 
-### Transações
-Todas as operações que envolvem dinheiro + propriedades (aceitar negociação, aplicar carta) devem usar `prisma.$transaction` para garantir atomicidade.
+Garantir que um usuário só possa alterar seu próprio avatar.
 
-### Locks
-Para evitar race conditions em negociações simultâneas sobre a mesma propriedade, usar `withLock` (já existente em `server/src/middleware/lock.middleware.ts`) com chave `negotiation:{playerId}` ou `prop:{sessionPossesId}`.
+Nunca permitir alteração de avatar de terceiros.
 
-### Timeout de Negociação
-Implementar com `setTimeout` no servidor ao criar a negociação. O timer deve ser armazenado em um `Map<number, NodeJS.Timeout>` para permitir cancelamento se a oferta for respondida antes de expirar.
+---
 
-### Histórico
-Todas as ações (negociações aceitas, cartas sorteadas) devem gerar registros em `Historico` para auditabilidade.
+# Concorrência
 
-### Baralho
-- Estrutura sugerida para `server/data/cartas.json`:
+Tratar cenários onde:
 
-```json
-{
-  "sorte": [
-    { "id": 1, "texto": "Ganhe R$ 500", "tipo": "ganhar_dinheiro", "valor": 500 },
-    { "id": 2, "texto": "Receba R$ 200 de cada jogador", "tipo": "receber_jogadores", "valor": 200 },
-    { "id": 3, "texto": "Sorte! Ganhe uma carta 'Saia da Prisão'", "tipo": "carta_prisao", "valor": 0 }
-  ],
-  "reves": [
-    { "id": 1, "texto": "Pague R$ 300", "tipo": "perder_dinheiro", "valor": 300 },
-    { "id": 2, "texto": "Pague R$ 150 para cada jogador", "tipo": "pagar_jogadores", "valor": 150 },
-    { "id": 3, "texto": "Vá para a Prisão", "tipo": "prisao", "valor": 0 }
-  ]
-}
+- Usuário possui duas abas abertas.
+- Usuário possui múltiplos dispositivos conectados.
+
+Definir política de atualização:
+
+```text
+Last Write Wins
 ```
 
-- As cartas dos dois baralhos são unidas em um único array embaralhado no início da partida OU mantidas separadas com botões distintos (a decidir durante implementação)
+ou mecanismo equivalente.
+
+Evitar corrupção de estado.
+
+---
+
+# Experiência do Usuário
+
+## Loading
+
+Durante upload:
+
+- Mostrar indicador de progresso.
+- Informar estado atual.
+
+---
+
+## Bloqueio de Duplo Clique
+
+Durante envio:
+
+- Desabilitar botão de salvar.
+- Evitar múltiplos uploads simultâneos.
+
+---
+
+## Upload Interrompido
+
+Se o usuário:
+
+- Fechar a aba
+- Perder conexão
+- Cancelar operação
+
+O sistema deve tratar corretamente uploads incompletos.
+
+---
+
+# Logs
+
+Registrar eventos importantes:
+
+- Upload iniciado
+- Upload concluído
+- Upload cancelado
+- Upload falhou
+- Exclusão realizada
+- Exclusão falhou
+- Arquivo órfão detectado
+
+---
+
+# Estrutura de Banco
+
+A tabela de usuários deve armazenar pelo menos:
+
+```sql
+avatar_url VARCHAR(2048),
+avatar_public_id VARCHAR(255),
+avatar_updated_at TIMESTAMP
+```
+
+### Observação
+
+O campo `avatar_public_id` deve ser utilizado para exclusão segura da imagem no Cloudinary.
+
+Nunca depender apenas da URL para remover arquivos.
+
+---
+
+# Critérios de Qualidade
+
+A implementação deve garantir:
+
+- Ausência de arquivos órfãos.
+- Ausência de uploads desnecessários.
+- Segurança contra uploads maliciosos.
+- Boa experiência de usuário.
+- Consistência entre Cloudinary e banco de dados.
+- Recuperação adequada em caso de falhas.
+- Escalabilidade para milhares de usuários simultâneos.
+
+---
+
+# Cenários de Teste Obrigatórios
+
+## Upload Inicial
+
+- Usuário sem avatar envia uma imagem.
+- Avatar é salvo corretamente.
+
+## Troca de Avatar
+
+- Usuário troca avatar existente.
+- Avatar antigo é removido.
+- Novo avatar é exibido imediatamente.
+
+## Cancelamento
+
+- Usuário seleciona imagem.
+- Preview aparece.
+- Usuário cancela.
+- Nenhum upload é realizado.
+
+## Upload Inválido
+
+- Arquivo excede tamanho máximo.
+- Arquivo possui formato não permitido.
+- Arquivo possui conteúdo inválido.
+
+O sistema deve rejeitar o upload.
+
+## Falha de Banco
+
+- Upload concluído.
+- Banco falha.
+
+O sistema deve evitar arquivos órfãos.
+
+## Falha na Exclusão do Avatar Antigo
+
+- Novo avatar permanece funcional.
+- Exclusão antiga é reagendada.
+
+## Exclusão de Conta
+
+- Conta removida.
+- Avatar removido.
+- Nenhum arquivo órfão permanece.
+
+## Concorrência
+
+- Atualizações simultâneas em múltiplas abas.
+- Estado final permanece consistente.
+
+## Cache
+
+- Avatar atualizado aparece imediatamente sem necessidade de limpar cache manualmente.

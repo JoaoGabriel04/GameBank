@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Jaro, Inconsolata } from 'next/font/google'
 import { ToastProvider } from "@/components/Toast";
+import MusicProvider from "@/components/MusicProvider";
 
 export const metadata: Metadata = {
   title: "GameBank",
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="en" className={`dark ${jaro.className} ${inconsolata.className}`}>
       <body>
         <ToastProvider>
+          <MusicProvider />
           {children}
         </ToastProvider>
       </body>

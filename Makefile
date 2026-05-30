@@ -1,6 +1,6 @@
 .PHONY: dev dev-up dev-down dev-down-v dev-build dev-rebuild dev-logs dev-shell dev-restart
 .PHONY: prod prod-up prod-down prod-down-v prod-build prod-rebuild prod-logs prod-shell
-.PHONY: db-reset db-migrate db-studio db-backup
+.PHONY: db-reset db-migrate db-studio db-backup db-purge-users
 .PHONY: test test-ci status clean prune setup help
 .PHONY: up down build logs shell restart
 
@@ -91,6 +91,9 @@ db-migrate:
 
 db-studio:
 	docker compose -f docker-compose.dev.yml exec server npx prisma studio
+
+db-purge-users:
+	docker compose -f docker-compose.dev.yml exec server npm run purge-users
 
 db-backup:
 	@mkdir -p backups

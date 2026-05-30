@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Button1 from "@/components/Button01";
 import { useSessions } from "@/hooks/useApi"
 import Modal from "@/components/Modal";
@@ -14,10 +14,9 @@ import { useEffect } from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import type { GameSession } from "@/types/game";
-import { PLAYER_COLORS, PlayerColor } from "@/types/game";
-import ColorDropdown from "@/components/ColorDropdown";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuthStore } from "@/stores/authStore";
+import UserAvatar from "@/components/UserAvatar";
 
 export default function Sessions() {
   const router = useRouter();
@@ -25,7 +24,6 @@ export default function Sessions() {
   const { user: authUser } = useAuthStore();
   const [joinModal, setJoinModal] = useState<{ open: boolean; session: GameSession | null }>({ open: false, session: null });
   const [password, setPassword] = useState("");
-  const [playerColor, setPlayerColor] = useState<PlayerColor | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<number | undefined>(undefined);
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState("");
@@ -77,7 +75,6 @@ export default function Sessions() {
   function handleClickSession(session: GameSession) {
     setJoinError("");
     setPassword("");
-    setPlayerColor(null);
     setSelectedTeamId(undefined);
     setJoinAsSpectator(false);
     setJoinModal({ open: true, session });
@@ -86,7 +83,6 @@ export default function Sessions() {
   async function handleJoin() {
     const session = joinModal.session;
     if (!session) return;
-    if (!joinAsSpectator && !playerColor) { setJoinError("Cor é obrigatória"); return; }
     if (!authUser) return;
 
     setJoinLoading(true);
@@ -96,7 +92,6 @@ export default function Sessions() {
       const res = await sessionsApi.join(session.id, {
         senha: password || undefined,
         nome: authUser.nome,
-        cor: playerColor ?? 'zinc',
         teamId: selectedTeamId,
         spectator: joinAsSpectator || undefined,
       });
@@ -115,23 +110,27 @@ export default function Sessions() {
     }
   }
 
-  const getAvailableColors = useCallback((): PlayerColor[] => {
-    if (!joinModal.session) return PLAYER_COLORS.map(c => c.value);
-    const used = joinModal.session.jogadores.map(j => j.cor as PlayerColor);
-    return PLAYER_COLORS.map(c => c.value).filter(c => !used.includes(c));
-  }, [joinModal.session]);
-
   const activeSessions = sessions ?? []
 
   return (
     <AuthGuard>
-    <main className="w-full bg-black">
+    <main className="w-full bg-black pb-24 lg:pb-0">
       
       <Header aba={"Sessions"}/>
 
       <section className="w-full min-h-[calc(100vh-200px)] py-16 lg:py-20 px-10">
-        <h1 className="text-green-500 text-4xl font-bold font-jaro text-center tracking-wide mb-4">Salas</h1>
-        <p className="text-zinc-400 text-center mb-10 font-inconsolata">Entre em uma sala ou crie uma nova partida</p>
+        <div className="flex flex-col items-center mb-10">
+          <h1 className="text-green-500 text-4xl font-bold font-jaro text-center tracking-wide mb-4">Salas</h1>
+          <p className="text-zinc-400 text-center mb-6 font-inconsolata">Entre em uma sala ou crie uma nova partida</p>
+          <Button1
+            size="md"
+            color="green"
+            handle={() => router.push('/new-session')}
+          >
+            <FontAwesomeIcon icon={faPlus} className="mr-2" />
+            Criar Sala
+          </Button1>
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
@@ -190,15 +189,7 @@ export default function Sessions() {
               <FontAwesomeIcon icon={faUsers} className="text-4xl text-zinc-600" />
             </div>
             <h2 className="text-2xl font-jaro text-zinc-300 mb-2">Nenhuma sala encontrada</h2>
-            <p className="text-zinc-500 mb-6 font-inconsolata">Crie uma nova sala para começar a jogar!</p>
-            <Button1
-              size="md"
-              color="green"
-              handle={() => router.push('/new-session')}
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              Criar Nova Sala
-            </Button1>
+            <p className="text-zinc-500 font-inconsolata">Crie uma nova sala para começar a jogar!</p>
           </div>
         )}
       </section>
@@ -218,25 +209,13 @@ export default function Sessions() {
 
           {authUser && (
             <div className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-              <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">{authUser.nome.charAt(0).toUpperCase()}</span>
-              </div>
+              <UserAvatar avatarUrl={authUser.avatarUrl} avatarUpdatedAt={authUser.avatarUpdatedAt} nome={authUser.nome} size="md" />
               <div>
                 <p className="text-zinc-100 font-inconsolata font-medium">{authUser.nome}</p>
-                <p className="text-zinc-500 text-xs font-inconsolata">Logado</p>
+                <p className="text-zinc-500 text-xs font-inconsolata">Entrar com este perfil</p>
               </div>
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Sua Cor</label>
-            <ColorDropdown
-              value={playerColor}
-              onChange={(color) => setPlayerColor(color)}
-              availableColors={getAvailableColors()}
-              placeholder="Selecione uma cor"
-            />
-          </div>
 
           {joinModal.session?.protegida && (
             <div>

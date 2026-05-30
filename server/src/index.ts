@@ -32,7 +32,7 @@ app.use(
         imgSrc: ["'self'", "data:"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-        upgradeInsecureRequests: [],
+        upgradeInsecureRequests: null,
       },
     },
   })

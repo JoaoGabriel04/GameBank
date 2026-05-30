@@ -5,27 +5,31 @@ import Inicio from "@/components/Inicio";
 import Loja from "@/components/Loja";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
 import AuthGuard from "@/components/AuthGuard";
 import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore, useAluguelReceivedStore } from "@/stores/socketStore";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
-import { Eye, EyeOff, Menu, LogOut } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import Historico from "@/components/Historico";
 import Ranking from "@/components/Ranking";
-import Modal from "@/components/Modal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Chat from "@/components/Chat";
 import NegotiationResponseModal from "@/components/NegotiationResponseModal";
+import PodiumModal from "@/components/PodiumModal";
 import Link from "next/link";
 import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
+import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPowerOff, faPlay, faUsers, faClock, faArrowLeft, faGamepad } from "@fortawesome/free-solid-svg-icons";
-import type { PlayerColor, Player } from "@/types/game";
+import type { PlayerColor, Player, RankedPlayer } from "@/types/game";
 import { PLAYER_COLORS } from "@/types/game";
 
 const linksNav = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
@@ -37,11 +41,11 @@ export default function Game() {
   const [startLoading, setStartLoading] = useState(false);
   const [quitLoading, setQuitLoading] = useState(false);
   const [desistirLoading, setDesistirLoading] = useState(false);
-  const [menuModal, setMenuModal] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
   const [showDesistirModal, setShowDesistirModal] = useState(false);
   const [showSaldo, setShowSaldo] = useState(true);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [podiumData, setPodiumData] = useState<RankedPlayer[] | null>(null);
 
   const params = useParams();
   const router = useRouter();
@@ -64,9 +68,13 @@ export default function Game() {
     if (!sessionId) return;
     connectSocket(sessionId);
     onReconnect(() => mutate());
-    onSessionClosed(() => {
+    onSessionClosed((ranking) => {
       setSessionEnded(true);
+      if (ranking) setPodiumData(ranking);
       setRoomToken(null);
+      mutate(undefined, { revalidate: false });
+      useProfileStore.getState().clearProfile();
+      clearReconnectCallbacks();
       disconnectSocket();
     });
     return () => {
@@ -142,9 +150,7 @@ export default function Game() {
       return;
     setEndLoading(true);
     await endSession(currentSession.id);
-    toastInfo("Jogo finalizado com sucesso!");
     setEndLoading(false);
-    router.push("/");
   };
 
   const handleQuit = async () => {
@@ -349,9 +355,7 @@ export default function Game() {
                         const pColor = PLAYER_COLORS.find(c => c.value === p.cor);
                         return (
                           <div key={p.id} className="px-4 py-3 bg-zinc-950/50 flex items-center gap-3 border-t border-zinc-800">
-                            <div className={`w-8 h-8 rounded-full ${pColor?.bg || 'bg-zinc-600'} flex items-center justify-center`}>
-                              <span className="text-white text-sm font-bold">{p.nome.charAt(0).toUpperCase()}</span>
-                            </div>
+                            <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" />
                             <span className="text-zinc-100 font-inconsolata">{p.nome}</span>
                           </div>
                         );
@@ -364,9 +368,7 @@ export default function Game() {
                   const pColor = PLAYER_COLORS.find(c => c.value === p.cor);
                   return (
                     <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-                      <div className={`w-10 h-10 rounded-full ${pColor?.bg || 'bg-zinc-600'} flex items-center justify-center`}>
-                        <span className="text-white text-sm font-bold">{p.nome.charAt(0).toUpperCase()}</span>
-                      </div>
+                      <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="md" />
                       <div>
                         <span className="text-zinc-100 font-inconsolata font-medium">{p.nome}</span>
                         <span className="text-zinc-500 text-sm ml-2 font-inconsolata">
@@ -444,24 +446,30 @@ export default function Game() {
 
   if (sessionEnded) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center max-w-md px-6">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-zinc-800 flex items-center justify-center">
-            <FontAwesomeIcon icon={faPowerOff} className="text-3xl text-zinc-500" />
+      <>
+        {podiumData ? (
+          <PodiumModal
+            ranking={podiumData}
+            userId={authUser?.id}
+            onClose={() => router.push("/sessions")}
+          />
+        ) : (
+          <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+            <div className="text-center max-w-md px-6">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-zinc-800 flex items-center justify-center">
+                <FontAwesomeIcon icon={faPowerOff} className="text-3xl text-zinc-500" />
+              </div>
+              <h2 className="text-3xl font-jaro text-zinc-100 mb-3">Sala Finalizada</h2>
+              <p className="text-zinc-400 font-inconsolata mb-8">
+                Esta sala foi encerrada. Volte para a lista de salas para entrar em outra partida.
+              </p>
+              <Button1 size="lg" color="green" handle={() => router.push("/sessions")}>
+                Voltar para Salas
+              </Button1>
+            </div>
           </div>
-          <h2 className="text-3xl font-jaro text-zinc-100 mb-3">Sala Finalizada</h2>
-          <p className="text-zinc-400 font-inconsolata mb-8">
-            Esta sala foi encerrada. Volte para a lista de salas para entrar em outra partida.
-          </p>
-          <Button1
-            size="lg"
-            color="green"
-            handle={() => router.push("/sessions")}
-          >
-            Voltar para Salas
-          </Button1>
-        </div>
-      </div>
+        )}
+      </>
     );
   }
 
@@ -491,7 +499,7 @@ export default function Game() {
   }
 
   return (
-    <AuthGuard><main className="w-full flex flex-col px-4 pb-6 min-h-screen bg-zinc-950">
+    <AuthGuard><main className="w-full flex flex-col px-4 pb-24 min-h-screen bg-zinc-950">
       <header className="w-full py-2 flex flex-col items-center">
         <Link
           href={"/"}
@@ -549,11 +557,6 @@ export default function Game() {
             </nav>
           )}
 
-          {!isWaiting && (
-            <button onClick={() => setMenuModal(true)} className="lg:hidden">
-              <Menu className="w-8 h-8 text-zinc-300" />
-            </button>
-          )}
         </div>
       </header>
 
@@ -563,12 +566,8 @@ export default function Game() {
             {/* Player info header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                {playerColor && (
-                  <div className={`w-10 h-10 rounded-full ${playerColor.bg} flex items-center justify-center`}>
-                    <span className="text-white text-sm font-bold">
-                      {currentPlayer?.nome.charAt(0).toUpperCase() || "?"}
-                    </span>
-                  </div>
+                {currentPlayer && (
+                  <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" />
                 )}
                 <div>
                   <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
@@ -615,33 +614,6 @@ export default function Game() {
         {renderConteudo()}
       </section>
 
-      <Modal
-        size="md"
-        title="Menu"
-        isOpen={menuModal}
-        onClose={() => setMenuModal(false)}
-      >
-        <ul className="w-full grid grid-rows-5 justify-center">
-          {linksNav.map((link, index) => (
-            <li
-              key={index}
-              onClick={() => {
-                localStorage.setItem("abaAtual", link);
-                setAbaAtual(link);
-                setMenuModal(false);
-              }}
-              className={`h-10 flex justify-center items-center hover:bg-purple-500/20 transition-colors cursor-pointer font-jaro ${
-                abaAtual === link
-                  ? "border-b border-purple-500 font-bold text-purple-400"
-                  : "text-zinc-500"
-              }`}
-            >
-              {link}
-            </li>
-          ))}
-        </ul>
-      </Modal>
-
       {endLoading && <Loading label="Finalizando..." />}
       {startLoading && <Loading label="Iniciando..." />}
 
@@ -670,6 +642,15 @@ export default function Game() {
         cancelText="Cancelar"
         color="red"
         loading={desistirLoading}
+      />
+
+      <GameBottomNav
+        linksNav={linksNav}
+        abaAtual={abaAtual}
+        onSelect={(tab) => {
+          localStorage.setItem("abaAtual", tab);
+          setAbaAtual(tab);
+        }}
       />
     </main></AuthGuard>
   );

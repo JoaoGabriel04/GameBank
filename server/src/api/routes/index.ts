@@ -8,6 +8,10 @@ import cartaRouter from "./carta.route.js"
 import negociacaoRouter from "./negociacao.route.js"
 import dividaRouter from "./divida.route.js"
 import authRouter from "../../modules/auth/auth.routes.js"
+import profileRouter from "./profile.route.js"
+import missionsRouter from "./missions.route.js"
+import shopRouter from "./shop.route.js"
+import rankingRouter from "./ranking.route.js"
 
 const apiRouter = Router()
 
@@ -20,5 +24,9 @@ apiRouter.use("/banco", bancoRouter)
 apiRouter.use("/cartas", cartaRouter)
 apiRouter.use("/negociacoes", negociacaoRouter)
 apiRouter.use("/dividas", dividaRouter)
+apiRouter.use("/profile", profileRouter)
+apiRouter.use("/missions", missionsRouter)
+apiRouter.use("/shop", shopRouter)
+apiRouter.use("/ranking", rankingRouter)
 
 export default apiRouter

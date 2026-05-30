@@ -57,9 +57,10 @@ export const sessionController = {
     try {
       const { sessionId } = req.params;
       const userId = req.user?.userId;
-      const result = await sessionService.startSession(Number(sessionId), userId);
-      emitSessionUpdated(result!.id, result);
-      return res.status(200).json(result);
+      await sessionService.startSession(Number(sessionId), userId);
+      const session = await sessionService.loadSession(Number(sessionId));
+      emitSessionUpdated(Number(sessionId), session);
+      return res.status(200).json(session);
     } catch (err) {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ error: err.message });
@@ -194,9 +195,9 @@ export const sessionController = {
 
     try {
       const userId = req.user?.userId;
-      await sessionService.endSession(sessionIdNum, userId);
-      emitSessionClosed(sessionIdNum);
-      res.status(200).json({ message: "Sessão encerrada e removida com sucesso" });
+      const ranked = await sessionService.endSession(sessionIdNum, userId);
+      emitSessionClosed(sessionIdNum, ranked);
+      res.status(200).json({ message: "Sessão encerrada e removida com sucesso", ranking: ranked });
     } catch (error) {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message });

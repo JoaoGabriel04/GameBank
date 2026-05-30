@@ -14,6 +14,8 @@ import {
 import {
   Check, X, ArrowLeftRight, Timer,
 } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
 import type { Negotiation } from "@/types/game";
 import { sortSessionPosses } from "@/utils/properties";
 
@@ -28,12 +30,28 @@ export default function NegotiationResponseModal() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const { currentSession, loadSession } = useGameStore();
   const authUser = useAuthStore((s) => s.user);
-  const { activeNegotiation, setActive, removePendente } = useNegotiationStore();
+  const {
+    activeNegotiation, setActive, removePendente,
+    minhaNegociacaoPendente, setMinhaNegociacao,
+    minhaNegociacaoAberto, setMinhaNegociacaoAberto,
+  } = useNegotiationStore();
 
   const currentPlayer = useMemo(
     () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
     [currentSession?.jogadores, authUser?.id]
   );
+
+  const fromPlayer = useMemo(
+    () => currentSession?.jogadores.find((p) => p.id === activeNegotiation?.fromPlayerId) ?? null,
+    [currentSession?.jogadores, activeNegotiation?.fromPlayerId]
+  );
+
+  const targetPlayer = useMemo(
+    () => currentSession?.jogadores.find((p) => p.id === minhaNegociacaoPendente?.toPlayerId) ?? null,
+    [currentSession?.jogadores, minhaNegociacaoPendente?.toPlayerId]
+  );
+
+  const showPendingView = minhaNegociacaoAberto && !!minhaNegociacaoPendente && !activeNegotiation;
 
   const [reqLoading, setReqLoading] = useState(false);
   const [isCountering, setIsCountering] = useState(false);
@@ -182,17 +200,13 @@ export default function NegotiationResponseModal() {
     }
   }
 
-  // Timer countdown
+  // Timer countdown — negociação recebida (activeNegotiation)
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   useEffect(() => {
-    if (!activeNegotiation) {
-      setTimeLeft(null);
-      return;
-    }
+    if (!activeNegotiation) { setTimeLeft(null); return; }
     const createdAt = new Date(activeNegotiation.createdAt).getTime();
     const update = () => {
-      const elapsed = Date.now() - createdAt;
-      const left = Math.max(0, 60 - Math.floor(elapsed / 1000));
+      const left = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
       setTimeLeft(left);
       if (left <= 0 && activeNegotiation.status === "pendente") {
         removePendente(activeNegotiation.id);
@@ -205,14 +219,123 @@ export default function NegotiationResponseModal() {
     return () => clearInterval(interval);
   }, [activeNegotiation?.id, activeNegotiation?.createdAt, activeNegotiation?.status]);
 
+  // Timer countdown — negociação pendente (minhaNegociacaoPendente)
+  const [pendingTimeLeft, setPendingTimeLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!minhaNegociacaoPendente) { setPendingTimeLeft(null); return; }
+    const createdAt = new Date(minhaNegociacaoPendente.createdAt).getTime();
+    const update = () => {
+      const left = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
+      setPendingTimeLeft(left);
+      if (left <= 0) { setMinhaNegociacao(null); setMinhaNegociacaoAberto(false); }
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [minhaNegociacaoPendente?.id, minhaNegociacaoPendente?.createdAt]);
+
+  const modalTitle = showPendingView
+    ? "Negociação Enviada"
+    : isCountering ? "Contra-Oferta" : "Negociação Recebida";
+
   return (
     <Modal
       size={isCountering ? "lg" : "md"}
-      title={isCountering ? "Contra-Oferta" : "Negociação Recebida"}
-      isOpen={!!activeNegotiation && !isExpired}
-      onClose={() => { setActive(null); resetCounter(); }}
+      title={modalTitle}
+      isOpen={(!!activeNegotiation && !isExpired) || showPendingView}
+      onClose={() => { setActive(null); resetCounter(); setMinhaNegociacaoAberto(false); }}
     >
-      {activeNegotiation && timeLeft !== null && (
+      {/* ── Vista pendente (proponente aguardando resposta) ── */}
+      {showPendingView && minhaNegociacaoPendente && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-center gap-2 text-sm font-inconsolata text-zinc-400">
+            <Timer className="w-4 h-4" />
+            <span className={pendingTimeLeft !== null && pendingTimeLeft <= 10 ? "text-red-400 font-bold" : ""}>
+              {pendingTimeLeft ?? "—"}s
+            </span>
+          </div>
+
+          {targetPlayer && (
+            <div className="relative overflow-hidden rounded-xl border border-zinc-700">
+              <UserBanner banner={targetPlayer.banner} className="absolute inset-0 w-full h-full" />
+              <div className="absolute inset-0 bg-black/60" />
+              <div className="relative z-10 flex items-center gap-3 p-3">
+                <UserAvatar
+                  avatarUrl={targetPlayer.avatarUrl}
+                  avatarUpdatedAt={targetPlayer.avatarUpdatedAt}
+                  nome={targetPlayer.nome}
+                  size="sm"
+                />
+                <div>
+                  <p className="text-xs font-inconsolata text-zinc-400">Aguardando resposta de</p>
+                  <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{targetPlayer.nome}</p>
+                </div>
+                <div className="ml-auto">
+                  <span className="text-xs font-inconsolata text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full">
+                    Pendente
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {minhaNegociacaoPendente.items.length > 0 && (
+            <div className="space-y-3">
+              {(() => {
+                const offer = minhaNegociacaoPendente.items.filter((i) => i.fromSide);
+                const want  = minhaNegociacaoPendente.items.filter((i) => !i.fromSide);
+                const resolveName = (item: typeof offer[0]) => {
+                  if (item.sessionPossesId) {
+                    const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
+                    const nome = sp?.posses?.propriedade?.nome ?? `Propriedade #${item.sessionPossesId}`;
+                    const casas = sp?.casas ?? 0;
+                    return nome + (casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : "");
+                  }
+                  return item.valor ? `R$ ${item.valor.toLocaleString("pt-BR")}` : "—";
+                };
+                return (
+                  <>
+                    {offer.length > 0 && (
+                      <div>
+                        <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-1">Você oferece</p>
+                        <div className="space-y-1">
+                          {offer.map((item) => (
+                            <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200">
+                              {resolveName(item)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {want.length > 0 && (
+                      <div>
+                        <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-1">Você quer</p>
+                        <div className="space-y-1">
+                          {want.map((item) => (
+                            <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200">
+                              {resolveName(item)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          <button
+            onClick={() => setMinhaNegociacaoAberto(false)}
+            className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-inconsolata rounded-xl transition-colors cursor-pointer text-sm"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* ── Vista normal (negociação recebida / contra-oferta) ── */}
+      {!showPendingView && activeNegotiation && timeLeft !== null && (
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-sm font-inconsolata text-zinc-400">
             <Timer className="w-4 h-4" />
@@ -223,9 +346,25 @@ export default function NegotiationResponseModal() {
 
           {!isCountering ? (
             <>
-              <div className="text-sm font-inconsolata text-zinc-300 text-center">
-                Oferta de <span className="text-zinc-100 font-semibold">{activeNegotiation.fromPlayer?.nome ?? "—"}</span>
-              </div>
+              {fromPlayer && (
+                <div className="relative overflow-hidden rounded-xl border border-zinc-700">
+                  <UserBanner banner={fromPlayer.banner} className="absolute inset-0 w-full h-full" />
+                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="relative z-10 flex items-center gap-3 p-3">
+                    <UserAvatar
+                      avatarUrl={fromPlayer.avatarUrl}
+                      avatarUpdatedAt={fromPlayer.avatarUpdatedAt}
+                      nome={fromPlayer.nome}
+                      size="sm"
+                      ring
+                    />
+                    <div>
+                      <p className="text-xs font-inconsolata text-zinc-400">Oferta de</p>
+                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{fromPlayer.nome}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {activeNegotiation.items.length > 0 && (
                 <div className="space-y-2">
@@ -279,9 +418,24 @@ export default function NegotiationResponseModal() {
             </>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm font-inconsolata text-zinc-300 text-center">
-                Contra-oferta para <span className="text-zinc-100 font-semibold">{activeNegotiation.fromPlayer?.nome ?? "—"}</span>
-              </p>
+              {fromPlayer && (
+                <div className="relative overflow-hidden rounded-xl border border-zinc-700">
+                  <UserBanner banner={fromPlayer.banner} className="absolute inset-0 w-full h-full" />
+                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="relative z-10 flex items-center gap-3 p-3">
+                    <UserAvatar
+                      avatarUrl={fromPlayer.avatarUrl}
+                      avatarUpdatedAt={fromPlayer.avatarUpdatedAt}
+                      nome={fromPlayer.nome}
+                      size="sm"
+                    />
+                    <div>
+                      <p className="text-xs font-inconsolata text-zinc-400">Contra-oferta para</p>
+                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{fromPlayer.nome}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* O que eu ofereço */}
