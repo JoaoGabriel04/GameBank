@@ -11,6 +11,14 @@ const resolvedBaseUrl =
 
 const api = axios.create({
   baseURL: resolvedBaseUrl,
-})
+});
+
+api.interceptors.request.use((config) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("jwt_token") : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default api;

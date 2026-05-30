@@ -17,6 +17,12 @@ process.on("unhandledRejection", (reason) => {
 const PORT = process.env.PORT || 7000;
 const app = express();
 
+// Render (e proxies em geral) injetam X-Forwarded-For; sem isso o express-rate-limit
+// lança ERR_ERL_UNEXPECTED_X_FORWARDED_FOR e devolve 500 antes de qualquer middleware
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 const corsOriginsEnv = process.env.CORS_ORIGIN?.trim() || "";
 const allowedOrigins = corsOriginsEnv
   ? corsOriginsEnv.split(",").map(s => s.trim())
