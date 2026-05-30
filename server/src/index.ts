@@ -33,7 +33,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", "http://localhost:7000", "https://sgpcontroller.onrender.com"],
+        connectSrc: ["'self'", "http://localhost:7000", "https://gamebank-vtsb.onrender.com"],
         fontSrc: ["'self'", "https:", "data:"],
         imgSrc: ["'self'", "data:"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
