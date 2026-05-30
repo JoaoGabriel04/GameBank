@@ -4,7 +4,7 @@ import { Jaro, Inconsolata } from 'next/font/google'
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
-  title: "Super Gerenciador de Partidas",
+  title: "GameBank",
   description: "Gerenciador de partidas do tabuleiro Super Banco Imobiliário",
 };
 
