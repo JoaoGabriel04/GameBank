@@ -7,7 +7,7 @@ const resolvedBaseUrl =
     ? process.env.NEXT_PUBLIC_API_URL
     : process.env.NODE_ENV === 'development'
     ? 'http://localhost:7000/api'
-    : "https://sgpcontroller.onrender.com/api";
+    : "https://gamebank-vtsb.onrender.com/api";
 
 const api = axios.create({
   baseURL: resolvedBaseUrl,
