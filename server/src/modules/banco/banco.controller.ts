@@ -3,6 +3,7 @@ import { BancoService } from "./banco.service.js";
 import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitSessionUpdated } from "../socket/socket.handler.js";
+import { emitToPlayer } from "../../lib/socket.js";
 
 const bancoService = new BancoService();
 const sessionService = new SessionService();
@@ -82,9 +83,15 @@ export const bancoController = {
     }
 
     try {
-      const valor = await bancoService.pagarAluguel(Number(sessionId), Number(pagadorId), Number(sessionPossesId));
+      const result = await bancoService.pagarAluguel(Number(sessionId), Number(pagadorId), Number(sessionPossesId));
+      emitToPlayer(Number(sessionId), result.recebedorId, "aluguel:received", {
+        fromPlayerNome: result.pagadorNome,
+        toPlayerId: result.recebedorId,
+        valor: result.valor,
+        propriedadeNome: result.propriedadeNome,
+      });
       await emitUpdatedSession(Number(sessionId));
-      return res.status(200).json({ message: "Aluguel pago", valor });
+      return res.status(200).json({ message: "Aluguel pago", valor: result.valor });
     } catch (err) {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
@@ -102,6 +109,12 @@ export const bancoController = {
 
     try {
       const result = await bancoService.aluguelAcao(Number(sessionId), Number(pagadorId), Number(sessionPossesId), Number(numDados));
+      emitToPlayer(Number(sessionId), result.recebedorId, "aluguel:received", {
+        fromPlayerNome: result.pagadorNome,
+        toPlayerId: result.recebedorId,
+        valor: result.valor,
+        propriedadeNome: result.propriedadeNome,
+      });
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({
         message: `${result.pagadorNome} pagou R$ ${result.valor} para ${result.recebedorNome}`,

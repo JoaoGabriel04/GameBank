@@ -34,6 +34,12 @@ export const buyPropApi = (propriedadeId: number, sessionId: number, userId: num
 export const buyHouseApi = (userId: number, sessionId: number, propriedadeId: number) =>
   propertiesApi.buyHouse(userId, sessionId, propriedadeId).then(res => res.data)
 
+export const buyHousesBatchApi = (userId: number, sessionId: number, sessaoPossesIds: number[]) =>
+  api.put('/propriedades/buyHousesBatch', { userId, sessionId, sessaoPossesIds }).then(res => res.data)
+
+export const sellHousesBatchApi = (userId: number, sessionId: number, items: { sessaoPossesId: number; quantidade: number }[]) =>
+  api.put('/propriedades/sellHousesBatch', { userId, sessionId, items }).then(res => res.data)
+
 export const sellHouseApi = (userId: number, sessionId: number, propriedadeId: number) =>
   propertiesApi.sellHouse(userId, sessionId, propriedadeId).then(res => res.data)
 

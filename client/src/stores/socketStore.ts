@@ -16,6 +16,7 @@ const BASE_URL = API_URL.replace(/\/api\/?$/, "");
 let socket: Socket | null = null;
 let currentSessionId: number | null = null;
 let reconnectCallbacks: (() => void)[] = [];
+let sessionClosedCallbacks: (() => void)[] = [];
 
 function getToken(): string {
   return typeof window !== "undefined"
@@ -29,6 +30,14 @@ export function onReconnect(cb: () => void) {
 
 export function clearReconnectCallbacks() {
   reconnectCallbacks = [];
+}
+
+export function onSessionClosed(cb: () => void) {
+  sessionClosedCallbacks.push(cb);
+}
+
+export function clearSessionClosedCallbacks() {
+  sessionClosedCallbacks = [];
 }
 
 export function connectSocket(sessionId: number) {
@@ -64,6 +73,7 @@ export function connectSocket(sessionId: number) {
   socket.on("session:closed", ({ sessionId: closedId }) => {
     if (closedId === sessionId) {
       useGameStore.setState({ currentSession: null });
+      sessionClosedCallbacks.forEach((cb) => cb());
     }
   });
 
@@ -98,6 +108,11 @@ export function connectSocket(sessionId: number) {
   // Notificações
   socket.on("notification:new", (data: GameNotification) => {
     useNotificationStore.getState().addNotification(data);
+  });
+
+  // Aluguel recebido — evento direcionado ao dono da propriedade
+  socket.on("aluguel:received", (data: { fromPlayerNome: string; toPlayerId: number; valor: number; propriedadeNome: string }) => {
+    useAluguelReceivedStore.getState().addEvent(data);
   });
 
   // Sorte e Revés — carta sorteada (broadcast)
@@ -204,6 +219,27 @@ export const useCardStore = create<CardStore>((set) => ({
   clearEvents: () => set({ events: [] }),
 }));
 
+// ─── Aluguel Received Store ─────────────────────────────────────────────
+
+interface AluguelRecebidoEvent {
+  fromPlayerNome: string;
+  toPlayerId: number;
+  valor: number;
+  propriedadeNome: string;
+}
+
+interface AluguelReceivedStore {
+  events: AluguelRecebidoEvent[];
+  addEvent: (data: AluguelRecebidoEvent) => void;
+  clearEvents: () => void;
+}
+
+export const useAluguelReceivedStore = create<AluguelReceivedStore>((set) => ({
+  events: [],
+  addEvent: (data) => set((s) => ({ events: [...s.events, data] })),
+  clearEvents: () => set({ events: [] }),
+}));
+
 export function disconnectSocket() {
   if (socket) {
     if (currentSessionId) {
@@ -215,6 +251,7 @@ export function disconnectSocket() {
     currentSessionId = null;
   }
   reconnectCallbacks = [];
+  sessionClosedCallbacks = [];
   clearChatAndNotifications();
 }
 
@@ -222,5 +259,6 @@ function clearChatAndNotifications() {
   useChatStore.getState().clearMessages();
   useNotificationStore.getState().clearNotifications();
   useCardStore.getState().clearEvents();
+  useAluguelReceivedStore.getState().clearEvents();
   useNegotiationStore.getState().clearNegotiations();
 }

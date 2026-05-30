@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useToast } from "@/components/Toast";
+import { sortSessionPosses } from "@/utils/properties";
 import { ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, Receipt } from "lucide-react";
 
 export default function Banco() {
@@ -80,8 +81,8 @@ export default function Banco() {
       setReqLoading(true);
       await deposito({ userId: currentPlayer.id, sessionId: currentSession.id, valor });
 
-      toastSuccess("Depósito realizado com sucesso!");
       await loadSession(currentSession.id);
+      toastSuccess("Depósito realizado com sucesso!");
       setModalDeposito(false);
       resetarValores();
     } catch {
@@ -103,8 +104,8 @@ export default function Banco() {
       setReqLoading(true);
       await saque({ userId: currentPlayer.id, sessionId: currentSession.id, valor });
 
-      toastSuccess("Saque realizado com sucesso!");
       await loadSession(currentSession.id);
+      toastSuccess("Saque realizado com sucesso!");
       setModalSaque(false);
       resetarValores();
     } catch {
@@ -133,8 +134,8 @@ export default function Banco() {
         valor,
       });
 
-      toastSuccess("Transferência realizada com sucesso!");
       await loadSession(currentSession.id);
+      toastSuccess("Transferência realizada com sucesso!");
       setModalTransferencia(false);
       resetarValores();
     } catch {
@@ -171,8 +172,8 @@ export default function Banco() {
         });
       }
 
-      toastSuccess("Aluguel pago com sucesso!");
       await loadSession(currentSession.id);
+      toastSuccess("Aluguel pago com sucesso!");
       setModalAluguel(false);
       resetarValores();
     } catch {
@@ -264,10 +265,15 @@ export default function Banco() {
 
         <label className="block text-sm font-inconsolata text-zinc-400 mb-1">Valor do depósito:</label>
         <input
-          type="number"
-          value={valorOperacao}
-          onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
+          type="text"
+          inputMode="numeric"
+          maxLength={7}
+          value={String(valorOperacao)}
+          onChange={(e) => {
+            const cleaned = e.target.value.replace(/\D/g, "").slice(0, 7);
+            setValorOperacao(cleaned ? Number(cleaned) : 0);
+          }}
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full text-zinc-100 font-inconsolata"
         />
 
         <div className="w-full flex justify-center items-center mt-5">
@@ -294,10 +300,15 @@ export default function Banco() {
 
         <label className="block text-sm font-inconsolata text-zinc-400 mb-1">Valor do saque:</label>
         <input
-          type="number"
-          value={valorOperacao}
-          onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
+          type="text"
+          inputMode="numeric"
+          maxLength={7}
+          value={String(valorOperacao)}
+          onChange={(e) => {
+            const cleaned = e.target.value.replace(/\D/g, "").slice(0, 7);
+            setValorOperacao(cleaned ? Number(cleaned) : 0);
+          }}
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full text-zinc-100 font-inconsolata"
         />
 
         <div className="w-full flex justify-center items-center mt-5">
@@ -343,10 +354,15 @@ export default function Banco() {
 
         <label className="block text-sm font-inconsolata text-zinc-400 mt-4 mb-1">Valor:</label>
         <input
-          type="number"
-          value={valorOperacao}
-          onChange={(e) => setValorOperacao(Number(e.target.value))}
-          className="bg-zinc-400/20 py-1 px-2 rounded w-full"
+          type="text"
+          inputMode="numeric"
+          maxLength={7}
+          value={String(valorOperacao)}
+          onChange={(e) => {
+            const cleaned = e.target.value.replace(/\D/g, "").slice(0, 7);
+            setValorOperacao(cleaned ? Number(cleaned) : 0);
+          }}
+          className="bg-zinc-400/20 py-1 px-2 rounded w-full text-zinc-100 font-inconsolata"
         />
 
         <div className="w-full flex justify-center items-center mt-5">
@@ -385,7 +401,9 @@ export default function Banco() {
             <SelectValue placeholder="Selecione a propriedade" />
           </SelectTrigger>
           <SelectContent className="bg-zinc-900 border-zinc-700">
-            {currentSession?.sessionPosses
+            {sortSessionPosses(
+              currentSession?.sessionPosses ?? []
+            )
               .filter((p) => !!p.playerId)
               .filter((p) => p.playerId !== currentPlayer?.id)
               .map((poss) => {

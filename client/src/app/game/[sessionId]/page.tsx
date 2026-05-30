@@ -6,15 +6,16 @@ import Loja from "@/components/Loja";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import AuthGuard from "@/components/AuthGuard";
-import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, useCardStore } from "@/stores/socketStore";
+import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore, useAluguelReceivedStore } from "@/stores/socketStore";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
-import { Menu } from "lucide-react";
+import { Eye, EyeOff, Menu, LogOut } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import Historico from "@/components/Historico";
+import Ranking from "@/components/Ranking";
 import Modal from "@/components/Modal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Chat from "@/components/Chat";
@@ -24,19 +25,23 @@ import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPowerOff, faPlay, faUsers, faClock, faArrowLeft, faGamepad } from "@fortawesome/free-solid-svg-icons";
-import type { PlayerColor } from "@/types/game";
+import type { PlayerColor, Player } from "@/types/game";
 import { PLAYER_COLORS } from "@/types/game";
 
-const linksNav = ["Início", "Loja", "Especiais", "Histórico"];
+const linksNav = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
 
 export default function Game() {
-  const { success: toastSuccess, error: toastError } = useToast();
+  const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const [abaAtual, setAbaAtual] = useState("Início");
   const [endLoading, setEndLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
   const [quitLoading, setQuitLoading] = useState(false);
+  const [desistirLoading, setDesistirLoading] = useState(false);
   const [menuModal, setMenuModal] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
+  const [showDesistirModal, setShowDesistirModal] = useState(false);
+  const [showSaldo, setShowSaldo] = useState(true);
+  const [sessionEnded, setSessionEnded] = useState(false);
 
   const params = useParams();
   const router = useRouter();
@@ -46,7 +51,7 @@ export default function Game() {
   const { session: swrSession, isLoading, isError, mutate } = useSession(sessionId);
 
   // Store Zustand — usada pelos componentes filhos
-  const { currentSession, endSession, startSession } = useGameStore();
+  const { currentSession, endSession, startSession, loadSession } = useGameStore();
   const { user: authUser, loadFromStorage: loadAuth } = useAuthStore();
 
   // Carrega authUser do localStorage (substitui o auto-load removido do authStore)
@@ -59,8 +64,14 @@ export default function Game() {
     if (!sessionId) return;
     connectSocket(sessionId);
     onReconnect(() => mutate());
+    onSessionClosed(() => {
+      setSessionEnded(true);
+      setRoomToken(null);
+      disconnectSocket();
+    });
     return () => {
       clearReconnectCallbacks();
+      clearSessionClosedCallbacks();
       disconnectSocket();
     };
   }, [sessionId, mutate]);
@@ -72,8 +83,23 @@ export default function Game() {
         const last = state.events[state.events.length - 1];
         if (last.effectDescription) {
           const msg = `${last.playerNome} ${last.effectDescription.replace(last.playerNome + " ", "")}`;
-          toastSuccess(msg);
+          if (last.tipoBaralho === "reves") {
+            toastError(msg);
+          } else {
+            toastSuccess(msg);
+          }
         }
+      }
+    });
+    return unsub;
+  }, [toastSuccess, toastError]);
+
+  // ─── Aluguel recebido → toast verde para o dono ────────────────────────
+  useEffect(() => {
+    const unsub = useAluguelReceivedStore.subscribe((state, prev) => {
+      if (state.events.length > prev.events.length) {
+        const last = state.events[state.events.length - 1];
+        toastSuccess(`Você recebeu R$ ${(last.valor).toLocaleString("pt-BR")} de aluguel de ${last.fromPlayerNome} pela ${last.propriedadeNome}`);
       }
     });
     return unsub;
@@ -93,7 +119,7 @@ export default function Game() {
 
   // Redireciona se não conseguir carregar a sessão (404, 401, 403), não em erro de rede
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || sessionEnded) return;
     if (!swrSession && isError) {
       if (endLoading) return;
       const axiosError = isError as { response?: { status?: number } };
@@ -108,7 +134,7 @@ export default function Game() {
       toastError(msg);
       router.push("/sessions");
     }
-  }, [isLoading, swrSession, isError, router, endLoading, toastError]);
+  }, [isLoading, sessionEnded, swrSession, isError, router, endLoading, toastError]);
 
   const handleEndGame = async () => {
     if (!currentSession) return;
@@ -116,7 +142,7 @@ export default function Game() {
       return;
     setEndLoading(true);
     await endSession(currentSession.id);
-    toastSuccess("Jogo finalizado com sucesso!");
+    toastInfo("Jogo finalizado com sucesso!");
     setEndLoading(false);
     router.push("/");
   };
@@ -134,13 +160,34 @@ export default function Game() {
       await sessionsApi.quit(currentSession.id);
       setRoomToken(null);
       disconnectSocket();
-      toastSuccess("Você saiu da sala.");
+      toastInfo("Você saiu da sala.");
       router.push("/sessions");
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao sair da sala";
-      toastError(msg);
+      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setQuitLoading(false);
+    }
+  };
+
+  const handleDesistir = async () => {
+    if (!currentSession) return;
+    setShowDesistirModal(true);
+  };
+
+  const confirmDesistir = async () => {
+    if (!currentSession) return;
+    setShowDesistirModal(false);
+    setDesistirLoading(true);
+    try {
+      await sessionsApi.desistir(currentSession.id);
+      await loadSession(currentSession.id);
+      toastInfo("Você desistiu da partida. Agora você é um espectador.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Erro ao desistir da partida";
+      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
+    } finally {
+      setDesistirLoading(false);
     }
   };
 
@@ -152,7 +199,7 @@ export default function Game() {
       await sessionsApi.quit(currentSession.id);
       setRoomToken(null);
       disconnectSocket();
-      toastSuccess("Você saiu da sala.");
+      toastInfo("Você saiu da sala.");
       router.push("/sessions");
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao sair da sala";
@@ -167,11 +214,11 @@ export default function Game() {
     setStartLoading(true);
     try {
       await startSession(currentSession.id);
-      toastSuccess("Jogo iniciado!");
       mutate();
+      toastInfo("Jogo iniciado!");
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao iniciar jogo";
-      toastError(msg);
+      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setStartLoading(false);
     }
@@ -196,7 +243,9 @@ export default function Game() {
   // ── Waiting Room ────────────────────────────────────────────────────────
   function renderWaitingRoom() {
     if (!currentSession) return null;
-    const jogadores = currentSession.jogadores || [];
+    const allPlayers = currentSession.jogadores || [];
+    const activePlayers = allPlayers.filter((p) => !p.desistiu);
+    const spectators = allPlayers.filter((p) => p.desistiu);
     const times = currentSession.times || [];
     const isDuplas = currentSession.modo === "duplas";
 
@@ -220,8 +269,14 @@ export default function Game() {
           <div className="flex justify-center gap-6 text-zinc-400 font-inconsolata text-sm mb-8">
             <div className="flex items-center gap-2">
               <FontAwesomeIcon icon={faUsers} />
-              <span>{jogadores.length}/{currentSession.maxJogadores || "?"} jogadores</span>
+              <span>{activePlayers.length}/{currentSession.maxJogadores || "?"} jogadores</span>
             </div>
+            {spectators.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                <span>{spectators.length} espectador{spectators.length !== 1 ? "es" : ""}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <FontAwesomeIcon icon={faClock} />
               <span>Saldo inicial: R$ {(currentSession.saldoInicial || 25000).toLocaleString()}</span>
@@ -265,14 +320,14 @@ export default function Game() {
           </Button1>
         </div>
 
-        {/* Players list */}
+        {/* Active Players list */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
           <h3 className="text-xl font-jaro text-zinc-100 mb-4 flex items-center gap-2">
             <FontAwesomeIcon icon={faUsers} className="text-green-500" />
-            Jogadores ({jogadores.length}/{currentSession.maxJogadores || "?"})
+            Jogadores ({activePlayers.length}/{currentSession.maxJogadores || "?"})
           </h3>
 
-          {jogadores.length === 0 ? (
+          {activePlayers.length === 0 ? (
             <p className="text-zinc-500 font-inconsolata text-center py-8">
               Nenhum jogador ainda. Compartilhe o link da sala!
             </p>
@@ -280,7 +335,7 @@ export default function Game() {
             <div className="space-y-3">
               {isDuplas && times.length > 0 ? (
                 times.map((team) => {
-                  const teamPlayers = jogadores.filter(j => j.teamId === team.id);
+                  const teamPlayers = activePlayers.filter(j => j.teamId === team.id);
                   const teamColor = PLAYER_COLORS.find(c => c.value === team.cor);
                   return (
                     <div key={team.id} className="border border-zinc-700 rounded-lg overflow-hidden">
@@ -305,7 +360,7 @@ export default function Game() {
                   );
                 })
               ) : (
-                jogadores.map((p) => {
+                activePlayers.map((p) => {
                   const pColor = PLAYER_COLORS.find(c => c.value === p.cor);
                   return (
                     <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
@@ -326,6 +381,26 @@ export default function Game() {
           )}
         </div>
 
+        {/* Spectators list */}
+        {spectators.length > 0 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-4">
+            <h3 className="text-xl font-jaro text-zinc-500 mb-4 flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Espectadores ({spectators.length})
+            </h3>
+            <div className="space-y-3">
+              {spectators.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
+                  <div className="w-10 h-10 rounded-full bg-zinc-600 flex items-center justify-center">
+                    <span className="text-zinc-300 text-sm font-bold">{p.nome.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <span className="text-zinc-400 font-inconsolata">{p.nome}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isDuplas && times.length > 0 && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-4">
             <h3 className="text-xl font-jaro text-zinc-100 mb-4">Times</h3>
@@ -338,7 +413,7 @@ export default function Game() {
                       {team.nome}
                     </div>
                     <div className="text-zinc-500 text-xs font-inconsolata">
-                      {jogadores.filter(j => j.teamId === team.id).length} jogador(es)
+                      {activePlayers.filter(j => j.teamId === team.id).length} jogador(es)
                     </div>
                   </div>
                 );
@@ -361,10 +436,34 @@ export default function Game() {
       case "Início":       return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
       case "Loja":         return <Loja />;
       case "Especiais":    return <Especiais />;
+      case "Ranking":      return <Ranking />;
       case "Histórico":    return <Historico />;
       default:             return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
     }
   };
+
+  if (sessionEnded) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-zinc-800 flex items-center justify-center">
+            <FontAwesomeIcon icon={faPowerOff} className="text-3xl text-zinc-500" />
+          </div>
+          <h2 className="text-3xl font-jaro text-zinc-100 mb-3">Sala Finalizada</h2>
+          <p className="text-zinc-400 font-inconsolata mb-8">
+            Esta sala foi encerrada. Volte para a lista de salas para entrar em outra partida.
+          </p>
+          <Button1
+            size="lg"
+            color="green"
+            handle={() => router.push("/sessions")}
+          >
+            Voltar para Salas
+          </Button1>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !currentSession) {
     return (
@@ -378,6 +477,18 @@ export default function Game() {
   }
 
   const isWaiting = currentSession.status === "Esperando";
+  const currentPlayer = currentSession?.jogadores?.find(
+    (p) => p.userId === authUser?.id
+  );
+  const isSpectator = !!currentPlayer?.desistiu;
+  const spectatorCount = currentSession?.jogadores?.filter((p) => p.desistiu).length ?? 0;
+  const playerColor = currentPlayer
+    ? PLAYER_COLORS.find((c) => c.value === currentPlayer.cor)
+    : null;
+
+  function formatCurrency(value: number) {
+    return value.toLocaleString("pt-BR");
+  }
 
   return (
     <AuthGuard><main className="w-full flex flex-col px-4 pb-6 min-h-screen bg-zinc-950">
@@ -417,7 +528,7 @@ export default function Game() {
 
           {!isWaiting && (
             <nav className="w-full mt-10 hidden lg:flex">
-              <ul className="w-full grid grid-cols-4 justify-center">
+              <ul className="w-full grid grid-cols-5 justify-center">
                 {linksNav.map((link, index) => (
                   <li
                     key={index}
@@ -449,12 +560,54 @@ export default function Game() {
       <section className="mt-8">
         {!isWaiting && (
           <div className="w-full flex flex-col my-4 border-b border-zinc-800 pb-4">
-            <h1 className="text-2xl font-jaro font-semibold text-zinc-100">
-              {currentSession.nome}
-            </h1>
-            <p className="text-zinc-400 font-inconsolata">
-              {formatDate(currentSession.dataInicio)} - Jogadores:{" "}
-              {currentSession.jogadores.length}
+            {/* Player info header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                {playerColor && (
+                  <div className={`w-10 h-10 rounded-full ${playerColor.bg} flex items-center justify-center`}>
+                    <span className="text-white text-sm font-bold">
+                      {currentPlayer?.nome.charAt(0).toUpperCase() || "?"}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
+                    {currentSession.nome}
+                    {isSpectator && (
+                      <span className="text-xs font-inconsolata bg-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded-full">
+                        Espectador
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-sm font-inconsolata text-zinc-500">
+                    {currentPlayer?.nome || "—"} · R$ {formatCurrency(currentPlayer?.saldo ?? 0)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {spectatorCount > 0 && (
+                  <span className="flex items-center gap-1 text-sm font-inconsolata text-zinc-500">
+                    <Eye className="w-4 h-4" />
+                    {spectatorCount}
+                  </span>
+                )}
+                {currentPlayer && !isSpectator && (
+                  <Button1
+                    size="sm"
+                    color="red"
+                    handle={desistirLoading ? undefined : handleDesistir}
+                    disabled={desistirLoading}
+                  >
+                    Desistir
+                  </Button1>
+                )}
+                <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
+                  {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <p className="text-zinc-500 font-inconsolata text-xs">
+              {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
             </p>
           </div>
         )}
@@ -468,7 +621,7 @@ export default function Game() {
         isOpen={menuModal}
         onClose={() => setMenuModal(false)}
       >
-        <ul className="w-full grid grid-rows-4 justify-center">
+        <ul className="w-full grid grid-rows-5 justify-center">
           {linksNav.map((link, index) => (
             <li
               key={index}
@@ -506,6 +659,17 @@ export default function Game() {
         cancelText="Cancelar"
         color="red"
         loading={quitLoading}
+      />
+      <ConfirmationModal
+        isOpen={showDesistirModal}
+        onClose={() => setShowDesistirModal(false)}
+        onConfirm={confirmDesistir}
+        title="Desistir da Partida?"
+        message="Você se tornará um espectador. Suas propriedades serão liberadas e seu saldo zerado. Você ainda poderá acompanhar a partida até o fim."
+        confirmText="Desistir"
+        cancelText="Cancelar"
+        color="red"
+        loading={desistirLoading}
       />
     </main></AuthGuard>
   );

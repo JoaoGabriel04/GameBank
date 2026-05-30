@@ -9,6 +9,19 @@ const COLOR_ORDER = PROPERTY_COLORS.reduce<Record<string, number>>(
   {}
 )
 
+export function sortSessionPosses(items: SessionPropriedade[]): SessionPropriedade[] {
+  return [...items].sort((a, b) => {
+    const corA = a.posses?.propriedade?.grupo_cor ?? ''
+    const corB = b.posses?.propriedade?.grupo_cor ?? ''
+    const orderA = COLOR_ORDER[corA] ?? 99
+    const orderB = COLOR_ORDER[corB] ?? 99
+    if (orderA !== orderB) return orderA - orderB
+    const nomeA = a.posses?.propriedade?.nome ?? ''
+    const nomeB = b.posses?.propriedade?.nome ?? ''
+    return nomeA.localeCompare(nomeB, 'pt-BR')
+  })
+}
+
 export interface PropItem {
   prop: Propriedade
   sessionProp: SessionPropriedade
@@ -21,6 +34,15 @@ export interface ColorGroup {
 
 function sortByName(items: PropItem[]): PropItem[] {
   return items.sort((a, b) => a.prop.nome.localeCompare(b.prop.nome, "pt-BR"))
+}
+
+export function sortPropItems(items: PropItem[]): PropItem[] {
+  return [...items].sort((a, b) => {
+    const orderA = COLOR_ORDER[a.prop.grupo_cor] ?? 99
+    const orderB = COLOR_ORDER[b.prop.grupo_cor] ?? 99
+    if (orderA !== orderB) return orderA - orderB
+    return a.prop.nome.localeCompare(b.prop.nome, 'pt-BR')
+  })
 }
 
 export function groupByColor(items: PropItem[]): ColorGroup[] {

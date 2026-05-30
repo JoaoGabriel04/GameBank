@@ -20,6 +20,8 @@ import {
 } from "@/services/api/players";
 import {
   buyHouseApi,
+  buyHousesBatchApi,
+  sellHousesBatchApi,
   buyPropApi,
   getPropByIdApi,
   hipotecarPropApi,
@@ -68,6 +70,8 @@ interface GameStore {
   getPropertyById: (propriedadeId: number) => Promise<Propriedade | null>;
   buyProperty: (propriedadeId: number, sessionId: number, userId: number) => Promise<void>;
   buyHouse: (params: { userId: number; sessionId: number; propriedadeId: number }) => Promise<void>;
+  buyHousesBatch: (params: { userId: number; sessionId: number; sessaoPossesIds: number[] }) => Promise<void>;
+  sellHousesBatch: (params: { userId: number; sessionId: number; items: { sessaoPossesId: number; quantidade: number }[] }) => Promise<void>;
   sellHouse: (params: { userId: number; sessionId: number; propriedadeId: number }) => Promise<void>;
   sellPropriedade: (propriedadeId: number, sessionId: number, userId: number) => Promise<void>;
   hipotecarProp: (propriedadeId: number, sessionId: number, userId: number) => Promise<void>;
@@ -307,6 +311,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await buyHouseApi(userId, sessionId, propriedadeId);
+      set({ loading: false });
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  buyHousesBatch: async ({ userId, sessionId, sessaoPossesIds }) => {
+    set({ loading: true, error: null });
+    try {
+      await buyHousesBatchApi(userId, sessionId, sessaoPossesIds);
+      set({ loading: false });
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  sellHousesBatch: async ({ userId, sessionId, items }) => {
+    set({ loading: true, error: null });
+    try {
+      await sellHousesBatchApi(userId, sessionId, items);
       set({ loading: false });
     } catch (err) {
       handleError(set, err);

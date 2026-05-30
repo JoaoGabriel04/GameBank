@@ -170,6 +170,12 @@ export class SessionRepository {
     });
   }
 
+  async countActivePlayers(sessionId: number): Promise<number> {
+    return prisma.sessionPlayer.count({
+      where: { sessionId, desistiu: false },
+    });
+  }
+
   async deletePlayer(id: number) {
     return prisma.sessionPlayer.delete({ where: { id } });
   }

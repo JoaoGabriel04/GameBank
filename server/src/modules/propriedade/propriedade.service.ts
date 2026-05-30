@@ -96,6 +96,137 @@ export class PropriedadeService {
     });
   }
 
+  async buyHousesBatch(userId: number, sessionId: number, sessaoPossesIds: number[]) {
+    return withLock(`batch:houses:${sessionId}:${userId}`, async () => {
+      if (!sessaoPossesIds.length) {
+        throw new AppError(400, "Nenhuma propriedade selecionada");
+      }
+
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado");
+
+      const properties = await prisma.sessionPosses.findMany({
+        where: { id: { in: sessaoPossesIds }, sessionId },
+        include: { posses: { include: { propriedade: true } } },
+      });
+
+      if (properties.length !== sessaoPossesIds.length) {
+        throw new AppError(404, "Alguma(s) propriedade(s) não encontrada(s)");
+      }
+
+      let totalCost = 0;
+      const nomes: string[] = [];
+      for (const prop of properties) {
+        if (prop.playerId !== userId) {
+          throw new AppError(400, `Você não é dono de ${prop.posses.propriedade.nome}`);
+        }
+        if (prop.negociando) {
+          throw new AppError(400, `${prop.posses.propriedade.nome} está em negociação`);
+        }
+        if (prop.casas >= 5) {
+          throw new AppError(400, `${prop.posses.propriedade.nome} já tem o máximo de casas`);
+        }
+        totalCost += prop.posses.propriedade.custo_casa;
+        nomes.push(prop.posses.propriedade.nome);
+      }
+
+      if (player.saldo < totalCost) {
+        throw new AppError(400, "Saldo insuficiente para comprar as casas");
+      }
+
+      const updateQueries = properties.map((prop) =>
+        prisma.sessionPosses.update({
+          where: { id: prop.id },
+          data: { casas: { increment: 1 } },
+        })
+      );
+
+      await prisma.$transaction([
+        ...updateQueries,
+        prisma.sessionPlayer.update({
+          where: { id: userId },
+          data: { saldo: { decrement: totalCost } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "COMPRA_CASA_LOTE",
+            detalhes: `${player.nome} comprou ${properties.length} casa(s): ${nomes.join(", ")} por R$ ${totalCost}`,
+          },
+        }),
+      ]);
+    });
+  }
+
+  async sellHousesBatch(userId: number, sessionId: number, items: { sessaoPossesId: number; quantidade: number }[]) {
+    return withLock(`batch:houses:${sessionId}:${userId}`, async () => {
+      if (!items.length) {
+        throw new AppError(400, "Nenhuma propriedade selecionada");
+      }
+
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado");
+
+      const ids = items.map((i) => i.sessaoPossesId);
+      const properties = await prisma.sessionPosses.findMany({
+        where: { id: { in: ids }, sessionId },
+        include: { posses: { include: { propriedade: true } } },
+      });
+
+      if (properties.length !== ids.length) {
+        throw new AppError(404, "Alguma(s) propriedade(s) não encontrada(s)");
+      }
+
+      const propMap = new Map(properties.map((p) => [p.id, p]));
+      let totalValue = 0;
+      const detalhesItens: string[] = [];
+
+      for (const item of items) {
+        const prop = propMap.get(item.sessaoPossesId);
+        if (!prop) throw new AppError(404, `Propriedade #${item.sessaoPossesId} não encontrada`);
+        if (prop.playerId !== userId) {
+          throw new AppError(400, `Você não é dono de ${prop.posses.propriedade.nome}`);
+        }
+        if (prop.negociando) {
+          throw new AppError(400, `${prop.posses.propriedade.nome} está em negociação`);
+        }
+        if (item.quantidade <= 0) {
+          throw new AppError(400, `Quantidade inválida para ${prop.posses.propriedade.nome}`);
+        }
+        if (prop.casas < item.quantidade) {
+          throw new AppError(400, `${prop.posses.propriedade.nome} tem apenas ${prop.casas} casa(s), não pode vender ${item.quantidade}`);
+        }
+        const valorItem = prop.posses.propriedade.custo_casa * item.quantidade;
+        totalValue += valorItem;
+        detalhesItens.push(`${item.quantidade} casa(s) de ${prop.posses.propriedade.nome}`);
+      }
+
+      const updateQueries = items.map((item) =>
+        prisma.sessionPosses.update({
+          where: { id: item.sessaoPossesId },
+          data: { casas: { decrement: item.quantidade } },
+        })
+      );
+
+      await prisma.$transaction([
+        ...updateQueries,
+        prisma.sessionPlayer.update({
+          where: { id: userId },
+          data: { saldo: { increment: totalValue } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "VENDA_CASA_LOTE",
+            detalhes: `${player.nome} vendeu ${detalhesItens.join(", ")} por R$ ${totalValue}`,
+          },
+        }),
+      ]);
+    });
+  }
+
   async sellHouse(userId: number, sessionId: number, propriedadeId: number) {
     const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
     if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");

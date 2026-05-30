@@ -91,7 +91,8 @@ export class SessionService {
     nome: string,
     cor: string,
     userId?: number,
-    teamId?: number
+    teamId?: number,
+    spectator?: boolean
   ) {
     const session = await this.repo.findBySenhaWithStatus(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
@@ -124,31 +125,34 @@ export class SessionService {
       }
     }
 
-    const playerCount = await this.repo.countPlayers(sessionId);
-    if (playerCount >= session.maxJogadores) {
-      throw new AppError(400, "Esta sala atingiu o número máximo de jogadores.");
-    }
-
-    // In duplas mode, validate team
-    if (session.modo === "duplas") {
-      if (!teamId) {
-        throw new AppError(400, "Modo duplas requer seleção de time.");
+    if (!spectator) {
+      const playerCount = await this.repo.countPlayers(sessionId);
+      if (playerCount >= session.maxJogadores) {
+        throw new AppError(400, "Esta sala atingiu o número máximo de jogadores.");
       }
-      const teamExists = await prisma.sessionTeam.findFirst({
-        where: { id: teamId, sessionId },
-      });
-      if (!teamExists) {
-        throw new AppError(400, "Time não encontrado nesta sessão.");
+
+      // In duplas mode, validate team
+      if (session.modo === "duplas") {
+        if (!teamId) {
+          throw new AppError(400, "Modo duplas requer seleção de time.");
+        }
+        const teamExists = await prisma.sessionTeam.findFirst({
+          where: { id: teamId, sessionId },
+        });
+        if (!teamExists) {
+          throw new AppError(400, "Time não encontrado nesta sessão.");
+        }
       }
     }
 
     const player = await this.repo.createPlayer({
       nome,
-      cor,
+      cor: spectator ? "zinc" : cor,
       saldo: 0,
+      desistiu: spectator ?? false,
       session: { connect: { id: sessionId } },
       ...(userId ? { user: { connect: { id: userId } } } : {}),
-      ...(teamId ? { team: { connect: { id: teamId } } } : {}),
+      ...(teamId && !spectator ? { team: { connect: { id: teamId } } } : {}),
     });
 
     await this.invalidateCache(sessionId);
@@ -168,9 +172,9 @@ export class SessionService {
       throw new AppError(403, "Apenas o dono da sala pode iniciar a partida.");
     }
 
-    const playerCount = session.jogadores.length;
-    if (playerCount < 2) {
-      throw new AppError(400, "São necessários pelo menos 2 jogadores para iniciar.");
+    const activePlayers = session.jogadores.filter((p) => !p.desistiu);
+    if (activePlayers.length < 2) {
+      throw new AppError(400, "São necessários pelo menos 2 jogadores ativos para iniciar.");
     }
 
     if (session.modo === "duplas") {
@@ -194,7 +198,7 @@ export class SessionService {
     // Assign initial balance to players (individual) or teams (duplas)
     if (session.modo === "individual") {
       await Promise.all(
-        session.jogadores.map((p) =>
+        activePlayers.map((p) =>
           prisma.sessionPlayer.update({
             where: { id: p.id },
             data: { saldo: session.saldoInicial ?? 25000 },
@@ -311,7 +315,7 @@ export class SessionService {
       throw new AppError(404, "Sessão não encontrada");
     }
 
-    if (session.status === "Em Andamento") {
+    if (session.status === "Em Andamento" && !player.desistiu) {
       await prisma.$transaction(async (tx) => {
         await tx.sessionPosses.updateMany({
           where: { sessionId, playerId: player.id },
@@ -368,11 +372,48 @@ export class SessionService {
 
     await this.invalidateCache(sessionId);
 
-    // Se não restarem jogadores na sala, auto-encerra
-    const remaining = await this.repo.countPlayers(sessionId);
-    if (remaining === 0) {
+    // Se não restarem jogadores ativos na sala, auto-encerra
+    const activeCount = await this.repo.countActivePlayers(sessionId);
+    if (activeCount === 0) {
       await this.endSession(sessionId);
     }
+  }
+
+  async desistirSession(sessionId: number, userId: number) {
+    const player = await this.repo.findPlayerByUserAndSession(userId, sessionId);
+    if (!player) {
+      throw new AppError(404, "Você não está nesta sala.");
+    }
+
+    if (player.desistiu) {
+      throw new AppError(400, "Você já desistiu desta partida.");
+    }
+
+    const session = await this.repo.findByIdSimple(sessionId);
+    if (!session || session.status !== "Em Andamento") {
+      throw new AppError(400, "Só é possível desistir de uma partida em andamento.");
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Libera propriedades
+      await tx.sessionPosses.updateMany({
+        where: { sessionId, playerId: player.id },
+        data: {
+          playerId: null,
+          casas: 0,
+          hipotecada: false,
+          negociando: false,
+        },
+      });
+
+      // Zera saldo e marca como desistente
+      await tx.sessionPlayer.update({
+        where: { id: player.id },
+        data: { saldo: 0, desistiu: true },
+      });
+    });
+
+    await this.invalidateCache(sessionId);
   }
 
   async getPlayerByUser(sessionId: number, userId: number) {

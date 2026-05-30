@@ -37,7 +37,6 @@ type Props = {
   playerId: number
   sessionId: number
   playerSaldo: number
-  podeComprarCasa: boolean
   podeVenderCasa: boolean
   podeHipotecar: boolean
   podeVender: boolean
@@ -47,11 +46,11 @@ type Props = {
 export default function PropertyDetailModal({
   isOpen, onClose, propriedade, sessionPropriedade,
   playerId, sessionId, playerSaldo,
-  podeComprarCasa, podeVenderCasa, podeHipotecar, podeVender,
+  podeVenderCasa, podeHipotecar, podeVender,
   onActionSuccess,
 }: Props) {
-  const { success: toastSuccess, error: toastError } = useToast()
-  const { buyHouse, sellHouse, hipotecarProp, sellPropriedade, loadSession, getAluguel } = useGameStore()
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
+  const { sellHouse, hipotecarProp, sellPropriedade, getAluguel } = useGameStore()
 
   const [confirmAction, setConfirmAction] = useState<{
     type: string
@@ -73,36 +72,25 @@ export default function PropertyDetailModal({
     try {
       await confirmAction.action()
       setConfirmAction(null)
-      toastSuccess(
-        confirmAction.type === 'buyHouse' ? 'Casa comprada!' :
+      const msg =
         confirmAction.type === 'sellHouse' ? 'Casa vendida!' :
         confirmAction.type === 'hipotecar' ? 'Propriedade hipotecada!' :
         'Propriedade vendida!'
-      )
-      onActionSuccess?.()
+      await onActionSuccess?.()
+      if (confirmAction.type !== 'sellHouse') {
+        toastSuccess(msg)
+      } else {
+        toastWarning(msg)
+      }
     } catch (err: any) {
-      toastError(
-        err?.response?.data?.message ??
-        (confirmAction.type === 'buyHouse' ? 'Erro ao comprar casa' :
-        confirmAction.type === 'sellHouse' ? 'Erro ao vender casa' :
+      const msg = err?.response?.data?.message ??
+        (confirmAction.type === 'sellHouse' ? 'Erro ao vender casa' :
         confirmAction.type === 'hipotecar' ? 'Erro ao hipotecar' :
         'Erro ao vender propriedade')
-      )
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setActionLoading(false)
     }
-  }
-
-  const prepareComprarCasa = () => {
-    const casasDepois = sessionPropriedade.casas + 1
-    setConfirmAction({
-      type: 'buyHouse',
-      title: 'Comprar Casa',
-      message: `Casa em ${propriedade.nome.toUpperCase()}\n\nCusto: R$ ${propriedade.custo_casa.toLocaleString('pt-BR')}\nSaldo atual: R$ ${playerSaldo.toLocaleString('pt-BR')}\nNovo aluguel: R$ ${getAluguel(propriedade, casasDepois).toLocaleString('pt-BR')}`,
-      confirmText: 'Comprar',
-      color: 'green',
-      action: () => buyHouse({ userId: playerId, sessionId, propriedadeId: propriedade.id }),
-    })
   }
 
   const prepareVenderCasa = () => {
@@ -194,13 +182,6 @@ export default function PropertyDetailModal({
           <div className="border-t border-zinc-800 pt-4">
             <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-3">Ações</p>
             <div className="grid grid-cols-2 gap-3">
-              <Button1
-                size="sm" color="green"
-                handle={podeComprarCasa ? prepareComprarCasa : undefined}
-                disabled={!podeComprarCasa}
-              >
-                Comprar Casa
-              </Button1>
               <Button1
                 size="sm" color="orange"
                 handle={podeVenderCasa ? prepareVenderCasa : undefined}

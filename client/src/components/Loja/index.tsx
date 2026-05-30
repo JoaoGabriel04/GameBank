@@ -37,7 +37,7 @@ function formatCurrency(value: number) {
 }
 
 export default function Loja() {
-  const { success: toastSuccess, error: toastError } = useToast()
+  const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
   const { currentSession, loadSession, buyProperty, comprarHipotecada, responderNotificacao } = useGameStore()
   const authUser = useAuthStore((s) => s.user)
 
@@ -45,6 +45,7 @@ export default function Loja() {
     () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
     [currentSession?.jogadores, authUser?.id]
   )
+  const isSpectator = !!currentPlayer?.desistiu
 
   const allProperties = useMemo(
     () => currentSession?.sessionPosses ?? [],
@@ -67,25 +68,26 @@ export default function Loja() {
     return groupByColor(items)
   }, [allProperties])
 
-  const [buyingPossesId, setBuyingPossesId] = useState<number | null>(null)
+  const [buyingLock, setBuyingLock] = useState(false)
 
   async function handleBuy(sessionPossesId: number) {
-    if (!currentPlayer || !currentSession) return
-    setBuyingPossesId(sessionPossesId)
+    if (!currentPlayer || !currentSession || buyingLock) return
+    setBuyingLock(true)
     try {
       await buyProperty(sessionPossesId, currentSession.id, currentPlayer.id)
       await loadSession(currentSession.id)
       toastSuccess("Propriedade comprada com sucesso!")
-    } catch {
-      toastError("Erro ao comprar propriedade")
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Erro ao comprar propriedade"
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
-      setBuyingPossesId(null)
+      setBuyingLock(false)
     }
   }
 
   async function handleComprarHipoteca(sessionPossesId: number) {
-    if (!currentPlayer || !currentSession) return
-    setBuyingPossesId(sessionPossesId)
+    if (!currentPlayer || !currentSession || buyingLock) return
+    setBuyingLock(true)
     try {
       const result = await comprarHipotecada(sessionPossesId, currentSession.id, currentPlayer.id)
       await loadSession(currentSession.id)
@@ -93,12 +95,13 @@ export default function Loja() {
       if (r?.direto) {
         toastSuccess("Hipoteca quitada com sucesso!")
       } else {
-        toastSuccess("Notificação enviada ao dono original!")
+        toastInfo("Notificação enviada ao dono original!")
       }
     } catch (err: any) {
-      toastError(err?.message || "Erro ao comprar hipoteca")
+      const msg = err?.response?.data?.message || err?.message || "Erro ao comprar hipoteca"
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
-      setBuyingPossesId(null)
+      setBuyingLock(false)
     }
   }
 
@@ -107,10 +110,15 @@ export default function Loja() {
     try {
       await responderNotificacao(notificationId, aceitar, currentPlayer.id, currentSession.id)
       await loadSession(currentSession.id)
-      toastSuccess(aceitar ? "Compra aprovada!" : "Compra recusada.")
+      if (aceitar) {
+        toastSuccess("Compra aprovada!")
+      } else {
+        toastInfo("Compra recusada.")
+      }
       useNotificationStore.getState().removeNotification(notificationId)
     } catch (err: any) {
-      toastError(err?.message || "Erro ao responder")
+      const msg = err?.response?.data?.message || err?.message || "Erro ao responder"
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     }
   }
 
@@ -133,7 +141,6 @@ export default function Loja() {
   }) {
     if (!propBase) return null
     const accent = getAccentHex(propBase.grupo_cor)
-    const isBuying = buyingPossesId === sessionProp.possesId
     const afford = canAfford(propBase.custo_compra)
 
     return (
@@ -167,16 +174,16 @@ export default function Loja() {
             </div>
             <button
               onClick={() => handleBuy(sessionProp.possesId)}
-              disabled={isBuying || !currentPlayer || !afford}
+              disabled={buyingLock || !currentPlayer || !afford}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium ${accent === '#fafafa' ? 'text-black' : 'text-white'} transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed`}
               style={{ backgroundColor: accent }}
-              title={!currentPlayer ? "Você não está associado a um jogador" : !afford ? "Saldo insuficiente" : ""}
+              title={!currentPlayer ? "Você não está associado a um jogador" : isSpectator ? "Espectadores não podem comprar" : !afford ? "Saldo insuficiente" : ""}
             >
-              {isBuying
+              {buyingLock
                 ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
                 : <ShoppingCart className="w-3.5 h-3.5" />
               }
-              {!currentPlayer ? "Indisponível" : !afford ? "Saldo insuf." : "Comprar"}
+              {!currentPlayer ? "Indisponível" : isSpectator ? "Espectador" : !afford ? "Saldo insuf." : "Comprar"}
             </button>
           </div>
         </div>
@@ -297,7 +304,6 @@ export default function Loja() {
                   {group.items.map(({ prop, sessionProp }) => {
                     const accent = getAccentHex(prop.grupo_cor)
                     const valorComJuros = Math.round(prop.hipoteca * 1.1)
-                    const isBuying = buyingPossesId === sessionProp.id
                     const afford = canAfford(valorComJuros)
                     return (
                       <div key={sessionProp.id} className="relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col opacity-70 hover:opacity-100 transition-opacity">
@@ -324,11 +330,11 @@ export default function Loja() {
                             </div>
                             <button
                               onClick={() => handleComprarHipoteca(sessionProp.id)}
-                              disabled={isBuying || !currentPlayer || !afford}
-                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium bg-amber-500 text-black transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                              title={!currentPlayer ? "Você não está associado a um jogador" : !afford ? "Saldo insuficiente" : ""}
+              disabled={buyingLock || !currentPlayer || isSpectator || !afford}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium bg-amber-500 text-black transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title={!currentPlayer ? "Você não está associado a um jogador" : isSpectator ? "Espectadores não podem comprar" : !afford ? "Saldo insuficiente" : ""}
                             >
-                              {isBuying
+                              {buyingLock
                                 ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
                                 : <ShoppingCart className="w-3.5 h-3.5" />
                               }

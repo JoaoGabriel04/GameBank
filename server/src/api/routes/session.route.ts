@@ -17,6 +17,7 @@ sessionRouter.get("/my-active", authenticate, sessionController.my_active)
 sessionRouter.post("/load-session/:sessionId", authenticate, authenticateRoom("params", "sessionId"), sessionController.load_session)
 sessionRouter.post("/:sessionId/start", authenticate, authenticateRoom("params", "sessionId"), sessionController.start_session)
 
+sessionRouter.post("/:sessionId/desistir", authenticate, authenticateRoom("params", "sessionId"), sessionController.desistir_session)
 sessionRouter.post("/:sessionId/quit", authenticate, sessionController.quit_session)
 sessionRouter.get("/:sessionId/my-player", authenticate, sessionController.my_player)
 

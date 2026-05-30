@@ -15,6 +15,7 @@ import {
   Check, X, ArrowLeftRight, Timer,
 } from "lucide-react";
 import type { Negotiation } from "@/types/game";
+import { sortSessionPosses } from "@/utils/properties";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -24,7 +25,7 @@ function formatCurrency(value: number) {
 }
 
 export default function NegotiationResponseModal() {
-  const { success: toastSuccess, error: toastError } = useToast();
+  const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const { currentSession, loadSession } = useGameStore();
   const authUser = useAuthStore((s) => s.user);
   const { activeNegotiation, setActive, removePendente } = useNegotiationStore();
@@ -47,16 +48,20 @@ export default function NegotiationResponseModal() {
 
   // My non-hipotecada, non-negociando properties
   const mySessionPosses = useMemo(
-    () => currentSession?.sessionPosses
-      .filter((p) => p.playerId === currentPlayer?.id && !p.hipotecada && !p.negociando) ?? [],
+    () => sortSessionPosses(
+      currentSession?.sessionPosses
+        .filter((p) => p.playerId === currentPlayer?.id && !p.hipotecada && !p.negociando) ?? []
+    ),
     [currentSession?.sessionPosses, currentPlayer?.id]
-  );
+  )
 
   // FromPlayer (original sender) properties — na contra-oferta NÃO filtra
   // negociando, pois as props ofertadas ainda estão locked até enviar
   const fromPlayerPosses = useMemo(
-    () => currentSession?.sessionPosses
-      .filter((p) => p.playerId === activeNegotiation?.fromPlayerId && !p.hipotecada) ?? [],
+    () => sortSessionPosses(
+      currentSession?.sessionPosses
+        .filter((p) => p.playerId === activeNegotiation?.fromPlayerId && !p.hipotecada) ?? []
+    ),
     [currentSession?.sessionPosses, activeNegotiation?.fromPlayerId]
   );
 
@@ -114,12 +119,13 @@ export default function NegotiationResponseModal() {
     setReqLoading(true);
     try {
       await aceitarNegociacaoApi(negotiation.id, currentPlayer.id);
-      toastSuccess("Negociação aceita!");
       removePendente(negotiation.id);
       setActive(null);
       if (negotiation.sessionId) await loadSession(negotiation.sessionId);
+      toastSuccess("Negociação aceita!");
     } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao aceitar negociação");
+      const msg = err?.response?.data?.message || "Erro ao aceitar negociação";
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -130,11 +136,12 @@ export default function NegotiationResponseModal() {
     setReqLoading(true);
     try {
       await recusarNegociacaoApi(negotiation.id, currentPlayer.id);
-      toastSuccess("Negociação recusada.");
+      toastInfo("Negociação recusada.");
       removePendente(negotiation.id);
       setActive(null);
     } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao recusar negociação");
+      const msg = err?.response?.data?.message || "Erro ao recusar negociação";
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -143,7 +150,7 @@ export default function NegotiationResponseModal() {
   async function handleContraOfertar(negotiation: Negotiation) {
     if (!currentPlayer || !currentSession) return;
     if (counterOfferPropIds.length === 0 && counterWantPropIds.length === 0 && counterOfferMoney <= 0 && counterWantMoney <= 0) {
-      return toastError("Adicione pelo menos um item à contra-oferta!");
+      return toastWarning("Adicione pelo menos um item à contra-oferta!");
     }
 
     const offerItems = [
@@ -168,7 +175,8 @@ export default function NegotiationResponseModal() {
       setActive(null);
       resetCounter();
     } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao enviar contra-oferta");
+      const msg = err?.response?.data?.message || "Erro ao enviar contra-oferta";
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }

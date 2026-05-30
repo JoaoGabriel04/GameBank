@@ -6,9 +6,10 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useToast } from "@/components/Toast";
-import { Coins, Handshake, Building2, ArrowRight, ArrowLeft, Ban, Gavel, Plus, Minus, Check } from "lucide-react";
+import { Eye, Coins, Handshake, Building2, ArrowRight, ArrowLeft, Ban, Gavel, Plus, Minus, Check } from "lucide-react";
 import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
+import { sortSessionPosses } from "@/utils/properties";
 
 const COLOR_HEX: Record<string, string> = {
   lime:    "#84cc16",
@@ -51,6 +52,7 @@ export default function Especiais() {
     () => currentSession?.jogadores.find((p) => p.userId === authUser?.id) ?? null,
     [currentSession?.jogadores, authUser?.id]
   )
+  const isSpectator = !!currentPlayer?.desistiu
 
   const [modalNegociar, setModalNegociar] = useState(false);
   const [modalReceber, setModalReceber] = useState(false);
@@ -66,15 +68,19 @@ export default function Especiais() {
   const jogadores = useMemo(() => currentSession?.jogadores ?? [], [currentSession?.jogadores])
 
   const mySessionPosses = useMemo(
-    () => currentSession?.sessionPosses
-      .filter((p) => p.playerId === currentPlayer?.id && !p.hipotecada && !p.negociando) ?? [],
+    () => sortSessionPosses(
+      currentSession?.sessionPosses
+        .filter((p) => p.playerId === currentPlayer?.id && !p.hipotecada && !p.negociando) ?? []
+    ),
     [currentSession?.sessionPosses, currentPlayer?.id]
   )
 
   const targetPlayerPosses = useMemo(() => {
     if (!targetPlayer || !currentSession) return [];
-    return currentSession.sessionPosses
-      .filter((p) => p.playerId === targetPlayer && !p.hipotecada && !p.negociando);
+    return sortSessionPosses(
+      currentSession.sessionPosses
+        .filter((p) => p.playerId === targetPlayer && !p.hipotecada && !p.negociando)
+    );
   }, [targetPlayer, currentSession?.sessionPosses])
 
   function resetCreate() {
@@ -106,7 +112,7 @@ export default function Especiais() {
       return toastWarning("A negociação precisa ter pelo menos uma propriedade ou diferença de dinheiro!");
     }
 
-    setReqLoading(true);
+      setReqLoading(true);
     try {
       const offerItems: ItemInput[] = [
         ...offerPropIds.map((id) => ({ sessionPossesId: id, fromSide: true })),
@@ -118,12 +124,13 @@ export default function Especiais() {
       ];
 
       await criarNegociacaoApi(currentSession.id, currentPlayer.id, targetPlayer, offerItems, wantItems);
-      toastSuccess("Negociação enviada!");
       await loadSession(currentSession.id);
+      toastSuccess("Negociação enviada!");
       setModalNegociar(false);
       resetCreate();
     } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao criar negociação");
+      const msg = err?.response?.data?.message || "Erro ao criar negociação";
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -135,7 +142,7 @@ export default function Especiais() {
 
     for (const player of jogadores) {
       if (player.id !== currentPlayer.id && player.saldo < 500) {
-        return toastError(`O Jogador ${player.nome} não tem saldo suficiente!`)
+        return toastWarning(`O Jogador ${player.nome} não tem saldo suficiente!`)
       }
     }
 
@@ -145,11 +152,12 @@ export default function Especiais() {
         userId: currentPlayer.id,
         sessionId: currentSession.id,
       });
-      toastSuccess("Pagamentos recebidos com sucesso!");
       await loadSession(currentSession.id);
+      toastSuccess("Pagamentos recebidos com sucesso!");
       setModalReceber(false);
     } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao receber de todos!");
+      const msg = err?.response?.data?.message || "Erro ao receber de todos!";
+      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
       setModalReceber(false);
     } finally {
       setReqLoading(false);
@@ -158,6 +166,12 @@ export default function Especiais() {
 
   return (
     <main className="w-full px-10">
+      {isSpectator ? (
+        <div className="text-center py-8">
+          <Eye className="w-12 h-12 text-zinc-500 mx-auto mb-3" />
+          <p className="text-zinc-400 font-inconsolata">Você é um espectador e não pode realizar negociações.</p>
+        </div>
+      ) : (
       <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
           onClick={() => setModalNegociar(true)}
@@ -192,6 +206,7 @@ export default function Especiais() {
           </div>
         </button>
       </nav>
+      )}
 
       {/* Modal de Criação de Negociação */}
       <Modal
@@ -218,7 +233,7 @@ export default function Especiais() {
         {!targetPlayer ? (
           <div className="space-y-3 mb-4">
             <p className="text-sm font-inconsolata text-zinc-400 mb-2">Selecione o jogador alvo:</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {jogadores
                 .filter((p) => p.id !== currentPlayer?.id)
                 .map((player) => {
@@ -336,9 +351,10 @@ export default function Especiais() {
                     <input
                       type="text"
                       inputMode="numeric"
+                      maxLength={7}
                       value={String(offerMoney)}
                       onChange={(e) => {
-                        const cleaned = e.target.value.replace(/\D/g, "");
+                        const cleaned = e.target.value.replace(/\D/g, "").slice(0, 7);
                         setOfferMoney(cleaned ? Number(cleaned) : 0);
                       }}
                       className="w-full bg-zinc-800 border border-zinc-600 rounded px-2.5 py-1.5 text-sm text-zinc-100 font-inconsolata text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -426,9 +442,10 @@ export default function Especiais() {
                     <input
                       type="text"
                       inputMode="numeric"
+                      maxLength={7}
                       value={String(wantMoney)}
                       onChange={(e) => {
-                        const cleaned = e.target.value.replace(/\D/g, "");
+                        const cleaned = e.target.value.replace(/\D/g, "").slice(0, 7);
                         setWantMoney(cleaned ? Number(cleaned) : 0);
                       }}
                       className="w-full bg-zinc-800 border border-zinc-600 rounded px-2.5 py-1.5 text-sm text-zinc-100 font-inconsolata text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

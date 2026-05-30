@@ -11,6 +11,7 @@ interface NegItemInput {
 
 const NEGOTIATION_TIMEOUT_MS = 60_000;
 const negotiationTimers = new Map<number, NodeJS.Timeout>();
+const MAX_NEG_VALOR = 9999999;
 
 export class NegociacaoService {
   constructor(private repo = new NegociacaoRepository()) {}
@@ -42,6 +43,12 @@ export class NegociacaoService {
     );
     if (!hasContent) {
       throw new AppError(400, "A negociação precisa ter pelo menos uma propriedade ou valor em dinheiro!");
+    }
+
+    for (const item of allItems) {
+      if (item.valor != null && item.valor > MAX_NEG_VALOR) {
+        throw new AppError(400, `Valor máximo permitido em negociação é R$ ${MAX_NEG_VALOR.toLocaleString("pt-BR")}`);
+      }
     }
 
     // Valida: proponente é dono das offered, alvo é dono das wanted

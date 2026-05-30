@@ -35,10 +35,10 @@ export const sessionController = {
   join_session: async (req: Request, res: Response) => {
     try {
       const { sessionId } = req.params;
-      const { senha, nome, cor, teamId } = req.body;
+      const { senha, nome, cor, teamId, spectator } = req.body;
       const userId = req.user?.userId;
       const result = await sessionService.joinSession(
-        Number(sessionId), senha, nome, cor, userId, teamId
+        Number(sessionId), senha, nome, cor, userId, teamId, spectator
       );
       const token = setRoomCookie(res, result.sessionId, result.playerId);
       const session = await sessionService.loadSession(result.sessionId);
@@ -164,6 +164,24 @@ export const sessionController = {
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: "Erro ao buscar seu jogador." });
+    }
+  },
+
+  desistir_session: async (req: Request, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user?.userId;
+      if (!userId) return res.status(401).json({ error: "Não autenticado" });
+
+      await sessionService.desistirSession(Number(sessionId), userId);
+      emitSessionUpdated(Number(sessionId), await sessionService.loadSession(Number(sessionId)));
+      return res.status(200).json({ message: "Você desistiu da partida." });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ error: err.message });
+      }
+      console.error(err);
+      return res.status(500).json({ error: "Erro ao desistir da partida." });
     }
   },
 

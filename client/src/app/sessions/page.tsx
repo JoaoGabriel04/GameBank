@@ -29,6 +29,7 @@ export default function Sessions() {
   const [selectedTeamId, setSelectedTeamId] = useState<number | undefined>(undefined);
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState("");
+  const [joinAsSpectator, setJoinAsSpectator] = useState(false);
   const [checkingActive, setCheckingActive] = useState(true);
 
   useEffect(() => {
@@ -78,13 +79,14 @@ export default function Sessions() {
     setPassword("");
     setPlayerColor(null);
     setSelectedTeamId(undefined);
+    setJoinAsSpectator(false);
     setJoinModal({ open: true, session });
   }
 
   async function handleJoin() {
     const session = joinModal.session;
     if (!session) return;
-    if (!playerColor) { setJoinError("Cor é obrigatória"); return; }
+    if (!joinAsSpectator && !playerColor) { setJoinError("Cor é obrigatória"); return; }
     if (!authUser) return;
 
     setJoinLoading(true);
@@ -94,8 +96,9 @@ export default function Sessions() {
       const res = await sessionsApi.join(session.id, {
         senha: password || undefined,
         nome: authUser.nome,
-        cor: playerColor,
+        cor: playerColor ?? 'zinc',
         teamId: selectedTeamId,
+        spectator: joinAsSpectator || undefined,
       });
       const roomToken = res.data?.roomToken;
       if (roomToken) {
@@ -268,6 +271,16 @@ export default function Sessions() {
               </select>
             </div>
           )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={joinAsSpectator}
+              onChange={(e) => setJoinAsSpectator(e.target.checked)}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-green-500 focus:ring-green-500 cursor-pointer"
+            />
+            <span className="text-sm font-inconsolata text-zinc-400">Entrar como espectador</span>
+          </label>
 
           <div className="flex gap-3 mt-2">
             <Button1

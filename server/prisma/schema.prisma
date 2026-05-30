@@ -93,6 +93,7 @@ model SessionPlayer {
   notificationsFrom Notification[] @relation("NotificationFromPlayer")
   notificationsTo   Notification[] @relation("NotificationToPlayer")
   carta_prisao      Boolean @default(false)
+  desistiu          Boolean @default(false)
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]

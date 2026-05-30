@@ -67,6 +67,44 @@ export const propsController = {
     }
   },
 
+  buyHousesBatch: async (req: Request, res: Response) => {
+    const { sessionId, userId, sessaoPossesIds } = req.body;
+    if (!sessionId || !userId || !sessaoPossesIds) {
+      return res.status(400).json({ message: "Campos vazios ou errados!" });
+    }
+
+    try {
+      await propriedadeService.buyHousesBatch(Number(userId), Number(sessionId), sessaoPossesIds);
+      await emitUpdatedSession(Number(sessionId));
+      return res.status(200).json({ message: "Casas compradas com sucesso!" });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message: err.message });
+      }
+      console.error("Erro ao comprar casas em lote:", err);
+      res.status(500).json({ message: "Erro interno ao comprar casas em lote." });
+    }
+  },
+
+  sellHousesBatch: async (req: Request, res: Response) => {
+    const { sessionId, userId, items } = req.body;
+    if (!sessionId || !userId || !items) {
+      return res.status(400).json({ message: "Campos vazios ou errados!" });
+    }
+
+    try {
+      await propriedadeService.sellHousesBatch(Number(userId), Number(sessionId), items);
+      await emitUpdatedSession(Number(sessionId));
+      return res.status(200).json({ message: "Casas vendidas com sucesso!" });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message: err.message });
+      }
+      console.error("Erro ao vender casas em lote:", err);
+      res.status(500).json({ message: "Erro interno ao vender casas em lote." });
+    }
+  },
+
   sellHouse: async (req: Request, res: Response) => {
     const { propriedadeId, sessionId, userId } = req.body;
     if (!sessionId || !userId) {

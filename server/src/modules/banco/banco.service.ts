@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 
 const ALUGUEL_ACAO_MULTIPLICADOR = 500;
 const RECEBER_DE_TODOS_VALOR = 500;
+const MAX_VALOR = 9999999;
 
 export class BancoService {
   constructor(private repo = new BancoRepository()) {}
@@ -11,6 +12,10 @@ export class BancoService {
   async deposito(userId: number, sessionId: number, valor: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+
+    if (valor > MAX_VALOR) {
+      throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
+    }
 
     await prisma.$transaction([
       prisma.sessionPlayer.update({
@@ -31,6 +36,10 @@ export class BancoService {
   async saque(userId: number, sessionId: number, valor: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+
+    if (valor > MAX_VALOR) {
+      throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
+    }
 
     if (player.saldo < valor) {
       throw new AppError(400, "Saldo insuficiente!");
@@ -55,6 +64,10 @@ export class BancoService {
   async transferencia(pagadorId: number, recebedorId: number, sessionId: number, valor: number) {
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Jogador pagador não encontrado!");
+
+    if (valor > MAX_VALOR) {
+      throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
+    }
 
     const recebedor = await this.repo.findPlayerById(recebedorId);
     if (!recebedor) throw new AppError(404, "Jogador recebedor não encontrado!");
@@ -138,7 +151,7 @@ export class BancoService {
       }),
     ]);
 
-    return valorAluguel;
+    return { valor: valorAluguel, pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, propriedadeNome: prop.nome };
   }
 
   async aluguelAcao(sessionId: number, pagadorId: number, sessionPossesId: number, numDados: number) {
@@ -175,7 +188,7 @@ export class BancoService {
       }),
     ]);
 
-    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, valor: valorAluguel };
+    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, valor: valorAluguel, propriedadeNome: poss.posses.propriedade.nome };
   }
 
   async receberDeTodos(sessionId: number, userId: number) {

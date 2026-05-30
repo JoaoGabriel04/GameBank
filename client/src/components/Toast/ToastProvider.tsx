@@ -28,6 +28,29 @@ export function useToast() {
   return context
 }
 
+const typeStyles: Record<ToastType, { icon: React.ReactNode; borderColor: string; iconColor: string }> = {
+  success: {
+    icon: <CheckCircle className="w-5 h-5" />,
+    borderColor: 'border-l-green-500',
+    iconColor: 'text-green-400',
+  },
+  error: {
+    icon: <AlertCircle className="w-5 h-5" />,
+    borderColor: 'border-l-red-500',
+    iconColor: 'text-red-400',
+  },
+  warning: {
+    icon: <AlertTriangle className="w-5 h-5" />,
+    borderColor: 'border-l-amber-500',
+    iconColor: 'text-amber-400',
+  },
+  info: {
+    icon: <Info className="w-5 h-5" />,
+    borderColor: 'border-l-blue-500',
+    iconColor: 'text-blue-400',
+  },
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [mounted, setMounted] = useState(false)
@@ -54,67 +77,29 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id))
   }
 
-  const getToastConfig = (type: ToastType) => {
-    switch (type) {
-      case 'success':
-        return {
-          icon: <CheckCircle className="w-5 h-5" />,
-          bg: 'bg-green-500/20',
-          border: 'border-green-500',
-          text: 'text-green-400',
-          title: 'Sucesso'
-        }
-      case 'error':
-        return {
-          icon: <AlertCircle className="w-5 h-5" />,
-          bg: 'bg-red-500/20',
-          border: 'border-red-500',
-          text: 'text-red-400',
-          title: 'Erro'
-        }
-      case 'warning':
-        return {
-          icon: <AlertTriangle className="w-5 h-5" />,
-          bg: 'bg-amber-500/20',
-          border: 'border-amber-500',
-          text: 'text-amber-400',
-          title: 'Atenção'
-        }
-      case 'info':
-        return {
-          icon: <Info className="w-5 h-5" />,
-          bg: 'bg-blue-500/20',
-          border: 'border-blue-500',
-          text: 'text-blue-400',
-          title: 'Info'
-        }
-    }
-  }
-
-return (
+  return (
     <ToastContext.Provider value={{ success, error, warning, info }}>
       {children}
       {mounted && (
         <div className="fixed top-4 right-4 z-[100000] flex flex-col gap-2 max-w-sm">
           {toasts.map((toast) => {
-            const config = getToastConfig(toast.type)
+            const style = typeStyles[toast.type]
             return (
               <div
                 key={toast.id}
                 className={`
-                  flex items-start gap-3 p-4 rounded-lg border-2 
-                  ${config.bg} ${config.border} backdrop-blur-sm
+                  flex items-start gap-3 p-4 rounded-lg border border-zinc-700/80 border-l-4
+                  ${style.borderColor} bg-zinc-900/95 backdrop-blur-sm
                   animate-slide-in shadow-lg
                 `}
               >
-                <span className={config.text}>{config.icon}</span>
-                <div className="flex-1">
-                  <p className={`text-sm font-jaro ${config.text}`}>{config.title}</p>
-                  <p className="text-sm font-inconsolata text-zinc-300">{toast.message}</p>
-                </div>
+                <span className={`mt-0.5 ${style.iconColor}`}>{style.icon}</span>
+                <p className="flex-1 text-sm font-inconsolata text-zinc-200 leading-relaxed">
+                  {toast.message}
+                </p>
                 <button
                   onClick={() => removeToast(toast.id)}
-                  className="text-zinc-400 hover:text-zinc-100 cursor-pointer"
+                  className="text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
