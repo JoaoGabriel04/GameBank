@@ -50,6 +50,18 @@ npx prisma migrate dev --name <descricao>
 
 Após npm install: `docker compose -f docker-compose.dev.yml build --no-cache server|client`
 
+## Admin
+
+O usuário admin é criado automaticamente no startup do servidor via `seedAdmin()` em `server/src/utils/seed-admin.ts`. Não requer comando manual.
+
+Para ativar, adicionar ao `.env` raiz:
+```
+ADMIN_EMAIL=admin@gamebank.com
+ADMIN_PASSWORD=troque-esta-senha
+```
+
+Se as variáveis não estiverem definidas, o seed é ignorado silenciosamente. O upsert é idempotente — rodar múltiplas vezes não duplica o usuário.
+
 ## Middleware chain (rotas protegidas)
 
 1. `authenticate` — JWT do header `Authorization: Bearer <token>`
