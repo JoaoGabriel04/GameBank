@@ -83,11 +83,14 @@ export default function PerfilPage() {
 
         {/* Card de perfil */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="relative h-24">
-            <UserBanner banner={profile.banner} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/80" />
+          {/* Banner */}
+          <div className="relative h-24 shrink-0">
+            <UserBanner banner={profile.banner} className="absolute inset-0 w-full h-full" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/60" />
           </div>
-          <div className="px-5 pb-5 -mt-10 flex items-end gap-4">
+
+          {/* Linha 1: avatar (puxado acima) + botões de ação */}
+          <div className="px-5 pt-0 flex items-start justify-between -mt-8">
             <UserAvatar
               avatarUrl={profile.avatarUrl}
               avatarUpdatedAt={profile.avatarUpdatedAt}
@@ -95,29 +98,32 @@ export default function PerfilPage() {
               size="lg"
               ring
             />
-            <div className="flex-1 min-w-0 pb-1">
-              <h1 className="font-jaro text-xl text-white truncate">{profile.nome}</h1>
-              {profile.title && (
-                <p className="text-xs font-inconsolata text-green-400">{profile.title}</p>
-              )}
-              <p className="text-xs font-inconsolata text-zinc-500">
-                Lv.{profile.level} · #{profile.id}
-              </p>
+            {/* Botões ficam abaixo do banner, alinhados ao topo da linha */}
+            <div className="flex items-center gap-3 pt-10">
+              <button
+                onClick={() => setEditOpen(true)}
+                className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
+                title="Editar perfil"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <Link href="/configuracoes" className="text-zinc-400 hover:text-zinc-100 transition-colors" title="Configurações">
+                <Settings className="w-4 h-4" />
+              </Link>
             </div>
-            <div className="flex flex-col items-end gap-1 pb-1">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditOpen(true)}
-                  className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
-                  title="Editar perfil"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <Link href="/configuracoes" className="text-zinc-500 hover:text-zinc-200 transition-colors">
-                  <Settings className="w-4 h-4" />
-                </Link>
-              </div>
-              <p className="text-sm font-inconsolata text-yellow-400 font-bold">{profile.coins.toLocaleString("pt-BR")} <span className="text-zinc-500 font-normal text-xs">coins</span></p>
+          </div>
+
+          {/* Linha 2: nome, título, nível, coins */}
+          <div className="px-5 pt-2 pb-5">
+            <h1 className="font-jaro text-xl text-white truncate">{profile.nome}</h1>
+            {profile.title && (
+              <p className="text-xs font-inconsolata text-green-400">{profile.title}</p>
+            )}
+            <div className="flex items-center justify-between mt-0.5">
+              <p className="text-xs font-inconsolata text-zinc-500">Lv.{profile.level} · #{profile.id}</p>
+              <p className="text-sm font-inconsolata text-yellow-400 font-bold">
+                {profile.coins.toLocaleString("pt-BR")} <span className="text-zinc-500 font-normal text-xs">coins</span>
+              </p>
             </div>
           </div>
         </div>
