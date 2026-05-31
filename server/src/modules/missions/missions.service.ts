@@ -1,9 +1,10 @@
-import { prisma } from "../../lib/prisma.js";
+import { missionsRepository } from "./missions.repository.js";
+import { getLevelFromXp } from "../../utils/level.js";
 
 export class MissionsService {
   async getUserMissions(userId: number) {
-    const allMissions = await prisma.mission.findMany({ where: { active: true } });
-    const userMissions = await prisma.userMission.findMany({ where: { userId } });
+    const allMissions = await missionsRepository.findActiveMissions();
+    const userMissions = await missionsRepository.findUserMissions(userId);
     const progressMap = new Map(userMissions.map((m) => [m.missionId, m]));
 
     return allMissions.map((mission) => {
@@ -24,53 +25,37 @@ export class MissionsService {
   }
 
   async track(userId: number, metric: string, amount: number, sessionId?: number) {
-    const missions = await prisma.mission.findMany({
-      where: { active: true, metric },
-    });
+    const missions = await missionsRepository.findActiveMissionsByMetric(metric);
 
     for (const mission of missions) {
-      const existing = await prisma.userMission.findUnique({
-        where: { userId_missionId: { userId, missionId: mission.id } },
-      });
+      const existing = await missionsRepository.findUserMission(userId, mission.id);
 
       const newProgress = Math.min((existing?.progress ?? 0) + amount, mission.target);
       const wasCompleted = existing?.completed ?? false;
       const nowCompleted = newProgress >= mission.target && !wasCompleted;
 
-      await prisma.userMission.upsert({
-        where: { userId_missionId: { userId, missionId: mission.id } },
-        create: { userId, missionId: mission.id, progress: newProgress, completed: nowCompleted, completedAt: nowCompleted ? new Date() : undefined },
-        update: { progress: newProgress, completed: nowCompleted, completedAt: nowCompleted ? new Date() : existing?.completedAt },
-      });
+      await missionsRepository.upsertUserMission(
+        userId,
+        mission.id,
+        newProgress,
+        nowCompleted,
+        nowCompleted ? new Date() : undefined,
+        existing?.completedAt
+      );
 
       if (nowCompleted) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { xp: true, level: true },
-        });
+        const user = await missionsRepository.findUserForReward(userId);
         if (!user) continue;
 
-        const newLevel = this.getLevelFromXp(user.xp + mission.xpReward);
-
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            xp: { increment: mission.xpReward },
-            coins: { increment: mission.coinReward },
-            ...(newLevel > user.level ? { level: newLevel } : {}),
-          },
-        });
+        const newLevel = getLevelFromXp(user.xp + mission.xpReward);
+        await missionsRepository.rewardUser(
+          userId,
+          mission.xpReward,
+          mission.coinReward,
+          newLevel > user.level ? newLevel : undefined
+        );
       }
     }
   }
 
-  private getLevelFromXp(totalXp: number): number {
-    let level = 1;
-    while (true) {
-      const xpNeeded = Math.floor(200 * Math.pow(1.04, level - 1));
-      if (totalXp < xpNeeded) return level;
-      totalXp -= xpNeeded;
-      level++;
-    }
-  }
 }

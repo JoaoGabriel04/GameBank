@@ -32,7 +32,7 @@ import { faPowerOff, faPlay, faUsers, faClock, faArrowLeft, faGamepad } from "@f
 import type { PlayerColor, Player, RankedPlayer } from "@/types/game";
 import { PLAYER_COLORS } from "@/types/game";
 
-const linksNav = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
+const linksNav = ["Loja", "Especiais", "Início", "Ranking", "Histórico"];
 
 export default function Game() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
@@ -255,6 +255,13 @@ export default function Game() {
     const times = currentSession.times || [];
     const isDuplas = currentSession.modo === "duplas";
 
+    const teamsWithPlayers = isDuplas
+      ? new Set(activePlayers.map((p) => p.teamId).filter(Boolean)).size
+      : 0;
+    const canStart = isDuplas
+      ? activePlayers.length >= 2 && teamsWithPlayers >= 2
+      : activePlayers.length >= 2;
+
     return (
       <div className="max-w-3xl mx-auto">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center mb-8">
@@ -290,16 +297,27 @@ export default function Game() {
           </div>
 
           {isOwner && (
-            <Button1
-              size="lg"
-              color="green"
-              handle={startLoading ? undefined : handleStartGame}
-              disabled={startLoading}
-              className="w-full max-w-xs mx-auto mb-3"
-            >
-              <FontAwesomeIcon icon={faPlay} className="mr-2" />
-              {startLoading ? "Iniciando..." : "Iniciar Jogo"}
-            </Button1>
+            <div className="w-full max-w-xs mx-auto mb-3">
+              <Button1
+                size="lg"
+                color="green"
+                handle={startLoading || !canStart ? undefined : handleStartGame}
+                disabled={startLoading || !canStart}
+                className="w-full"
+              >
+                <FontAwesomeIcon icon={faPlay} className="mr-2" />
+                {startLoading ? "Iniciando..." : "Iniciar Jogo"}
+              </Button1>
+              {!canStart && (
+                <p className="text-xs font-inconsolata text-zinc-500 text-center mt-1">
+                  {isDuplas
+                    ? teamsWithPlayers < 2
+                      ? "Necessário pelo menos 2 times com jogadores"
+                      : "Necessário pelo menos 2 jogadores"
+                    : "Necessário pelo menos 2 jogadores"}
+                </p>
+              )}
+            </div>
           )}
 
           {isOwner && (

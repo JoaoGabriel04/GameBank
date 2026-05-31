@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { AuthService } from "./auth.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { prisma } from "../../lib/prisma.js";
+import { authRepository } from "./auth.repository.js";
 import { CompleteProfileSchema } from "../../shared/schemas/auth.schema.js";
 import { toAuthUserPayload } from "../../utils/auth-user.js";
 
@@ -132,17 +132,7 @@ export const authController = {
 
   me: async (req: Request, res: Response) => {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        select: {
-          id: true,
-          email: true,
-          nome: true,
-          avatarUrl: true,
-          avatarUpdatedAt: true,
-          profileComplete: true,
-        },
-      });
+      const user = await authRepository.findById(req.user!.userId);
       if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
       res.json(toAuthUserPayload(user));
     } catch (err) {

@@ -182,7 +182,7 @@ export default function NegotiationResponseModal() {
 
     setReqLoading(true);
     try {
-      await contraOfertarNegociacaoApi(
+      const newNegotiation: Negotiation = await contraOfertarNegociacaoApi(
         negotiation.id,
         currentPlayer.id,
         offerItems as any,
@@ -192,6 +192,11 @@ export default function NegotiationResponseModal() {
       removePendente(negotiation.id);
       setActive(null);
       resetCounter();
+      // Registra a nova negociação como "minha proposta pendente"
+      if (newNegotiation) {
+        setMinhaNegociacao(newNegotiation);
+        setMinhaNegociacaoAberto(true);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Erro ao enviar contra-oferta";
       if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
@@ -204,9 +209,11 @@ export default function NegotiationResponseModal() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   useEffect(() => {
     if (!activeNegotiation) { setTimeLeft(null); return; }
-    const createdAt = new Date(activeNegotiation.createdAt).getTime();
+    const deadline = activeNegotiation.expiresAt
+      ? new Date(activeNegotiation.expiresAt).getTime()
+      : new Date(activeNegotiation.createdAt).getTime() + 120_000;
     const update = () => {
-      const left = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
+      const left = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
       setTimeLeft(left);
       if (left <= 0 && activeNegotiation.status === "pendente") {
         removePendente(activeNegotiation.id);
@@ -217,22 +224,24 @@ export default function NegotiationResponseModal() {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [activeNegotiation?.id, activeNegotiation?.createdAt, activeNegotiation?.status]);
+  }, [activeNegotiation?.id, activeNegotiation?.expiresAt, activeNegotiation?.status]);
 
   // Timer countdown — negociação pendente (minhaNegociacaoPendente)
   const [pendingTimeLeft, setPendingTimeLeft] = useState<number | null>(null);
   useEffect(() => {
     if (!minhaNegociacaoPendente) { setPendingTimeLeft(null); return; }
-    const createdAt = new Date(minhaNegociacaoPendente.createdAt).getTime();
+    const deadline = minhaNegociacaoPendente.expiresAt
+      ? new Date(minhaNegociacaoPendente.expiresAt).getTime()
+      : new Date(minhaNegociacaoPendente.createdAt).getTime() + 120_000;
     const update = () => {
-      const left = Math.max(0, 60 - Math.floor((Date.now() - createdAt) / 1000));
+      const left = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
       setPendingTimeLeft(left);
       if (left <= 0) { setMinhaNegociacao(null); setMinhaNegociacaoAberto(false); }
     };
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [minhaNegociacaoPendente?.id, minhaNegociacaoPendente?.createdAt]);
+  }, [minhaNegociacaoPendente?.id, minhaNegociacaoPendente?.expiresAt]);
 
   const modalTitle = showPendingView
     ? "Negociação Enviada"

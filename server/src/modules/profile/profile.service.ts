@@ -1,4 +1,3 @@
-import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { validateAndProcessAvatar } from "../../lib/image-validation.js";
 import {
@@ -8,29 +7,17 @@ import {
 } from "../avatar/avatar.service.js";
 import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants/avatars.js";
 import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
+import { profileRepository } from "./profile.repository.js";
+import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
 
 export class ProfileService {
   async getProfile(userId: number) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        items: {
-          include: { item: true },
-        },
-        missions: {
-          include: { mission: true },
-        },
-      },
-    });
+    const user = await profileRepository.findWithItemsAndMissions(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    // Sync level so it always reflects actual total XP
-    const correctLevel = this.getLevelFromXp(user.xp);
+    const correctLevel = getLevelFromXp(user.xp);
     if (correctLevel !== user.level) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { level: correctLevel },
-      });
+      await profileRepository.updateLevel(user.id, correctLevel);
     }
 
     const equippedTitle = user.items.find((i) => i.equipped && i.item.type === "title")?.item.value;
@@ -72,11 +59,7 @@ export class ProfileService {
   }
 
   async getHistory(userId: number, limit = 20) {
-    const results = await prisma.gameResult.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    const results = await profileRepository.findGameResults(userId, limit);
 
     return results.map((r) => ({
       id: r.id,
@@ -93,7 +76,7 @@ export class ProfileService {
     userId: number,
     data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string; banner?: string }
   ) {
-    const current = await prisma.user.findUnique({ where: { id: userId } });
+    const current = await profileRepository.findUser(userId);
     if (!current) throw new AppError(404, "Usuário não encontrado");
 
     if (data.nome !== undefined && (data.nome.length < 1 || data.nome.length > 30)) {
@@ -136,7 +119,7 @@ export class ProfileService {
 
     const oldPublicId = current.avatarPublicId;
     try {
-      const user = await prisma.user.update({ where: { id: userId }, data: updateData });
+      const user = await profileRepository.update(userId, updateData);
 
       if (oldPublicId && oldPublicId !== newPublicId && updateData.avatarUrl !== undefined) {
         deleteCloudinaryAvatar(oldPublicId).catch((err) =>
@@ -158,24 +141,6 @@ export class ProfileService {
   }
 
   xpForLevel(level: number): number {
-    return Math.floor(200 * Math.pow(1.04, level - 1));
-  }
-
-  totalXpForLevel(level: number): number {
-    let total = 0;
-    for (let i = 1; i < level; i++) {
-      total += this.xpForLevel(i);
-    }
-    return total;
-  }
-
-  getLevelFromXp(totalXp: number): number {
-    let level = 1;
-    let xpNeeded = 0;
-    while (true) {
-      xpNeeded += this.xpForLevel(level);
-      if (totalXp < xpNeeded) return level;
-      level++;
-    }
+    return xpForLevel(level);
   }
 }

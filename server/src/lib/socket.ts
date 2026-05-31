@@ -29,6 +29,16 @@ export function emitToPlayer(sessionId: number, playerId: number, event: string,
   }
 }
 
+// Emite para um usuário específico via activeSockets (User.id → socketId).
+// Mais confiável que emitToPlayer pois não depende de socket.data.playerId.
+export function emitToUser(userId: number, event: string, data: unknown) {
+  const nsp = getIO().of("/game");
+  const socketId = activeSockets.get(userId);
+  if (!socketId) return;
+  const socket = nsp.sockets.get(socketId);
+  socket?.emit(event, data);
+}
+
 export async function initSocket(httpServer: HttpServer) {
   const corsOrigins = process.env.CORS_ORIGIN?.split(",").map(s => s.trim()) || ["http://localhost:3000"];
   const corsWildcard = corsOrigins.includes("*");

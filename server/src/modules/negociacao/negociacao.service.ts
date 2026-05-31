@@ -1,7 +1,10 @@
 import { NegociacaoRepository } from "./negociacao.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
-import { withLock } from "../../middleware/lock.middleware.js";
+import type { PrismaPromise } from "../../../generated/prisma/index.js";
+import { NEGOTIATION_TIMEOUT_MS, MAX_NEG_VALOR } from "../../utils/level.js";
+
+type PrismaOp = PrismaPromise<unknown>;
 
 interface NegItemInput {
   sessionPossesId?: number | null;
@@ -9,9 +12,7 @@ interface NegItemInput {
   valor?: number | null;
 }
 
-const NEGOTIATION_TIMEOUT_MS = 60_000;
-const negotiationTimers = new Map<number, NodeJS.Timeout>();
-const MAX_NEG_VALOR = 9999999;
+type SessionPossesFull = Awaited<ReturnType<NegociacaoRepository["findSessionPosses"]>>;
 
 export class NegociacaoService {
   constructor(private repo = new NegociacaoRepository()) {}
@@ -49,10 +50,13 @@ export class NegociacaoService {
       if (item.valor != null && item.valor > MAX_NEG_VALOR) {
         throw new AppError(400, `Valor máximo permitido em negociação é R$ ${MAX_NEG_VALOR.toLocaleString("pt-BR")}`);
       }
+      if (item.valor != null && item.valor < 0) {
+        throw new AppError(400, "Valor não pode ser negativo!");
+      }
     }
 
     // Valida: proponente é dono das offered, alvo é dono das wanted
-    const offerSpMap = new Map<number, Awaited<ReturnType<NegociacaoRepository["findSessionPosses"]>>>();
+    const offerSpMap = new Map<number, NonNullable<SessionPossesFull>>();
     for (const item of offerItems) {
       if (!item.sessionPossesId) continue;
       const sp = await this.repo.findSessionPosses(sessionId, item.sessionPossesId);
@@ -68,7 +72,7 @@ export class NegociacaoService {
       offerSpMap.set(item.sessionPossesId, sp);
     }
 
-    const wantSpMap = new Map<number, Awaited<ReturnType<NegociacaoRepository["findSessionPosses"]>>>();
+    const wantSpMap = new Map<number, NonNullable<SessionPossesFull>>();
     for (const item of wantItems) {
       if (!item.sessionPossesId) continue;
       const sp = await this.repo.findSessionPosses(sessionId, item.sessionPossesId);
@@ -86,15 +90,18 @@ export class NegociacaoService {
     const fromGroupMap = this.buildGroupMap(fromProps);
     const toGroupMap = this.buildGroupMap(toProps);
 
-    const offerIds = new Set(offerItems.map((i) => i.sessionPossesId).filter((id): id is number => id != null));
-    const wantIds = new Set(wantItems.map((i) => i.sessionPossesId).filter((id): id is number => id != null));
+    const offerIds = new Set(
+      offerItems.map((i) => i.sessionPossesId).filter((id): id is number => id != null)
+    );
+    const wantIds = new Set(
+      wantItems.map((i) => i.sessionPossesId).filter((id): id is number => id != null)
+    );
 
-    for (const [id, sp] of offerSpMap) {
-      if (sp && sp.casas > 0) {
+    for (const [, sp] of offerSpMap) {
+      if (sp.casas > 0) {
         const grupo = sp.posses.propriedade.grupo_cor;
-        const allInGroup = fromGroupMap.get(grupo) || [];
-        const included = allInGroup.every((pid) => offerIds.has(pid));
-        if (!included) {
+        const allInGroup = fromGroupMap.get(grupo) ?? [];
+        if (!allInGroup.every((pid) => offerIds.has(pid))) {
           throw new AppError(
             400,
             `"${sp.posses.propriedade.nome}" tem casas. Você precisa oferecer TODAS as propriedades do grupo ${grupo} ou vender as casas primeiro.`
@@ -103,12 +110,11 @@ export class NegociacaoService {
       }
     }
 
-    for (const [id, sp] of wantSpMap) {
-      if (sp && sp.casas > 0) {
+    for (const [, sp] of wantSpMap) {
+      if (sp.casas > 0) {
         const grupo = sp.posses.propriedade.grupo_cor;
-        const allInGroup = toGroupMap.get(grupo) || [];
-        const included = allInGroup.every((pid) => wantIds.has(pid));
-        if (!included) {
+        const allInGroup = toGroupMap.get(grupo) ?? [];
+        if (!allInGroup.every((pid) => wantIds.has(pid))) {
           throw new AppError(
             400,
             `"${sp.posses.propriedade.nome}" tem casas. Você precisa solicitar TODAS as propriedades do grupo ${grupo} ou o dono vender as casas primeiro.`
@@ -117,20 +123,22 @@ export class NegociacaoService {
       }
     }
 
-    // Cria negociação
+    const expiresAt = new Date(Date.now() + NEGOTIATION_TIMEOUT_MS);
+
+    // Cria negociação com expiresAt
     const negotiation = await this.repo.createNegotiation({
       sessionId,
       fromPlayerId,
       toPlayerId,
+      expiresAt,
     });
 
     // Cria items
-    const dbItems: { sessionPossesId?: number | null; fromSide: boolean; valor?: number | null }[] =
-      allItems.map((i) => ({
-        sessionPossesId: i.sessionPossesId,
-        fromSide: i.fromSide,
-        valor: i.valor,
-      }));
+    const dbItems = allItems.map((i) => ({
+      sessionPossesId: i.sessionPossesId,
+      fromSide: i.fromSide,
+      valor: i.valor,
+    }));
 
     if (dbItems.length > 0) {
       await this.repo.createNegotiationItems(negotiation.id, dbItems);
@@ -143,33 +151,6 @@ export class NegociacaoService {
       }
     }
 
-    // Agenda timeout
-    const timer = setTimeout(async () => {
-      try {
-        const n = await this.repo.findNegotiationById(negotiation.id);
-        if (n && n.status === "pendente") {
-          await this.repo.updateNegotiationStatus(negotiation.id, "expirada");
-          for (const item of n.items) {
-            if (item.sessionPossesId && item.fromSide) {
-              await this.repo.setNegociando(item.sessionPossesId, false);
-            }
-          }
-          const { emitToPlayer } = await import("../../lib/socket.js");
-          emitToPlayer(sessionId, n.fromPlayerId, "negotiation:expired", {
-            negotiationId: n.id,
-          });
-          emitToPlayer(sessionId, n.toPlayerId, "negotiation:expired", {
-            negotiationId: n.id,
-          });
-          negotiationTimers.delete(n.id);
-        }
-      } catch (err) {
-        console.error("[Negociação] Erro no timeout:", err);
-      }
-    }, NEGOTIATION_TIMEOUT_MS);
-
-    negotiationTimers.set(negotiation.id, timer);
-
     const result = await this.repo.findNegotiationById(negotiation.id);
     return result;
   }
@@ -180,26 +161,31 @@ export class NegociacaoService {
     if (negotiation.status !== "pendente") {
       throw new AppError(400, "Esta negociação não está mais pendente!");
     }
+    if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
+      throw new AppError(400, "Esta negociação já expirou!");
+    }
     if (negotiation.toPlayerId !== playerId) {
       throw new AppError(403, "Apenas o alvo pode aceitar esta negociação!");
     }
 
-    // Cancela timeout
-    this.clearTimer(negotiationId);
-
-    const items = negotiation.items as { id: number; sessionPossesId: number | null; fromSide: boolean; valor: number | null }[];
+    const items = negotiation.items as {
+      id: number;
+      sessionPossesId: number | null;
+      fromSide: boolean;
+      valor: number | null;
+    }[];
 
     const offerProps = items.filter((i) => i.fromSide && i.sessionPossesId);
     const wantProps = items.filter((i) => !i.fromSide && i.sessionPossesId);
 
     const offerMoney = items
       .filter((i) => i.fromSide && i.valor)
-      .reduce((acc: number, i) => acc + (i.valor ?? 0), 0);
+      .reduce((acc, i) => acc + (i.valor ?? 0), 0);
     const wantMoney = items
       .filter((i) => !i.fromSide && i.valor)
-      .reduce((acc: number, i) => acc + (i.valor ?? 0), 0);
+      .reduce((acc, i) => acc + (i.valor ?? 0), 0);
 
-    const netMoney = offerMoney - wantMoney; // fromPlayer paga se > 0, recebe se < 0
+    const netMoney = offerMoney - wantMoney;
 
     const fromPlayer = await this.repo.findPlayerById(negotiation.fromPlayerId);
     const toPlayer = await this.repo.findPlayerById(negotiation.toPlayerId);
@@ -212,10 +198,8 @@ export class NegociacaoService {
       throw new AppError(400, "Alvo não tem saldo suficiente!");
     }
 
-    const operacoes: any[] = [];
+    const operacoes: PrismaOp[] = [];
 
-    // Transfere propriedades: offered (from → to), wanted (to → from)
-    // Ao transferir, zera casas (quebra o monopólio do dono anterior)
     for (const item of offerProps) {
       operacoes.push(
         prisma.sessionPosses.update({
@@ -233,7 +217,6 @@ export class NegociacaoService {
       );
     }
 
-    // Ajusta saldos (net)
     if (netMoney > 0) {
       operacoes.push(
         prisma.sessionPlayer.update({
@@ -254,17 +237,6 @@ export class NegociacaoService {
         prisma.sessionPlayer.update({
           where: { id: negotiation.fromPlayerId },
           data: { saldo: { increment: Math.abs(netMoney) } },
-        })
-      );
-    }
-
-    // Destrava props offered que não foram transferidas (só dinheiro)
-    const allOfferPropIds = offerProps.map((i) => i.sessionPossesId!).filter((id): id is number => id != null);
-    for (const propId of allOfferPropIds) {
-      operacoes.push(
-        prisma.sessionPosses.update({
-          where: { id: propId },
-          data: { negociando: false },
         })
       );
     }
@@ -294,18 +266,18 @@ export class NegociacaoService {
     if (negotiation.status !== "pendente") {
       throw new AppError(400, "Esta negociação não está mais pendente!");
     }
+    if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
+      throw new AppError(400, "Esta negociação já expirou!");
+    }
     if (negotiation.toPlayerId !== playerId) {
       throw new AppError(403, "Apenas o alvo pode recusar esta negociação!");
     }
 
-    this.clearTimer(negotiationId);
+    const unlockOps: PrismaOp[] = [];
 
-    const operacoes: any[] = [];
-
-    // Destrava offered
     for (const item of negotiation.items) {
       if (item.fromSide && item.sessionPossesId) {
-        operacoes.push(
+        unlockOps.push(
           prisma.sessionPosses.update({
             where: { id: item.sessionPossesId },
             data: { negociando: false },
@@ -314,7 +286,7 @@ export class NegociacaoService {
       }
     }
 
-    operacoes.push(
+    unlockOps.push(
       prisma.negotiation.update({
         where: { id: negotiationId },
         data: { status: "recusada", respondedAt: new Date() },
@@ -329,7 +301,7 @@ export class NegociacaoService {
       })
     );
 
-    await prisma.$transaction(operacoes);
+    await prisma.$transaction(unlockOps);
     return this.repo.findNegotiationById(negotiationId);
   }
 
@@ -344,14 +316,16 @@ export class NegociacaoService {
     if (oldNegotiation.status !== "pendente") {
       throw new AppError(400, "Esta negociação não está mais pendente!");
     }
+    if (oldNegotiation.expiresAt && new Date() > oldNegotiation.expiresAt) {
+      throw new AppError(400, "Esta negociação já expirou!");
+    }
     if (oldNegotiation.toPlayerId !== playerId) {
       throw new AppError(403, "Apenas o alvo pode contra-ofertar!");
     }
 
-    this.clearTimer(negotiationId);
+    // Destrava props antigas e fecha negociação anterior
+    const unlockOps: PrismaOp[] = [];
 
-    // Destrava props antigas
-    const unlockOps: any[] = [];
     for (const item of oldNegotiation.items) {
       if (item.fromSide && item.sessionPossesId) {
         unlockOps.push(
@@ -370,23 +344,23 @@ export class NegociacaoService {
     );
     await prisma.$transaction(unlockOps);
 
-    // Cria nova negociação com papéis invertidos
-    const newNegotiation = await this.criarNegociacao(
+    // Cria nova negociação com papéis invertidos — timer recomeça do zero
+    return this.criarNegociacao(
       oldNegotiation.sessionId,
-      oldNegotiation.toPlayerId, // alvo vira proponente
-      oldNegotiation.fromPlayerId, // proponente vira alvo
+      oldNegotiation.toPlayerId,
+      oldNegotiation.fromPlayerId,
       newOfferItems,
       newWantItems
     );
-
-    return newNegotiation;
   }
 
   async listarPendentes(sessionId: number, playerId: number) {
     return this.repo.findPendentesByPlayer(sessionId, playerId);
   }
 
-  private buildGroupMap(props: any[]): Map<string, number[]> {
+  private buildGroupMap(
+    props: Awaited<ReturnType<NegociacaoRepository["findSessionPossesByPlayerFull"]>>
+  ): Map<string, number[]> {
     const map = new Map<string, number[]>();
     for (const sp of props) {
       const grupo = sp.posses.propriedade.grupo_cor;
@@ -394,13 +368,5 @@ export class NegociacaoService {
       map.get(grupo)!.push(sp.id);
     }
     return map;
-  }
-
-  private clearTimer(negotiationId: number) {
-    const timer = negotiationTimers.get(negotiationId);
-    if (timer) {
-      clearTimeout(timer);
-      negotiationTimers.delete(negotiationId);
-    }
   }
 }

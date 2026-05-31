@@ -9,6 +9,7 @@ import apiRouter from "./api/routes/index.js";
 import { ensureGameData } from "./utils/ensureGameData.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket } from "./lib/socket.js";
+import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 
 process.on("unhandledRejection", (reason) => {
   console.error("[UNHANDLED_REJECTION]", reason);
@@ -100,6 +101,7 @@ async function start() {
   app.use(errorHandler);
 
   await ensureGameData();
+  startNegotiationCleanup();
 
   httpServer.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}!`)

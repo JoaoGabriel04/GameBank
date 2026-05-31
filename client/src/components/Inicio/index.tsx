@@ -177,7 +177,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
   const { currentSession, loadSession, getAluguel, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore();
   const { user: authUser } = useAuthStore();
-  const { pendentes, setActive } = useNegotiationStore();
+  const { pendentes, setActive, minhaNegociacaoPendente, setMinhaNegociacaoAberto } = useNegotiationStore();
 
   const [showSaldo, setShowSaldo] = useState(true);
   const [selectedSessionPropId, setSelectedSessionPropId] = useState<number | null>(null);
@@ -652,16 +652,44 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         </div>
       )}
 
-      {/* ── Negociações Pendentes ── */}
-      {pendentes.length > 0 && (
+      {/* ── Negociações ── */}
+      {(pendentes.length > 0 || minhaNegociacaoPendente) && (
         <div>
           <h2 className="text-xl font-jaro text-zinc-100 mb-4 flex items-center gap-2">
             Negociações Pendentes
             <span className="text-sm font-inconsolata bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
-              {pendentes.length}
+              {pendentes.length + (minhaNegociacaoPendente ? 1 : 0)}
             </span>
           </h2>
           <div className="space-y-3">
+            {/* Proposta enviada pelo proponente */}
+            {minhaNegociacaoPendente && (
+              <button
+                onClick={() => setMinhaNegociacaoAberto(true)}
+                className="w-full flex items-center justify-between p-4 bg-zinc-900 border border-amber-500/40 rounded-xl hover:border-amber-400 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                    <Handshake className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-inconsolata text-zinc-200">
+                      Proposta enviada para{" "}
+                      <span className="text-amber-400 font-semibold">
+                        {currentSession?.jogadores.find((p) => p.id === minhaNegociacaoPendente.toPlayerId)?.nome ?? "—"}
+                      </span>
+                    </p>
+                    <p className="text-xs font-inconsolata text-zinc-500">
+                      {minhaNegociacaoPendente.items.length} item(ns) · Aguardando resposta…
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-inconsolata text-amber-400 shrink-0">
+                  Ver proposta →
+                </span>
+              </button>
+            )}
+            {/* Propostas recebidas */}
             {pendentes.map((n) => (
               <button
                 key={n.id}

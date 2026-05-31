@@ -1,11 +1,13 @@
 import bcrypt from "bcryptjs";
 import { SessionRepository } from "./session.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { prisma } from "../../lib/prisma.js";
+import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
 import { MissionsService } from "../missions/missions.service.js";
+import { RankingService } from "../ranking/ranking.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
+import { getLevelFromXp } from "../../utils/level.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
@@ -67,7 +69,7 @@ export class SessionService {
     // Cria o criador como primeiro jogador (apelido e cor vêm do perfil)
     let playerId: number | undefined;
     if (userId) {
-      const owner = await prisma.user.findUnique({ where: { id: userId } });
+      const owner = await this.repo.findUserProfile(userId);
       if (!owner?.profileComplete) {
         throw new AppError(403, "Complete seu perfil antes de criar uma sala");
       }
@@ -150,18 +152,13 @@ export class SessionService {
     let resolvedCor = spectator ? "zinc" : (cor || "zinc");
 
     if (userId) {
-      const account = await prisma.user.findUnique({ where: { id: userId } });
+      const account = await this.repo.findUserProfile(userId);
       if (!account?.profileComplete) {
         throw new AppError(403, "Complete seu perfil antes de entrar em uma sala");
       }
       resolvedNome = account.nome;
       if (!spectator) {
-        const usedColors = (
-          await prisma.sessionPlayer.findMany({
-            where: { sessionId, desistiu: false },
-            select: { cor: true },
-          })
-        ).map((p) => p.cor);
+        const usedColors = await this.repo.findUsedColors(sessionId);
         resolvedCor = pickPlayerColor(userId, usedColors);
       }
     } else if (!spectator) {
@@ -180,9 +177,7 @@ export class SessionService {
         if (!teamId) {
           throw new AppError(400, "Modo duplas requer seleção de time.");
         }
-        const teamExists = await prisma.sessionTeam.findFirst({
-          where: { id: teamId, sessionId },
-        });
+        const teamExists = await this.repo.findTeamInSession(teamId, sessionId);
         if (!teamExists) {
           throw new AppError(400, "Time não encontrado nesta sessão.");
         }
@@ -222,9 +217,13 @@ export class SessionService {
     }
 
     if (session.modo === "duplas") {
-      const playersWithoutTeam = session.jogadores.filter((p) => !p.teamId);
+      const playersWithoutTeam = activePlayers.filter((p) => !p.teamId);
       if (playersWithoutTeam.length > 0) {
         throw new AppError(400, "Todos os jogadores devem estar em um time para iniciar.");
+      }
+      const teamsWithPlayers = new Set(activePlayers.map((p) => p.teamId).filter(Boolean));
+      if (teamsWithPlayers.size < 2) {
+        throw new AppError(400, "São necessários pelo menos 2 times com jogadores para iniciar.");
       }
     }
 
@@ -243,24 +242,13 @@ export class SessionService {
     if (session.modo === "individual") {
       await Promise.all(
         activePlayers.map((p) =>
-          prisma.sessionPlayer.update({
-            where: { id: p.id },
-            data: { saldo: session.saldoInicial ?? 25000 },
-          })
+          this.repo.updatePlayerBalance(p.id, session.saldoInicial ?? 25000)
         )
       );
     } else {
-      // Assign balance to teams in duplas mode
-      const teams = await prisma.sessionTeam.findMany({
-        where: { sessionId: session.id },
-      });
+      const teams = await this.repo.findTeamsBySession(session.id);
       await Promise.all(
-        teams.map((t) =>
-          prisma.sessionTeam.update({
-            where: { id: t.id },
-            data: { saldo: session.saldoInicial ?? 25000 },
-          })
-        )
+        teams.map((t) => this.repo.updateTeamBalance(t.id, session.saldoInicial ?? 25000))
       );
     }
 
@@ -289,14 +277,7 @@ export class SessionService {
   private async cleanupOrphanedSessions() {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     try {
-      const orphaned = await prisma.session.findMany({
-        where: {
-          status: "Em Andamento",
-          dataInicio: { lt: oneDayAgo },
-          jogadores: { none: {} },
-        },
-        select: { id: true },
-      });
+      const orphaned = await this.repo.findOrphanedSessions(oneDayAgo);
 
       for (const session of orphaned) {
         await this.endSession(session.id);
@@ -483,6 +464,7 @@ export class SessionService {
   }
 
   private missionService = new MissionsService();
+  private rankingService = new RankingService();
 
   async endSession(sessionId: number, userId?: number) {
     if (userId) {
@@ -496,6 +478,16 @@ export class SessionService {
 
     const session = await this.repo.findByIdSimple(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
+
+    // Sala de espera encerrada pelo dono: apenas deleta, sem recompensar ninguém
+    if (session.status === "Esperando") {
+      await prisma.$transaction(async (tx) => {
+        await tx.sessionPlayer.deleteMany({ where: { sessionId } });
+        await tx.sessionTeam.deleteMany({ where: { sessionId } });
+        await tx.session.delete({ where: { id: sessionId } });
+      });
+      return [];
+    }
 
     const ranked = this.calculateRankings(session);
 
@@ -519,7 +511,7 @@ export class SessionService {
         if (!user) continue;
 
         const newXp = user.xp + entry.xpEarned;
-        const newLevel = this.getLevelFromXp(newXp);
+        const newLevel = getLevelFromXp(newXp);
 
         await tx.user.update({
           where: { id: p.userId },
@@ -545,6 +537,9 @@ export class SessionService {
       await tx.historico.deleteMany({ where: { sessionId } });
       await tx.session.delete({ where: { id: sessionId } });
     });
+
+    // Invalida cache do ranking — XP/level dos jogadores mudou
+    this.rankingService.invalidateCache().catch(() => {});
 
     // Track cumulative missions (non-critical, after transaction)
     for (const entry of ranked) {
@@ -598,13 +593,4 @@ export class SessionService {
     });
   }
 
-  private getLevelFromXp(totalXp: number): number {
-    let level = 1;
-    while (true) {
-      const xpNeeded = Math.floor(200 * Math.pow(1.04, level - 1));
-      if (totalXp < xpNeeded) return level;
-      totalXp -= xpNeeded;
-      level++;
-    }
-  }
 }

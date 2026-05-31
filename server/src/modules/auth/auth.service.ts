@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "../../lib/prisma.js";
 import { signToken } from "../../lib/jwt.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { isPrismaUniqueViolation, normalizeEmail } from "../../utils/email.js";
@@ -11,29 +10,36 @@ import {
   deleteCloudinaryAvatar,
   rollbackCloudinaryUpload,
 } from "../avatar/avatar.service.js";
+import { authRepository } from "./auth.repository.js";
 
 type OAuthProvider = "google" | "discord";
 
+type AuthUser = {
+  id: number;
+  email: string;
+  nome: string;
+  avatarUrl: string | null;
+  avatarUpdatedAt: Date | null;
+  profileComplete: boolean;
+  googleId?: string | null;
+  discordId?: string | null;
+};
+
 export class AuthService {
-  private async findUserByEmail(email: string) {
+  private async findUserByEmail(email: string): Promise<AuthUser | null> {
     const normalized = normalizeEmail(email);
-    const exact = await prisma.user.findUnique({ where: { email: normalized } });
+    const exact = await authRepository.findByEmailExact(normalized);
     if (exact) return exact;
 
-    const insensitive = await prisma.user.findFirst({
-      where: { email: { equals: normalized, mode: "insensitive" } },
-    });
+    const insensitive = await authRepository.findByEmailInsensitive(normalized);
     if (!insensitive) return null;
     if (insensitive.email === normalized) return insensitive;
 
     try {
-      return await prisma.user.update({
-        where: { id: insensitive.id },
-        data: { email: normalized },
-      });
+      return await authRepository.updateEmail(insensitive.id, normalized);
     } catch (err) {
       if (isPrismaUniqueViolation(err)) {
-        return prisma.user.findUnique({ where: { email: normalized } });
+        return authRepository.findByEmailExact(normalized);
       }
       throw err;
     }
@@ -58,13 +64,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(senha, 12);
     try {
-      const user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          nome: "",
-          passwordHash,
-          profileComplete: false,
-        },
+      const user = await authRepository.create({
+        email: normalizedEmail,
+        nome: "",
+        passwordHash,
+        profileComplete: false,
       });
       return this.authResponse(user);
     } catch (err) {
@@ -77,11 +81,12 @@ export class AuthService {
 
   async login(email: string, senha: string) {
     const user = await this.findUserByEmail(email);
-    if (!user || !user.passwordHash) {
-      throw new AppError(401, "Email ou senha inválidos");
-    }
+    if (!user) throw new AppError(401, "Email ou senha inválidos");
 
-    const valida = await bcrypt.compare(senha, user.passwordHash);
+    const full = await authRepository.findFullById(user.id);
+    if (!full?.passwordHash) throw new AppError(401, "Email ou senha inválidos");
+
+    const valida = await bcrypt.compare(senha, full.passwordHash);
     if (!valida) throw new AppError(401, "Email ou senha inválidos");
 
     return this.authResponse(user);
@@ -93,7 +98,7 @@ export class AuthService {
     nome: string,
     options: { avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string }
   ) {
-    const current = await prisma.user.findUnique({ where: { id: userId } });
+    const current = await authRepository.findFullById(userId);
 
     let newAvatarUrl: string;
     let newPublicId: string | null = null;
@@ -116,24 +121,12 @@ export class AuthService {
     const oldPublicId = current?.avatarPublicId ?? null;
 
     try {
-      const user = await prisma.user.upsert({
-        where: { id: userId },
-        create: {
-          id: userId,
-          email,
-          nome,
-          avatarUrl: newAvatarUrl,
-          avatarPublicId: newPublicId,
-          avatarUpdatedAt: new Date(),
-          profileComplete: true,
-        },
-        update: {
-          nome,
-          avatarUrl: newAvatarUrl,
-          avatarPublicId: newPublicId,
-          avatarUpdatedAt: new Date(),
-          profileComplete: true,
-        },
+      const user = await authRepository.upsertProfile(userId, email, {
+        nome,
+        avatarUrl: newAvatarUrl,
+        avatarPublicId: newPublicId,
+        avatarUpdatedAt: new Date(),
+        profileComplete: true,
       });
 
       if (oldPublicId && oldPublicId !== newPublicId) {
@@ -220,14 +213,14 @@ export class AuthService {
     provider: OAuthProvider;
     providerId: string;
     email: string;
-  }) {
+  }): Promise<AuthUser> {
     const { provider, providerId, email } = params;
 
     if (provider === "google") {
-      const byGoogle = await prisma.user.findUnique({ where: { googleId: providerId } });
+      const byGoogle = await authRepository.findByGoogleId(providerId);
       if (byGoogle) return byGoogle;
     } else {
-      const byDiscord = await prisma.user.findUnique({ where: { discordId: providerId } });
+      const byDiscord = await authRepository.findByDiscordId(providerId);
       if (byDiscord) return byDiscord;
     }
 
@@ -242,7 +235,7 @@ export class AuthService {
         : { email, nome: "", discordId: providerId, profileComplete: false };
 
     try {
-      return await prisma.user.create({ data: createData });
+      return await authRepository.create(createData);
     } catch (err) {
       if (!isPrismaUniqueViolation(err)) throw err;
 
@@ -253,19 +246,10 @@ export class AuthService {
     }
   }
 
-  private linkProviderToUser(
-    user: {
-      id: number;
-      email: string;
-      nome: string;
-      avatarUrl: string | null;
-      avatarUpdatedAt: Date | null;
-      profileComplete: boolean;
-      googleId: string | null;
-      discordId: string | null;
-    },
+  private async linkProviderToUser(
+    user: AuthUser,
     params: { provider: OAuthProvider; providerId: string }
-  ) {
+  ): Promise<AuthUser> {
     const { provider, providerId } = params;
 
     if (provider === "google") {
@@ -273,10 +257,7 @@ export class AuthService {
         throw new AppError(409, "Este email já está vinculado a outra conta Google");
       }
       if (!user.googleId) {
-        return prisma.user.update({
-          where: { id: user.id },
-          data: { googleId: providerId },
-        });
+        return authRepository.linkGoogle(user.id, providerId);
       }
       return user;
     }
@@ -285,10 +266,7 @@ export class AuthService {
       throw new AppError(409, "Este email já está vinculado a outra conta Discord");
     }
     if (!user.discordId) {
-      return prisma.user.update({
-        where: { id: user.id },
-        data: { discordId: providerId },
-      });
+      return authRepository.linkDiscord(user.id, providerId);
     }
     return user;
   }

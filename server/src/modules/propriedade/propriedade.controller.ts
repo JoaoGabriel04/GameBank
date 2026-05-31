@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Request, Response } from "express";
 import { PropriedadeService } from "./propriedade.service.js";
 import { SessionService } from "../session/session.service.js";
@@ -13,234 +14,165 @@ async function emitUpdatedSession(sessionId: number) {
   emitSessionUpdated(sessionId, session);
 }
 
+const SessionPlayerBody = z.object({
+  sessionId: z.coerce.number().int().positive(),
+  userId: z.coerce.number().int().positive(),
+});
+
+const PropBody = SessionPlayerBody.extend({
+  propriedadeId: z.coerce.number().int().positive(),
+});
+
+function parseError(res: Response, err: unknown) {
+  if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+  if (err instanceof z.ZodError) return res.status(400).json({ message: "Dados inválidos", details: err.flatten().fieldErrors });
+  console.error(err);
+  return res.status(500).json({ message: "Erro interno." });
+}
+
 export const propsController = {
   getPropById: async (req: Request, res: Response) => {
-    const { propriedadeId } = req.params;
     try {
-      const propriedade = await propriedadeService.getPropById(parseInt(propriedadeId));
+      const propriedadeId = z.coerce.number().int().positive().parse(req.params.propriedadeId);
+      const propriedade = await propriedadeService.getPropById(propriedadeId);
       res.status(200).json(propriedade);
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao buscar propriedade: ", err);
-      res.status(500).json({ message: "Erro ao buscar propriedade" });
+      parseError(res, err);
     }
   },
 
   buyProp: async (req: Request, res: Response) => {
-    const { propriedadeId, sessionId, userId } = req.body;
-
     try {
-      const result = await propriedadeService.buyProp(
-        parseInt(propriedadeId),
-        parseInt(sessionId),
-        parseInt(userId)
-      );
-      await emitUpdatedSession(parseInt(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      const result = await propriedadeService.buyProp(propriedadeId, sessionId, userId);
+      await emitUpdatedSession(sessionId);
       res.status(200).json(result);
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao comprar propriedade: ", err);
-      res.status(500).json({ message: "Erro ao comprar propriedade" });
+      parseError(res, err);
     }
   },
 
   buyHouse: async (req: Request, res: Response) => {
-    const { sessionId, userId, propriedadeId } = req.body;
-    if (!sessionId || !userId) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      await propriedadeService.buyHouse(Number(userId), Number(sessionId), parseInt(propriedadeId));
-      await emitUpdatedSession(Number(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      await propriedadeService.buyHouse(userId, sessionId, propriedadeId);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Casa comprada com sucesso!" });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao comprar casa:", err);
-      res.status(500).json({ message: "Erro interno ao comprar casa." });
+      return parseError(res, err);
     }
   },
 
   buyHousesBatch: async (req: Request, res: Response) => {
-    const { sessionId, userId, sessaoPossesIds } = req.body;
-    if (!sessionId || !userId || !sessaoPossesIds) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      await propriedadeService.buyHousesBatch(Number(userId), Number(sessionId), sessaoPossesIds);
-      await emitUpdatedSession(Number(sessionId));
+      const { sessionId, userId } = SessionPlayerBody.parse(req.body);
+      const sessaoPossesIds = z.array(z.number().int().positive()).min(1).parse(req.body.sessaoPossesIds);
+      await propriedadeService.buyHousesBatch(userId, sessionId, sessaoPossesIds);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Casas compradas com sucesso!" });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao comprar casas em lote:", err);
-      res.status(500).json({ message: "Erro interno ao comprar casas em lote." });
+      return parseError(res, err);
     }
   },
 
   sellHousesBatch: async (req: Request, res: Response) => {
-    const { sessionId, userId, items } = req.body;
-    if (!sessionId || !userId || !items) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      await propriedadeService.sellHousesBatch(Number(userId), Number(sessionId), items);
-      await emitUpdatedSession(Number(sessionId));
+      const { sessionId, userId } = SessionPlayerBody.parse(req.body);
+      const items = z.array(z.object({
+        sessaoPossesId: z.number().int().positive(),
+        quantidade: z.number().int().min(1),
+      })).min(1).parse(req.body.items);
+      await propriedadeService.sellHousesBatch(userId, sessionId, items);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Casas vendidas com sucesso!" });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao vender casas em lote:", err);
-      res.status(500).json({ message: "Erro interno ao vender casas em lote." });
+      return parseError(res, err);
     }
   },
 
   sellHouse: async (req: Request, res: Response) => {
-    const { propriedadeId, sessionId, userId } = req.body;
-    if (!sessionId || !userId) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      await propriedadeService.sellHouse(Number(userId), Number(sessionId), parseInt(propriedadeId));
-      await emitUpdatedSession(Number(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      await propriedadeService.sellHouse(userId, sessionId, propriedadeId);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Casa vendida com sucesso!" });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao vender casa:", err);
-      res.status(500).json({ message: "Erro interno ao vender casa." });
+      return parseError(res, err);
     }
   },
 
   sellPropriedade: async (req: Request, res: Response) => {
-    const { propriedadeId, sessionId, userId } = req.body;
-    if (!sessionId || !userId) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      const propriedadeAtualizada = await propriedadeService.sellPropriedade(
-        parseInt(propriedadeId),
-        Number(sessionId),
-        Number(userId)
-      );
-      await emitUpdatedSession(Number(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      const propriedadeAtualizada = await propriedadeService.sellPropriedade(propriedadeId, sessionId, userId);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Propriedade vendida com sucesso!", propriedade: propriedadeAtualizada });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao vender propriedade!", err);
-      return res.status(500).json({ message: "Erro interno ao vender propriedade." });
+      return parseError(res, err);
     }
   },
 
   hipotecarPropriedade: async (req: Request, res: Response) => {
-    const { propriedadeId, sessionId, userId } = req.body;
-    if (!sessionId || !userId) {
-      return res.status(400).json({ message: "Campos vazios ou errados!" });
-    }
-
     try {
-      const result = await propriedadeService.hipotecarPropriedade(
-        parseInt(propriedadeId),
-        Number(sessionId),
-        Number(userId)
-      );
-      await emitUpdatedSession(Number(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      const result = await propriedadeService.hipotecarPropriedade(propriedadeId, sessionId, userId);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Propriedade hipotecada com sucesso!", propriedade: result });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao hipotecar propriedade!", err);
-      return res.status(500).json({ message: "Erro interno ao hipotecar propriedade." });
+      return parseError(res, err);
     }
   },
 
   comprarHipotecada: async (req: Request, res: Response) => {
-    const { sessionPossesId, sessionId, compradorId } = req.body;
-    if (!sessionPossesId || !sessionId || !compradorId) {
-      return res.status(400).json({ message: "Campos obrigatórios ausentes" });
-    }
-
     try {
+      const body = z.object({
+        sessionPossesId: z.coerce.number().int().positive(),
+        sessionId: z.coerce.number().int().positive(),
+        compradorId: z.coerce.number().int().positive(),
+      }).parse(req.body);
+
       const result = await propriedadeService.comprarHipotecada(
-        parseInt(sessionPossesId),
-        parseInt(sessionId),
-        parseInt(compradorId)
+        body.sessionPossesId,
+        body.sessionId,
+        body.compradorId
       );
-      await emitUpdatedSession(parseInt(sessionId));
-      const r = result as any;
+      await emitUpdatedSession(body.sessionId);
+
+      const r = result as Record<string, unknown>;
       if (r?.notification) {
-        emitNotificationNew(parseInt(sessionId), r.notification);
+        emitNotificationNew(body.sessionId, r.notification as Parameters<typeof emitNotificationNew>[1]);
       }
       return res.status(200).json(result);
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao comprar hipoteca:", err);
-      return res.status(500).json({ message: "Erro interno ao comprar hipoteca" });
+      return parseError(res, err);
     }
   },
 
   responderNotificacao: async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { aceitar, respondedorId, sessionId } = req.body;
-    if (aceitar === undefined || !respondedorId || !sessionId) {
-      return res.status(400).json({ message: "Campos obrigatórios ausentes" });
-    }
-
     try {
-      const result = await propriedadeService.responderNotificacao(
-        parseInt(id),
-        aceitar,
-        parseInt(respondedorId)
-      );
-      await emitUpdatedSession(parseInt(sessionId));
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const body = z.object({
+        aceitar: z.boolean(),
+        respondedorId: z.coerce.number().int().positive(),
+        sessionId: z.coerce.number().int().positive(),
+      }).parse(req.body);
+
+      const result = await propriedadeService.responderNotificacao(id, body.aceitar, body.respondedorId);
+      await emitUpdatedSession(body.sessionId);
       return res.status(200).json(result);
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao responder notificação:", err);
-      return res.status(500).json({ message: "Erro interno ao responder notificação" });
+      return parseError(res, err);
     }
   },
 
   trocarPropriedade: async (req: Request, res: Response) => {
-    const { propriedadeId, sessionId, userId } = req.body;
-    if (!propriedadeId || !sessionId || !userId) {
-      return res.status(400).json({ message: "Campos vazios" });
-    }
-
     try {
-      await propriedadeService.trocarPropriedade(
-        parseInt(propriedadeId),
-        Number(sessionId),
-        Number(userId)
-      );
-      await emitUpdatedSession(Number(sessionId));
+      const { propriedadeId, sessionId, userId } = PropBody.parse(req.body);
+      await propriedadeService.trocarPropriedade(propriedadeId, sessionId, userId);
+      await emitUpdatedSession(sessionId);
       return res.status(200).json({ message: "Propriedade trocada com sucesso!" });
     } catch (err) {
-      if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message: err.message });
-      }
-      console.error("Erro ao trocar propriedade!", err);
-      return res.status(500).json({ message: "Erro interno ao trocar propriedade." });
+      return parseError(res, err);
     }
   },
 };

@@ -1,6 +1,7 @@
 import { io, Socket } from "socket.io-client";
 import { useGameStore } from "./gameStore";
 import { useNegotiationStore } from "./negotiationStore";
+import { useAuthStore } from "./authStore";
 import { getRoomToken } from "./roomTokenStore";
 import { toast } from "@/lib/toast";
 import type { ChatMessage, GameNotification, Negotiation } from "@/types/game";
@@ -139,14 +140,21 @@ export function connectSocket(sessionId: number) {
 
   // Negociação — aceita
   socket.on("negotiation:accepted", (data: Negotiation) => {
-    const store = useNegotiationStore.getState();
-    const wasProposer = store.minhaNegociacaoPendente?.id === data.id;
-    const wasTarget   = store.pendentes.some((n) => n.id === data.id);
-    store.removePendente(data.id);
-    store.setMinhaNegociacao(null);
-    store.setMinhaNegociacaoAberto(false);
-    if (wasProposer) toast.success("Sua negociação foi aceita!");
-    else if (wasTarget) toast.success("Negociação concluída com sucesso!");
+    const negStore = useNegotiationStore.getState();
+    const authUser = useAuthStore.getState().user;
+
+    // Identifica papel via User.id presente no payload — independe do currentSession estar carregado
+    const iAmProposer = !!authUser && data.fromPlayer?.userId === authUser.id;
+    const iAmTarget   = !!authUser && data.toPlayer?.userId === authUser.id;
+
+    negStore.removePendente(data.id);
+    negStore.setMinhaNegociacao(null);
+    negStore.setMinhaNegociacaoAberto(false);
+
+    if (iAmProposer) toast.success("Sua negociação foi aceita!");
+    else if (iAmTarget) toast.success("Negociação concluída com sucesso!");
+
+    if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
   });
 
   // Negociação — recusada (só o proponente recebe este evento)
@@ -166,16 +174,17 @@ export function connectSocket(sessionId: number) {
     store.setMinhaNegociacao(null);
     store.setMinhaNegociacaoAberto(false);
     if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
-    toast.warning("Sua negociação expirou por tempo limite.");
+    toast.warning("Negociação expirada por tempo limite.");
   });
 
-  // Negociação — contra-oferta (proponente original recebe; substitui o estado pendente)
+  // Negociação — contra-oferta (proponente original vira alvo; substitui o estado pendente)
   socket.on("negotiation:counter", (data: Negotiation) => {
     const store = useNegotiationStore.getState();
     store.setMinhaNegociacao(null);
     store.setMinhaNegociacaoAberto(false);
     store.addPendente(data);
     store.setActive(data);
+    toast.info("Você recebeu uma contra-oferta!");
   });
 }
 

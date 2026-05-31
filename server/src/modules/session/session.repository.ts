@@ -242,4 +242,49 @@ export class SessionRepository {
       data: { userId },
     });
   }
+
+  async findUserProfile(userId: number) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, nome: true, profileComplete: true },
+    });
+  }
+
+  async findUsedColors(sessionId: number) {
+    const players = await prisma.sessionPlayer.findMany({
+      where: { sessionId, desistiu: false },
+      select: { cor: true },
+    });
+    return players.map((p) => p.cor);
+  }
+
+  async findTeamInSession(teamId: number, sessionId: number) {
+    return prisma.sessionTeam.findFirst({ where: { id: teamId, sessionId } });
+  }
+
+  async updatePlayerBalance(playerId: number, saldo: number) {
+    return prisma.sessionPlayer.update({
+      where: { id: playerId },
+      data: { saldo },
+    });
+  }
+
+  async findTeamsBySession(sessionId: number) {
+    return prisma.sessionTeam.findMany({ where: { sessionId } });
+  }
+
+  async updateTeamBalance(teamId: number, saldo: number) {
+    return prisma.sessionTeam.update({ where: { id: teamId }, data: { saldo } });
+  }
+
+  async findOrphanedSessions(before: Date) {
+    return prisma.session.findMany({
+      where: {
+        status: "Em Andamento",
+        dataInicio: { lt: before },
+        jogadores: { none: {} },
+      },
+      select: { id: true },
+    });
+  }
 }

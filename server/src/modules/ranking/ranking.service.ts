@@ -1,27 +1,46 @@
-import { prisma } from "../../lib/prisma.js";
+import { rankingRepository } from "./ranking.repository.js";
+import { getRedis } from "../../lib/redis.js";
+
+const CACHE_KEY = "ranking:global";
+const CACHE_TTL_S = 5 * 60; // 5 minutos
 
 export class RankingService {
   async getGlobalRanking(limit = 100) {
-    const users = await prisma.user.findMany({
-      where: { totalGames: { gt: 0 } },
-      orderBy: { xp: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        nome: true,
-        avatarUrl: true,
-        avatarUpdatedAt: true,
-        level: true,
-        xp: true,
-        totalGames: true,
-        totalWins: true,
-        totalTop3: true,
-      },
-    });
+    const redis = getRedis();
 
-    return users.map((user, index) => ({
+    if (redis) {
+      try {
+        const cached = await redis.get(CACHE_KEY);
+        if (cached) return JSON.parse(cached);
+      } catch {
+        // fallback to DB
+      }
+    }
+
+    const users = await rankingRepository.findTopUsers(limit);
+    const result = users.map((user, index) => ({
       position: index + 1,
       ...user,
     }));
+
+    if (redis) {
+      try {
+        await redis.setEx(CACHE_KEY, CACHE_TTL_S, JSON.stringify(result));
+      } catch {
+        // non-critical
+      }
+    }
+
+    return result;
+  }
+
+  async invalidateCache() {
+    const redis = getRedis();
+    if (!redis) return;
+    try {
+      await redis.del(CACHE_KEY);
+    } catch {
+      // non-critical
+    }
   }
 }

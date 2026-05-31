@@ -46,6 +46,7 @@ export class NegociacaoRepository {
     sessionId: number;
     fromPlayerId: number;
     toPlayerId: number;
+    expiresAt?: Date;
     status?: string;
   }) {
     return prisma.negotiation.create({
@@ -54,9 +55,27 @@ export class NegociacaoRepository {
         fromPlayerId: data.fromPlayerId,
         toPlayerId: data.toPlayerId,
         status: data.status ?? "pendente",
+        expiresAt: data.expiresAt,
         items: { create: [] },
       },
       include: { items: true },
+    });
+  }
+
+  async findExpiredPending() {
+    return prisma.negotiation.findMany({
+      where: {
+        status: "pendente",
+        expiresAt: { lt: new Date() },
+      },
+      include: { items: true },
+    });
+  }
+
+  async expireNegotiation(id: number) {
+    return prisma.negotiation.update({
+      where: { id },
+      data: { status: "expirada", respondedAt: new Date() },
     });
   }
 

@@ -211,6 +211,7 @@ export interface Negotiation {
   toPlayerId: number;
   status: "pendente" | "aceita" | "recusada" | "expirada";
   createdAt: string;
+  expiresAt: string | null;
   respondedAt: string | null;
   items: NegotiationItem[];
   fromPlayer?: Player;

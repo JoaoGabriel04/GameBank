@@ -87,22 +87,22 @@ model Session {
   @@map("sessions")
 }
 
-// Jogadores “fictícios” dentro da sessão
+// Jogadores "fictícios" dentro da sessão
 model SessionPlayer {
-  id        Int     @id @default(autoincrement()) // id único da sessão
+  id        Int     @id @default(autoincrement())
   sessionId Int
   session   Session @relation(fields: [sessionId], references: [id])
-  userId    Int?    // link para User (dono do jogador)
+  userId    Int?    // link para User (dono do jogador) — User.id (JWT)
   user      User?   @relation(fields: [userId], references: [id])
 
   nome   String
   cor    String
   saldo  Float
-  teamId Int? // null = modo individual
+  teamId Int?
   team   SessionTeam? @relation(fields: [teamId], references: [id])
 
-  sessionPosses SessionPosses[] // para referenciar quais posses pertencem a esse jogador
-  lastOwned     SessionPosses[] @relation("LastOwner") // propriedades que já foram suas (hipotecadas)
+  sessionPosses SessionPosses[]
+  lastOwned     SessionPosses[] @relation("LastOwner")
   messages      Message[]
   notificationsFrom Notification[] @relation("NotificationFromPlayer")
   notificationsTo   Notification[] @relation("NotificationToPlayer")
@@ -113,6 +113,8 @@ model SessionPlayer {
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
 
+  @@index([userId])
+  @@index([sessionId])
   @@map("session_players")
 }
 
@@ -153,15 +155,20 @@ model SessionPosses {
   possesId Int
   posses   Posses @relation(fields: [possesId], references: [id])
 
-  playerId Int? // jogador fictício dono dessa posse
+  playerId Int?
   player   SessionPlayer? @relation(fields: [playerId], references: [id])
 
-  lastOwnerId Int? // dono antes de hipotecar
+  lastOwnerId Int?
   lastOwner    SessionPlayer? @relation("LastOwner", fields: [lastOwnerId], references: [id])
 
-  casas      Int     @default(0) // sobrescreve da posse base
+  casas      Int     @default(0)
   hipotecada Boolean @default(false)
   negociando Boolean @default(false)
+
+  @@index([sessionId])
+  @@index([playerId])
+  @@index([sessionId, playerId])
+  @@map("session_posses")
 }
 
 // Histórico de transações
@@ -174,6 +181,7 @@ model Historico {
   tipo     String
   detalhes String
 
+  @@index([sessionId])
   @@map("historico")
 }
 
@@ -187,6 +195,7 @@ model Message {
   texto     String
   createdAt DateTime @default(now())
 
+  @@index([sessionId])
   @@map("messages")
 }
 
@@ -205,6 +214,8 @@ model Notification {
   createdAt       DateTime    @default(now())
   respondedAt     DateTime?
 
+  @@index([sessionId])
+  @@index([toPlayerId])
   @@map("notifications")
 }
 
@@ -217,11 +228,16 @@ model Negotiation {
   toPlayerId      Int
   toPlayer        SessionPlayer @relation("NegotiationToPlayer", fields: [toPlayerId], references: [id])
   status          String   @default("pendente")
+  expiresAt       DateTime?
   createdAt       DateTime @default(now())
   respondedAt     DateTime?
 
   items NegotiationItem[]
 
+  @@index([sessionId])
+  @@index([fromPlayerId])
+  @@index([toPlayerId])
+  @@index([status])
   @@map("negociacoes")
 }
 
@@ -248,6 +264,8 @@ model Debt {
   createdAt DateTime @default(now())
   paidAt    DateTime?
 
+  @@index([playerId])
+  @@index([sessionId])
   @@map("dividas")
 }
 
@@ -324,5 +342,6 @@ model GameResult {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([sessionId])
   @@map("resultados_partidas")
 }
