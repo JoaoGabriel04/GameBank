@@ -466,8 +466,8 @@ export class SessionService {
   private missionService = new MissionsService();
   private rankingService = new RankingService();
 
-  async endSession(sessionId: number, userId?: number) {
-    if (userId) {
+  async endSession(sessionId: number, userId?: number, isAdmin = false) {
+    if (userId && !isAdmin) {
       const session = await this.repo.findByIdSimple(sessionId);
       if (session?.ownerId && session.ownerId !== userId) {
         throw new AppError(403, "Apenas o dono da sala pode encerrá-la.");

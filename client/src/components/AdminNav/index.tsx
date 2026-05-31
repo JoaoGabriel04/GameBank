@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faStore, faUsers, faServer, faBullseye, faGaugeHigh,
 } from "@fortawesome/free-solid-svg-icons";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, LogOut } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import UserAvatar from "@/components/UserAvatar";
 
@@ -22,7 +22,12 @@ const ADMIN_TABS = [
 export default function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+
+  function handleLogout() {
+    logout();
+    router.replace("/login");
+  }
 
   const isActive = (path: string) =>
     path === "/admin" ? pathname === "/admin" : pathname.startsWith(path);
@@ -69,9 +74,16 @@ export default function AdminNav() {
           {user && (
             <div className="flex items-center gap-2 px-3 py-2">
               <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" />
-              <span className="font-inconsolata text-xs text-zinc-400 truncate">{user.nome}</span>
+              <span className="font-inconsolata text-xs text-zinc-400 truncate flex-1">{user.nome}</span>
             </div>
           )}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-inconsolata text-zinc-600 hover:text-red-400 hover:bg-zinc-800 transition-colors w-full cursor-pointer"
+          >
+            <LogOut className="w-3 h-3" />
+            Sair
+          </button>
         </div>
       </aside>
 

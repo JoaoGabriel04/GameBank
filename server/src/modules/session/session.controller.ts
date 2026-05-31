@@ -195,7 +195,8 @@ export const sessionController = {
 
     try {
       const userId = req.user?.userId;
-      const ranked = await sessionService.endSession(sessionIdNum, userId);
+      const isAdmin = req.user?.isAdmin ?? false;
+      const ranked = await sessionService.endSession(sessionIdNum, userId, isAdmin);
       emitSessionClosed(sessionIdNum, ranked);
       res.status(200).json({ message: "Sessão encerrada e removida com sucesso", ranking: ranked });
     } catch (error) {
