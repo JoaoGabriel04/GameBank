@@ -65,7 +65,7 @@ export default function AdminNav() {
 
         <div className="px-3 py-4 border-t border-zinc-800 space-y-2">
           <Link
-            href="/user"
+            href="/"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-inconsolata text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800 transition-colors"
           >
             <ExternalLink className="w-3 h-3" />
@@ -86,6 +86,39 @@ export default function AdminNav() {
           </button>
         </div>
       </aside>
+
+      {/* Mobile — header no topo */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 flex items-center justify-between px-4 h-14">
+        <Link href="/admin" className="flex items-center gap-2">
+          <Image src="/images/gamebank-logo.png" alt="GameBank" width={80} height={80} className="w-8" />
+          <span className="font-inconsolata text-[10px] text-violet-400 uppercase tracking-widest">Admin</span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          {user && (
+            <UserAvatar
+              avatarUrl={user.avatarUrl}
+              avatarUpdatedAt={user.avatarUpdatedAt}
+              nome={user.nome}
+              size="sm"
+            />
+          )}
+          <Link
+            href="/"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Voltar ao site"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
 
       {/* Mobile — bottom nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
