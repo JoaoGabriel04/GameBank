@@ -37,6 +37,7 @@ export const authRepository = {
         avatarUrl: true,
         avatarUpdatedAt: true,
         profileComplete: true,
+        isAdmin: true,
       },
     }),
 

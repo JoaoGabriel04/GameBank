@@ -6,6 +6,7 @@ const ROOM_JWT_SECRET = process.env.ROOM_JWT_SECRET || JWT_SECRET;
 export interface JwtPayload {
   userId: number;
   email: string;
+  isAdmin: boolean;
 }
 
 export interface RoomJwtPayload {

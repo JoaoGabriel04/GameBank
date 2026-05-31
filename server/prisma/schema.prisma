@@ -45,6 +45,7 @@ model User {
   avatarUpdatedAt  DateTime?
   banner           String?   @default("preset:banner-01")
   profileComplete  Boolean   @default(false)
+  isAdmin          Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
   level        Int       @default(1)

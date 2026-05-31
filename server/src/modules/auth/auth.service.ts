@@ -52,8 +52,9 @@ export class AuthService {
     avatarUrl: string | null;
     avatarUpdatedAt: Date | null;
     profileComplete: boolean;
+    isAdmin?: boolean;
   }) {
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({ userId: user.id, email: user.email, isAdmin: user.isAdmin ?? false });
     return { token, user: toAuthUserPayload(user) };
   }
 

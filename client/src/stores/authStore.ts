@@ -8,6 +8,7 @@ export interface AuthUser {
   avatarUpdatedAt?: string | null;
   banner?: string | null;
   profileComplete: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthStore {

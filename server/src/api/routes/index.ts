@@ -1,4 +1,5 @@
-import {Router} from "express"
+import { Router } from "express"
+import adminRouter from "./admin.route.js"
 import sessionRouter from "./session.route.js"
 import propRouter from "./propriedade.route.js"
 import userRouter from "./user.route.js"
@@ -28,5 +29,6 @@ apiRouter.use("/profile", profileRouter)
 apiRouter.use("/missions", missionsRouter)
 apiRouter.use("/shop", shopRouter)
 apiRouter.use("/ranking", rankingRouter)
+apiRouter.use("/admin", adminRouter)
 
 export default apiRouter

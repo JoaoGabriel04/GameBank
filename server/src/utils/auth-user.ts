@@ -6,6 +6,7 @@ export type AuthUserPayload = {
   avatarUpdatedAt: string | null;
   banner: string | null;
   profileComplete: boolean;
+  isAdmin: boolean;
 };
 
 export function toAuthUserPayload(user: {
@@ -16,6 +17,7 @@ export function toAuthUserPayload(user: {
   avatarUpdatedAt: Date | null;
   banner?: string | null;
   profileComplete: boolean;
+  isAdmin?: boolean;
 }): AuthUserPayload {
   return {
     id: user.id,
@@ -25,5 +27,6 @@ export function toAuthUserPayload(user: {
     avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
     banner: user.banner ?? null,
     profileComplete: user.profileComplete,
+    isAdmin: user.isAdmin ?? false,
   };
 }
