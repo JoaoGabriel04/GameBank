@@ -142,10 +142,14 @@ export function connectSocket(sessionId: number) {
   socket.on("negotiation:accepted", (data: Negotiation) => {
     const negStore = useNegotiationStore.getState();
     const authUser = useAuthStore.getState().user;
+    const minhaNeg = negStore.minhaNegociacaoPendente;
 
-    // Identifica papel via User.id presente no payload — independe do currentSession estar carregado
-    const iAmProposer = !!authUser && data.fromPlayer?.userId === authUser.id;
-    const iAmTarget   = !!authUser && data.toPlayer?.userId === authUser.id;
+    // Fallback: se minhaNegociacaoPendente.id bate com a negociação aceita,
+    // este cliente é o proponente — independe de userId estar preenchido no payload.
+    const iAmProposer =
+      (minhaNeg?.id === data.id) ||
+      (!!authUser && data.fromPlayer?.userId === authUser.id);
+    const iAmTarget = !!authUser && data.toPlayer?.userId === authUser.id;
 
     negStore.removePendente(data.id);
     negStore.setMinhaNegociacao(null);

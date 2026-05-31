@@ -4,7 +4,7 @@ import { NegociacaoService } from "./negociacao.service.js";
 import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitSessionUpdated } from "../socket/socket.handler.js";
-import { emitToUser } from "../../lib/socket.js";
+import { emitToPlayer } from "../../lib/socket.js";
 
 const negociacaoService = new NegociacaoService();
 const sessionService = new SessionService();
@@ -57,8 +57,9 @@ export const negociacaoController = {
         body.offerItems,
         body.wantItems
       );
-      const toUserId = negotiation?.toPlayer?.userId;
-      if (toUserId) emitToUser(toUserId, "negotiation:new", negotiation);
+      if (negotiation?.toPlayerId) {
+        emitToPlayer(body.sessionId, negotiation.toPlayerId, "negotiation:new", negotiation);
+      }
       await emitUpdatedSession(body.sessionId);
       return res.status(201).json(negotiation);
     } catch (err) {
@@ -72,10 +73,8 @@ export const negociacaoController = {
       const { playerId } = PlayerIdBodySchema.parse(req.body);
       const negotiation = await negociacaoService.aceitarNegociacao(id, playerId);
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após aceitar");
-      const fromUserId = negotiation.fromPlayer?.userId;
-      const toUserId   = negotiation.toPlayer?.userId;
-      if (fromUserId) emitToUser(fromUserId, "negotiation:accepted", negotiation);
-      if (toUserId)   emitToUser(toUserId,   "negotiation:accepted", negotiation);
+      emitToPlayer(negotiation.sessionId, negotiation.fromPlayerId, "negotiation:accepted", negotiation);
+      emitToPlayer(negotiation.sessionId, negotiation.toPlayerId,   "negotiation:accepted", negotiation);
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -89,8 +88,7 @@ export const negociacaoController = {
       const { playerId } = PlayerIdBodySchema.parse(req.body);
       const negotiation = await negociacaoService.recusarNegociacao(id, playerId);
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após recusar");
-      const fromUserId = negotiation.fromPlayer?.userId;
-      if (fromUserId) emitToUser(fromUserId, "negotiation:rejected", { negotiationId: negotiation.id });
+      emitToPlayer(negotiation.sessionId, negotiation.fromPlayerId, "negotiation:rejected", { negotiationId: negotiation.id });
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -109,9 +107,7 @@ export const negociacaoController = {
         body.wantItems
       );
       if (!newNegotiation) throw new AppError(404, "Negociação não encontrada após contra-oferta");
-      // toPlayer da nova negociação é o proponente original, que agora recebe a contra-oferta
-      const toUserId = newNegotiation.toPlayer?.userId;
-      if (toUserId) emitToUser(toUserId, "negotiation:counter", newNegotiation);
+      emitToPlayer(newNegotiation.sessionId, newNegotiation.toPlayerId, "negotiation:counter", newNegotiation);
       await emitUpdatedSession(newNegotiation.sessionId);
       return res.status(201).json(newNegotiation);
     } catch (err) {
