@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import apiRouter from "./api/routes/index.js";
 import { ensureGameData } from "./utils/ensureGameData.js";
+import { seedAdmin } from "./utils/seed-admin.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket } from "./lib/socket.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
@@ -101,6 +102,7 @@ async function start() {
   app.use(errorHandler);
 
   await ensureGameData();
+  await seedAdmin();
   startNegotiationCleanup();
 
   httpServer.listen(PORT, () => {
