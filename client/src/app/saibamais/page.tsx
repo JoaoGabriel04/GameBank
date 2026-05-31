@@ -1,6 +1,6 @@
 'use client'
 
-import Header from "@/components/Header";
+import LandingHeader from "@/components/LandingHeader";
 import Footer from "@/components/Footer";
 import Button1 from "@/components/Button01";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -83,7 +83,7 @@ export default function SaibaMais() {
 
   return (
     <main className="w-full bg-black pb-24 lg:pb-0">
-      <Header />
+      <LandingHeader />
 
       <section className="relative w-full pt-32 pb-16 sm:pt-40 sm:pb-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(34,197,94,0.08)_0%,_transparent_60%)]" />

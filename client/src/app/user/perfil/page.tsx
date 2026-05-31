@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Pencil, Settings, Gamepad2, Crown, Trophy, Star, Clock } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 import Header from "@/components/Header"
@@ -35,12 +36,14 @@ const MISSION_ICON: Record<string, string> = {
 }
 
 export default function PerfilPage() {
+  const router = useRouter()
   const { user, token, loadFromStorage } = useAuthStore()
   const { profile, loading, loadProfile } = useProfileStore()
   const [history, setHistory] = useState<any[] | null>(null)
   const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => { loadFromStorage() }, [loadFromStorage])
+
   useEffect(() => {
     if (token && !profile) loadProfile()
   }, [token, profile, loadProfile])
@@ -79,59 +82,51 @@ export default function PerfilPage() {
       {/* Glow decorativo */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
 
-      <main className="pt-28 px-4 max-w-lg mx-auto space-y-4 relative">
-
-        {/* Card de perfil */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          {/* Banner */}
-          <div className="relative h-24 shrink-0">
-            <UserBanner banner={profile.banner} className="absolute inset-0 w-full h-full" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/60" />
+      
+      <main className="pt-30 px-4 max-w-lg mx-auto space-y-4">
+        <div className="bg-zinc-800 rounded-2xl">
+          <div className="overflow-hidden rounded-t-2xl">
+            <UserBanner banner={profile.banner} className="h-20 w-full" />
           </div>
-
-          {/* Linha 1: avatar (puxado acima) + botões de ação */}
-          <div className="px-5 pt-0 flex items-start justify-between -mt-8">
-            <UserAvatar
-              avatarUrl={profile.avatarUrl}
-              avatarUpdatedAt={profile.avatarUpdatedAt}
-              nome={profile.nome}
-              size="lg"
-              ring
-            />
-            {/* Botões ficam abaixo do banner, alinhados ao topo da linha */}
-            <div className="flex items-center gap-3 pt-10">
+          <div className="px-4 pb-4 flex items-center gap-4 -mt-6">
+          <UserAvatar
+            avatarUrl={profile.avatarUrl}
+            avatarUpdatedAt={profile.avatarUpdatedAt}
+            nome={profile.nome}
+            size="lg"
+            ring
+          />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
+            {profile.title && <p className="text-sm text-green-400">{profile.title}</p>}
+            <p className="text-xs text-zinc-400">Nível {profile.level}</p>
+          </div>
+          <div className="text-right flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setEditOpen(true)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
+                className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
                 title="Editar perfil"
-              >
+                >
                 <Pencil className="w-4 h-4" />
               </button>
-              <Link href="/configuracoes" className="text-zinc-400 hover:text-zinc-100 transition-colors" title="Configurações">
+              <Link
+                href="/user/configuracoes"
+                className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                title="Configurações"
+              >
                 <Settings className="w-4 h-4" />
               </Link>
             </div>
+            <p className="text-sm text-yellow-400 font-bold">{profile.coins} coins</p>
+            <p className="text-xs text-zinc-500">ID #{profile.id}</p>
           </div>
-
-          {/* Linha 2: nome, título, nível, coins */}
-          <div className="px-5 pt-2 pb-5">
-            <h1 className="font-jaro text-xl text-white truncate">{profile.nome}</h1>
-            {profile.title && (
-              <p className="text-xs font-inconsolata text-green-400">{profile.title}</p>
-            )}
-            <div className="flex items-center justify-between mt-0.5">
-              <p className="text-xs font-inconsolata text-zinc-500">Lv.{profile.level} · #{profile.id}</p>
-              <p className="text-sm font-inconsolata text-yellow-400 font-bold">
-                {profile.coins.toLocaleString("pt-BR")} <span className="text-zinc-500 font-normal text-xs">coins</span>
-              </p>
-            </div>
           </div>
         </div>
 
         <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
 
-        {/* Barra de XP */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+        <div className="bg-zinc-800 rounded-2xl p-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-xs font-inconsolata text-zinc-400">Nível {profile.level}</span>
             <span className="text-xs font-inconsolata text-zinc-500">{xpIntoLevel.toLocaleString()} / {xpCurrent.toLocaleString()} XP</span>

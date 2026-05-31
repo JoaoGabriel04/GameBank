@@ -12,9 +12,9 @@ import { faPlus, faUsers, faClock, faLock, faUsersGear, faGamepad } from "@forta
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Footer from "@/components/Footer";
-import Header from "@/components/Header";
+
 import type { GameSession } from "@/types/game";
-import AuthGuard from "@/components/AuthGuard";
+
 import { useAuthStore } from "@/stores/authStore";
 import UserAvatar from "@/components/UserAvatar";
 
@@ -31,6 +31,7 @@ export default function Sessions() {
   const [checkingActive, setCheckingActive] = useState(true);
 
   useEffect(() => {
+    if (authUser?.isAdmin) { router.replace("/admin/sessoes"); return; }
     if (!authUser) return;
     sessionsApi.getMyActive()
       .then(res => {
@@ -113,10 +114,10 @@ export default function Sessions() {
   const activeSessions = sessions ?? []
 
   return (
-    <AuthGuard>
+
     <main className="w-full bg-black pb-24 lg:pb-0">
       
-      <Header aba={"Sessions"}/>
+      
 
       <section className="w-full min-h-[calc(100vh-200px)] py-16 lg:py-20 px-10">
         <div className="flex flex-col items-center mb-10">
@@ -125,7 +126,7 @@ export default function Sessions() {
           <Button1
             size="md"
             color="green"
-            handle={() => router.push('/new-session')}
+            handle={() => router.push('/user/new-session')}
           >
             <FontAwesomeIcon icon={faPlus} className="mr-2" />
             Criar Sala
@@ -282,6 +283,6 @@ export default function Sessions() {
 
       <Footer />
     </main>
-    </AuthGuard>
+
   )
 }

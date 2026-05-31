@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setAuth: (token, user) => {
     localStorage.setItem("jwt_token", token);
     localStorage.setItem("jwt_user", JSON.stringify(user));
+    console.log("[auth] setAuth →", user.email, "| isAdmin:", user.isAdmin);
     set({ token, user, loading: false });
   },
 

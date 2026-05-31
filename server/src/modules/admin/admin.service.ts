@@ -51,6 +51,57 @@ export class AdminService {
     return adminRepository.deleteItem(id);
   }
 
+  // ── Sessions ───────────────────────────────────────────────────────────
+
+  async listSessions() {
+    const sessions = await adminRepository.findAllSessions();
+    return sessions.map(({ senha, _count, ...rest }) => ({
+      ...rest,
+      protegida: senha !== null,
+      jogadoresCount: _count.jogadores,
+    }));
+  }
+
+  // ── Missions ───────────────────────────────────────────────────────────
+
+  async listMissions() {
+    return adminRepository.findAllMissions();
+  }
+
+  async createMission(data: {
+    name: string;
+    description: string;
+    metric: string;
+    target: number;
+    xpReward: number;
+    coinReward: number;
+    perGame: boolean;
+    active: boolean;
+  }) {
+    return adminRepository.createMission(data);
+  }
+
+  async updateMission(id: number, data: Partial<{
+    name: string;
+    description: string;
+    metric: string;
+    target: number;
+    xpReward: number;
+    coinReward: number;
+    perGame: boolean;
+    active: boolean;
+  }>) {
+    const exists = await adminRepository.findMissionById(id);
+    if (!exists) throw new AppError(404, "Missão não encontrada.");
+    return adminRepository.updateMission(id, data);
+  }
+
+  async deleteMission(id: number) {
+    const exists = await adminRepository.findMissionById(id);
+    if (!exists) throw new AppError(404, "Missão não encontrada.");
+    return adminRepository.deleteMission(id);
+  }
+
   // ── Users ──────────────────────────────────────────────────────────────
 
   async listUsers() {

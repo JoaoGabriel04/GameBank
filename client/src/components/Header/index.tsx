@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { menuOptions } from "@/utils/menuOptions";
+import { userMenuOptions as menuOptions } from "@/utils/menuOptions";
 import Image from "next/image";
 import Button1 from "../Button01";
 import { useRouter } from "next/navigation";

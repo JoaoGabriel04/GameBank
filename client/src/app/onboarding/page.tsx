@@ -40,7 +40,7 @@ export default function OnboardingPage() {
       return;
     }
     if (user?.profileComplete) {
-      router.replace("/sessions");
+      router.replace("/user/sessions");
     }
   }, [loading, token, user, router]);
 

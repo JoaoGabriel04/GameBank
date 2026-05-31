@@ -34,6 +34,57 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
+  // Sessions
+  findAllSessions: () =>
+    prisma.session.findMany({
+      where: { status: { in: ["Esperando", "Em Andamento"] } },
+      select: {
+        id: true,
+        nome: true,
+        modo: true,
+        status: true,
+        maxJogadores: true,
+        saldoInicial: true,
+        dataInicio: true,
+        ownerId: true,
+        senha: true,
+        _count: { select: { jogadores: true } },
+      },
+      orderBy: { id: "desc" },
+    }),
+
+  // Missions
+  findAllMissions: () =>
+    prisma.mission.findMany({ orderBy: { id: "asc" } }),
+
+  findMissionById: (id: number) =>
+    prisma.mission.findUnique({ where: { id } }),
+
+  createMission: (data: {
+    name: string;
+    description: string;
+    metric: string;
+    target: number;
+    xpReward: number;
+    coinReward: number;
+    perGame: boolean;
+    active: boolean;
+  }) => prisma.mission.create({ data }),
+
+  updateMission: (id: number, data: Partial<{
+    name: string;
+    description: string;
+    metric: string;
+    target: number;
+    xpReward: number;
+    coinReward: number;
+    perGame: boolean;
+    active: boolean;
+  }>) => prisma.mission.update({ where: { id }, data }),
+
+  deleteMission: (id: number) =>
+    prisma.mission.delete({ where: { id } }),
+
   // Users
   findAllUsers: () =>
     prisma.user.findMany({

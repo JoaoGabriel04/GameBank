@@ -12,9 +12,31 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
-import CardFeatures from "./tests/home/_components/cardFeatures";
 import Footer from "@/components/Footer";
-import Header from "@/components/Header";
+import LandingHeader from "@/components/LandingHeader";
+
+function CardFeatures({ color, icon, title, description }: {
+  color: string;
+  icon: any;
+  title: string;
+  description: string;
+}) {
+  const palette: Record<string, string> = {
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    green:  "text-green-400 bg-green-500/10 border-green-500/20",
+    amber:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  };
+  const cls = palette[color] ?? palette.green;
+  return (
+    <div className={`flex flex-col items-center text-center gap-4 p-6 rounded-2xl border ${cls}`}>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${cls}`}>
+        <FontAwesomeIcon icon={icon} className="text-xl" />
+      </div>
+      <h3 className="font-jaro text-lg text-zinc-100">{title}</h3>
+      <p className="font-inconsolata text-sm text-zinc-400">{description}</p>
+    </div>
+  );
+}
 
 const tutorialSteps = [
   { num: "01", icon: faUserPlus, title: "Crie sua Conta", desc: "Cadastre-se com email ou entre com Google/Discord em segundos." },
@@ -46,7 +68,11 @@ export default function Home() {
 
   function handleNavigate(path: string) {
     if (user) {
-      router.push(path);
+      const map: Record<string, string> = {
+        "/sessions":    "/user/sessions",
+        "/new-session": "/user/new-session",
+      };
+      router.push(map[path] ?? path);
     } else {
       router.push(`/login?redirect=${encodeURIComponent(path)}`);
     }
@@ -74,7 +100,7 @@ export default function Home() {
   return (
     <main className="w-full bg-black pb-24 lg:pb-0">
 
-      <Header />
+      <LandingHeader />
 
       <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.png')] bg-bottom bg-cover bg-no-repeat z-10">
         <div className="w-full h-full flex flex-col justify-center items-center gap-6">

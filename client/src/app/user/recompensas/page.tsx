@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
-import Header from "@/components/Header"
-import SiteBottomNav from "@/components/SiteBottomNav"
+
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCrown, faXmark } from "@fortawesome/free-solid-svg-icons"
 import UserAvatar from "@/components/UserAvatar"
@@ -26,12 +27,14 @@ const MEDAL: Record<number, { emoji: string; border: string; glow: string; size:
 }
 
 export default function RecompensasPage() {
-  const { token, loadFromStorage } = useAuthStore()
+  const router = useRouter()
+  const { user, token, loadFromStorage } = useAuthStore()
   const { missions, ranking, loading, loadMissions, loadRanking } = useProfileStore()
   const [tab, setTab] = useState<"missoes" | "ranking">("missoes")
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
 
   useEffect(() => { loadFromStorage() }, [loadFromStorage])
+  useEffect(() => { if (user?.isAdmin) router.replace("/admin/recompensas") }, [user, router])
   useEffect(() => {
     if (token) {
       loadMissions()
@@ -44,7 +47,7 @@ export default function RecompensasPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
-      <Header aba="recompensas" />
+      
 
       {/* Glow */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-yellow-500/5 blur-3xl rounded-full pointer-events-none" />
@@ -250,7 +253,7 @@ export default function RecompensasPage() {
         </div>
       )}
 
-      <SiteBottomNav aba="recompensas" />
+      
     </div>
   )
 }

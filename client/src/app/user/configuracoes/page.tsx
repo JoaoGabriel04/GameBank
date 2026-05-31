@@ -13,9 +13,9 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { useAuthStore } from "@/stores/authStore";
 import { useMusicStore } from "@/stores/musicStore";
-import { menuOptions } from "@/utils/menuOptions";
-import Header from "@/components/Header";
-import SiteBottomNav from "@/components/SiteBottomNav";
+import { userMenuOptions as menuOptions } from "@/utils/menuOptions";
+
+
 
 const VERSION = process.env.NEXT_PUBLIC_GAME_VERSION ?? "1.0.0";
 
@@ -32,12 +32,12 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white pb-24">
-      <Header aba="perfil" />
 
-      <main className="pt-30 px-4 max-w-lg mx-auto space-y-4">
+
+      <main className="pt-8 px-4 max-w-lg mx-auto space-y-4">
         {/* Back link */}
         <Link
-          href="/perfil"
+          href="/user/perfil"
           className="inline-flex items-center gap-2 text-zinc-500 hover:text-zinc-200 transition-colors font-inconsolata text-sm mb-2"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -191,7 +191,7 @@ export default function ConfiguracoesPage() {
         </section>
       </main>
 
-      <SiteBottomNav aba="perfil" />
+
     </div>
   );
 }

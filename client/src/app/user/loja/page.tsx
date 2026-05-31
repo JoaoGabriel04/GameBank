@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
-import Header from "@/components/Header"
-import SiteBottomNav from "@/components/SiteBottomNav"
+
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag } from "@fortawesome/free-solid-svg-icons"
 import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
@@ -198,6 +199,7 @@ function ShopItemCard({
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function LojaPage() {
+  const router = useRouter()
   const { user, token, loadFromStorage } = useAuthStore()
   const { profile, shopItems, loading, loadShopItems, loadProfile } = useProfileStore()
   const [myItems, setMyItems] = useState<any[]>([])
@@ -206,6 +208,10 @@ export default function LojaPage() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null)
 
   useEffect(() => { loadFromStorage() }, [loadFromStorage])
+
+  useEffect(() => {
+    if (user?.isAdmin) router.replace("/admin/loja")
+  }, [user, router])
 
   useEffect(() => {
     if (token) {
@@ -274,7 +280,7 @@ export default function LojaPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
-      <Header aba="loja" />
+      
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative pt-24 overflow-hidden">
@@ -397,7 +403,7 @@ export default function LojaPage() {
         )}
       </main>
 
-      <SiteBottomNav aba="loja" />
+      
     </div>
   )
 }

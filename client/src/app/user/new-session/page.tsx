@@ -4,7 +4,7 @@ import Loading from "@/components/Loading";
 import UserAvatar from "@/components/UserAvatar";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
-import AuthGuard from "@/components/AuthGuard";
+
 import Lenis from "lenis";
 import { INITIAL_BALANCE } from "@/types/game";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -159,7 +159,7 @@ export default function NewSession() {
       if (sessionId) {
         toastSuccess("Sala criada com sucesso!");
         setReqLoading(false);
-        router.push(`/game/${sessionId}`);
+        router.push(`/user/game/${sessionId}`);
       } else {
         toastError("Erro ao criar sala");
       }
@@ -170,10 +170,10 @@ export default function NewSession() {
   };
 
   return (
-    <AuthGuard><div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center mb-8">
-          <Link href="/sessions" className="mr-4">
+          <Link href="/user/sessions" className="mr-4">
             <button className="w-10 h-10 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-green-500 transition-all cursor-pointer">
               <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-zinc-400" />
             </button>
@@ -445,6 +445,6 @@ export default function NewSession() {
         </div>
       </div>
       {reqLoading && <Loading label="Criando sala..." />}
-    </div></AuthGuard>
+    </div>
   );
 }

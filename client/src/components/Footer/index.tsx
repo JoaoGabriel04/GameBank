@@ -1,4 +1,4 @@
-import { menuOptions } from "@/utils/menuOptions";
+import { userMenuOptions as menuOptions } from "@/utils/menuOptions";
 import { faGithub, faFacebookF, faInstagram, faXTwitter } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";

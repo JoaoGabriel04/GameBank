@@ -6,7 +6,7 @@ import Loja from "@/components/Loja";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import AuthGuard from "@/components/AuthGuard";
+
 import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore, useAluguelReceivedStore } from "@/stores/socketStore";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
@@ -140,7 +140,7 @@ export default function Game() {
         status === 403 ? "Você não tem permissão para acessar esta sala" :
         "Sessão não encontrada";
       toastError(msg);
-      router.push("/sessions");
+      router.push("/user/sessions");
     }
   }, [isLoading, sessionEnded, swrSession, isError, router, endLoading, toastError]);
 
@@ -167,7 +167,7 @@ export default function Game() {
       setRoomToken(null);
       disconnectSocket();
       toastInfo("Você saiu da sala.");
-      router.push("/sessions");
+      router.push("/user/sessions");
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao sair da sala";
       if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
@@ -206,7 +206,7 @@ export default function Game() {
       setRoomToken(null);
       disconnectSocket();
       toastInfo("Você saiu da sala.");
-      router.push("/sessions");
+      router.push("/user/sessions");
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao sair da sala";
       toastError(msg);
@@ -469,7 +469,7 @@ export default function Game() {
           <PodiumModal
             ranking={podiumData}
             userId={authUser?.id}
-            onClose={() => router.push("/sessions")}
+            onClose={() => router.push("/user/sessions")}
           />
         ) : (
           <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -481,7 +481,7 @@ export default function Game() {
               <p className="text-zinc-400 font-inconsolata mb-8">
                 Esta sala foi encerrada. Volte para a lista de salas para entrar em outra partida.
               </p>
-              <Button1 size="lg" color="green" handle={() => router.push("/sessions")}>
+              <Button1 size="lg" color="green" handle={() => router.push("/user/sessions")}>
                 Voltar para Salas
               </Button1>
             </div>
@@ -517,7 +517,7 @@ export default function Game() {
   }
 
   return (
-    <AuthGuard><main className="w-full flex flex-col px-4 pb-24 min-h-screen bg-zinc-950">
+    <main className="w-full flex flex-col px-4 pb-24 min-h-screen bg-zinc-950">
       <header className="w-full py-2 flex flex-col items-center">
         <Link
           href={"/"}
@@ -670,6 +670,6 @@ export default function Game() {
           setAbaAtual(tab);
         }}
       />
-    </main></AuthGuard>
+    </main>
   );
 }

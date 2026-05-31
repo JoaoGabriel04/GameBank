@@ -14,28 +14,26 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const pathname = usePathname();
   const { user, loading, loadFromStorage } = useAuthStore();
 
-  useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      const redirect = encodeURIComponent(pathname);
-      router.replace(`/login?redirect=${redirect}`);
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       return;
     }
     if (!user.profileComplete) {
       router.replace("/onboarding");
+      return;
+    }
+    // Admin tentando acessar área de usuário → redireciona para admin
+    if (user.isAdmin && pathname.startsWith("/user")) {
+      router.replace("/admin");
     }
   }, [loading, user, router, pathname]);
 
-  if (loading) {
+  if (loading || !user || !user.profileComplete) {
     return <Loading label="Verificando autenticação..." />;
-  }
-
-  if (!user || !user.profileComplete) {
-    return <Loading label="Redirecionando..." />;
   }
 
   return <>{children}</>;
