@@ -1,28 +1,212 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
 import Header from "@/components/Header"
 import SiteBottomNav from "@/components/SiteBottomNav"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCoins, faCheck, faPalette, faGem, faChartLine, faBuilding, faTrophy, faCrown } from "@fortawesome/free-solid-svg-icons"
-import Image from "next/image"
+import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag } from "@fortawesome/free-solid-svg-icons"
+import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
 
-const typeIcon: Record<string, any> = {
-  title: faCrown,
-  color: faPalette,
-  badge: faGem,
+// ── Configuração visual por tipo de item ─────────────────────────────────────
+
+type ItemType = "title" | "color" | "badge" | string
+
+const TYPE_CONFIG: Record<string, {
+  label: string
+  icon: any
+  gradient: string
+  glow: string
+  accent: string
+  iconColor: string
+}> = {
+  title: {
+    label: "Títulos",
+    icon: faCrown,
+    gradient: "from-violet-600/20 via-purple-600/10 to-transparent",
+    glow: "shadow-[0_0_24px_rgba(139,92,246,0.25)]",
+    accent: "text-violet-400",
+    iconColor: "text-violet-400",
+  },
+  badge: {
+    label: "Emblemas",
+    icon: faGem,
+    gradient: "from-cyan-600/20 via-blue-600/10 to-transparent",
+    glow: "shadow-[0_0_24px_rgba(6,182,212,0.25)]",
+    accent: "text-cyan-400",
+    iconColor: "text-cyan-400",
+  },
+  color: {
+    label: "Cores",
+    icon: faPalette,
+    gradient: "from-pink-600/20 via-rose-600/10 to-transparent",
+    glow: "shadow-[0_0_24px_rgba(236,72,153,0.25)]",
+    accent: "text-pink-400",
+    iconColor: "text-pink-400",
+  },
 }
+
+function getConfig(type: string) {
+  return TYPE_CONFIG[type] ?? {
+    label: "Itens",
+    icon: faGem,
+    gradient: "from-zinc-600/20 to-transparent",
+    glow: "",
+    accent: "text-zinc-400",
+    iconColor: "text-zinc-400",
+  }
+}
+
+const FILTER_OPTIONS = [
+  { value: "all", label: "Todos" },
+  { value: "title", label: "Títulos" },
+  { value: "badge", label: "Emblemas" },
+  { value: "color", label: "Cores" },
+]
+
+// ── Componente do card de item ────────────────────────────────────────────────
+
+function ShopItemCard({
+  item,
+  owned,
+  equipped,
+  canAfford,
+  onBuy,
+  onEquip,
+  buying,
+}: {
+  item: any
+  owned: boolean
+  equipped: boolean
+  canAfford: boolean
+  onBuy: () => void
+  onEquip: () => void
+  buying: boolean
+}) {
+  const cfg = getConfig(item.type)
+
+  return (
+    <div
+      className={`
+        relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-300
+        bg-zinc-900
+        ${equipped
+          ? `border-violet-500/60 ${cfg.glow}`
+          : owned
+          ? "border-zinc-700 hover:border-zinc-500"
+          : canAfford
+          ? "border-zinc-800 hover:border-zinc-600 hover:scale-[1.02]"
+          : "border-zinc-800 opacity-60"
+        }
+      `}
+    >
+      {/* Faixa superior com gradiente */}
+      <div className={`h-24 w-full bg-gradient-to-br ${cfg.gradient} flex items-center justify-center relative`}>
+        {/* Ícone central */}
+        <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
+          <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
+        </div>
+
+        {/* Badge "Equipado" */}
+        {equipped && (
+          <span className="absolute top-2 right-2 flex items-center gap-1 bg-violet-600 text-white text-[10px] font-inconsolata font-semibold px-2 py-0.5 rounded-full">
+            <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
+            Equipado
+          </span>
+        )}
+
+        {/* Badge "Possuído" */}
+        {owned && !equipped && (
+          <span className="absolute top-2 right-2 flex items-center gap-1 bg-zinc-700 text-zinc-300 text-[10px] font-inconsolata px-2 py-0.5 rounded-full">
+            <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
+            Possuído
+          </span>
+        )}
+      </div>
+
+      {/* Conteúdo */}
+      <div className="flex flex-col flex-1 p-4 gap-2">
+        <div>
+          <span className={`text-[10px] font-inconsolata uppercase tracking-widest ${cfg.accent}`}>
+            {getConfig(item.type).label}
+          </span>
+          <h3 className="text-sm font-jaro text-zinc-100 leading-tight mt-0.5 line-clamp-1">
+            {item.name}
+          </h3>
+        </div>
+
+        <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed line-clamp-2 flex-1">
+          {item.description}
+        </p>
+
+        {/* Preço + Botão */}
+        <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-800 gap-2">
+          {!owned ? (
+            <div className="flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+              <FontAwesomeIcon icon={faCoins} className="text-amber-400 text-xs" />
+              <span className="text-amber-300 text-xs font-inconsolata font-semibold">{item.price}</span>
+            </div>
+          ) : (
+            <div className="w-2" />
+          )}
+
+          {equipped ? (
+            <button
+              onClick={onEquip}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium bg-violet-600 hover:bg-violet-500 text-white transition-colors cursor-pointer"
+            >
+              {buying ? <Loader2 className="w-3 h-3 animate-spin" /> : <FontAwesomeIcon icon={faCheck} className="text-[10px]" />}
+              Desequipar
+            </button>
+          ) : owned ? (
+            <button
+              onClick={onEquip}
+              disabled={buying}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {buying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              Equipar
+            </button>
+          ) : (
+            <button
+              onClick={onBuy}
+              disabled={!canAfford || buying}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                canAfford
+                  ? "bg-green-600 hover:bg-green-500 text-white"
+                  : "bg-zinc-700 text-zinc-500"
+              }`}
+            >
+              {buying ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : canAfford ? (
+                <FontAwesomeIcon icon={faShoppingBag} className="text-[10px]" />
+              ) : (
+                <FontAwesomeIcon icon={faLock} className="text-[10px]" />
+              )}
+              {canAfford ? "Comprar" : "Sem coins"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Página principal ──────────────────────────────────────────────────────────
 
 export default function LojaPage() {
   const { user, token, loadFromStorage } = useAuthStore()
   const { profile, shopItems, loading, loadShopItems, loadProfile } = useProfileStore()
   const [myItems, setMyItems] = useState<any[]>([])
-  const [message, setMessage] = useState<string | null>(null)
+  const [filter, setFilter] = useState<string>("all")
+  const [buyingId, setBuyingId] = useState<number | null>(null)
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null)
 
   useEffect(() => { loadFromStorage() }, [loadFromStorage])
+
   useEffect(() => {
     if (token) {
       loadShopItems()
@@ -34,94 +218,179 @@ export default function LojaPage() {
     if (profile) setMyItems(profile.items)
   }, [profile])
 
-  const handleBuy = async (itemId: number) => {
-    setMessage(null)
+  useEffect(() => {
+    if (!feedback) return
+    const t = setTimeout(() => setFeedback(null), 3000)
+    return () => clearTimeout(t)
+  }, [feedback])
+
+  const filteredItems = useMemo(() => {
+    if (filter === "all") return shopItems
+    return shopItems.filter((i: any) => i.type === filter)
+  }, [shopItems, filter])
+
+  const coins = profile?.coins ?? 0
+  const ownedCount = myItems.length
+  const totalCount = shopItems.length
+
+  const handleBuy = async (item: any) => {
+    setBuyingId(item.id)
+    setFeedback(null)
     try {
-      const res = await buyShopItemApi(itemId)
-      setMessage(`Item "${res.item.name}" comprado com sucesso!`)
+      await buyShopItemApi(item.id)
+      setFeedback({ type: "success", msg: `"${item.name}" adicionado à sua coleção!` })
       loadProfile()
       loadShopItems()
     } catch (err: any) {
-      setMessage(err?.response?.data?.message || "Erro ao comprar item")
+      setFeedback({ type: "error", msg: err?.response?.data?.message || "Erro ao comprar item" })
+    } finally {
+      setBuyingId(null)
     }
   }
 
-  const handleEquip = async (itemId: number) => {
-    setMessage(null)
+  const handleEquip = async (item: any) => {
+    setBuyingId(item.id)
+    setFeedback(null)
     try {
-      await equipShopItemApi(itemId)
-      setMessage("Item atualizado!")
+      await equipShopItemApi(item.id)
+      const equipped = myItems.some((i: any) => i.id === item.id && i.equipped)
+      setFeedback({ type: "success", msg: equipped ? `"${item.name}" desequipado.` : `"${item.name}" equipado!` })
       loadProfile()
     } catch (err: any) {
-      setMessage(err?.response?.data?.message || "Erro ao equipar item")
+      setFeedback({ type: "error", msg: err?.response?.data?.message || "Erro ao equipar item" })
+    } finally {
+      setBuyingId(null)
     }
   }
 
   if (!user || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-900 text-zinc-400">
-        <p>Faça login para acessar a loja.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-zinc-950 text-zinc-400">
+        <FontAwesomeIcon icon={faShoppingBag} className="text-4xl text-zinc-600" />
+        <p className="font-inconsolata text-sm">Faça login para acessar a loja.</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white pb-20">
+    <div className="min-h-screen bg-zinc-950 text-white pb-24">
       <Header aba="loja" />
 
-      <main className="pt-30 px-4 max-w-lg mx-auto space-y-4">
-        <div className="flex items-center justify-between bg-zinc-800 rounded-xl px-4 py-3">
-          <h1 className="font-bold">Loja</h1>
-          <div className="flex items-center gap-2 text-yellow-400">
-            <FontAwesomeIcon icon={faCoins} />
-            <span className="font-bold">{profile?.coins ?? 0}</span>
-          </div>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <div className="relative pt-24 overflow-hidden">
+        {/* Glow decorativo */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-40 bg-violet-600/10 blur-3xl rounded-full" />
+          <div className="absolute top-0 right-1/4 w-72 h-32 bg-amber-500/8 blur-3xl rounded-full" />
         </div>
 
-        {message && (
-          <div className="bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-sm text-center">{message}</div>
-        )}
+        <div className="relative max-w-2xl mx-auto px-4 pt-8 pb-6">
+          {/* Cabeçalho + coins */}
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <h1 className="font-jaro text-3xl text-zinc-100 leading-none">Loja</h1>
+              <p className="font-inconsolata text-sm text-zinc-500 mt-1">
+                {ownedCount} de {totalCount} itens na coleção
+              </p>
+            </div>
 
+            {/* Wallet de coins */}
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5">
+                <FontAwesomeIcon icon={faCoins} className="text-amber-400 text-base" />
+                <span className="font-jaro text-xl text-amber-300">{coins.toLocaleString("pt-BR")}</span>
+              </div>
+              <span className="text-[10px] font-inconsolata text-zinc-600">GameCoins</span>
+            </div>
+          </div>
+
+          {/* Barra de progresso da coleção */}
+          {totalCount > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-inconsolata text-zinc-600 uppercase tracking-widest">Progresso da coleção</span>
+                <span className="text-[10px] font-inconsolata text-zinc-500">{Math.round((ownedCount / totalCount) * 100)}%</span>
+              </div>
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full transition-all duration-700"
+                  style={{ width: `${(ownedCount / totalCount) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Filtros por categoria */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(opt.value)}
+                className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-inconsolata font-medium transition-all duration-200 cursor-pointer ${
+                  filter === opt.value
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+                }`}
+              >
+                {opt.value !== "all" && (
+                  <FontAwesomeIcon icon={getConfig(opt.value).icon} className={`mr-1.5 text-[10px] ${filter === opt.value ? "text-zinc-700" : getConfig(opt.value).iconColor}`} />
+                )}
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Feedback ─────────────────────────────────────────────────────── */}
+      <div className="max-w-2xl mx-auto px-4">
+        <div className={`overflow-hidden transition-all duration-300 ${feedback ? "max-h-16 mb-4" : "max-h-0 mb-0"}`}>
+          {feedback && (
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-inconsolata ${
+              feedback.type === "success"
+                ? "bg-green-950/60 border-green-700/40 text-green-300"
+                : "bg-red-950/60 border-red-700/40 text-red-300"
+            }`}>
+              {feedback.type === "success"
+                ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                : <XCircle className="w-4 h-4 shrink-0" />
+              }
+              {feedback.msg}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Grid de itens ────────────────────────────────────────────────── */}
+      <main className="max-w-2xl mx-auto px-4">
         {loading.shop ? (
-          <p className="text-zinc-500 text-center">Carregando...</p>
-        ) : shopItems.length === 0 ? (
-          <p className="text-zinc-500 text-center">Nenhum item disponível.</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-zinc-600">
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <p className="font-inconsolata text-sm">Carregando itens...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-20 text-zinc-600">
+            <FontAwesomeIcon icon={faShoppingBag} className="text-4xl" />
+            <p className="font-inconsolata text-sm">
+              {filter === "all" ? "Nenhum item disponível." : "Nenhum item nesta categoria."}
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {shopItems.map((item: any) => {
+            {filteredItems.map((item: any) => {
               const owned = myItems.some((i: any) => i.id === item.id)
               const equipped = myItems.some((i: any) => i.id === item.id && i.equipped)
               return (
-                <div key={item.id} className={`bg-zinc-800 rounded-2xl p-4 flex flex-col items-center text-center ${equipped ? "ring-2 ring-green-500" : ""}`}>
-                  <div className="w-12 h-12 rounded-full bg-zinc-700 flex items-center justify-center mb-2">
-                    <FontAwesomeIcon icon={typeIcon[item.type] || faGem} className="text-green-400 text-xl" />
-                  </div>
-                  <h3 className="text-sm font-bold mb-1">{item.name}</h3>
-                  <p className="text-xs text-zinc-400 mb-3">{item.description}</p>
-                  <div className="flex items-center gap-1 text-yellow-400 text-xs mb-3">
-                    <FontAwesomeIcon icon={faCoins} />
-                    <span>{item.price}</span>
-                  </div>
-                  {equipped ? (
-                    <button onClick={() => handleEquip(item.id)} className="w-full py-1.5 rounded-lg text-xs bg-green-600 text-white font-medium">
-                      Equipado
-                    </button>
-                  ) : owned ? (
-                    <button onClick={() => handleEquip(item.id)} className="w-full py-1.5 rounded-lg text-xs bg-zinc-700 text-zinc-300 hover:bg-zinc-600 font-medium transition-colors">
-                      Equipar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleBuy(item.id)}
-                      disabled={(profile?.coins ?? 0) < item.price}
-                      className={`w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        (profile?.coins ?? 0) >= item.price ? "bg-green-600 hover:bg-green-500 text-white" : "bg-zinc-700 text-zinc-500 cursor-not-allowed"
-                      }`}
-                    >
-                      Comprar
-                    </button>
-                  )}
-                </div>
+                <ShopItemCard
+                  key={item.id}
+                  item={item}
+                  owned={owned}
+                  equipped={equipped}
+                  canAfford={coins >= item.price}
+                  onBuy={() => handleBuy(item)}
+                  onEquip={() => handleEquip(item)}
+                  buying={buyingId === item.id}
+                />
               )
             })}
           </div>
