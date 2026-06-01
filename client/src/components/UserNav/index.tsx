@@ -36,7 +36,7 @@ export default function UserNav() {
         </Link>
 
         <nav className="flex items-center gap-8">
-          {NAV_TABS.slice(1, 4).map((tab) => (
+          {NAV_TABS.slice(1).map((tab) => (
             <Link
               key={tab.path}
               href={tab.path}
@@ -50,23 +50,9 @@ export default function UserNav() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {user && (
-            <>
-              <Link href="/user/perfil" className="flex items-center gap-2">
-                <UserAvatar
-                  avatarUrl={user.avatarUrl}
-                  avatarUpdatedAt={user.avatarUpdatedAt}
-                  nome={user.nome}
-                  size="sm"
-                  ring={isActive("/user/perfil")}
-                />
-                <span className="text-zinc-300 font-jaro text-sm truncate max-w-28">{user.nome}</span>
-              </Link>
-              <Button1 size="md" color="green" handle={() => router.push("/user/new-session")}>
-                Criar Sala
-              </Button1>
-            </>
-          )}
+          <Button1 size="md" color="green" handle={() => router.push("/user/new-session")}>
+            Criar Sala
+          </Button1>
         </div>
       </header>
 
