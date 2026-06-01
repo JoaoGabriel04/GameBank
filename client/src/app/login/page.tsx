@@ -32,7 +32,9 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-md">
-      <h1 className="text-4xl font-jaro text-center text-green-400 mb-8">GameBank</h1>
+      <Link href="/" className="block text-4xl font-jaro text-center text-green-400 mb-8 hover:text-green-300 transition-colors">
+        GameBank
+      </Link>
 
       <div className="bg-zinc-900 rounded-2xl p-8 border border-zinc-800">
         <h2 className="text-xl font-jaro text-zinc-100 mb-6 text-center">Entrar</h2>

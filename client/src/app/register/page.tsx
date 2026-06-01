@@ -31,7 +31,9 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <h1 className="text-4xl font-jaro text-center text-green-400 mb-8">GameBank</h1>
+        <Link href="/" className="block text-4xl font-jaro text-center text-green-400 mb-8 hover:text-green-300 transition-colors">
+          GameBank
+        </Link>
 
         <div className="bg-zinc-900 rounded-2xl p-8 border border-zinc-800">
           <h2 className="text-xl font-jaro text-zinc-100 mb-2 text-center">Criar Conta</h2>
