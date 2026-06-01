@@ -7,6 +7,8 @@ import { PLAYER_COLORS } from "@/types/game";
 import { getPropData } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
 import type { Player, SessionPropriedade } from "@/types/game";
+import UserBanner from "../UserBanner";
+import UserAvatar from "../UserAvatar";
 
 function calculatePatrimonio(player: Player, allPosses: SessionPropriedade[]): number {
   if (player.desistiu && player.patrimonyAtDesistir != null) {
