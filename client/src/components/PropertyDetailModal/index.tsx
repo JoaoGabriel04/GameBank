@@ -45,12 +45,11 @@ type Props = {
 
 export default function PropertyDetailModal({
   isOpen, onClose, propriedade, sessionPropriedade,
-  playerId, sessionId, playerSaldo,
-  podeVenderCasa, podeHipotecar, podeVender,
+  playerId, sessionId, podeHipotecar, podeVender,
   onActionSuccess,
 }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  const { sellHouse, hipotecarProp, sellPropriedade, getAluguel } = useGameStore()
+  const { hipotecarProp, sellPropriedade, getAluguel } = useGameStore()
 
   const [confirmAction, setConfirmAction] = useState<{
     type: string
@@ -91,18 +90,6 @@ export default function PropertyDetailModal({
     } finally {
       setActionLoading(false)
     }
-  }
-
-  const prepareVenderCasa = () => {
-    const casasDepois = sessionPropriedade.casas - 1
-    setConfirmAction({
-      type: 'sellHouse',
-      title: 'Vender Casa',
-      message: `Vender 1 casa de ${propriedade.nome.toUpperCase()}\n\nVocê recebe: R$ ${Math.floor(propriedade.custo_casa / 2).toLocaleString('pt-BR')}\nNovo aluguel: R$ ${getAluguel(propriedade, casasDepois).toLocaleString('pt-BR')}`,
-      confirmText: 'Vender',
-      color: 'orange',
-      action: () => sellHouse({ userId: playerId, sessionId, propriedadeId: propriedade.id }),
-    })
   }
 
   const prepareHipotecar = () => {
@@ -182,13 +169,6 @@ export default function PropertyDetailModal({
           <div className="border-t border-zinc-800 pt-4">
             <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-3">Ações</p>
             <div className="grid grid-cols-2 gap-3">
-              <Button1
-                size="sm" color="orange"
-                handle={podeVenderCasa ? prepareVenderCasa : undefined}
-                disabled={!podeVenderCasa}
-              >
-                Vender Casa
-              </Button1>
               <Button1
                 size="sm" color="purple"
                 handle={podeHipotecar ? prepareHipotecar : undefined}

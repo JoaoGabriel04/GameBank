@@ -3,7 +3,6 @@ import type { CreatePlayerSchema, EditPlayerSchema, PlayerColorEnum } from '../s
 import type { CreateSessionSchema, JoinSessionSchema, CreateTeamSchema, StartSessionSchema } from '../schemas/session.schema';
 import type { BuyPropSchema, HouseOperationSchema, TrocaPropSchema } from '../schemas/propriedade.schema';
 import type { DepositoSaqueSchema, TransferenciaSchema, AluguelSchema, AluguelAcaoSchema, ReceberDeTodosSchema } from '../schemas/banco.schema';
-import type { RegisterSchema, LoginSchema } from '../schemas/auth.schema';
 
 export type PlayerColor = z.infer<typeof PlayerColorEnum>;
 export type CreatePlayerInput = z.infer<typeof CreatePlayerSchema>;
@@ -20,7 +19,5 @@ export type TransferenciaInput = z.infer<typeof TransferenciaSchema>;
 export type AluguelInput = z.infer<typeof AluguelSchema>;
 export type AluguelAcaoInput = z.infer<typeof AluguelAcaoSchema>;
 export type ReceberDeTodosInput = z.infer<typeof ReceberDeTodosSchema>;
-export type RegisterInput = z.infer<typeof RegisterSchema>;
-export type LoginInput = z.infer<typeof LoginSchema>;
 
 export type SessionStatus = 'Esperando' | 'Em Andamento' | 'Finalizada';

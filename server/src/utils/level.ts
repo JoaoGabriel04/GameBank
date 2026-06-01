@@ -7,14 +7,6 @@ export function xpForLevel(level: number): number {
   return Math.floor(200 * Math.pow(1.04, level - 1));
 }
 
-export function totalXpForLevel(level: number): number {
-  let total = 0;
-  for (let i = 1; i < level; i++) {
-    total += xpForLevel(i);
-  }
-  return total;
-}
-
 export function getLevelFromXp(totalXp: number): number {
   let level = 1;
   let accumulated = 0;

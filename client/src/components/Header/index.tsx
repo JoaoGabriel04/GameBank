@@ -35,7 +35,7 @@ export default function Header({ aba }: HeaderProps) {
   return (
     <>
       <header className="absolute w-full h-25 top-0 left-0 grid grid-cols-1 lg:grid-cols-3 justify-between items-center px-10 z-100">
-        <div className="flex justify-center lg:justify-start">
+        <div className="flex justify-between items-center lg:justify-start">
           <Link href={'/'}>
             <Image src={'/images/gamebank-logo.png'} alt="logo-gamebank" width={100} height={100} className="w-15" />
           </Link>

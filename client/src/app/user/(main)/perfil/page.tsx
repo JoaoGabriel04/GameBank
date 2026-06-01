@@ -82,39 +82,45 @@ export default function PerfilPage() {
       {/* Glow decorativo */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
 
-      
+
       <main className="pt-30 px-4 max-w-lg mx-auto space-y-4">
         <div className="bg-zinc-800 rounded-2xl">
           <div className="overflow-hidden rounded-t-2xl">
             <UserBanner banner={profile.banner} className="h-20 w-full" />
           </div>
           <div className="px-4 pb-4 flex items-center gap-4 -mt-6">
-          <UserAvatar
-            avatarUrl={profile.avatarUrl}
-            avatarUpdatedAt={profile.avatarUpdatedAt}
-            nome={profile.nome}
-            size="lg"
-            ring
-          />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
-            {profile.title && <p className="text-sm text-green-400">{profile.title}</p>}
-            <p className="text-xs text-zinc-400">Nível {profile.level}</p>
-          </div>
-          <div className="text-right flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEditOpen(true)}
-                className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
-                title="Editar perfil"
-                >
-                <Pencil className="w-4 h-4" />
-              </button>
-    
+            <UserAvatar
+              avatarUrl={profile.avatarUrl}
+              avatarUpdatedAt={profile.avatarUpdatedAt}
+              nome={profile.nome}
+              size="lg"
+              ring
+            />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
+              {profile.title && <p className="text-sm text-green-400">{profile.title}</p>}
+              <p className="text-xs text-zinc-400">Nível {profile.level}</p>
             </div>
-            <p className="text-sm text-yellow-400 font-bold">{profile.coins} coins</p>
-            <p className="text-xs text-zinc-500">ID #{profile.id}</p>
-          </div>
+            <div className="text-right flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                  title="Editar perfil"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <Link
+                  href="/user/configuracoes"
+                  className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                  title="Configurações"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+              </div>
+              <p className="text-sm text-yellow-400 font-bold">{profile.coins} coins</p>
+              <p className="text-xs text-zinc-500">ID #{profile.id}</p>
+            </div>
           </div>
         </div>
 

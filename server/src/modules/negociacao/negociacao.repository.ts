@@ -68,7 +68,7 @@ export class NegociacaoRepository {
         status: "pendente",
         expiresAt: { lt: new Date() },
       },
-      include: { items: true },
+      include: { items: true, fromPlayer: true, toPlayer: true },
     });
   }
 
