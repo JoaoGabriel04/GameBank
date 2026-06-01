@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import api from "@/services/api";
 import Link from "next/link";
 import { getPostAuthPath } from "@/utils/authRedirect";
+import Button1 from "@/components/Button01";
 
 function LoginForm() {
   const router = useRouter();
@@ -89,12 +90,9 @@ function LoginForm() {
             className="w-full bg-zinc-800 text-zinc-100 rounded-xl px-4 py-3 border border-zinc-700 focus:outline-none focus:border-green-500 font-inconsolata"
             required
           />
-          <button
-            type="submit"
-            className="w-full bg-green-600 hover:bg-green-500 text-white font-jaro py-3 rounded-xl transition-colors"
-          >
+          <Button1 type="submit" size="full" color="green">
             Entrar
-          </button>
+          </Button1>
         </form>
 
         <p className="text-center text-zinc-500 text-sm mt-6 font-inconsolata">

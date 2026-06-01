@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import api from "@/services/api";
 import Link from "next/link";
 import { getPostAuthPath } from "@/utils/authRedirect";
+import Button1 from "@/components/Button01";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,12 +66,9 @@ export default function RegisterPage() {
               required
               minLength={6}
             />
-            <button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-500 text-white font-jaro py-3 rounded-xl transition-colors cursor-pointer"
-            >
+            <Button1 type="submit" size="full" color="green">
               Continuar
-            </button>
+            </Button1>
           </form>
 
           <div className="relative my-6">
