@@ -213,9 +213,9 @@ export default function RecompensasPage() {
       {selectedPlayer && (
         <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedPlayer(null)}>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-20">
-              <UserBanner banner={selectedPlayer.banner} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/80" />
+            <div className="relative h-20 overflow-hidden rounded-t-2xl">
+              <UserBanner banner={selectedPlayer.banner} className="w-full h-full" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/80 pointer-events-none" />
             </div>
             <div className="px-5 pb-5 -mt-8 space-y-4">
               <div className="flex items-end justify-between">
