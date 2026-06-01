@@ -12,7 +12,7 @@ declare global {
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Token não fornecido" });
+    return res.status(401).json({ message: "Token não fornecido" });
   }
 
   const token = header.replace("Bearer ", "");
@@ -21,6 +21,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     req.user = payload;
     next();
   } catch {
-    return res.status(401).json({ error: "Token inválido ou expirado" });
+    return res.status(401).json({ message: "Token inválido ou expirado" });
   }
 }

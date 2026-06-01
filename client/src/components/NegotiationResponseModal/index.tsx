@@ -18,13 +18,7 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import type { Negotiation } from "@/types/game";
 import { sortSessionPosses } from "@/utils/properties";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
+import { formatCurrency } from "@/utils/format";
 
 export default function NegotiationResponseModal() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();

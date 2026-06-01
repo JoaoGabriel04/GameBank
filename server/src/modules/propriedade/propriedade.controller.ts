@@ -1,18 +1,10 @@
 import { z } from "zod";
 import type { Request, Response } from "express";
 import { PropriedadeService } from "./propriedade.service.js";
-import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { emitSessionUpdated, emitNotificationNew } from "../socket/socket.handler.js";
+import { emitNotificationNew, emitUpdatedSession } from "../socket/socket.handler.js";
 
 const propriedadeService = new PropriedadeService();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 const SessionPlayerBody = z.object({
   sessionId: z.coerce.number().int().positive(),

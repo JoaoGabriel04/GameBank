@@ -1,19 +1,11 @@
 import { z } from "zod";
 import type { Request, Response } from "express";
 import { NegociacaoService } from "./negociacao.service.js";
-import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { emitSessionUpdated } from "../socket/socket.handler.js";
-import { emitToUser, emitToUserWithRetry } from "../../lib/socket.js";
+import { emitUpdatedSession } from "../socket/socket.handler.js";
+import { emitToRoom, emitToUserWithRetry } from "../../lib/socket.js";
 
 const negociacaoService = new NegociacaoService();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 const NegItemSchema = z.object({
   sessionPossesId: z.number().int().positive().nullable().optional(),
@@ -57,15 +49,14 @@ export const negociacaoController = {
         body.offerItems,
         body.wantItems
       );
-      // Emite notificação com retry — tenta 2 vezes com 50ms entre tentativas.
-      // Se falhar, emitSessionUpdated (broadcast) vai sincronizar estado.
+      // Broadcast na sala é mais confiável que emitToUserWithRetry individual
+      // O cliente filtra por targetUserId no payload
       const toUserId = negotiation?.toPlayer?.userId;
-      if (toUserId) {
-        const delivered = await emitToUserWithRetry(toUserId, "negotiation:new", negotiation);
-        if (!delivered) {
-          console.error(`[Negociação] Falha ao entregar notificação para usuário ${toUserId}, confiando em broadcast`);
-        }
-      }
+      emitToRoom(body.sessionId, "negotiation:toast", {
+        type: "new",
+        targetUserId: toUserId,
+        negotiation,
+      });
       await emitUpdatedSession(body.sessionId);
       return res.status(201).json(negotiation);
     } catch (err) {
@@ -81,15 +72,19 @@ export const negociacaoController = {
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após aceitar");
       const fromUserId = negotiation.fromPlayer?.userId;
       const toUserId   = negotiation.toPlayer?.userId;
-      // Tenta entregar com retry para ambos os jogadores
-      if (fromUserId) {
-        const delivered = await emitToUserWithRetry(fromUserId, "negotiation:accepted", negotiation);
-        if (!delivered) console.error(`[Negociação] Falha ao notificar aceitação para usuário ${fromUserId}`);
-      }
-      if (toUserId) {
-        const delivered = await emitToUserWithRetry(toUserId, "negotiation:accepted", negotiation);
-        if (!delivered) console.error(`[Negociação] Falha ao notificar aceitação para usuário ${toUserId}`);
-      }
+      // Broadcast na sala — mais confiável que emitToUserWithRetry
+      emitToRoom(negotiation.sessionId, "negotiation:toast", {
+        type: "accepted",
+        role: "proposer",
+        targetUserId: fromUserId,
+        negotiation,
+      });
+      emitToRoom(negotiation.sessionId, "negotiation:toast", {
+        type: "accepted",
+        role: "target",
+        targetUserId: toUserId,
+        negotiation,
+      });
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -104,10 +99,12 @@ export const negociacaoController = {
       const negotiation = await negociacaoService.recusarNegociacao(id, playerId);
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após recusar");
       const fromUserId = negotiation.fromPlayer?.userId;
-      if (fromUserId) {
-        const delivered = await emitToUserWithRetry(fromUserId, "negotiation:rejected", { negotiationId: negotiation.id });
-        if (!delivered) console.error(`[Negociação] Falha ao notificar recusa para usuário ${fromUserId}`);
-      }
+      // Broadcast na sala — mais confiável que emitToUserWithRetry
+      emitToRoom(negotiation.sessionId, "negotiation:toast", {
+        type: "rejected",
+        targetUserId: fromUserId,
+        negotiationId: negotiation.id,
+      });
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -127,12 +124,12 @@ export const negociacaoController = {
       );
       if (!newNegotiation) throw new AppError(404, "Negociação não encontrada após contra-oferta");
       const toUserId = newNegotiation.toPlayer?.userId;
-      if (toUserId) {
-        const delivered = await emitToUserWithRetry(toUserId, "negotiation:counter", newNegotiation);
-        if (!delivered) {
-          console.error(`[Negociação] Falha ao entregar contra-oferta para usuário ${toUserId}`);
-        }
-      }
+      // Broadcast na sala — mais confiável que emitToUserWithRetry
+      emitToRoom(newNegotiation.sessionId, "negotiation:toast", {
+        type: "counter",
+        targetUserId: toUserId,
+        negotiation: newNegotiation,
+      });
       await emitUpdatedSession(newNegotiation.sessionId);
       return res.status(201).json(newNegotiation);
     } catch (err) {

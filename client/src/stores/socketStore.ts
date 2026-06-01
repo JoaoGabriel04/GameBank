@@ -76,26 +76,7 @@ export function connectSocket(sessionId: number) {
     useGameStore.setState({ currentSession: data });
   });
 
-  socket.on("session:closed", ({ sessionId: closedId, ranking }) => {
-    if (closedId === sessionId) {
-      sessionEnded = true;
-      useGameStore.setState({ currentSession: null });
-      sessionClosedCallbacks.forEach((cb) => cb(ranking));
-    }
-  });
-
-  socket.on("player:balance", ({ userId, saldo }) => {
-    const store = useGameStore.getState();
-    const session = store.currentSession;
-    if (!session) return;
-    const jogadores = session.jogadores.map((j) =>
-      j.id === userId ? { ...j, saldo } : j
-    );
-    useGameStore.setState({ currentSession: { ...session, jogadores } });
-  });
-
   socket.on("disconnect", () => {});
-
   socket.on("connect_error", () => {});
 
   socket.on("error", ({ message }) => {
@@ -117,9 +98,21 @@ export function connectSocket(sessionId: number) {
     useNotificationStore.getState().addNotification(data);
   });
 
-  // Aluguel recebido — evento direcionado ao dono da propriedade
-  socket.on("aluguel:received", (data: { fromPlayerNome: string; toPlayerId: number; valor: number; propriedadeNome: string }) => {
+  // Aluguel recebido — broadcast na sala, filtrado por toUserId
+  socket.on("aluguel:toast", (data: { fromPlayerNome: string; toPlayerId: number; toUserId?: number | null; valor: number; propriedadeNome: string }) => {
+    const myId = useAuthStore.getState().user?.id;
     useAluguelReceivedStore.getState().addEvent(data);
+    if (data.toUserId && data.toUserId === myId) {
+      toast.success(`Você recebeu R$ ${data.valor.toLocaleString("pt-BR")} de ${data.fromPlayerNome} (${data.propriedadeNome})`);
+    }
+  });
+
+  // Transferência recebida — broadcast na sala, filtrado por toUserId
+  socket.on("transferencia:toast", (data: { fromPlayerNome: string; toPlayerId: number; toUserId?: number | null; valor: number }) => {
+    const myId = useAuthStore.getState().user?.id;
+    if (data.toUserId && data.toUserId === myId) {
+      toast.success(`Você recebeu R$ ${data.valor.toLocaleString("pt-BR")} de ${data.fromPlayerNome}`);
+    }
   });
 
   // Sorte e Revés — carta sorteada (broadcast)
@@ -132,64 +125,82 @@ export function connectSocket(sessionId: number) {
     useCardStore.getState().addCardEvent(data);
   });
 
-  // Negociação — nova oferta recebida
-  socket.on("negotiation:new", (data: Negotiation) => {
-    useNegotiationStore.getState().addPendente(data);
-    useNegotiationStore.getState().setActive(data);
-  });
-
-  // Negociação — aceita
-  socket.on("negotiation:accepted", (data: Negotiation) => {
+  // Negociação — evento broadcast confiável (substitui eventos targeted individuais)
+  // type: "new" | "accepted" | "rejected" | "counter" | "expired"
+  // targetUserId: quem deve ver o toast
+  socket.on("negotiation:toast", (data: {
+    type: string;
+    role?: string;
+    targetUserId?: number | null;
+    negotiation?: Negotiation;
+    negotiationId?: number;
+  }) => {
+    const myId = useAuthStore.getState().user?.id;
     const negStore = useNegotiationStore.getState();
-    const authUser = useAuthStore.getState().user;
-    const minhaNeg = negStore.minhaNegociacaoPendente;
+    const isMyToast = data.targetUserId && data.targetUserId === myId;
 
-    // Fallback: se minhaNegociacaoPendente.id bate com a negociação aceita,
-    // este cliente é o proponente — independe de userId estar preenchido no payload.
-    const iAmProposer =
-      (minhaNeg?.id === data.id) ||
-      (!!authUser && data.fromPlayer?.userId === authUser.id);
-    const iAmTarget = !!authUser && data.toPlayer?.userId === authUser.id;
-
-    negStore.removePendente(data.id);
-    negStore.setMinhaNegociacao(null);
-    negStore.setMinhaNegociacaoAberto(false);
-
-    if (iAmProposer) toast.success("Sua negociação foi aceita!");
-    else if (iAmTarget) toast.success("Negociação concluída com sucesso!");
-
-    if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    if (data.type === "new" && data.negotiation) {
+      // Só o alvo adiciona à lista de pendentes
+      if (isMyToast) {
+        negStore.addPendente(data.negotiation);
+        negStore.setActive(data.negotiation);
+      }
+      if (isMyToast) toast.info("Você recebeu uma nova proposta de negociação!");
+    } else if (data.type === "accepted") {
+      // Todos removem a negociação pendente
+      if (data.negotiation) {
+        negStore.removePendente(data.negotiation.id);
+      }
+      negStore.setMinhaNegociacao(null);
+      negStore.setMinhaNegociacaoAberto(false);
+      if (isMyToast) {
+        if (data.role === "proposer") {
+          toast.success("Sua negociação foi aceita!");
+        } else {
+          toast.success("Negociação concluída com sucesso!");
+        }
+      }
+      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    } else if (data.type === "rejected") {
+      // Todos removem a negociação pendente
+      if (data.negotiationId) {
+        negStore.removePendente(data.negotiationId);
+      }
+      negStore.setMinhaNegociacao(null);
+      negStore.setMinhaNegociacaoAberto(false);
+      if (isMyToast) toast.error("Sua negociação foi recusada.");
+      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    } else if (data.type === "expired") {
+      // Todos removem a negociação pendente
+      if (data.negotiationId) {
+        negStore.removePendente(data.negotiationId);
+      }
+      negStore.setMinhaNegociacao(null);
+      negStore.setMinhaNegociacaoAberto(false);
+      if (isMyToast) toast.warning("Negociação expirada por tempo limite.");
+      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    } else if (data.type === "counter" && data.negotiation) {
+      // Contra-oferta: o proponente original vira alvo
+      negStore.setMinhaNegociacao(null);
+      negStore.setMinhaNegociacaoAberto(false);
+      if (isMyToast) {
+        negStore.addPendente(data.negotiation);
+        negStore.setActive(data.negotiation);
+      }
+      if (isMyToast) toast.info("Você recebeu uma contra-oferta!");
+      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+    }
   });
 
-  // Negociação — recusada (só o proponente recebe este evento)
-  socket.on("negotiation:rejected", ({ negotiationId }: { negotiationId: number }) => {
-    const store = useNegotiationStore.getState();
-    store.removePendente(negotiationId);
-    store.setMinhaNegociacao(null);
-    store.setMinhaNegociacaoAberto(false);
-    if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
-    toast.error("Sua negociação foi recusada.");
-  });
-
-  // Negociação — expirada
+  // Fallback: negotiation:expired via emitToUser individual (negotiation-cleanup.ts)
   socket.on("negotiation:expired", ({ negotiationId }: { negotiationId: number }) => {
+    if (!currentSessionId) return;
     const store = useNegotiationStore.getState();
     store.removePendente(negotiationId);
     store.setMinhaNegociacao(null);
     store.setMinhaNegociacaoAberto(false);
-    if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
-    toast.warning("Negociação expirada por tempo limite.");
   });
 
-  // Negociação — contra-oferta (proponente original vira alvo; substitui o estado pendente)
-  socket.on("negotiation:counter", (data: Negotiation) => {
-    const store = useNegotiationStore.getState();
-    store.setMinhaNegociacao(null);
-    store.setMinhaNegociacaoAberto(false);
-    store.addPendente(data);
-    store.setActive(data);
-    toast.info("Você recebeu uma contra-oferta!");
-  });
 }
 
 // ─── Chat Store ──────────────────────────────────────────────────────────

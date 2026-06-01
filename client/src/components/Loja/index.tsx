@@ -7,6 +7,7 @@ import { LoaderCircle, ShoppingCart, Bell, Check, X as XIcon } from "lucide-reac
 import { useToast } from "@/components/Toast"
 import { PROPERTY_COLORS, Propriedade } from "@/types/game"
 import { getPropData, groupByColor } from "@/utils/properties"
+import { formatCurrency } from "@/utils/format"
 
 const COLOR_HEX: Record<string, string> = {
   lime:    "#84cc16",
@@ -31,10 +32,6 @@ function getAccentHex(grupoCor: string | null): string {
 
 const COLOR_LABELS: Record<string, string> = {}
 for (const c of PROPERTY_COLORS) COLOR_LABELS[c.value] = c.label
-
-function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR')
-}
 
 export default function Loja() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()

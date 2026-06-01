@@ -15,6 +15,7 @@ import PropertyDetailModal from "../PropertyDetailModal";
 import ConfirmationModal from "../ConfirmationModal";
 import Modal from "../Modal";
 import { useToast } from "@/components/Toast";
+import { formatCurrency } from "@/utils/format";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import {
@@ -70,10 +71,6 @@ for (const c of PROPERTY_COLORS) COLOR_LABELS[c.value] = c.label
 type ModalType = "deposito" | "saque" | "transferencia" | "aluguel" | "casas" | "venderCasas" | null;
 
 const QUICK_VALUES = [100, 500, 2000, 5000, 10000, 50000, 100000];
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR");
-}
 
 function ValorInput({ value, onChange, max }: { value: number; onChange: (v: number) => void; max?: number }) {
   return (
@@ -463,10 +460,6 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       setReqLoading(false)
     }
   }
-
-  const playerColor = currentPlayer
-    ? PLAYER_COLORS.find((c) => c.value === currentPlayer.cor)
-    : null;
 
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-10">

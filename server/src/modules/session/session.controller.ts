@@ -25,10 +25,10 @@ export const sessionController = {
       return res.status(201).json(result);
     } catch (err) {
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ error: err.message });
+        return res.status(err.statusCode).json({ message: err.message });
       }
       console.error(err);
-      return res.status(500).json({ error: "Erro ao criar a sessão." });
+      return res.status(500).json({ message: "Erro ao criar a sessão." });
     }
   },
 
@@ -46,10 +46,10 @@ export const sessionController = {
       return res.status(200).json({ ...session, roomToken: token });
     } catch (err) {
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ error: err.message });
+        return res.status(err.statusCode).json({ message: err.message });
       }
       console.error(err);
-      return res.status(500).json({ error: "Erro ao entrar na sessão." });
+      return res.status(500).json({ message: "Erro ao entrar na sessão." });
     }
   },
 
@@ -63,10 +63,10 @@ export const sessionController = {
       return res.status(200).json(session);
     } catch (err) {
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ error: err.message });
+        return res.status(err.statusCode).json({ message: err.message });
       }
       console.error(err);
-      return res.status(500).json({ error: "Erro ao iniciar a sessão." });
+      return res.status(500).json({ message: "Erro ao iniciar a sessão." });
     }
   },
 
@@ -88,6 +88,8 @@ export const sessionController = {
       // Auto-backfill: se roomAccess tem playerId mas player não tem userId, associa
       if (req.user?.userId && req.roomAccess?.playerId) {
         await sessionService.backfillPlayerUserId(req.roomAccess.playerId, req.user.userId);
+        // Notifica outros jogadores que este player foi associado
+        emitSessionUpdated(sessionIdNum, await sessionService.loadSession(sessionIdNum));
       }
 
       const session = await sessionService.loadSession(sessionIdNum);
@@ -125,13 +127,27 @@ export const sessionController = {
       const { playerId } = req.params;
       const userId = req.user?.userId;
       if (!userId) {
-        return res.status(401).json({ error: "Não autenticado" });
+        return res.status(401).json({ message: "Não autenticado" });
       }
-      await sessionService.backfillPlayerUserId(Number(playerId), userId);
+      const { SessionService } = await import("./session.service.js");
+      const svc = new SessionService();
+      await svc.backfillPlayerUserId(Number(playerId), userId);
+      // Busca o sessionId a partir do playerId para emitir atualização
+      try {
+        const { prisma } = await import("../../lib/prisma.js");
+        const player = await prisma.sessionPlayer.findUnique({
+          where: { id: Number(playerId) },
+          select: { sessionId: true },
+        });
+        if (player?.sessionId) {
+          const session = await svc.loadSession(player.sessionId);
+          emitSessionUpdated(player.sessionId, session);
+        }
+      } catch {}
       res.status(200).json({ ok: true });
     } catch (err) {
       console.error("Erro ao backfill userId:", err);
-      res.status(500).json({ error: "Erro ao associar usuário ao jogador" });
+      res.status(500).json({ message: "Erro ao associar usuário ao jogador" });
     }
   },
 
@@ -139,7 +155,7 @@ export const sessionController = {
     try {
       const { sessionId } = req.params;
       const userId = req.user?.userId;
-      if (!userId) return res.status(401).json({ error: "Não autenticado" });
+      if (!userId) return res.status(401).json({ message: "Não autenticado" });
 
       await sessionService.quitSession(Number(sessionId), userId);
       res.clearCookie(`room_token_${sessionId}`, { path: "/" });
@@ -147,10 +163,10 @@ export const sessionController = {
       return res.status(200).json({ message: "Você saiu da sala." });
     } catch (err) {
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ error: err.message });
+        return res.status(err.statusCode).json({ message: err.message });
       }
       console.error(err);
-      return res.status(500).json({ error: "Erro ao sair da sala." });
+      return res.status(500).json({ message: "Erro ao sair da sala." });
     }
   },
 
@@ -158,13 +174,13 @@ export const sessionController = {
     try {
       const { sessionId } = req.params;
       const userId = req.user?.userId;
-      if (!userId) return res.status(401).json({ error: "Não autenticado" });
+      if (!userId) return res.status(401).json({ message: "Não autenticado" });
 
       const player = await sessionService.getPlayerByUser(Number(sessionId), userId);
-      return res.status(200).json({ player });
+      res.status(200).json({ player });
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: "Erro ao buscar seu jogador." });
+      res.status(500).json({ message: "Erro ao buscar seu jogador." });
     }
   },
 
@@ -172,17 +188,17 @@ export const sessionController = {
     try {
       const { sessionId } = req.params;
       const userId = req.user?.userId;
-      if (!userId) return res.status(401).json({ error: "Não autenticado" });
+      if (!userId) return res.status(401).json({ message: "Não autenticado" });
 
       await sessionService.desistirSession(Number(sessionId), userId);
       emitSessionUpdated(Number(sessionId), await sessionService.loadSession(Number(sessionId)));
       return res.status(200).json({ message: "Você desistiu da partida." });
     } catch (err) {
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ error: err.message });
+        return res.status(err.statusCode).json({ message: err.message });
       }
       console.error(err);
-      return res.status(500).json({ error: "Erro ao desistir da partida." });
+      return res.status(500).json({ message: "Erro ao desistir da partida." });
     }
   },
 

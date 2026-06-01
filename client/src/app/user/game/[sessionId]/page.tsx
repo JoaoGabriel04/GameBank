@@ -13,12 +13,12 @@ import { useSession } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
 import { Eye, EyeOff } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
-import UserBanner from "@/components/UserBanner";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import Historico from "@/components/Historico";
 import Ranking from "@/components/Ranking";
+import { formatCurrency } from "@/utils/format";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Chat from "@/components/Chat";
 import NegotiationResponseModal from "@/components/NegotiationResponseModal";
@@ -28,8 +28,8 @@ import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPowerOff, faPlay, faUsers, faClock, faArrowLeft, faGamepad } from "@fortawesome/free-solid-svg-icons";
-import type { PlayerColor, Player, RankedPlayer } from "@/types/game";
+import { faPowerOff, faPlay, faUsers, faClock, faGamepad } from "@fortawesome/free-solid-svg-icons";
+import type { RankedPlayer } from "@/types/game";
 import { PLAYER_COLORS } from "@/types/game";
 
 const linksNav = ["Loja", "Especiais", "Início", "Ranking", "Histórico"];
@@ -508,13 +508,6 @@ export default function Game() {
   );
   const isSpectator = !!currentPlayer?.desistiu;
   const spectatorCount = currentSession?.jogadores?.filter((p) => p.desistiu).length ?? 0;
-  const playerColor = currentPlayer
-    ? PLAYER_COLORS.find((c) => c.value === currentPlayer.cor)
-    : null;
-
-  function formatCurrency(value: number) {
-    return value.toLocaleString("pt-BR");
-  }
 
   return (
     <main className="w-full flex flex-col px-4 pb-24 min-h-screen bg-zinc-950">
@@ -597,7 +590,7 @@ export default function Game() {
                     )}
                   </h1>
                   <p className="text-sm font-inconsolata text-zinc-500">
-                    {currentPlayer?.nome || "—"} · R$ {formatCurrency(currentPlayer?.saldo ?? 0)}
+                    {currentPlayer?.nome || "—"} · {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
                   </p>
                 </div>
               </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react"
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"
+import { registerToastFns } from "@/lib/toast"
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -72,6 +73,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const error = useCallback((message: string) => addToast('error', message), [addToast])
   const warning = useCallback((message: string) => addToast('warning', message), [addToast])
   const info = useCallback((message: string) => addToast('info', message), [addToast])
+
+  useEffect(() => {
+    registerToastFns({ success, error, warning, info })
+  }, [success, error, warning, info])
 
   const removeToast = (id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id))

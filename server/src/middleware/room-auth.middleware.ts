@@ -16,7 +16,7 @@ export function authenticateRoom(sessionIdParam: "params" | "body" | "query" = "
     try {
       const sessionId = req[sessionIdParam]?.[sessionKey] ?? req[sessionIdParam]?.sessionId ?? req.params.sessionId;
       if (!sessionId) {
-        return res.status(400).json({ error: "ID da sessão não fornecido" });
+        return res.status(400).json({ message: "ID da sessão não fornecido" });
       }
 
       const session = await prisma.session.findUnique({
@@ -25,7 +25,7 @@ export function authenticateRoom(sessionIdParam: "params" | "body" | "query" = "
       });
 
       if (!session) {
-        return res.status(404).json({ error: "Sessão não encontrada" });
+        return res.status(404).json({ message: "Sessão não encontrada" });
       }
 
       // Sala pública — sem senha, não precisa de token
@@ -52,14 +52,14 @@ export function authenticateRoom(sessionIdParam: "params" | "body" | "query" = "
       const token = req.cookies?.[cookieName] || req.headers["x-room-token"] as string | undefined;
 
       if (!token) {
-        return res.status(401).json({ error: "Acesso não autorizado a esta sala" });
+        return res.status(401).json({ message: "Acesso não autorizado a esta sala" });
       }
 
       try {
         const payload = verifyRoomToken(token);
 
         if (payload.sessionId !== Number(sessionId)) {
-          return res.status(403).json({ error: "Token não pertence a esta sala" });
+          return res.status(403).json({ message: "Token não pertence a esta sala" });
         }
 
         req.roomAccess = payload;
@@ -81,11 +81,11 @@ export function authenticateRoom(sessionIdParam: "params" | "body" | "query" = "
 
         next();
       } catch {
-        return res.status(401).json({ error: "Token de sala inválido ou expirado" });
+        return res.status(401).json({ message: "Token de sala inválido ou expirado" });
       }
     } catch (err) {
       console.error("[authenticateRoom] Erro inesperado:", err);
-      res.status(500).json({ error: "Erro interno ao verificar acesso à sala" });
+      res.status(500).json({ message: "Erro interno ao verificar acesso à sala" });
     }
   };
 }

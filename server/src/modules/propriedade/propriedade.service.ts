@@ -242,126 +242,132 @@ export class PropriedadeService {
   }
 
   async sellHouse(userId: number, sessionId: number, propriedadeId: number) {
-    const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
-    if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
+    return withLock(`prop:${propriedadeId}`, async () => {
+      const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
+      if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
 
-    if (propriedade.negociando) {
-      throw new AppError(400, "Esta propriedade está em negociação!");
-    }
+      if (propriedade.negociando) {
+        throw new AppError(400, "Esta propriedade está em negociação!");
+      }
 
-    const player = await this.repo.findPlayerById(userId);
-    if (!player) throw new AppError(404, "Jogador não encontrado!");
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado!");
 
-    if (propriedade.casas === 0) {
-      throw new AppError(400, "Esta propriedade não possui casas!");
-    }
+      if (propriedade.casas === 0) {
+        throw new AppError(400, "Esta propriedade não possui casas!");
+      }
 
-    const valorVenda = propriedade.posses.propriedade.custo_casa;
+      const valorVenda = propriedade.posses.propriedade.custo_casa;
 
-    await prisma.$transaction([
-      prisma.sessionPosses.update({
-        where: { id: propriedade.id },
-        data: { casas: { decrement: 1 } },
-      }),
-      prisma.sessionPlayer.update({
-        where: { id: userId },
-        data: { saldo: { increment: valorVenda } },
-      }),
-      prisma.historico.create({
-        data: {
-          sessionId: Number(sessionId),
-          data: new Date(),
-          tipo: "VENDA_CASA",
-          detalhes: `${player.nome} vendeu uma casa em ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
-        },
-      }),
-    ]);
+      await prisma.$transaction([
+        prisma.sessionPosses.update({
+          where: { id: propriedade.id },
+          data: { casas: { decrement: 1 } },
+        }),
+        prisma.sessionPlayer.update({
+          where: { id: userId },
+          data: { saldo: { increment: valorVenda } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "VENDA_CASA",
+            detalhes: `${player.nome} vendeu uma casa em ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+          },
+        }),
+      ]);
+    });
   }
 
   async sellPropriedade(propriedadeId: number, sessionId: number, userId: number) {
-    const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
-    if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
+    return withLock(`sell:${propriedadeId}`, async () => {
+      const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
+      if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
 
-    const player = await this.repo.findPlayerById(userId);
-    if (!player) throw new AppError(404, "Jogador não encontrado!");
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado!");
 
-    if (!propriedade.player || propriedade.player.id !== player.id) {
-      throw new AppError(400, "Você não é proprietário desta propriedade!");
-    }
+      if (!propriedade.player || propriedade.player.id !== player.id) {
+        throw new AppError(400, "Você não é proprietário desta propriedade!");
+      }
 
-    if (propriedade.negociando) {
-      throw new AppError(400, "Esta propriedade está em negociação!");
-    }
+      if (propriedade.negociando) {
+        throw new AppError(400, "Esta propriedade está em negociação!");
+      }
 
-    if (propriedade.casas > 0) {
-      throw new AppError(400, "Esta propriedade ainda possui casas!");
-    }
+      if (propriedade.casas > 0) {
+        throw new AppError(400, "Esta propriedade ainda possui casas!");
+      }
 
-    const valorVenda = propriedade.posses.propriedade.custo_compra;
+      const valorVenda = propriedade.posses.propriedade.custo_compra;
 
-    await prisma.$transaction([
-      prisma.sessionPosses.update({
-        where: { id: propriedade.id },
-        data: { playerId: null, casas: 0 },
-      }),
-      prisma.sessionPlayer.update({
-        where: { id: userId },
-        data: { saldo: { increment: valorVenda } },
-      }),
-      prisma.historico.create({
-        data: {
-          sessionId: Number(sessionId),
-          data: new Date(),
-          tipo: "VENDA_PROPRIEDADE",
-          detalhes: `${player.nome} vendeu a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
-        },
-      }),
-    ]);
+      await prisma.$transaction([
+        prisma.sessionPosses.update({
+          where: { id: propriedade.id },
+          data: { playerId: null, casas: 0 },
+        }),
+        prisma.sessionPlayer.update({
+          where: { id: userId },
+          data: { saldo: { increment: valorVenda } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "VENDA_PROPRIEDADE",
+            detalhes: `${player.nome} vendeu a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+          },
+        }),
+      ]);
 
-    return this.repo.findSessionPosses(sessionId, propriedadeId);
+      return this.repo.findSessionPosses(sessionId, propriedadeId);
+    });
   }
 
   async hipotecarPropriedade(propriedadeId: number, sessionId: number, userId: number) {
-    const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
-    if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
+    return withLock(`hipoteca:${propriedadeId}`, async () => {
+      const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
+      if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
 
-    const player = await this.repo.findPlayerById(userId);
-    if (!player) throw new AppError(404, "Jogador não encontrado!");
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado!");
 
-    if (!propriedade.player || propriedade.player.id !== player.id) {
-      throw new AppError(400, "Você não é proprietário desta propriedade!");
-    }
+      if (!propriedade.player || propriedade.player.id !== player.id) {
+        throw new AppError(400, "Você não é proprietário desta propriedade!");
+      }
 
-    if (propriedade.negociando) {
-      throw new AppError(400, "Esta propriedade está em negociação!");
-    }
+      if (propriedade.negociando) {
+        throw new AppError(400, "Esta propriedade está em negociação!");
+      }
 
-    if (propriedade.casas > 0) {
-      throw new AppError(400, "Esta propriedade ainda possui casas!");
-    }
+      if (propriedade.casas > 0) {
+        throw new AppError(400, "Esta propriedade ainda possui casas!");
+      }
 
-    const valorVenda = propriedade.posses.propriedade.hipoteca;
+      const valorVenda = propriedade.posses.propriedade.hipoteca;
 
-    await prisma.$transaction([
-      prisma.sessionPosses.update({
-        where: { id: propriedade.id },
-        data: { playerId: null, lastOwnerId: userId, casas: 0, hipotecada: true },
-      }),
-      prisma.sessionPlayer.update({
-        where: { id: userId },
-        data: { saldo: { increment: valorVenda } },
-      }),
-      prisma.historico.create({
-        data: {
-          sessionId: Number(sessionId),
-          data: new Date(),
-          tipo: "HIPOTECA_PROPRIEDADE",
-          detalhes: `${player.nome} hipotecou a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
-        },
-      }),
-    ]);
+      await prisma.$transaction([
+        prisma.sessionPosses.update({
+          where: { id: propriedade.id },
+          data: { playerId: null, lastOwnerId: userId, casas: 0, hipotecada: true },
+        }),
+        prisma.sessionPlayer.update({
+          where: { id: userId },
+          data: { saldo: { increment: valorVenda } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "HIPOTECA_PROPRIEDADE",
+            detalhes: `${player.nome} hipotecou a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+          },
+        }),
+      ]);
 
-    return this.repo.findSessionPosses(sessionId, propriedadeId);
+      return this.repo.findSessionPosses(sessionId, propriedadeId);
+    });
   }
 
   async comprarHipotecada(sessionPossesId: number, sessionId: number, compradorId: number) {
@@ -503,25 +509,27 @@ export class PropriedadeService {
   }
 
   async trocarPropriedade(propriedadeId: number, sessionId: number, userId: number) {
-    const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
-    if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
+    return withLock(`troca:${propriedadeId}`, async () => {
+      const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
+      if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
 
-    const player = await this.repo.findPlayerById(userId);
-    if (!player) throw new AppError(404, "Jogador não encontrado!");
+      const player = await this.repo.findPlayerById(userId);
+      if (!player) throw new AppError(404, "Jogador não encontrado!");
 
-    await prisma.$transaction([
-      prisma.sessionPosses.update({
-        where: { id: propriedade.id },
-        data: { playerId: player.id, casas: 0 },
-      }),
-      prisma.historico.create({
-        data: {
-          sessionId: Number(sessionId),
-          data: new Date(),
-          tipo: "TROCA_PROPRIEDADE",
-          detalhes: `${player.nome} adquiriu a propriedade ${propriedade.posses.propriedade.nome}`,
-        },
-      }),
-    ]);
+      await prisma.$transaction([
+        prisma.sessionPosses.update({
+          where: { id: propriedade.id },
+          data: { playerId: player.id, casas: 0 },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "TROCA_PROPRIEDADE",
+            detalhes: `${player.nome} adquiriu a propriedade ${propriedade.posses.propriedade.nome}`,
+          },
+        }),
+      ]);
+    });
   }
 }

@@ -73,7 +73,7 @@ function createAuthLimiter() {
     ...baseRateLimit,
     windowMs: 15 * 60 * 1000,
     max: 20,
-    message: { error: "Muitas requisições. Tente novamente em 15 minutos." },
+    message: { message: "Muitas requisições. Tente novamente em 15 minutos." },
   });
 }
 
@@ -82,7 +82,7 @@ function createApiLimiter() {
     ...baseRateLimit,
     windowMs: 60 * 1000,
     max: 300,
-    message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
+    message: { message: "Muitas requisições. Tente novamente em 1 minuto." },
   });
 }
 

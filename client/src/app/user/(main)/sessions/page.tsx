@@ -102,7 +102,7 @@ export default function Sessions() {
       }
       setJoinModal({ open: false, session: null });
       mutate();
-      router.push(`/game/${session.id}`);
+      router.push(`/user/game/${session.id}`);
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erro ao entrar na sala";
       setJoinError(msg);

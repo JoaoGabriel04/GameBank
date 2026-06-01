@@ -1,18 +1,10 @@
 import type { Request, Response } from "express";
 import { BancoService } from "./banco.service.js";
-import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { emitSessionUpdated } from "../socket/socket.handler.js";
-import { emitToUserWithRetry } from "../../lib/socket.js";
+import { emitUpdatedSession } from "../socket/socket.handler.js";
+import { emitToRoom, emitToUserWithRetry } from "../../lib/socket.js";
 
 const bancoService = new BancoService();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 export const bancoController = {
   test: (_req: Request, res: Response) => {
@@ -65,14 +57,13 @@ export const bancoController = {
 
     try {
       const result = await bancoService.transferencia(Number(pagadorId), Number(recebedorId), Number(sessionId), Number(valor));
-      if (result.recebedorUserId) {
-        const delivered = await emitToUserWithRetry(result.recebedorUserId, "transferencia:received", {
-          fromPlayerNome: result.pagadorNome,
-          toPlayerId: result.recebedorId,
-          valor: result.valor,
-        });
-        if (!delivered) console.error(`[Banco] Falha ao notificar transferência para usuário ${result.recebedorUserId}`);
-      }
+      // Broadcast na sala é mais confiável que emitToUserWithRetry individual
+      emitToRoom(Number(sessionId), "transferencia:toast", {
+        fromPlayerNome: result.pagadorNome,
+        toPlayerId: result.recebedorId,
+        toUserId: result.recebedorUserId,
+        valor: result.valor,
+      });
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({ message: "Transferência realizada com sucesso!" });
     } catch (err) {
@@ -92,15 +83,13 @@ export const bancoController = {
 
     try {
       const result = await bancoService.pagarAluguel(Number(sessionId), Number(pagadorId), Number(sessionPossesId));
-      if (result.recebedorUserId) {
-        const delivered = await emitToUserWithRetry(result.recebedorUserId, "aluguel:received", {
-          fromPlayerNome: result.pagadorNome,
-          toPlayerId: result.recebedorId,
-          valor: result.valor,
-          propriedadeNome: result.propriedadeNome,
-        });
-        if (!delivered) console.error(`[Banco] Falha ao notificar aluguel para usuário ${result.recebedorUserId}`);
-      }
+      emitToRoom(Number(sessionId), "aluguel:toast", {
+        fromPlayerNome: result.pagadorNome,
+        toPlayerId: result.recebedorId,
+        toUserId: result.recebedorUserId,
+        valor: result.valor,
+        propriedadeNome: result.propriedadeNome,
+      });
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({ message: "Aluguel pago", valor: result.valor });
     } catch (err) {
@@ -120,15 +109,13 @@ export const bancoController = {
 
     try {
       const result = await bancoService.aluguelAcao(Number(sessionId), Number(pagadorId), Number(sessionPossesId), Number(numDados));
-      if (result.recebedorUserId) {
-        const delivered = await emitToUserWithRetry(result.recebedorUserId, "aluguel:received", {
-          fromPlayerNome: result.pagadorNome,
-          toPlayerId: result.recebedorId,
-          valor: result.valor,
-          propriedadeNome: result.propriedadeNome,
-        });
-        if (!delivered) console.error(`[Banco] Falha ao notificar aluguel para usuário ${result.recebedorUserId}`);
-      }
+      emitToRoom(Number(sessionId), "aluguel:toast", {
+        fromPlayerNome: result.pagadorNome,
+        toPlayerId: result.recebedorId,
+        toUserId: result.recebedorUserId,
+        valor: result.valor,
+        propriedadeNome: result.propriedadeNome,
+      });
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({
         message: `${result.pagadorNome} pagou R$ ${result.valor} para ${result.recebedorNome}`,

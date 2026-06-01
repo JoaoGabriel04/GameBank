@@ -27,15 +27,26 @@ async function expireNegotiations() {
         });
       });
 
-      // Usa emitToUser (activeSockets Map) — mais confiável que emitToPlayer
-      // pois não depende de socket.data.playerId estar populado
+      // Tenta entregar notificação individual, com fallback para broadcast na sala
       try {
-        const { emitToUser } = await import("./socket.js");
+        const { emitToUser, emitToRoom } = await import("./socket.js");
         const fromUserId = negotiation.fromPlayer?.userId;
         const toUserId   = negotiation.toPlayer?.userId;
         const payload = { negotiationId: negotiation.id };
-        if (fromUserId) emitToUser(fromUserId, "negotiation:expired", payload);
-        if (toUserId)   emitToUser(toUserId,   "negotiation:expired", payload);
+        // Broadcast na sala é mais confiável — cliente filtra por userId
+        emitToRoom(negotiation.sessionId, "negotiation:toast", {
+          type: "expired",
+          targetUserId: fromUserId,
+          negotiationId: negotiation.id,
+        });
+        emitToRoom(negotiation.sessionId, "negotiation:toast", {
+          type: "expired",
+          targetUserId: toUserId,
+          negotiationId: negotiation.id,
+        });
+        // Tenta entregar individual como bônus (não crítico)
+        if (fromUserId) await emitToUser(fromUserId, "negotiation:expired", payload).catch(() => {});
+        if (toUserId)   await emitToUser(toUserId,   "negotiation:expired", payload).catch(() => {});
       } catch {
         console.error("[Negociação] Erro ao emitir negotiation:expired:", negotiation.id);
       }

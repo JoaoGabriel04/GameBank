@@ -5,13 +5,8 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { PLAYER_COLORS } from "@/types/game";
 import { getPropData } from "@/utils/properties";
+import { formatCurrency } from "@/utils/format";
 import type { Player, SessionPropriedade } from "@/types/game";
-import UserAvatar from "@/components/UserAvatar";
-import UserBanner from "@/components/UserBanner";
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR");
-}
 
 function calculatePatrimonio(player: Player, allPosses: SessionPropriedade[]): number {
   if (player.desistiu && player.patrimonyAtDesistir != null) {

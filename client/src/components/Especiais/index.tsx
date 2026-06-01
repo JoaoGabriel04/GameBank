@@ -6,12 +6,13 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useToast } from "@/components/Toast";
-import { Eye, Coins, Handshake, Building2, ArrowRight, ArrowLeft, Ban, Gavel, Plus, Minus, Check } from "lucide-react";
+import { Eye, Coins, Handshake, Building2, ArrowRight, ArrowLeft, Plus, Minus, Check } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
 import { sortSessionPosses } from "@/utils/properties";
+import { formatCurrency } from "@/utils/format";
 
 const COLOR_HEX: Record<string, string> = {
   lime:    "#84cc16",
@@ -32,10 +33,6 @@ function getAccentHex(grupoCor: string | null): string {
   const match = found.bg?.match(/bg-(\w+)/)
   if (match) return COLOR_HEX[match[1]] ?? "#52525b"
   return "#52525b"
-}
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR")
 }
 
 interface ItemInput {

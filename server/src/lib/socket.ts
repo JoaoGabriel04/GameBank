@@ -29,21 +29,34 @@ export function emitToPlayer(sessionId: number, playerId: number, event: string,
   }
 }
 
-// Emite para um usuário específico via activeSockets (User.id → socketId).
-// Com retry: tenta novamente após 50ms se falhar na primeira vez.
-export function emitToUser(userId: number, event: string, data: unknown) {
+// Emite para um usuário específico via Redis (cross-instância) ou activeSockets (fallback).
+// Usa nsp.to(socketId) que funciona com Redis adapter entre instâncias.
+export async function emitToUser(userId: number, event: string, data: unknown) {
   const nsp = getIO().of("/game");
-  const socketId = activeSockets.get(userId);
+  const redis = getRedis();
+  let socketId: string | null = null;
+
+  if (redis) {
+    socketId = await redis.get(`user:socket:${userId}`);
+  } else {
+    socketId = activeSockets.get(userId) || null;
+  }
+
   if (!socketId) {
     console.warn(`[Socket] emitToUser falhou: usuário ${userId} não tem socket registrado para evento "${event}"`);
-    return;
+    return false;
   }
-  const socket = nsp.sockets.get(socketId);
-  if (!socket) {
-    console.warn(`[Socket] emitToUser falhou: socket ${socketId} não encontrado para usuário ${userId} evento "${event}"`);
-    return;
-  }
-  socket.emit(event, data);
+  nsp.to(socketId).emit(event, data);
+  return true;
+}
+
+// Emite para uma sala (broadcast) — mais confiável que emitToUser para notificações
+// pois não depende de socket lookup individual que pode estar stale.
+// O cliente filtra por targetUserId no payload.
+export function emitToRoom(sessionId: number, event: string, data: unknown) {
+  const nsp = getIO().of("/game");
+  const roomName = `session:${sessionId}`;
+  nsp.to(roomName).emit(event, data);
 }
 
 // Emite com retry automático — tenta novamente após 50ms se socket não estiver pronto
@@ -51,7 +64,15 @@ export async function emitToUserWithRetry(userId: number, event: string, data: u
   const nsp = getIO().of("/game");
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const socketId = activeSockets.get(userId);
+    const redis = getRedis();
+    let socketId: string | null = null;
+
+    if (redis) {
+      socketId = await redis.get(`user:socket:${userId}`);
+    } else {
+      socketId = activeSockets.get(userId) || null;
+    }
+
     if (!socketId) {
       if (attempt < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -61,19 +82,8 @@ export async function emitToUserWithRetry(userId: number, event: string, data: u
       return false;
     }
 
-    const socket = nsp.sockets.get(socketId);
-    if (!socket) {
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        continue;
-      }
-      console.warn(`[Socket] emitToUserWithRetry exauriu tentativas: socket ${socketId} não encontrado para usuário ${userId} evento "${event}"`);
-      return false;
-    }
-
-    socket.emit(event, data, (ackData?: unknown) => {
-      console.log(`[Socket] ACK recebido para evento "${event}" do usuário ${userId}`);
-    });
+    // nsp.to(socketId) funciona cross-instância com Redis adapter
+    nsp.to(socketId).emit(event, data);
     return true;
   }
 
@@ -288,12 +298,17 @@ async function registerActiveSocket(socket: Socket) {
   }
 
   if (oldSocketId && oldSocketId !== socket.id) {
-    // Notifica e desconecta o socket antigo (funciona cross-instância com Redis adapter)
-    gameNsp?.to(oldSocketId).emit("force_disconnect", {
-      reason: "Você entrou em outro dispositivo.",
-    });
+    // Notifica o socket antigo antes de desconectar
     const oldSocket = gameNsp?.sockets.get(oldSocketId);
-    oldSocket?.disconnect(true);
+    if (oldSocket?.connected) {
+      oldSocket.emit("force_disconnect", {
+        reason: "Você entrou em outro dispositivo.",
+      });
+    }
+    // Desconecta após breve delay para permitir que a mensagem seja entregue
+    setTimeout(() => {
+      oldSocket?.disconnect(true);
+    }, 100);
   }
 
   // Registra novo socket
