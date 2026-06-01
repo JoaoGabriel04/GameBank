@@ -76,6 +76,11 @@ export function connectSocket(sessionId: number) {
     useGameStore.setState({ currentSession: data });
   });
 
+  socket.on("session:closed", (data: { sessionId: number; ranking?: any[] }) => {
+    if (data.sessionId !== sessionId) return;
+    sessionClosedCallbacks.forEach((cb) => cb(data.ranking));
+  });
+
   socket.on("disconnect", () => {});
   socket.on("connect_error", () => {});
 
