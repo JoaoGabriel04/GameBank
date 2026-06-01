@@ -4,18 +4,6 @@ export function emitSessionUpdated(sessionId: number, data: unknown) {
   getIO().of("/game").to(`session:${sessionId}`).emit("session:updated", data);
 }
 
-export function emitPlayerBalance(sessionId: number, userId: number, saldo: number) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("player:balance", { userId, saldo });
-}
-
-export function emitPropertyChanged(sessionId: number, data: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("property:changed", data);
-}
-
-export function emitHistoryNew(sessionId: number, data: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("history:new", data);
-}
-
 export function emitSessionClosed(sessionId: number, ranking?: unknown) {
   getIO().of("/game").to(`session:${sessionId}`).emit("session:closed", { sessionId, ranking });
 }

@@ -157,7 +157,7 @@ export class BancoService {
       try { await this.missionService.track(poss.player.userId, "rent_earned", valorAluguel); } catch {}
     }
 
-    return { valor: valorAluguel, pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, propriedadeNome: prop.nome };
+    return { valor: valorAluguel, pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, recebedorUserId: poss.player.userId, propriedadeNome: prop.nome };
   }
 
   async aluguelAcao(sessionId: number, pagadorId: number, sessionPossesId: number, numDados: number) {
@@ -194,7 +194,7 @@ export class BancoService {
       }),
     ]);
 
-    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, valor: valorAluguel, propriedadeNome: poss.posses.propriedade.nome };
+    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, recebedorUserId: poss.player.userId, valor: valorAluguel, propriedadeNome: poss.posses.propriedade.nome };
   }
 
   async receberDeTodos(sessionId: number, userId: number) {

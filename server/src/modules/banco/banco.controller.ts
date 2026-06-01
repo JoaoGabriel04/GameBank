@@ -3,7 +3,7 @@ import { BancoService } from "./banco.service.js";
 import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitSessionUpdated } from "../socket/socket.handler.js";
-import { emitToPlayer } from "../../lib/socket.js";
+import { emitToUserWithRetry } from "../../lib/socket.js";
 
 const bancoService = new BancoService();
 const sessionService = new SessionService();
@@ -84,12 +84,15 @@ export const bancoController = {
 
     try {
       const result = await bancoService.pagarAluguel(Number(sessionId), Number(pagadorId), Number(sessionPossesId));
-      emitToPlayer(Number(sessionId), result.recebedorId, "aluguel:received", {
-        fromPlayerNome: result.pagadorNome,
-        toPlayerId: result.recebedorId,
-        valor: result.valor,
-        propriedadeNome: result.propriedadeNome,
-      });
+      if (result.recebedorUserId) {
+        const delivered = await emitToUserWithRetry(result.recebedorUserId, "aluguel:received", {
+          fromPlayerNome: result.pagadorNome,
+          toPlayerId: result.recebedorId,
+          valor: result.valor,
+          propriedadeNome: result.propriedadeNome,
+        });
+        if (!delivered) console.error(`[Banco] Falha ao notificar aluguel para usuário ${result.recebedorUserId}`);
+      }
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({ message: "Aluguel pago", valor: result.valor });
     } catch (err) {
@@ -109,12 +112,15 @@ export const bancoController = {
 
     try {
       const result = await bancoService.aluguelAcao(Number(sessionId), Number(pagadorId), Number(sessionPossesId), Number(numDados));
-      emitToPlayer(Number(sessionId), result.recebedorId, "aluguel:received", {
-        fromPlayerNome: result.pagadorNome,
-        toPlayerId: result.recebedorId,
-        valor: result.valor,
-        propriedadeNome: result.propriedadeNome,
-      });
+      if (result.recebedorUserId) {
+        const delivered = await emitToUserWithRetry(result.recebedorUserId, "aluguel:received", {
+          fromPlayerNome: result.pagadorNome,
+          toPlayerId: result.recebedorId,
+          valor: result.valor,
+          propriedadeNome: result.propriedadeNome,
+        });
+        if (!delivered) console.error(`[Banco] Falha ao notificar aluguel para usuário ${result.recebedorUserId}`);
+      }
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({
         message: `${result.pagadorNome} pagou R$ ${result.valor} para ${result.recebedorNome}`,
