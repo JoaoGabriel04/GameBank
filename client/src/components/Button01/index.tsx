@@ -38,7 +38,7 @@ export default function Button1({ handle, type, color, className, size, ref, chi
   };
 
   return (
-    <div ref={ref} className={`inline-block ${className}`}>
+    <div ref={ref} className={`${size === "full" ? "block w-full" : "inline-block"} ${className}`}>
       <button
         {...(handle && { onClick: handle as React.MouseEventHandler<HTMLButtonElement> })}
         type={type === "submit" ? "submit" : "button"}
