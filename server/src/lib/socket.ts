@@ -34,9 +34,16 @@ export function emitToPlayer(sessionId: number, playerId: number, event: string,
 export function emitToUser(userId: number, event: string, data: unknown) {
   const nsp = getIO().of("/game");
   const socketId = activeSockets.get(userId);
-  if (!socketId) return;
+  if (!socketId) {
+    console.warn(`[Socket] emitToUser falhou: usuário ${userId} não tem socket registrado para evento "${event}"`);
+    return;
+  }
   const socket = nsp.sockets.get(socketId);
-  socket?.emit(event, data);
+  if (!socket) {
+    console.warn(`[Socket] emitToUser falhou: socket ${socketId} não encontrado para usuário ${userId} evento "${event}"`);
+    return;
+  }
+  socket.emit(event, data);
 }
 
 export async function initSocket(httpServer: HttpServer) {
@@ -258,7 +265,10 @@ async function registerActiveSocket(socket: Socket) {
 
 async function setSocketPlayerId(socket: Socket, sessionId: number) {
   const userId = socket.data.userId;
-  if (!userId) return;
+  if (!userId) {
+    console.warn("[socket] setSocketPlayerId: socket sem userId — playerId não será definido");
+    return;
+  }
   try {
     const { prisma } = await import("../lib/prisma.js");
     const player = await prisma.sessionPlayer.findFirst({
@@ -268,8 +278,9 @@ async function setSocketPlayerId(socket: Socket, sessionId: number) {
     if (player) {
       socket.data.playerId = player.id;
     }
-  } catch {
-    // Silencia erro — playerId fica undefined
+  } catch (err) {
+    console.warn("[socket] setSocketPlayerId falhou para userId", userId, "sessionId", sessionId, err);
+    // playerId fica undefined — emitToPlayer não encontrará este socket
   }
 }
 

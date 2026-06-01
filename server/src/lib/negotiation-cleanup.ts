@@ -1,19 +1,18 @@
 import { prisma } from "./prisma.js";
 
-const CLEANUP_INTERVAL_MS = 30_000; // verifica a cada 30s
+const CLEANUP_INTERVAL_MS = 10_000; // verifica a cada 10s
 
 async function expireNegotiations() {
   try {
     const expired = await prisma.negotiation.findMany({
       where: { status: "pendente", expiresAt: { lt: new Date() } },
-      include: { items: true },
+      include: { items: true, fromPlayer: true, toPlayer: true },
     });
 
     if (expired.length === 0) return;
 
     for (const negotiation of expired) {
       await prisma.$transaction(async (tx) => {
-        // Destrava as propriedades que estavam bloqueadas (fromSide = o que o proponente ofereceu)
         for (const item of negotiation.items) {
           if (item.fromSide && item.sessionPossesId) {
             await tx.sessionPosses.update({
@@ -28,17 +27,30 @@ async function expireNegotiations() {
         });
       });
 
-      // Notifica os jogadores via socket (lazy import para evitar ciclo)
+      // Usa emitToUser (activeSockets Map) — mais confiável que emitToPlayer
+      // pois não depende de socket.data.playerId estar populado
       try {
-        const { emitToPlayer } = await import("./socket.js");
-        emitToPlayer(negotiation.sessionId, negotiation.fromPlayerId, "negotiation:expired", {
-          negotiationId: negotiation.id,
-        });
-        emitToPlayer(negotiation.sessionId, negotiation.toPlayerId, "negotiation:expired", {
-          negotiationId: negotiation.id,
-        });
+        const { emitToUser } = await import("./socket.js");
+        const fromUserId = negotiation.fromPlayer?.userId;
+        const toUserId   = negotiation.toPlayer?.userId;
+        const payload = { negotiationId: negotiation.id };
+        if (fromUserId) emitToUser(fromUserId, "negotiation:expired", payload);
+        if (toUserId)   emitToUser(toUserId,   "negotiation:expired", payload);
       } catch {
-        // Socket pode não estar disponível — não é crítico
+        console.error("[Negociação] Erro ao emitir negotiation:expired:", negotiation.id);
+      }
+
+      // Sincroniza estado da sessão com todos os clientes
+      // Garante que propriedades desbloqueadas apareçam mesmo se emit acima falhou
+      try {
+        const { SessionService } = await import("../modules/session/session.service.js");
+        const sessionService = new SessionService();
+        await sessionService.invalidateCache(negotiation.sessionId);
+        const session = await sessionService.loadSession(negotiation.sessionId);
+        const { emitSessionUpdated } = await import("../modules/socket/socket.handler.js");
+        emitSessionUpdated(negotiation.sessionId, session);
+      } catch (err) {
+        console.error("[Negociação] Erro ao sincronizar sessão após expiração:", err);
       }
     }
 
@@ -50,7 +62,6 @@ async function expireNegotiations() {
 
 export function startNegotiationCleanup() {
   setInterval(expireNegotiations, CLEANUP_INTERVAL_MS);
-  // Executa imediatamente no startup para limpar negociações antigas de reinicios anteriores
   expireNegotiations();
-  console.log("[Negociação] Cleanup de expiradas ativo (intervalo: 30s)");
+  console.log("[Negociação] Cleanup de expiradas ativo (intervalo: 10s)");
 }
