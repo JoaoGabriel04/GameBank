@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
-
+import UserBadge from "@/components/UserBadge"
+import { resolveBadge } from "@/constants/badges"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag } from "@fortawesome/free-solid-svg-icons"
@@ -13,7 +14,7 @@ import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
 
 // ── Configuração visual por tipo de item ─────────────────────────────────────
 
-type ItemType = "title" | "color" | "badge" | string
+type ItemType = "title" | "badge" | string
 
 const TYPE_CONFIG: Record<string, {
   label: string
@@ -39,14 +40,6 @@ const TYPE_CONFIG: Record<string, {
     accent: "text-cyan-400",
     iconColor: "text-cyan-400",
   },
-  color: {
-    label: "Cores",
-    icon: faPalette,
-    gradient: "from-pink-600/20 via-rose-600/10 to-transparent",
-    glow: "shadow-[0_0_24px_rgba(236,72,153,0.25)]",
-    accent: "text-pink-400",
-    iconColor: "text-pink-400",
-  },
 }
 
 function getConfig(type: string) {
@@ -64,7 +57,6 @@ const FILTER_OPTIONS = [
   { value: "all", label: "Todos" },
   { value: "title", label: "Títulos" },
   { value: "badge", label: "Emblemas" },
-  { value: "color", label: "Cores" },
 ]
 
 // ── Componente do card de item ────────────────────────────────────────────────
@@ -106,8 +98,26 @@ function ShopItemCard({
       {/* Faixa superior com gradiente */}
       <div className={`h-24 w-full bg-gradient-to-br ${cfg.gradient} flex items-center justify-center relative`}>
         {/* Ícone central */}
-        <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
-          <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
+        <div className={`${item.type === "badge" ? "flex flex-col items-center gap-1" : ""}`}>
+          <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
+            {item.type === "badge" ? (
+              <UserBadge
+                badge={item.value ? JSON.parse(item.value).badge : undefined}
+                variant="medium"
+              />
+            ) : (
+              <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
+            )}
+          </div>
+          {item.type === "badge" && (
+            <span className="text-[10px] font-inconsolata text-zinc-400 text-center max-w-[70px]">
+              {(() => {
+                const badgeData = item.value ? JSON.parse(item.value) : null;
+                const preset = resolveBadge(badgeData?.badge);
+                return preset?.label || "";
+              })()}
+            </span>
+          )}
         </div>
 
         {/* Badge "Equipado" */}
@@ -138,9 +148,42 @@ function ShopItemCard({
           </h3>
         </div>
 
-        <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed line-clamp-2 flex-1">
-          {item.description}
-        </p>
+        {item.type === "badge" ? (
+          <div className="space-y-2 flex-1">
+            <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed">
+              {(() => {
+                const badgeData = item.value ? JSON.parse(item.value) : null;
+                const preset = resolveBadge(badgeData?.badge);
+                return preset?.description || item.description;
+              })()}
+            </p>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const badgeData = item.value ? JSON.parse(item.value) : null;
+                const preset = resolveBadge(badgeData?.badge);
+                if (preset) {
+                  const rarityColors: Record<string, string> = {
+                    common: "bg-zinc-700 text-zinc-200",
+                    rare: "bg-blue-700 text-blue-200",
+                    epic: "bg-purple-700 text-purple-200",
+                    legendary: "bg-yellow-700 text-yellow-200",
+                  };
+                  const color = rarityColors[preset.rarity] || rarityColors.common;
+                  return (
+                    <span className={`text-[10px] font-inconsolata font-semibold px-2 py-1 rounded ${color} capitalize`}>
+                      {preset.rarity}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed line-clamp-2 flex-1">
+            {item.description}
+          </p>
+        )}
 
         {/* Preço + Botão */}
         <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-800 gap-2">

@@ -34,6 +34,9 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
+  deleteUserItemsByItemId: (itemId: number) =>
+    prisma.userItem.deleteMany({ where: { itemId } }),
+
   // Sessions
   findAllSessions: () =>
     prisma.session.findMany({

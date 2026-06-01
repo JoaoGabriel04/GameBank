@@ -8,6 +8,7 @@ import gsap from 'gsap'
 import Button1 from '../Button01'
 import UserAvatar from '@/components/UserAvatar'
 import UserBanner from '@/components/UserBanner'
+import UserBadge from '@/components/UserBadge'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -115,7 +116,10 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
                 <UserBanner banner={user.banner} className="h-14 w-full" />
                 <div className="flex items-center gap-3 px-4 py-2 bg-zinc-800 -mt-5">
                   <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" ring />
-                  <span className="text-zinc-100 font-jaro text-sm truncate">{user.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-100 font-jaro text-sm truncate">{user.nome}</span>
+                    <UserBadge badge={user.badge} variant="small" />
+                  </div>
                 </div>
               </div>
               <div className="w-full px-4 flex flex-col items-center gap-3">

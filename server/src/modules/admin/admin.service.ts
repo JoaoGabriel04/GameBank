@@ -1,4 +1,5 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
+import { prisma } from "../../lib/prisma.js";
 import { adminRepository } from "./admin.repository.js";
 
 export class AdminService {
@@ -48,7 +49,10 @@ export class AdminService {
   async deleteItem(id: number) {
     const exists = await adminRepository.findItemById(id);
     if (!exists) throw new AppError(404, "Item não encontrado.");
-    return adminRepository.deleteItem(id);
+    await prisma.$transaction([
+      adminRepository.deleteUserItemsByItemId(id),
+      adminRepository.deleteItem(id),
+    ]);
   }
 
   // ── Sessions ───────────────────────────────────────────────────────────

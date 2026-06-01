@@ -7,6 +7,7 @@ import { faCrown, faCoins, faBolt, faXmark } from "@fortawesome/free-solid-svg-i
 import type { RankedPlayer } from "@/types/game"
 import UserBanner from "@/components/UserBanner"
 import UserAvatar from "@/components/UserAvatar"
+import UserBadge from "@/components/UserBadge"
 
 interface PodiumModalProps {
   ranking: RankedPlayer[]
@@ -106,7 +107,10 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                   </div>
                 </div>
 
-                <p className="text-sm font-bold text-white truncate max-w-24 text-center">{entry.player.nome}</p>
+                <div className="flex flex-col items-center gap-1 justify-center">
+                  <p className="text-sm font-bold text-white truncate max-w-24 text-center">{entry.player.nome}</p>
+                  <UserBadge badge={entry.player.badge} variant="large" />
+                </div>
 
                 <motion.div
                   initial={{ opacity: 0 }}

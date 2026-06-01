@@ -11,6 +11,8 @@ import { useProfileStore } from "@/stores/profileStore"
 import UserAvatar from "@/components/UserAvatar"
 import EditProfileModal from "@/components/EditProfileModal"
 import UserBanner from "@/components/UserBanner"
+import UserBadge from "@/components/UserBadge"
+import BadgeCollection from "@/components/BadgeCollection"
 import { getProfileHistoryApi } from "@/services/api/profile"
 
 const xpForLevel = (level: number) => Math.floor(200 * Math.pow(1.04, level - 1))
@@ -23,7 +25,6 @@ const totalXpForLevels = (level: number) => {
 const TYPE_GRADIENT: Record<string, string> = {
   title: "from-violet-500/20 to-violet-600/5 border-violet-500/30 text-violet-300",
   badge: "from-cyan-500/20 to-cyan-600/5 border-cyan-500/30 text-cyan-300",
-  color: "from-amber-500/20 to-amber-600/5 border-amber-500/30 text-amber-300",
 }
 
 const MISSION_ICON: Record<string, string> = {
@@ -97,7 +98,10 @@ export default function PerfilPage() {
               ring
             />
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
+                <UserBadge badge={profile.badge} variant="medium" showLabel={true} />
+              </div>
               {profile.title && <p className="text-sm text-green-400">{profile.title}</p>}
               <p className="text-xs text-zinc-400">Nível {profile.level}</p>
             </div>
@@ -174,6 +178,15 @@ export default function PerfilPage() {
             </div>
           </div>
         )}
+
+        {/* Coleção de Emblemas */}
+        <BadgeCollection
+          userBadges={profile.items
+            .filter((i: any) => i.type === "badge")
+            .map((i: any) => JSON.parse(i.value).badge)
+            .filter(Boolean)}
+          isOwner={true}
+        />
 
         {/* Missões */}
         {profile.missions.length > 0 && (

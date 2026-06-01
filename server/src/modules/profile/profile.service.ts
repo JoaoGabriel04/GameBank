@@ -22,6 +22,8 @@ export class ProfileService {
 
     const equippedTitle = user.items.find((i) => i.equipped && i.item.type === "title")?.item.value;
     const parsedTitle = equippedTitle ? JSON.parse(equippedTitle) : null;
+    const equippedBadge = user.items.find((i) => i.equipped && i.item.type === "badge")?.item.value;
+    const parsedBadge = equippedBadge ? JSON.parse(equippedBadge) : null;
 
     return {
       id: user.id,
@@ -36,11 +38,13 @@ export class ProfileService {
       totalWins: user.totalWins,
       totalTop3: user.totalTop3,
       title: parsedTitle?.title || null,
+      badge: parsedBadge?.badge || null,
       items: user.items.map((i) => ({
         id: i.item.id,
         name: i.item.name,
         description: i.item.description,
         icon: i.item.icon,
+        value: i.item.value,
         type: i.item.type,
         equipped: i.equipped,
       })),

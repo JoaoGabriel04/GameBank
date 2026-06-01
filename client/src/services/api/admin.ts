@@ -5,7 +5,7 @@ export interface AdminShopItem {
   name: string;
   description: string;
   price: number;
-  type: "title" | "badge" | "color";
+  type: "title" | "badge";
   value: string | null;
   icon: string | null;
   available: boolean;

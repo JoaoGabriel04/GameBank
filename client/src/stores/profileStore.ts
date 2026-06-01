@@ -18,6 +18,7 @@ interface ProfileData {
   totalWins: number
   totalTop3: number
   title?: string | null
+  badge?: string | null
   items: any[]
   missions: any[]
 }

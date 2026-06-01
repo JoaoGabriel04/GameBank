@@ -16,6 +16,11 @@ export const rankingRepository = {
         totalGames: true,
         totalWins: true,
         totalTop3: true,
+        banner: true,
+        items: {
+          where: { equipped: true },
+          include: { item: true },
+        },
       },
     }),
 };

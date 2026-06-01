@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useChatStore, sendChatMessage } from "@/stores/socketStore";
 import { useGameStore } from "@/stores/gameStore";
 import { MessageCircle, Send, X } from "lucide-react";
+import UserBadge from "@/components/UserBadge";
 
 export default function Chat() {
   const [open, setOpen] = useState(false);
@@ -35,6 +36,10 @@ export default function Chat() {
     currentSession?.jogadores.map((j) => [j.id, j.nome]) || []
   );
 
+  const playerBadges = new Map(
+    currentSession?.jogadores.map((j) => [j.id, j.badge]) || []
+  );
+
   return (
     <>
       <button
@@ -61,11 +66,15 @@ export default function Chat() {
             )}
             {messages.map((msg) => (
               <div key={msg.id} className="text-sm">
-                <span
-                  className="font-bold text-xs mr-1"
-                  style={{ color: getPlayerColor(msg.playerId, currentSession) }}
-                >
-                  {playerNames.get(msg.playerId) || msg.playerNome}:
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    className="font-bold text-xs"
+                    style={{ color: getPlayerColor(msg.playerId, currentSession) }}
+                  >
+                    {playerNames.get(msg.playerId) || msg.playerNome}
+                  </span>
+                  <UserBadge badge={playerBadges.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
+                  <span className="text-zinc-500 text-xs mr-1">:</span>
                 </span>
                 <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>
               </div>

@@ -18,10 +18,19 @@ export class RankingService {
     }
 
     const users = await rankingRepository.findTopUsers(limit);
-    const result = users.map((user, index) => ({
-      position: index + 1,
-      ...user,
-    }));
+    const result = users.map((user, index) => {
+      const equippedTitle = user.items?.find((i) => i.equipped && i.item.type === "title")?.item.value;
+      const parsedTitle = equippedTitle ? JSON.parse(equippedTitle) : null;
+      const equippedBadge = user.items?.find((i) => i.equipped && i.item.type === "badge")?.item.value;
+      const parsedBadge = equippedBadge ? JSON.parse(equippedBadge) : null;
+      const { items, ...rest } = user;
+      return {
+        position: index + 1,
+        ...rest,
+        title: parsedTitle?.title || null,
+        badge: parsedBadge?.badge || null,
+      };
+    });
 
     if (redis) {
       try {

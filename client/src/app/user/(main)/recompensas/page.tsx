@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 
-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCrown, faXmark } from "@fortawesome/free-solid-svg-icons"
 import UserAvatar from "@/components/UserAvatar"
 import UserBanner from "@/components/UserBanner"
+import UserBadge from "@/components/UserBadge"
 
 const MISSION_ICON: Record<string, string> = {
   properties_bought: "🏢",
@@ -213,16 +213,20 @@ export default function RecompensasPage() {
       {selectedPlayer && (
         <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedPlayer(null)}>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-20 overflow-hidden rounded-t-2xl">
+            <div className="overflow-hidden rounded-t-2xl h-20">
               <UserBanner banner={selectedPlayer.banner} className="w-full h-full" />
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/80 pointer-events-none" />
             </div>
-            <div className="px-5 pb-5 -mt-8 space-y-4">
+            <div className="px-5 pb-5 -mt-8 space-y-4 z-10">
               <div className="flex items-end justify-between">
                 <div className="flex items-end gap-3">
                   <UserAvatar avatarUrl={selectedPlayer.avatarUrl} avatarUpdatedAt={selectedPlayer.avatarUpdatedAt} nome={selectedPlayer.nome} size="lg" ring />
                   <div>
-                    <h3 className="font-jaro text-lg text-white">{selectedPlayer.nome}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-jaro text-lg text-white">{selectedPlayer.nome}</h3>
+                      <UserBadge badge={selectedPlayer.badge} variant="medium" showLabel={true} />
+                    </div>
+                    {selectedPlayer.title && <p className="text-xs text-green-400">{selectedPlayer.title}</p>}
                     <p className="text-xs font-inconsolata text-zinc-400">Nível {selectedPlayer.level}</p>
                   </div>
                 </div>

@@ -11,13 +11,11 @@ import type { AdminShopItem, ItemInput } from "@/services/api/admin";
 const TYPE_LABELS: Record<string, string> = {
   title: "Título",
   badge: "Emblema",
-  color: "Cor",
 };
 
 const TYPE_GRADIENT: Record<string, string> = {
   title: "from-violet-500/20 to-violet-600/5 border-violet-500/30",
   badge: "from-cyan-500/20 to-cyan-600/5 border-cyan-500/30",
-  color: "from-amber-500/20 to-amber-600/5 border-amber-500/30",
 };
 
 const EMPTY_FORM: ItemInput = {
@@ -149,7 +147,6 @@ function ItemModal({
                 <select value={form.type} onChange={(e) => set("type", e.target.value as ItemInput["type"])} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none">
                   <option value="title">Título</option>
                   <option value="badge">Emblema</option>
-                  <option value="color">Cor</option>
                 </select>
               </div>
               <div>
@@ -186,7 +183,7 @@ function ItemModal({
   );
 }
 
-const FILTERS_TYPE = ["todos", "title", "badge", "color"] as const;
+const FILTERS_TYPE = ["todos", "title", "badge"] as const;
 const FILTERS_STATUS = ["todos", "ativos", "inativos"] as const;
 
 export default function AdminLojaPage() {

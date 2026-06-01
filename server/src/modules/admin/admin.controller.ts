@@ -10,7 +10,7 @@ const ItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   price: z.number().int().min(0),
-  type: z.enum(["title", "badge", "color"]),
+  type: z.enum(["title", "badge"]),
   value: z.string().nullable().optional(),
   icon: z.string().nullable().optional(),
   available: z.boolean(),

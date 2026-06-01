@@ -9,6 +9,7 @@ import { formatCurrency } from "@/utils/format";
 import type { Player, SessionPropriedade } from "@/types/game";
 import UserBanner from "../UserBanner";
 import UserAvatar from "../UserAvatar";
+import UserBadge from "../UserBadge";
 
 function calculatePatrimonio(player: Player, allPosses: SessionPropriedade[]): number {
   if (player.desistiu && player.patrimonyAtDesistir != null) {
@@ -107,6 +108,7 @@ export default function Ranking() {
                     <p className={`text-sm font-inconsolata truncate ${isMe ? "text-green-400 font-bold" : "text-zinc-100"}`}>
                       {entry.player.nome}
                     </p>
+                    <UserBadge badge={entry.player.badge} variant="small" />
                     {isMe && (
                       <span className="text-[10px] font-inconsolata text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded">
                         VOCÊ

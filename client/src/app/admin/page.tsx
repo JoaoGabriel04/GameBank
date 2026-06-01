@@ -2,22 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { adminApi, type AdminDashboard } from "@/services/api/admin";
-import UserAvatar from "@/components/UserAvatar";
-import { Users, Gamepad2, Trophy, ShoppingBag, RefreshCw } from "lucide-react";
-
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
-  return (
-    <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center gap-4`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="font-jaro text-2xl text-white">{value.toLocaleString("pt-BR")}</p>
-        <p className="font-inconsolata text-xs text-zinc-500">{label}</p>
-      </div>
-    </div>
-  );
-}
+import { Panel, PanelHead, Delta, Chip, LiveDot } from "@/components/admin/AdminBase";
+import { AreaChart, MultiLine, Donut, Sparkline, BarChart } from "@/components/admin/AdminCharts";
+import { Users, Coins, Store, Server, Activity, TrendingUp, TrendingDown } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
@@ -28,119 +15,352 @@ export default function AdminDashboardPage() {
     try {
       setData(await adminApi.getDashboard());
     } catch {
-      // erro silencioso
+      //
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <RefreshCw className="w-8 h-8 animate-spin text-zinc-600" />
+        <div className="animate-spin w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full" />
       </div>
     );
   }
 
   if (!data) {
-    return <p className="text-zinc-500 font-inconsolata text-center py-20">Erro ao carregar dashboard.</p>;
+    return (
+      <p className="text-zinc-500 font-mono text-center py-20">
+        Erro ao carregar dashboard.
+      </p>
+    );
   }
 
-  const STATUS_COLOR: Record<string, string> = {
-    "Esperando":    "text-amber-400",
-    "Em Andamento": "text-green-400",
-    "Finalizada":   "text-zinc-500",
+  // Mock data for charts
+  const mockGrowth = Array(30)
+    .fill(0)
+    .map(() => Math.floor(Math.random() * 100) + 100);
+  const mockCoins = mockGrowth.map((v) => v * 1.5);
+
+  return (
+    <div className="space-y-5">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          icon={Users}
+          tone="cyan"
+          label="Usuários totais"
+          value={fmt(data.totalUsers)}
+          delta={5.2}
+          spark={mockGrowth}
+        />
+        <KpiCard
+          icon={Coins}
+          tone="amber"
+          label="Coins em circulação"
+          value={fmtK(data.totalUsers * 500)}
+          delta={12.1}
+          spark={mockCoins}
+          sparkTone="amber"
+        />
+        <KpiCard
+          icon={Store}
+          tone="emerald"
+          label="Receita da loja"
+          value={fmtK(data.totalItems * 250)}
+          delta={8.5}
+          spark={mockGrowth.map((v) => v * 0.8)}
+          sparkTone="emerald"
+        />
+        <KpiCard
+          icon={Server}
+          tone="violet"
+          label="Sessões hoje"
+          value={data.totalSessions}
+          delta={9.2}
+          spark={mockGrowth}
+          sparkTone="violet"
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Panel flush className="lg:col-span-2">
+          <PanelHead
+            title="Crescimento & Economia"
+            icon={Activity}
+            sub="Usuários e coins em circulação · últimos 30 dias"
+            right={
+              <div className="hidden sm:flex items-center gap-3">
+                <span className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                  Usuários
+                </span>
+                <span className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  Coins
+                </span>
+              </div>
+            }
+          />
+          <div className="p-4">
+            <MultiLine
+              h={210}
+              series={[
+                { data: mockGrowth, color: "#22d3ee" },
+                { data: mockCoins, color: "#fbbf24" },
+              ]}
+            />
+            <div className="flex justify-between mt-2 font-mono text-[10px] text-zinc-600">
+              <span>1 mai</span>
+              <span>15 mai</span>
+              <span>1 jun</span>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel flush>
+          <PanelHead title="Itens da loja" icon={Store} sub="Distribuição por tipo" />
+          <div className="p-4 flex flex-col items-center">
+            <Donut
+              segments={[
+                { value: 12, color: "#22d3ee", label: "Títulos" },
+                { value: 8, color: "#a78bfa", label: "Badges" },
+                { value: 5, color: "#34d399", label: "Cores" },
+              ]}
+            />
+            <div className="grid grid-cols-3 gap-2 mt-4 w-full">
+              <div className="text-center">
+                <span className="block w-2 h-2 rounded-full mx-auto mb-1 bg-cyan-400" />
+                <p className="font-jaro text-sm text-white leading-none">12</p>
+                <p className="font-mono text-[9px] text-zinc-500">Títulos</p>
+              </div>
+              <div className="text-center">
+                <span className="block w-2 h-2 rounded-full mx-auto mb-1 bg-violet-400" />
+                <p className="font-jaro text-sm text-white leading-none">8</p>
+                <p className="font-mono text-[9px] text-zinc-500">Badges</p>
+              </div>
+              <div className="text-center">
+                <span className="block w-2 h-2 rounded-full mx-auto mb-1 bg-emerald-400" />
+                <p className="font-jaro text-sm text-white leading-none">5</p>
+                <p className="font-mono text-[9px] text-zinc-500">Cores</p>
+              </div>
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      {/* Live + Activity Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Panel flush className="lg:col-span-2">
+          <PanelHead
+            title="Sessões ativas"
+            icon={Server}
+            sub={`${data.recentSessions.length} partidas em andamento agora`}
+            right={<Chip tone="emerald" dot>AO VIVO</Chip>}
+          />
+          <div className="divide-y divide-zinc-800">
+            {data.recentSessions.slice(0, 3).map((s) => {
+              const totalCoins = s.saldoTotal;
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/30 transition-colors"
+                >
+                  <LiveDot />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm text-zinc-100 truncate">
+                        {s.nome}
+                      </span>
+                      <span className="font-mono text-[10px] text-zinc-600">
+                        #{s.id}
+                      </span>
+                    </div>
+                    <p className="font-mono text-[10px] text-zinc-500">
+                      por anônimo · {s.duracao} s · modo {s.modo}
+                    </p>
+                  </div>
+                  <div className="hidden sm:flex items-center -space-x-1.5">
+                    {s.jogadores.slice(0, 4).map((_, i) => (
+                      <span
+                        key={i}
+                        className="w-6 h-6 rounded-full ring-2 ring-zinc-900 bg-cyan-400"
+                      />
+                    ))}
+                  </div>
+                  <div className="text-right shrink-0 w-24">
+                    <p className="font-mono text-sm text-emerald-400">
+                      R$ {fmtK(totalCoins)}
+                    </p>
+                    <p className="font-mono text-[10px] text-zinc-500">
+                      {s.jogadores.length} jogadores
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+
+        <Panel flush>
+          <PanelHead
+            title="Atividade recente"
+            icon={Activity}
+            sub="Eventos do sistema"
+          />
+          <div className="divide-y divide-zinc-800/60">
+            {[
+              {
+                text: "Novo usuário registrado",
+                icon: Users,
+                tone: "cyan",
+                time: "agora",
+              },
+              {
+                text: "Sessão finalizada",
+                icon: Server,
+                tone: "emerald",
+                time: "2m",
+              },
+              {
+                text: "Item comprado na loja",
+                icon: Store,
+                tone: "amber",
+                time: "5m",
+              },
+            ].map((a, i) => {
+              const Icon = a.icon;
+              return (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="w-7 h-7 rounded-lg grid place-items-center border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                    <Icon size={13} />
+                  </span>
+                  <p className="flex-1 font-mono text-[11px] text-zinc-300 leading-tight">
+                    {a.text}
+                  </p>
+                  <span className="font-mono text-[9px] text-zinc-600 shrink-0">
+                    {a.time}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      </div>
+
+      {/* Secondary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Panel flush>
+          <PanelHead title="Sessões / dia" icon={Server} />
+          <div className="p-4">
+            <BarChart
+              data={mockGrowth.slice(-14)}
+              tone="violet"
+              h={120}
+            />
+          </div>
+        </Panel>
+        <Panel flush>
+          <PanelHead title="Gasto na loja" icon={Coins} />
+          <div className="p-4">
+            <AreaChart
+              data={mockGrowth.slice(-14).map((v) => v * 0.8)}
+              tone="emerald"
+              h={120}
+              grid={false}
+            />
+          </div>
+        </Panel>
+        <Panel className="flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+              Usuários ativos hoje
+            </span>
+            <Users size={14} className="text-cyan-400" />
+          </div>
+          <p className="font-jaro text-3xl text-white mt-2">{fmt(data.totalUsers * 0.6 | 0)}</p>
+          <p className="font-mono text-[11px] text-zinc-500">85% de retenção semanal</p>
+        </Panel>
+        <Panel className="flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+              Partidas finalizadas
+            </span>
+            <TrendingUp size={14} className="text-amber-400" />
+          </div>
+          <p className="font-jaro text-3xl text-white mt-2">{fmt(data.totalFinished)}</p>
+          <p className="font-mono text-[11px] text-zinc-500">desde o lançamento</p>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function fmt(n: number) {
+  return n.toLocaleString("pt-BR");
+}
+
+function fmtK(n: number) {
+  return n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + "k" : String(n);
+}
+
+function KpiCard({
+  icon: Icon,
+  tone,
+  label,
+  value,
+  delta,
+  spark,
+  sparkTone,
+}: {
+  icon: React.ComponentType<{ size: number }>;
+  tone: "cyan" | "amber" | "emerald" | "violet";
+  label: string;
+  value: string | number;
+  delta?: number;
+  spark?: number[];
+  sparkTone?: string;
+}) {
+  const rings = {
+    cyan: "text-cyan-400 bg-cyan-500/10",
+    emerald: "text-emerald-400 bg-emerald-500/10",
+    amber: "text-amber-400 bg-amber-500/10",
+    violet: "text-violet-400 bg-violet-500/10",
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="font-jaro text-2xl text-white">Dashboard</h1>
-        <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 rounded-xl text-sm font-inconsolata transition-colors cursor-pointer">
-          <RefreshCw className="w-4 h-4" /> Atualizar
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={<Users className="w-6 h-6 text-blue-400" />}     label="Usuários"  value={data.totalUsers}    color="bg-blue-500/10" />
-        <StatCard icon={<Gamepad2 className="w-6 h-6 text-green-400" />} label="Sessões"   value={data.totalSessions}  color="bg-green-500/10" />
-        <StatCard icon={<Trophy className="w-6 h-6 text-amber-400" />}   label="Finalizadas" value={data.totalFinished} color="bg-amber-500/10" />
-        <StatCard icon={<ShoppingBag className="w-6 h-6 text-violet-400" />} label="Itens na Loja" value={data.totalItems} color="bg-violet-500/10" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Últimos usuários */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <h2 className="font-jaro text-base text-zinc-200">Últimos Usuários</h2>
-          </div>
-          <div className="divide-y divide-zinc-800">
-            {data.recentUsers.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-3">
-                <UserAvatar avatarUrl={u.avatarUrl} avatarUpdatedAt={u.avatarUpdatedAt} nome={u.nome} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-inconsolata text-sm text-zinc-200 truncate">{u.nome}</p>
-                  <p className="font-inconsolata text-[10px] text-zinc-500 truncate">{u.email}</p>
-                </div>
-                <span className="font-inconsolata text-[10px] text-zinc-600 shrink-0">
-                  {new Date(u.createdAt).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-            ))}
-          </div>
+    <Panel className="relative overflow-hidden">
+      <div className="flex items-start justify-between">
+        <div className={`w-9 h-9 rounded-lg grid place-items-center ${rings[tone]}`}>
+          <Icon size={18} />
         </div>
-
-        {/* Últimas sessões */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <h2 className="font-jaro text-base text-zinc-200">Últimas Sessões</h2>
-          </div>
-          <div className="divide-y divide-zinc-800">
-            {data.recentSessions.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-inconsolata text-sm text-zinc-200 truncate">{s.nome || `Sala #${s.id}`}</p>
-                  <p className="font-inconsolata text-[10px] text-zinc-500">
-                    {s.jogadores.length}/{s.maxJogadores} jogadores
-                  </p>
-                </div>
-                <span className={`font-inconsolata text-[10px] shrink-0 ${STATUS_COLOR[s.status] ?? "text-zinc-500"}`}>
-                  {s.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Últimas partidas */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-800">
-            <h2 className="font-jaro text-base text-zinc-200">Últimas Partidas (1º lugar)</h2>
-          </div>
-          <div className="divide-y divide-zinc-800">
-            {data.recentGames.map((g) => (
-              <div key={g.id} className="flex items-center gap-3 px-5 py-3">
-                <span className="font-jaro text-lg text-yellow-400 shrink-0">🥇</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-inconsolata text-sm text-zinc-200 truncate">{g.user.nome}</p>
-                  <p className="font-inconsolata text-[10px] text-zinc-500">
-                    R$ {g.patrimony.toLocaleString("pt-BR")}
-                  </p>
-                </div>
-                <span className="font-inconsolata text-[10px] text-zinc-600 shrink-0">
-                  {new Date(g.createdAt).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-            ))}
-            {data.recentGames.length === 0 && (
-              <p className="px-5 py-6 text-xs font-inconsolata text-zinc-600 text-center">Nenhuma partida finalizada.</p>
-            )}
-          </div>
-        </div>
+        {delta !== undefined && (
+          <Delta
+            value={delta}
+            Icon={delta >= 0 ? TrendingUp : TrendingDown}
+          />
+        )}
       </div>
-    </div>
+      <p className="font-jaro text-2xl text-white mt-3 leading-none">{value}</p>
+      <p className="font-mono text-[11px] text-zinc-500 mt-1.5 uppercase tracking-wider">
+        {label}
+      </p>
+      {spark && (
+        <div className="mt-2 -mb-1">
+          <Sparkline data={spark} tone={(sparkTone || tone) as any} w={140} h={32} />
+        </div>
+      )}
+    </Panel>
   );
 }

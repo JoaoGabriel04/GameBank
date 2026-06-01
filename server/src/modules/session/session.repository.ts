@@ -18,7 +18,15 @@ export class SessionRepository {
         jogadores: {
           include: {
             team: true,
-            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+            user: {
+              select: {
+                avatarUrl: true, avatarUpdatedAt: true, banner: true,
+                items: {
+                  where: { equipped: true, item: { type: "badge" } },
+                  include: { item: true },
+                },
+              },
+            },
           },
         },
         times: true,
@@ -56,7 +64,15 @@ export class SessionRepository {
         jogadores: {
           include: {
             team: true,
-            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+            user: {
+              select: {
+                avatarUrl: true, avatarUpdatedAt: true, banner: true,
+                items: {
+                  where: { equipped: true, item: { type: "badge" } },
+                  include: { item: true },
+                },
+              },
+            },
           },
         },
         times: true,
@@ -88,7 +104,15 @@ export class SessionRepository {
         jogadores: {
           include: {
             team: true,
-            user: { select: { avatarUrl: true, avatarUpdatedAt: true, banner: true } },
+            user: {
+              select: {
+                avatarUrl: true, avatarUpdatedAt: true, banner: true,
+                items: {
+                  where: { equipped: true, item: { type: "badge" } },
+                  include: { item: true },
+                },
+              },
+            },
           },
         },
         times: true,

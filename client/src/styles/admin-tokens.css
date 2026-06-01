@@ -1,0 +1,214 @@
+/* Admin Console Design Tokens */
+
+:root {
+  /* Colors - Primary */
+  --color-primary: #06B6D4;
+  --color-primary-light: #22D3EE;
+  --color-primary-dark: #0891B2;
+
+  /* Colors - Backgrounds */
+  --color-bg: #09090B;
+  --color-surface: #18181B;
+  --color-surface-light: #27272A;
+
+  /* Colors - Borders */
+  --color-border: #27272A;
+  --color-border-light: #3F3F46;
+
+  /* Colors - Text */
+  --color-text-primary: #F4F4F5;
+  --color-text-secondary: #A1A1AA;
+  --color-text-tertiary: #71717A;
+
+  /* Colors - Semantic */
+  --color-success: #22C55E;
+  --color-warning: #F97316;
+  --color-error: #EF4444;
+  --color-info: #06B6D4;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(6, 182, 212, 0.2);
+
+  /* Z-Index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal: 1040;
+  --z-popover: 1050;
+  --z-tooltip: 1060;
+}
+
+/* Utility classes for admin */
+.admin-bg {
+  background-color: #09090b;
+}
+
+.admin-surface {
+  background-color: #18181b;
+}
+
+.admin-border {
+  border-color: #27272a;
+}
+
+.admin-text-primary {
+  color: #f4f4f5;
+}
+
+.admin-text-secondary {
+  color: #a1a1aa;
+}
+
+.admin-card {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 0.5rem;
+}
+
+.admin-button-primary {
+  background-color: #06b6d4;
+  color: #09090b;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-button-primary:hover {
+  background-color: #0891b2;
+}
+
+.admin-button-primary:active {
+  background-color: #06b6d4;
+}
+
+.admin-button-secondary {
+  background-color: #27272a;
+  color: #f4f4f5;
+  border: 1px solid #3f3f46;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.admin-button-secondary:hover {
+  background-color: #3f3f46;
+}
+
+.admin-button-danger {
+  background-color: #ef4444;
+  color: #ffffff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-button-danger:hover {
+  background-color: #dc2626;
+}
+
+.admin-button-danger:active {
+  background-color: #b91c1c;
+}
+
+.admin-input {
+  background-color: #18181b;
+  border: 1px solid #27272a;
+  color: #f4f4f5;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 1px #06b6d4;
+}
+
+.admin-table-head {
+  background-color: #18181b;
+  border-bottom: 1px solid #27272a;
+}
+
+.admin-table-row {
+  border-bottom: 1px solid #27272a;
+  transition: background-color 0.2s;
+}
+
+.admin-table-row:hover {
+  background-color: #27272a;
+}
+
+.admin-badge-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #22c55e;
+  color: #ffffff;
+}
+
+.admin-badge-inactive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #3f3f46;
+  color: #d4d4d8;
+}
+
+.admin-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+.admin-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
