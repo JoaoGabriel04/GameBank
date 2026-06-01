@@ -30,7 +30,7 @@ export function emitToPlayer(sessionId: number, playerId: number, event: string,
 }
 
 // Emite para um usuário específico via activeSockets (User.id → socketId).
-// Mais confiável que emitToPlayer pois não depende de socket.data.playerId.
+// Com retry: tenta novamente após 50ms se falhar na primeira vez.
 export function emitToUser(userId: number, event: string, data: unknown) {
   const nsp = getIO().of("/game");
   const socketId = activeSockets.get(userId);
@@ -44,6 +44,40 @@ export function emitToUser(userId: number, event: string, data: unknown) {
     return;
   }
   socket.emit(event, data);
+}
+
+// Emite com retry automático — tenta novamente após 50ms se socket não estiver pronto
+export async function emitToUserWithRetry(userId: number, event: string, data: unknown, maxRetries: number = 2): Promise<boolean> {
+  const nsp = getIO().of("/game");
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const socketId = activeSockets.get(userId);
+    if (!socketId) {
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        continue;
+      }
+      console.warn(`[Socket] emitToUserWithRetry exauriu tentativas: usuário ${userId} não tem socket para "${event}"`);
+      return false;
+    }
+
+    const socket = nsp.sockets.get(socketId);
+    if (!socket) {
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        continue;
+      }
+      console.warn(`[Socket] emitToUserWithRetry exauriu tentativas: socket ${socketId} não encontrado para usuário ${userId} evento "${event}"`);
+      return false;
+    }
+
+    socket.emit(event, data, (ackData?: unknown) => {
+      console.log(`[Socket] ACK recebido para evento "${event}" do usuário ${userId}`);
+    });
+    return true;
+  }
+
+  return false;
 }
 
 export async function initSocket(httpServer: HttpServer) {
@@ -98,8 +132,11 @@ export async function initSocket(httpServer: HttpServer) {
           socket.data.sessionId = sessionId;
           await registerActiveSocket(socket);
           await setSocketPlayerId(socket, sessionId);
-          // Carrega mensagens anteriores do chat
           await loadChatHistory(socket, sessionId);
+          // Entrega mensagens que não foram entregues na reconexão
+          await deliverQueuedMessages(socket);
+          // Notifica cliente que está pronto para receber eventos
+          socket.emit("socket:ready", { sessionId });
           return;
         }
 
@@ -116,6 +153,8 @@ export async function initSocket(httpServer: HttpServer) {
             await registerActiveSocket(socket);
             await setSocketPlayerId(socket, sessionId);
             await loadChatHistory(socket, sessionId);
+            await deliverQueuedMessages(socket);
+            socket.emit("socket:ready", { sessionId });
             return;
           }
         }
@@ -136,6 +175,8 @@ export async function initSocket(httpServer: HttpServer) {
           await registerActiveSocket(socket);
           await setSocketPlayerId(socket, sessionId);
           await loadChatHistory(socket, sessionId);
+          await deliverQueuedMessages(socket);
+          socket.emit("socket:ready", { sessionId });
         } else {
           socket.emit("error", { message: "Token não pertence a esta sala" });
         }
@@ -281,6 +322,59 @@ async function setSocketPlayerId(socket: Socket, sessionId: number) {
   } catch (err) {
     console.warn("[socket] setSocketPlayerId falhou para userId", userId, "sessionId", sessionId, err);
     // playerId fica undefined — emitToPlayer não encontrará este socket
+  }
+}
+
+// Enfileira mensagem não entregue em Redis para entrega futura
+async function queueUndeliveredMessage(userId: number, event: string, data: unknown) {
+  const redis = getRedis();
+  if (!redis) return;
+
+  try {
+    const queueKey = `msg:queue:${userId}`;
+    const message = { event, data, timestamp: Date.now() };
+    // Mantém apenas últimas 100 mensagens por usuário (TTL de 24h)
+    await redis.rPush(queueKey, JSON.stringify(message));
+    await redis.expire(queueKey, 86400);
+    console.log(`[Socket] Mensagem enfileirada para usuário ${userId}: "${event}"`);
+  } catch (err) {
+    console.error("[Socket] Erro ao enfileirar mensagem:", err);
+  }
+}
+
+// Entrega mensagens enfileiradas quando socket se reconecta
+async function deliverQueuedMessages(socket: Socket) {
+  const userId = socket.data.userId;
+  if (!userId) return;
+
+  const redis = getRedis();
+  if (!redis) return;
+
+  try {
+    const queueKey = `msg:queue:${userId}`;
+    const messages = await redis.lRange(queueKey, 0, -1);
+
+    if (messages.length === 0) return;
+
+    let delivered = 0;
+    for (const msgStr of messages) {
+      try {
+        const { event, data } = JSON.parse(msgStr);
+        socket.emit(event, data);
+        delivered++;
+      } catch {
+        // Skip mensagens malformadas
+      }
+    }
+
+    // Limpa a fila após entrega
+    await redis.del(queueKey);
+
+    if (delivered > 0) {
+      console.log(`[Socket] ${delivered} mensagem(ns) enfileirada(s) entregue(s) para usuário ${userId}`);
+    }
+  } catch (err) {
+    console.error("[Socket] Erro ao entregar mensagens enfileiradas:", err);
   }
 }
 

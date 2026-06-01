@@ -4,7 +4,7 @@ import { NegociacaoService } from "./negociacao.service.js";
 import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitSessionUpdated } from "../socket/socket.handler.js";
-import { emitToUser } from "../../lib/socket.js";
+import { emitToUser, emitToUserWithRetry } from "../../lib/socket.js";
 
 const negociacaoService = new NegociacaoService();
 const sessionService = new SessionService();
@@ -13,12 +13,6 @@ async function emitUpdatedSession(sessionId: number) {
   await sessionService.invalidateCache(sessionId);
   const session = await sessionService.loadSession(sessionId);
   emitSessionUpdated(sessionId, session);
-}
-
-// Pequeno delay para garantir que o socket foi registrado em activeSockets
-// antes de tentar emitir. Sem isso, há race condition quando socket se conecta.
-async function delayMs(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 const NegItemSchema = z.object({
@@ -63,13 +57,14 @@ export const negociacaoController = {
         body.offerItems,
         body.wantItems
       );
-      // Emite notificação específica para o alvo — aguarda ligeiramente para garantir
-      // que o socket foi registrado em activeSockets (race condition no session:join).
-      // Se falhar, emitSessionUpdated vai sincronizar de qualquer forma.
+      // Emite notificação com retry — tenta 2 vezes com 50ms entre tentativas.
+      // Se falhar, emitSessionUpdated (broadcast) vai sincronizar estado.
       const toUserId = negotiation?.toPlayer?.userId;
       if (toUserId) {
-        await delayMs(20);
-        emitToUser(toUserId, "negotiation:new", negotiation);
+        const delivered = await emitToUserWithRetry(toUserId, "negotiation:new", negotiation);
+        if (!delivered) {
+          console.error(`[Negociação] Falha ao entregar notificação para usuário ${toUserId}, confiando em broadcast`);
+        }
       }
       await emitUpdatedSession(body.sessionId);
       return res.status(201).json(negotiation);
@@ -86,9 +81,15 @@ export const negociacaoController = {
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após aceitar");
       const fromUserId = negotiation.fromPlayer?.userId;
       const toUserId   = negotiation.toPlayer?.userId;
-      await delayMs(20);
-      if (fromUserId) emitToUser(fromUserId, "negotiation:accepted", negotiation);
-      if (toUserId)   emitToUser(toUserId,   "negotiation:accepted", negotiation);
+      // Tenta entregar com retry para ambos os jogadores
+      if (fromUserId) {
+        const delivered = await emitToUserWithRetry(fromUserId, "negotiation:accepted", negotiation);
+        if (!delivered) console.error(`[Negociação] Falha ao notificar aceitação para usuário ${fromUserId}`);
+      }
+      if (toUserId) {
+        const delivered = await emitToUserWithRetry(toUserId, "negotiation:accepted", negotiation);
+        if (!delivered) console.error(`[Negociação] Falha ao notificar aceitação para usuário ${toUserId}`);
+      }
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -103,8 +104,10 @@ export const negociacaoController = {
       const negotiation = await negociacaoService.recusarNegociacao(id, playerId);
       if (!negotiation) throw new AppError(404, "Negociação não encontrada após recusar");
       const fromUserId = negotiation.fromPlayer?.userId;
-      await delayMs(20);
-      if (fromUserId) emitToUser(fromUserId, "negotiation:rejected", { negotiationId: negotiation.id });
+      if (fromUserId) {
+        const delivered = await emitToUserWithRetry(fromUserId, "negotiation:rejected", { negotiationId: negotiation.id });
+        if (!delivered) console.error(`[Negociação] Falha ao notificar recusa para usuário ${fromUserId}`);
+      }
       await emitUpdatedSession(negotiation.sessionId);
       return res.status(200).json(negotiation);
     } catch (err) {
@@ -123,11 +126,12 @@ export const negociacaoController = {
         body.wantItems
       );
       if (!newNegotiation) throw new AppError(404, "Negociação não encontrada após contra-oferta");
-      // toPlayer da nova negociação é o proponente original (que agora recebe a contra-oferta)
       const toUserId = newNegotiation.toPlayer?.userId;
       if (toUserId) {
-        await delayMs(20);
-        emitToUser(toUserId, "negotiation:counter", newNegotiation);
+        const delivered = await emitToUserWithRetry(toUserId, "negotiation:counter", newNegotiation);
+        if (!delivered) {
+          console.error(`[Negociação] Falha ao entregar contra-oferta para usuário ${toUserId}`);
+        }
       }
       await emitUpdatedSession(newNegotiation.sessionId);
       return res.status(201).json(newNegotiation);
