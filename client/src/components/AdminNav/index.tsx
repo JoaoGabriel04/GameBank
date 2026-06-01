@@ -88,7 +88,7 @@ export default function AdminNav() {
       </aside>
 
       {/* Mobile — header no topo */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 flex items-center justify-between px-4 h-14">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 flex items-center justify-between px-4 h-18">
         <Link href="/admin" className="flex items-center gap-2">
           <Image src="/images/gamebank-logo.png" alt="GameBank" width={80} height={80} className="w-8" />
           <span className="font-inconsolata text-[10px] text-violet-400 uppercase tracking-widest">Admin</span>
@@ -112,7 +112,7 @@ export default function AdminNav() {
           </Link>
           <button
             onClick={handleLogout}
-            className="text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+            className="text-red-500 hover:text-red-400 transition-colors cursor-pointer"
             title="Sair"
           >
             <LogOut className="w-4 h-4" />

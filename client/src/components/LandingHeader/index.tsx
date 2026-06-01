@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
+import Button1 from "../Button01";
 
 export default function LandingHeader() {
   const router = useRouter();
@@ -32,12 +33,9 @@ export default function LandingHeader() {
         />
       </Link>
 
-      <button
-        onClick={handleCTA}
-        className="font-jaro text-sm px-5 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white transition-colors cursor-pointer"
-      >
+      <Button1 size="md" color="green" handle={handleCTA}>
         {user ? "Acessar" : "Entrar"}
-      </button>
+      </Button1>
     </header>
   );
 }

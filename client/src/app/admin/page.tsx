@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="font-jaro text-2xl text-white">Dashboard</h1>
         <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 rounded-xl text-sm font-inconsolata transition-colors cursor-pointer">

@@ -37,7 +37,7 @@ export default function Sessions() {
       .then(res => {
         const s = res.data?.session;
         if (s && s.id) {
-          router.replace(`/game/${s.id}`);
+          router.replace(`/user/game/${s.id}`);
         }
       })
       .catch(() => {})

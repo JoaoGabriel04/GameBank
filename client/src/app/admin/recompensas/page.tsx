@@ -118,7 +118,7 @@ export default function AdminRecompensasPage() {
   const metricMeta = (metric: string) => METRICS.find((m) => m.value === metric) ?? { icon: "⭐", label: metric };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-jaro text-2xl text-white flex items-center gap-2">
           🏆 Missões
