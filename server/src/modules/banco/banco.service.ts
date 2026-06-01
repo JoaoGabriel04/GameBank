@@ -92,6 +92,14 @@ export class BancoService {
         },
       }),
     ]);
+
+    return {
+      pagadorNome: pagador.nome,
+      recebedorNome: recebedor.nome,
+      recebedorId: recebedor.id,
+      recebedorUserId: recebedor.userId,
+      valor,
+    };
   }
 
   async pagarAluguel(sessionId: number, pagadorId: number, sessionPossesId: number) {

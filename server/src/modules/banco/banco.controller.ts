@@ -64,7 +64,15 @@ export const bancoController = {
     }
 
     try {
-      await bancoService.transferencia(Number(pagadorId), Number(recebedorId), Number(sessionId), Number(valor));
+      const result = await bancoService.transferencia(Number(pagadorId), Number(recebedorId), Number(sessionId), Number(valor));
+      if (result.recebedorUserId) {
+        const delivered = await emitToUserWithRetry(result.recebedorUserId, "transferencia:received", {
+          fromPlayerNome: result.pagadorNome,
+          toPlayerId: result.recebedorId,
+          valor: result.valor,
+        });
+        if (!delivered) console.error(`[Banco] Falha ao notificar transferência para usuário ${result.recebedorUserId}`);
+      }
       await emitUpdatedSession(Number(sessionId));
       return res.status(200).json({ message: "Transferência realizada com sucesso!" });
     } catch (err) {
