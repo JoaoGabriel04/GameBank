@@ -6,8 +6,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
-import Header from "@/components/Header"
-import SiteBottomNav from "@/components/SiteBottomNav"
+
+
 import UserAvatar from "@/components/UserAvatar"
 import EditProfileModal from "@/components/EditProfileModal"
 import UserBanner from "@/components/UserBanner"
@@ -77,7 +77,7 @@ export default function PerfilPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
-      <Header aba="perfil" />
+
 
       {/* Glow decorativo */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
@@ -110,13 +110,7 @@ export default function PerfilPage() {
                 >
                 <Pencil className="w-4 h-4" />
               </button>
-              <Link
-                href="/user/configuracoes"
-                className="text-zinc-500 hover:text-zinc-200 transition-colors"
-                title="Configurações"
-              >
-                <Settings className="w-4 h-4" />
-              </Link>
+    
             </div>
             <p className="text-sm text-yellow-400 font-bold">{profile.coins} coins</p>
             <p className="text-xs text-zinc-500">ID #{profile.id}</p>
@@ -131,7 +125,7 @@ export default function PerfilPage() {
             <span className="text-xs font-inconsolata text-zinc-400">Nível {profile.level}</span>
             <span className="text-xs font-inconsolata text-zinc-500">{xpIntoLevel.toLocaleString()} / {xpCurrent.toLocaleString()} XP</span>
           </div>
-          <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="w-full h-3 bg-zinc-950 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-700"
               style={{ width: `${xpProgress}%` }}
@@ -244,7 +238,7 @@ export default function PerfilPage() {
         </div>
       </main>
 
-      <SiteBottomNav aba="perfil" />
+
     </div>
   )
 }
