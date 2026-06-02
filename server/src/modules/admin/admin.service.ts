@@ -118,4 +118,89 @@ export class AdminService {
     }
     return adminRepository.updateUserCoins(userId, delta);
   }
+
+  // ── Cards ──────────────────────────────────────────────────────────────
+
+  async listCards() {
+    return adminRepository.findAllCards();
+  }
+
+  async createCard(data: {
+    tipo: string;
+    texto: string;
+    efeito: string;
+    valor: number;
+    ativo: boolean;
+  }) {
+    return adminRepository.createCard(data);
+  }
+
+  async updateCard(id: number, data: Partial<{
+    tipo: string;
+    texto: string;
+    efeito: string;
+    valor: number;
+    ativo: boolean;
+  }>) {
+    const exists = await adminRepository.findCardById(id);
+    if (!exists) throw new AppError(404, "Carta não encontrada.");
+    return adminRepository.updateCard(id, data);
+  }
+
+  async deleteCard(id: number) {
+    const exists = await adminRepository.findCardById(id);
+    if (!exists) throw new AppError(404, "Carta não encontrada.");
+    return adminRepository.deleteCard(id);
+  }
+
+  // ── GameSettings ───────────────────────────────────────────────────────
+
+  async getSettings() {
+    const settings = await adminRepository.findAllSettings();
+    const result: Record<string, any> = {};
+    for (const s of settings) {
+      result[s.key] = isNaN(+s.value) ? s.value : +s.value;
+    }
+    return result;
+  }
+
+  async updateSettings(data: Record<string, any>) {
+    const stringified = Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, String(v)])
+    );
+    await adminRepository.updateSettingsBatch(stringified);
+    return this.getSettings();
+  }
+
+  // ── Banners ────────────────────────────────────────────────────────────
+
+  async listBanners() {
+    return adminRepository.findAllBanners();
+  }
+
+  async createBanner(data: {
+    nome: string;
+    css: string;
+    spriteId?: string;
+    disponibilidade: boolean;
+  }) {
+    return adminRepository.createBanner(data);
+  }
+
+  async updateBanner(id: number, data: Partial<{
+    nome: string;
+    css: string;
+    spriteId: string;
+    disponibilidade: boolean;
+  }>) {
+    const exists = await adminRepository.findBannerById(id);
+    if (!exists) throw new AppError(404, "Banner não encontrado.");
+    return adminRepository.updateBanner(id, data);
+  }
+
+  async deleteBanner(id: number) {
+    const exists = await adminRepository.findBannerById(id);
+    if (!exists) throw new AppError(404, "Banner não encontrado.");
+    return adminRepository.deleteBanner(id);
+  }
 }

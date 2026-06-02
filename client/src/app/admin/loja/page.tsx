@@ -1,33 +1,52 @@
 "use client";
 
+/**
+ * Loja — Admin
+ * Salve em: src/app/admin/loja/page.tsx
+ * Melhorias vs atual: cards com glow + gradiente, modal com preview ao vivo,
+ * segmented control, tipo "color" suportado visualmente.
+ */
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Store, Plus, Pencil, Trash2, Check, X, Crown, Trophy,
+  TrendingUp, Target, Palette, Sparkles, Coins, Shield,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { AdminShopItem, ItemInput } from "@/services/api/admin";
+import {
+  Panel, Chip, Toggle, Segmented, Btn, Field,
+  AdminInput, AdminTextarea, AdminSelect, AdminModal,
+} from "@/components/admin/AdminUI";
 
-const TYPE_LABELS: Record<string, string> = {
-  title: "Título",
-  badge: "Emblema",
+/* ── Icon map ── */
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+  crown: Crown, trophy: Trophy, trending: TrendingUp, target: Target,
+  palette: Palette, sparkles: Sparkles, coins: Coins, shield: Shield,
 };
 
-const TYPE_GRADIENT: Record<string, string> = {
-  title: "from-violet-500/20 to-violet-600/5 border-violet-500/30",
-  badge: "from-cyan-500/20 to-cyan-600/5 border-cyan-500/30",
+function ItemIcon({ name, size = 20 }: { name: string | null; size?: number }) {
+  const I = ICON_MAP[name ?? "sparkles"] ?? Sparkles;
+  return <I size={size} />;
+}
+
+/* ── Type metadata ── */
+type ItemType = "title" | "badge" | "color";
+
+const TYPE_META: Record<ItemType, { label: string; tone: "amber" | "violet" | "emerald"; grad: string; color: string }> = {
+  title: { label: "Título",   tone: "amber",   grad: "from-amber-500/15 to-amber-500/0",   color: "#f59e0b" },
+  badge: { label: "Emblema",  tone: "violet",  grad: "from-violet-500/15 to-violet-500/0", color: "#a78bfa" },
+  color: { label: "Cor",      tone: "emerald", grad: "from-emerald-500/15 to-emerald-500/0", color: "#34d399" },
 };
 
-const EMPTY_FORM: ItemInput = {
-  name: "",
-  description: "",
-  price: 0,
-  type: "title",
-  value: null,
-  icon: null,
-  available: true,
-};
+function getTypeMeta(type: string) {
+  return TYPE_META[type as ItemType] ?? TYPE_META.title;
+}
 
+/* ── Item card preview (used in grid AND inside modal) ── */
 function ItemCard({
   item,
   onEdit,
@@ -35,55 +54,86 @@ function ItemCard({
   onDelete,
 }: {
   item: AdminShopItem;
-  onEdit: (item: AdminShopItem) => void;
+  onEdit: (i: AdminShopItem) => void;
   onToggle: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const meta = getTypeMeta(item.type);
+  const accent = item.type === "color" && item.value ? item.value : meta.color;
 
   return (
-    <div className={`relative rounded-2xl border bg-gradient-to-br p-4 ${TYPE_GRADIENT[item.type] ?? "from-zinc-800/50 border-zinc-700"} ${!item.available ? "opacity-50" : ""}`}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="min-w-0">
-          <p className="font-jaro text-base text-white truncate">{item.name}</p>
-          <p className="text-xs font-inconsolata text-zinc-400 truncate">{item.description}</p>
+    <div
+      className={`relative rounded-2xl border bg-gradient-to-b ${meta.grad} p-4 overflow-hidden transition-all ${
+        item.available ? "border-zinc-800" : "border-zinc-800/60 opacity-55"
+      }`}
+      style={{ boxShadow: item.available ? `0 0 30px -14px ${accent}` : "none" }}
+    >
+      {/* Glow blob */}
+      <div
+        className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none"
+        style={{ background: accent }}
+      />
+
+      <div className="flex items-start justify-between mb-3 relative">
+        <div
+          className="w-11 h-11 rounded-xl grid place-items-center"
+          style={{ background: accent + "22", color: accent }}
+        >
+          <ItemIcon name={item.icon} size={20} />
         </div>
-        <span className={`shrink-0 text-[10px] font-inconsolata px-2 py-0.5 rounded-full border ${TYPE_GRADIENT[item.type]}`}>
-          {TYPE_LABELS[item.type]}
-        </span>
+        <Chip tone={meta.tone}>{meta.label}</Chip>
       </div>
 
-      <div className="flex items-center justify-between mt-3">
-        <div>
-          <p className="text-sm font-inconsolata text-yellow-400 font-bold">{item.price} coins</p>
-          <p className="text-[10px] font-inconsolata text-zinc-500">{item.ownerCount} donos</p>
+      <h3
+        className="font-jaro text-base relative"
+        style={{ color: item.type === "color" && item.value ? item.value : "#f4f4f5" }}
+      >
+        {item.name}
+      </h3>
+      <p className="font-inconsolata text-[11px] text-zinc-500 mt-0.5 leading-snug relative line-clamp-2 h-8">
+        {item.description}
+      </p>
+
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800 relative">
+        <div className="flex items-center gap-1">
+          <Toggle on={item.available} onChange={() => onToggle(item.id)} size="sm" />
+          <span className="font-inconsolata text-[10px] text-zinc-500 ml-1">
+            {item.available ? "ativo" : "inativo"}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Toggle disponibilidade */}
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => onToggle(item.id)}
-            title={item.available ? "Desativar" : "Ativar"}
-            className={`w-9 h-5 rounded-full transition-colors ${item.available ? "bg-green-500" : "bg-zinc-600"}`}
+            type="button"
+            onClick={() => onEdit(item)}
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-zinc-800 cursor-pointer transition-colors"
           >
-            <span className={`block w-4 h-4 rounded-full bg-white mx-0.5 transition-transform ${item.available ? "translate-x-4" : "translate-x-0"}`} />
+            <Pencil size={13} />
           </button>
-          {/* Editar */}
-          <button onClick={() => onEdit(item)} className="text-zinc-400 hover:text-white transition-colors cursor-pointer">
-            <Pencil className="w-4 h-4" />
-          </button>
-          {/* Deletar */}
-          {confirmDelete ? (
+          {confirmDel ? (
             <div className="flex items-center gap-1">
-              <button onClick={() => onDelete(item.id)} className="text-red-400 hover:text-red-300 cursor-pointer">
-                <Check className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => { setConfirmDel(false); onDelete(item.id); }}
+                className="text-rose-400 hover:text-rose-300 cursor-pointer p-1"
+              >
+                <Check size={13} />
               </button>
-              <button onClick={() => setConfirmDelete(false)} className="text-zinc-400 hover:text-white cursor-pointer">
-                <X className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => setConfirmDel(false)}
+                className="text-zinc-500 hover:text-white cursor-pointer p-1"
+              >
+                <X size={13} />
               </button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="text-zinc-400 hover:text-red-400 transition-colors cursor-pointer">
-              <Trash2 className="w-4 h-4" />
+            <button
+              type="button"
+              onClick={() => setConfirmDel(true)}
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 cursor-pointer transition-colors"
+            >
+              <Trash2 size={13} />
             </button>
           )}
         </div>
@@ -92,109 +142,177 @@ function ItemCard({
   );
 }
 
+/* ── Live preview card (inside modal) ── */
+function ItemPreview({ form }: { form: Partial<ItemInput> }) {
+  const meta = getTypeMeta(form.type ?? "title");
+  const accent = form.type === "color" && form.value ? form.value : meta.color;
+  return (
+    <div
+      className={`relative rounded-2xl border bg-gradient-to-b ${meta.grad} p-5 overflow-hidden`}
+      style={{ boxShadow: `0 0 40px -18px ${accent}` }}
+    >
+      <div className="flex items-start justify-between relative">
+        <div className="w-12 h-12 rounded-xl grid place-items-center" style={{ background: accent + "22", color: accent }}>
+          <ItemIcon name={form.icon ?? "sparkles"} size={22} />
+        </div>
+        <Chip tone={meta.tone}>{meta.label}</Chip>
+      </div>
+      <h3 className="font-jaro text-xl mt-3 relative" style={{ color: form.type === "color" && form.value ? form.value : "#fff" }}>
+        {form.name || "Nome do item"}
+      </h3>
+      <p className="font-inconsolata text-xs text-zinc-400 mt-1 relative leading-snug">
+        {form.description || "Descrição curta do item."}
+      </p>
+      <div className="flex items-center justify-between mt-4 relative">
+        <span className="inline-flex items-center gap-1.5 font-jaro text-lg text-amber-300">
+          <Coins size={15} />
+          {(form.price ?? 0).toLocaleString("pt-BR")}
+        </span>
+        <span className="font-inconsolata text-[10px] text-zinc-500">pré-visualização</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Item modal (create / edit) ── */
+const EMPTY: ItemInput = {
+  name: "", description: "", price: 0,
+  type: "title", value: null, icon: "sparkles", available: true,
+};
+const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
+
 function ItemModal({
-  initial,
+  item,
   onClose,
   onSave,
 }: {
-  initial: ItemInput | null;
+  item: AdminShopItem | "new" | null;
   onClose: () => void;
-  onSave: (data: ItemInput) => Promise<void>;
+  onSave: (data: ItemInput, id?: number) => Promise<void>;
 }) {
-  const [form, setForm] = useState<ItemInput>(initial ?? EMPTY_FORM);
+  const isNew = item === "new";
+  const initial = isNew ? EMPTY : (item ? { ...item } as ItemInput : null);
+  const [form, setForm] = useState<ItemInput>(initial ?? EMPTY);
   const [saving, setSaving] = useState(false);
 
-  function set(key: keyof ItemInput, value: unknown) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
+  useEffect(() => { setForm(initial ?? EMPTY); }, [item]);
+
+  if (!item) return null;
+
+  const set = (k: keyof ItemInput, v: unknown) => setForm((p) => ({ ...p, [k]: v }));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave(form, isNew ? undefined : (item as AdminShopItem).id);
       onClose();
     } finally {
       setSaving(false);
     }
   }
 
-  // Preview ao vivo
-  const previewItem: AdminShopItem = { ...form, id: 0, ownerCount: 0 };
-
   return (
-    <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
-          <h2 className="font-jaro text-lg text-white">{initial ? "Editar Item" : "Novo Item"}</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
-        </div>
+    <AdminModal open={!!item} onClose={onClose} width={780}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+        <h2 className="font-jaro text-lg text-white flex items-center gap-2 whitespace-nowrap">
+          <Store size={18} className="text-cyan-400" />
+          {isNew ? "Novo item" : "Editar item"}
+        </h2>
+        <button type="button" onClick={onClose} className="text-zinc-500 hover:text-white cursor-pointer p-1">
+          <X size={18} />
+        </button>
+      </div>
 
-        <div className="flex flex-col md:flex-row gap-6 p-6">
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="flex-1 space-y-4">
-            <div>
-              <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Nome</label>
-              <input value={form.name} onChange={(e) => set("name", e.target.value)} required className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none focus:border-zinc-500" />
-            </div>
-            <div>
-              <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Descrição</label>
-              <textarea value={form.description} onChange={(e) => set("description", e.target.value)} required rows={2} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none focus:border-zinc-500 resize-none" />
-            </div>
+      {/* Body */}
+      <form onSubmit={handleSubmit}>
+        <div className="grid md:grid-cols-[1fr_280px] gap-5 p-5">
+          {/* Left — form */}
+          <div className="space-y-4">
+            <Field label="Nome">
+              <AdminInput value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="ex: Lendário" required />
+            </Field>
+
+            <Field label="Descrição">
+              <AdminTextarea rows={2} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Descrição curta" required />
+            </Field>
+
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Tipo</label>
-                <select value={form.type} onChange={(e) => set("type", e.target.value as ItemInput["type"])} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none">
+              <Field label="Tipo">
+                <AdminSelect value={form.type} onChange={(e) => set("type", e.target.value)}>
                   <option value="title">Título</option>
                   <option value="badge">Emblema</option>
-                </select>
-              </div>
+                  <option value="color">Cor (visual only)</option>
+                </AdminSelect>
+              </Field>
+              <Field label="Preço (coins)">
+                <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={form.type === "color" ? "Cor (hex)" : "Valor / slug"} hint={form.type === "color" ? "ex: #22d3ee" : "slug ou valor"}>
+                <div className="flex items-center gap-2">
+                  {form.type === "color" && (
+                    <input
+                      type="color"
+                      value={form.value ?? "#22d3ee"}
+                      onChange={(e) => set("value", e.target.value)}
+                      className="w-9 h-9 rounded-xl bg-transparent border border-zinc-700 cursor-pointer shrink-0"
+                    />
+                  )}
+                  <AdminInput
+                    value={form.value ?? ""}
+                    onChange={(e) => set("value", e.target.value || null)}
+                  />
+                </div>
+              </Field>
+              <Field label="Ícone">
+                <AdminSelect value={form.icon ?? "sparkles"} onChange={(e) => set("icon", e.target.value)}>
+                  {ICON_OPTIONS.map((ic) => (
+                    <option key={ic} value={ic}>{ic}</option>
+                  ))}
+                </AdminSelect>
+              </Field>
+            </div>
+
+            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
               <div>
-                <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Preço (coins)</label>
-                <input type="number" min={0} value={form.price} onChange={(e) => set("price", Number(e.target.value))} required className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none focus:border-zinc-500" />
+                <p className="font-inconsolata text-sm text-zinc-200">Disponível na loja</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">Visível para os jogadores</p>
               </div>
+              <Toggle on={form.available} onChange={(v) => set("available", v)} />
             </div>
-            <div>
-              <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Valor (ex: #ff6600, slug)</label>
-              <input value={form.value ?? ""} onChange={(e) => set("value", e.target.value || null)} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none focus:border-zinc-500" />
-            </div>
-            <div>
-              <label className="text-xs font-inconsolata text-zinc-400 mb-1 block">Ícone (FA ou URL)</label>
-              <input value={form.icon ?? ""} onChange={(e) => set("icon", e.target.value || null)} className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm font-inconsolata text-zinc-100 focus:outline-none focus:border-zinc-500" />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.available} onChange={(e) => set("available", e.target.checked)} className="accent-green-500 w-4 h-4" />
-              <span className="text-sm font-inconsolata text-zinc-300">Disponível na loja</span>
-            </label>
+          </div>
 
-            <button type="submit" disabled={saving} className="w-full py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 text-white font-inconsolata rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed">
-              {saving ? "Salvando..." : "Salvar"}
-            </button>
-          </form>
-
-          {/* Preview */}
-          <div className="w-full md:w-52 shrink-0">
-            <p className="text-xs font-inconsolata text-zinc-500 mb-2 text-center">Preview</p>
-            <ItemCard item={previewItem} onEdit={() => {}} onToggle={() => {}} onDelete={() => {}} />
+          {/* Right — preview + actions */}
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+                Pré-visualização
+              </p>
+              <ItemPreview form={form} />
+            </div>
+            <Btn type="submit" variant="primary" icon={Check} className="justify-center w-full" disabled={saving}>
+              {saving ? "Salvando…" : isNew ? "Criar item" : "Salvar"}
+            </Btn>
+            <Btn variant="ghost" className="justify-center w-full" onClick={onClose}>Cancelar</Btn>
           </div>
         </div>
-      </div>
-    </div>
+      </form>
+    </AdminModal>
   );
 }
 
-const FILTERS_TYPE = ["todos", "title", "badge"] as const;
-const FILTERS_STATUS = ["todos", "ativos", "inativos"] as const;
-
+/* ── Main page ── */
 export default function AdminLojaPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { items, loadingItems, loadItems, createItem, updateItem, toggleItem, deleteItem } = useAdminStore();
-  const { success: toastSuccess, error: toastError } = useToast();
-
-  const [filterType, setFilterType] = useState<typeof FILTERS_TYPE[number]>("todos");
-  const [filterStatus, setFilterStatus] = useState<typeof FILTERS_STATUS[number]>("todos");
-  const [modalItem, setModalItem] = useState<AdminShopItem | null | "new">(null);
+  const { success: ok, error: err } = useToast();
+  const [filter, setFilter] = useState("Todos");
+  const [editing, setEditing] = useState<AdminShopItem | "new" | null>(null);
 
   useEffect(() => {
     if (user !== null && !user.isAdmin) router.replace("/");
@@ -202,94 +320,52 @@ export default function AdminLojaPage() {
 
   useEffect(() => { loadItems(); }, [loadItems]);
 
-  const filtered = items.filter((item) => {
-    if (filterType !== "todos" && item.type !== filterType) return false;
-    if (filterStatus === "ativos" && !item.available) return false;
-    if (filterStatus === "inativos" && item.available) return false;
+  const list = items.filter((i) => {
+    if (filter === "Títulos")  return i.type === "title";
+    if (filter === "Emblemas") return i.type === "badge";
+    if (filter === "Inativos") return !i.available;
     return true;
   });
 
-  async function handleSave(data: ItemInput) {
+  async function handleSave(data: ItemInput, id?: number) {
     try {
-      if (modalItem === "new") {
-        await createItem(data);
-        toastSuccess("Item criado!");
-      } else if (modalItem) {
-        await updateItem(modalItem.id, data);
-        toastSuccess("Item atualizado!");
-      }
-    } catch {
-      toastError("Erro ao salvar item.");
-      throw new Error("save failed");
-    }
+      if (id === undefined) { await createItem(data); ok("Item criado!"); }
+      else                  { await updateItem(id, data); ok("Item atualizado!"); }
+    } catch { err("Erro ao salvar item."); throw new Error(); }
   }
 
   async function handleToggle(id: number) {
-    try {
-      await toggleItem(id);
-    } catch {
-      toastError("Erro ao alternar disponibilidade.");
-    }
+    try { await toggleItem(id); }
+    catch { err("Erro ao alternar disponibilidade."); }
   }
 
   async function handleDelete(id: number) {
-    try {
-      await deleteItem(id);
-      toastSuccess("Item removido.");
-    } catch {
-      toastError("Erro ao remover item.");
-    }
+    try { await deleteItem(id); ok("Item removido."); }
+    catch { err("Erro ao remover item."); }
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-jaro text-2xl text-white flex items-center gap-2">
-          🏪 Itens da Loja
-          <span className="text-sm font-inconsolata text-zinc-500 font-normal">({items.length})</span>
-        </h1>
-        <button
-          onClick={() => setModalItem("new")}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-inconsolata rounded-xl transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Novo Item
-        </button>
-      </div>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {FILTERS_TYPE.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilterType(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-inconsolata border transition-colors cursor-pointer ${filterType === f ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}
-          >
-            {f === "todos" ? "Todos" : TYPE_LABELS[f]}
-          </button>
-        ))}
-        <div className="w-px bg-zinc-700 mx-1" />
-        {FILTERS_STATUS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilterStatus(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-inconsolata border transition-colors cursor-pointer ${filterStatus === f ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"}`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <Segmented
+          value={filter} onChange={setFilter}
+          options={["Todos","Títulos","Emblemas","Inativos"]}
+        />
+        <Btn variant="primary" icon={Plus} onClick={() => setEditing("new")}>
+          Novo item
+        </Btn>
       </div>
 
       {loadingItems ? (
-        <p className="text-zinc-500 font-inconsolata text-center py-20">Carregando itens...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-zinc-500 font-inconsolata text-center py-20">Nenhum item encontrado.</p>
+        <p className="py-20 text-center font-inconsolata text-sm text-zinc-500">Carregando itens…</p>
+      ) : list.length === 0 ? (
+        <p className="py-20 text-center font-inconsolata text-sm text-zinc-600">Nenhum item nesta categoria.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((item) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {list.map((i) => (
             <ItemCard
-              key={item.id}
-              item={item}
-              onEdit={(i) => setModalItem(i)}
+              key={i.id} item={i}
+              onEdit={setEditing}
               onToggle={handleToggle}
               onDelete={handleDelete}
             />
@@ -297,13 +373,7 @@ export default function AdminLojaPage() {
         </div>
       )}
 
-      {modalItem !== null && (
-        <ItemModal
-          initial={modalItem === "new" ? null : modalItem}
-          onClose={() => setModalItem(null)}
-          onSave={handleSave}
-        />
-      )}
+      <ItemModal item={editing} onClose={() => setEditing(null)} onSave={handleSave} />
     </div>
   );
 }

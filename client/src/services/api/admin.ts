@@ -65,6 +65,26 @@ export interface AdminDashboard {
 export type ItemInput = Omit<AdminShopItem, "id" | "ownerCount">;
 export type MissionInput = Omit<AdminMission, "id">;
 
+export interface Card {
+  id: number;
+  tipo: string;
+  texto: string;
+  efeito: string;
+  valor: number;
+  ativo: boolean;
+}
+
+export interface Banner {
+  id: number;
+  nome: string;
+  css: string;
+  spriteId?: string;
+  disponibilidade: boolean;
+}
+
+export type CardInput = Omit<Card, "id">;
+export type BannerInput = Omit<Banner, "id">;
+
 export const adminApi = {
   // ShopItems
   listItems: () => api.get<AdminShopItem[]>("/admin/shop/items").then((r) => r.data),
@@ -92,4 +112,23 @@ export const adminApi = {
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; coins: number }>(`/admin/users/${userId}/coins`, { delta }).then((r) => r.data),
+
+  // Cards
+  listCards: () => api.get<Card[]>("/admin/cards").then((r) => r.data),
+  createCard: (data: CardInput) => api.post<Card>("/admin/cards", data).then((r) => r.data),
+  updateCard: (id: number, data: Partial<CardInput>) =>
+    api.patch<Card>(`/admin/cards/${id}`, data).then((r) => r.data),
+  deleteCard: (id: number) => api.delete(`/admin/cards/${id}`),
+
+  // GameSettings
+  getSettings: () => api.get<Record<string, any>>("/admin/settings").then((r) => r.data),
+  updateSettings: (data: Record<string, any>) =>
+    api.patch<Record<string, any>>("/admin/settings", data).then((r) => r.data),
+
+  // Banners
+  listBanners: () => api.get<Banner[]>("/admin/banners").then((r) => r.data),
+  createBanner: (data: BannerInput) => api.post<Banner>("/admin/banners", data).then((r) => r.data),
+  updateBanner: (id: number, data: Partial<BannerInput>) =>
+    api.patch<Banner>(`/admin/banners/${id}`, data).then((r) => r.data),
+  deleteBanner: (id: number) => api.delete(`/admin/banners/${id}`),
 };

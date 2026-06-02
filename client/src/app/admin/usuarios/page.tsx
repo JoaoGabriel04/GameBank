@@ -1,64 +1,189 @@
 "use client";
 
+/**
+ * Usuários — Admin
+ * Salve em: src/app/admin/usuarios/page.tsx
+ * Substitui a versão atual que só tinha CoinAdjust inline.
+ */
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Users, Pencil, Download, Search, Shield, Ban,
+  Check, Coins, MessageSquare, ChevronRight,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import UserAvatar from "@/components/UserAvatar";
-import { Check, X } from "lucide-react";
 import type { AdminUser } from "@/services/api/admin";
+import {
+  Panel, PanelHead, Chip, Toggle, Progress, Segmented,
+  Btn, Field, AdminInput, AdminSelect, AdminAvatar,
+  Drawer, LiveDot,
+} from "@/components/admin/AdminUI";
 
-function CoinAdjust({ user, onAdjust }: { user: AdminUser; onAdjust: (delta: number) => Promise<void> }) {
-  const [open, setOpen] = useState(false);
-  const [delta, setDelta] = useState(0);
+/* ── Status helpers ── */
+const STATUS_TONE: Record<string, "emerald" | "rose" | "zinc"> = {
+  ativo: "emerald", banido: "rose", inativo: "zinc",
+};
+
+/* ── User Edit Drawer ── */
+function UserEditDrawer({
+  user,
+  open,
+  onClose,
+}: {
+  user: AdminUser | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { adjustCoins } = useAdminStore();
+  const { success: ok, error: err } = useToast();
+
+  const [coins, setCoins] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [banned, setBanned] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  async function handle() {
-    if (!delta) return;
+  useEffect(() => {
+    if (user) {
+      setCoins(user.coins);
+      setIsAdmin(user.isAdmin);
+      setBanned(false); // add isBanned to AdminUser when backend supports it
+    }
+  }, [user]);
+
+  if (!user) return null;
+
+  const winRate = user.totalGames > 0
+    ? Math.round((user.totalWins / user.totalGames) * 100)
+    : 0;
+
+  async function handleSave() {
+    if (!user) return;
     setSaving(true);
     try {
-      await onAdjust(delta);
-      setOpen(false);
-      setDelta(0);
+      const delta = coins - user.coins;
+      if (delta !== 0) await adjustCoins(user.id, delta);
+      ok("Usuário atualizado!");
+      onClose();
+    } catch {
+      err("Erro ao salvar.");
     } finally {
       setSaving(false);
     }
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="text-xs font-inconsolata text-zinc-400 hover:text-yellow-400 transition-colors cursor-pointer underline underline-offset-2">
-        Ajustar coins
-      </button>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        value={delta}
-        onChange={(e) => setDelta(Number(e.target.value))}
-        className="w-20 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs font-inconsolata text-zinc-100 focus:outline-none"
-        placeholder="±"
-        autoFocus
-      />
-      <button onClick={handle} disabled={saving || !delta} className="text-green-400 hover:text-green-300 disabled:opacity-40 cursor-pointer">
-        <Check className="w-4 h-4" />
-      </button>
-      <button onClick={() => { setOpen(false); setDelta(0); }} className="text-zinc-400 hover:text-white cursor-pointer">
-        <X className="w-4 h-4" />
-      </button>
-    </div>
+    <Drawer open={open} onClose={onClose} width={460} title="Editar usuário" icon={Users}>
+      <div className="p-5 space-y-5">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <AdminAvatar user={user} size="md" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-jaro text-lg text-white truncate">{user.nome}</h3>
+              {user.isAdmin && <Chip tone="violet">admin</Chip>}
+            </div>
+            <p className="font-inconsolata text-xs text-zinc-500 truncate">{user.email}</p>
+            <p className="font-inconsolata text-[10px] text-zinc-600">
+              #{user.id} · desde {new Date(user.createdAt).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            ["Partidas", user.totalGames],
+            ["Vitórias", user.totalWins],
+            ["Win %",    winRate + "%"],
+            ["Nível",    user.level],
+          ].map(([l, v]) => (
+            <div key={String(l)} className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-center">
+              <p className="font-jaro text-base text-white leading-none">{v}</p>
+              <p className="font-inconsolata text-[9px] text-zinc-500 mt-1">{l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Coins slider */}
+        <Field label={`Coins — ${coins.toLocaleString("pt-BR")}`}>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min={0} max={100000} step={100} value={coins}
+              onChange={(e) => setCoins(+e.target.value)}
+              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
+            />
+            <AdminInput
+              type="number" value={coins} onChange={(e) => setCoins(+e.target.value)}
+              className="!w-24 !py-1.5 text-right"
+            />
+          </div>
+        </Field>
+
+        {/* Level progress */}
+        <div>
+          <div className="flex justify-between font-inconsolata text-[11px] text-zinc-500 mb-1.5">
+            <span>Nível {user.level}</span>
+            <span>{user.xp.toLocaleString("pt-BR")} XP</span>
+          </div>
+          <Progress value={user.xp} max={user.xp + 2000} tone="cyan" />
+        </div>
+
+        {/* Role toggles */}
+        <div className="space-y-2">
+          <div className={`flex items-center justify-between border rounded-xl px-4 py-3 ${
+            isAdmin ? "bg-violet-500/5 border-violet-500/30" : "bg-zinc-900 border-zinc-800"
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <span className="text-violet-400"><Shield size={16} /></span>
+              <div>
+                <p className="font-inconsolata text-sm text-zinc-200">Administrador</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">Acesso total ao console</p>
+              </div>
+            </div>
+            <Toggle on={isAdmin} onChange={setIsAdmin} />
+          </div>
+
+          <div className={`flex items-center justify-between border rounded-xl px-4 py-3 ${
+            banned ? "bg-rose-500/5 border-rose-500/30" : "bg-zinc-900 border-zinc-800"
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <span className="text-rose-400"><Ban size={16} /></span>
+              <div>
+                <p className="font-inconsolata text-sm text-zinc-200">Banir usuário</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">Bloqueia login e partidas</p>
+              </div>
+            </div>
+            <Toggle on={banned} onChange={setBanned} />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <Btn variant="ghost" className="flex-1 justify-center" onClick={onClose}>Cancelar</Btn>
+          <Btn
+            variant="primary" icon={Check} className="flex-1 justify-center"
+            onClick={handleSave} disabled={saving}
+          >
+            {saving ? "Salvando…" : "Salvar"}
+          </Btn>
+        </div>
+      </div>
+    </Drawer>
   );
 }
 
+/* ── Main page ── */
 export default function AdminUsuariosPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { users, loadingUsers, loadUsers, adjustCoins } = useAdminStore();
-  const { success: toastSuccess, error: toastError } = useToast();
+  const { users, loadingUsers, loadUsers } = useAdminStore();
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState("Todos");
+  const [selected, setSelected] = useState<number[]>([]);
+  const [editing, setEditing] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     if (user !== null && !user.isAdmin) router.replace("/");
@@ -66,82 +191,182 @@ export default function AdminUsuariosPage() {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
-  async function handleAdjust(userId: number, delta: number) {
-    try {
-      await adjustCoins(userId, delta);
-      toastSuccess(`Coins ajustados com sucesso.`);
-    } catch {
-      toastError("Erro ao ajustar coins.");
-      throw new Error("adjust failed");
-    }
-  }
+  const filtered = users.filter((u) => {
+    if (filter === "Admins" && !u.isAdmin) return false;
+    // if (filter === "Banidos" && !u.isBanned) return false; // enable when backend supports
+    const term = q.toLowerCase();
+    return u.nome.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
+  });
+
+  const toggleSel = (id: number) =>
+    setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+
+  const adminsCount = users.filter((u) => u.isAdmin).length;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-jaro text-2xl text-white flex items-center gap-2">
-          👥 Usuários
-          <span className="text-sm font-inconsolata text-zinc-500 font-normal">({users.length})</span>
-        </h1>
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <Segmented
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "Todos",   label: `Todos ${users.length}` },
+            { value: "Admins",  label: `Admins ${adminsCount}` },
+          ]}
+        />
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <AdminInput
+              placeholder="Buscar nome ou e-mail"
+              value={q} onChange={(e) => setQ(e.target.value)}
+              className="!pl-9"
+            />
+          </div>
+          <Btn variant="ghost" icon={Download} size="sm" className="hidden sm:inline-flex">
+            Exportar
+          </Btn>
+        </div>
       </div>
 
-      {loadingUsers ? (
-        <p className="text-zinc-500 font-inconsolata text-center py-20">Carregando usuários...</p>
-      ) : (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left px-4 py-3 text-xs font-inconsolata text-zinc-500 uppercase tracking-wide">Usuário</th>
-                  <th className="text-left px-4 py-3 text-xs font-inconsolata text-zinc-500 uppercase tracking-wide hidden sm:table-cell">Email</th>
-                  <th className="text-center px-4 py-3 text-xs font-inconsolata text-zinc-500 uppercase tracking-wide">Nível</th>
-                  <th className="text-right px-4 py-3 text-xs font-inconsolata text-zinc-500 uppercase tracking-wide">Coins</th>
-                  <th className="text-center px-4 py-3 text-xs font-inconsolata text-zinc-500 uppercase tracking-wide hidden md:table-cell">Partidas</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <UserAvatar avatarUrl={u.avatarUrl} avatarUpdatedAt={u.avatarUpdatedAt} nome={u.nome} size="sm" />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-inconsolata text-zinc-100">{u.nome}</span>
-                            {u.isAdmin && (
-                              <span className="text-[9px] font-inconsolata bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest">
-                                Admin
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs font-inconsolata text-zinc-500">#{u.id}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="text-xs font-inconsolata text-zinc-400">{u.email}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="text-sm font-inconsolata text-zinc-200">{u.level}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="text-sm font-inconsolata text-yellow-400 font-bold">{u.coins.toLocaleString("pt-BR")}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center hidden md:table-cell">
-                      <span className="text-xs font-inconsolata text-zinc-400">{u.totalGames}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <CoinAdjust user={u} onAdjust={(delta) => handleAdjust(u.id, delta)} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Batch action bar */}
+      {selected.length > 0 && (
+        <div className="flex items-center gap-3 bg-cyan-500/5 border border-cyan-500/30 rounded-xl px-4 py-2.5">
+          <span className="font-inconsolata text-xs text-cyan-300">
+            {selected.length} selecionado(s)
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <Btn variant="subtle" icon={Coins} size="sm">Dar coins</Btn>
+            <Btn variant="subtle" icon={MessageSquare} size="sm">Notificar</Btn>
+            <Btn variant="danger" icon={Ban} size="sm">Banir</Btn>
           </div>
         </div>
       )}
+
+      {/* Table */}
+      <Panel flush>
+        {loadingUsers ? (
+          <p className="py-20 text-center font-inconsolata text-sm text-zinc-500">
+            Carregando usuários…
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="border-b border-zinc-800 text-left">
+                  <th className="pl-4 py-2.5 w-8" />
+                  {["Usuário", "Nível", "Coins", "Vitórias", "Win %", "Status", ""].map((h, i) => (
+                    <th
+                      key={i}
+                      className={`px-4 py-2.5 font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500
+                        ${[2, 3, 4].includes(i) ? "text-right" : ""}
+                        ${i === 3 ? "hidden md:table-cell" : ""}
+                        ${i === 4 ? "hidden lg:table-cell" : ""}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((u) => {
+                  const wr = u.totalGames > 0
+                    ? Math.round((u.totalWins / u.totalGames) * 100)
+                    : 0;
+                  const isSel = selected.includes(u.id);
+                  return (
+                    <tr
+                      key={u.id}
+                      className="border-b border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
+                    >
+                      <td className="pl-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleSel(u.id)}
+                          className={`w-4 h-4 rounded border grid place-items-center cursor-pointer transition-colors ${
+                            isSel
+                              ? "bg-cyan-500 border-cyan-500"
+                              : "border-zinc-600 hover:border-zinc-400"
+                          }`}
+                        >
+                          {isSel && <Check size={10} className="text-zinc-950" strokeWidth={3} />}
+                        </button>
+                      </td>
+
+                      {/* User */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <AdminAvatar user={u} size="sm" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-inconsolata text-sm text-zinc-100 truncate">
+                                {u.nome}
+                              </span>
+                              {u.isAdmin && <Chip tone="violet">admin</Chip>}
+                            </div>
+                            <span className="font-inconsolata text-[10px] text-zinc-500 truncate block">
+                              {u.email}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Level */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-jaro text-sm text-cyan-300 w-5 shrink-0">
+                            {u.level}
+                          </span>
+                          <Progress value={u.xp} max={u.xp + 2000} tone="cyan" className="w-14" height={4} />
+                        </div>
+                      </td>
+
+                      {/* Coins */}
+                      <td className="px-4 py-3 text-right font-inconsolata text-sm text-amber-300">
+                        {u.coins.toLocaleString("pt-BR")}
+                      </td>
+
+                      {/* Wins */}
+                      <td className="px-4 py-3 text-right font-inconsolata text-sm text-zinc-300 hidden md:table-cell">
+                        {u.totalWins}
+                      </td>
+
+                      {/* Win % */}
+                      <td className="px-4 py-3 text-right font-inconsolata text-sm text-zinc-400 hidden lg:table-cell">
+                        {wr}%
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <Chip tone="emerald" dot>ativo</Chip>
+                      </td>
+
+                      {/* Edit */}
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setEditing(u)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-zinc-800 cursor-pointer transition-colors"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <p className="py-12 text-center font-inconsolata text-sm text-zinc-600">
+                Nenhum usuário encontrado.
+              </p>
+            )}
+          </div>
+        )}
+      </Panel>
+
+      <UserEditDrawer user={editing} open={!!editing} onClose={() => setEditing(null)} />
     </div>
   );
 }

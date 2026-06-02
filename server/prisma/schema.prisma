@@ -346,3 +346,34 @@ model GameResult {
   @@index([sessionId])
   @@map("resultados_partidas")
 }
+
+model Card {
+  id      Int     @id @default(autoincrement())
+  tipo    String  // "sorte" | "revés"
+  texto   String
+  efeito  String  // "ganhar" | "pagar" | "pagarPct" | "pagarPorCasa" | "prisao" | "sairPrisao"
+  valor   Int     @default(0)
+  ativo   Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("cartas")
+}
+
+model GameSettings {
+  key   String   @id @unique
+  value String
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("jogo_configuracoes")
+}
+
+model Banner {
+  id        Int     @id @default(autoincrement())
+  nome      String
+  css       String
+  spriteId  String?
+  disponibilidade Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("banners")
+}

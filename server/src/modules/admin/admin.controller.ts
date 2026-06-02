@@ -131,6 +131,102 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  // Cards
+  listCards: async (_req: Request, res: Response) => {
+    try {
+      res.json(await adminService.listCards());
+    } catch (err) { parseError(res, err); }
+  },
+
+  createCard: async (req: Request, res: Response) => {
+    try {
+      const data = z.object({
+        tipo: z.string().min(1),
+        texto: z.string().min(1),
+        efeito: z.string().min(1),
+        valor: z.number().int().min(0),
+        ativo: z.boolean(),
+      }).parse(req.body);
+      res.status(201).json(await adminService.createCard(data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  updateCard: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const data = z.object({
+        tipo: z.string().min(1),
+        texto: z.string().min(1),
+        efeito: z.string().min(1),
+        valor: z.number().int().min(0),
+        ativo: z.boolean(),
+      }).partial().parse(req.body);
+      res.json(await adminService.updateCard(id, data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  deleteCard: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      await adminService.deleteCard(id);
+      res.status(204).send();
+    } catch (err) { parseError(res, err); }
+  },
+
+  // GameSettings
+  getSettings: async (_req: Request, res: Response) => {
+    try {
+      res.json(await adminService.getSettings());
+    } catch (err) { parseError(res, err); }
+  },
+
+  updateSettings: async (req: Request, res: Response) => {
+    try {
+      const data = z.record(z.string(), z.any()).parse(req.body);
+      res.json(await adminService.updateSettings(data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  // Banners
+  listBanners: async (_req: Request, res: Response) => {
+    try {
+      res.json(await adminService.listBanners());
+    } catch (err) { parseError(res, err); }
+  },
+
+  createBanner: async (req: Request, res: Response) => {
+    try {
+      const data = z.object({
+        nome: z.string().min(1),
+        css: z.string().min(1),
+        spriteId: z.string().optional(),
+        disponibilidade: z.boolean().default(true),
+      }).parse(req.body);
+      res.status(201).json(await adminService.createBanner(data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  updateBanner: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const data = z.object({
+        nome: z.string().min(1),
+        css: z.string().min(1),
+        spriteId: z.string(),
+        disponibilidade: z.boolean(),
+      }).partial().parse(req.body);
+      res.json(await adminService.updateBanner(id, data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  deleteBanner: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      await adminService.deleteBanner(id);
+      res.status(204).send();
+    } catch (err) { parseError(res, err); }
+  },
+
   getDashboard: async (_req: Request, res: Response) => {
     try {
       const [

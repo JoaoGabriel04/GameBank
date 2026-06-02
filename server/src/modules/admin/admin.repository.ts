@@ -114,4 +114,79 @@ export const adminRepository = {
       data: { coins: { increment: delta } },
       select: { id: true, nome: true, coins: true },
     }),
+
+  // Cards
+  findAllCards: () =>
+    prisma.card.findMany({ orderBy: { id: "asc" } }),
+
+  findCardById: (id: number) =>
+    prisma.card.findUnique({ where: { id } }),
+
+  createCard: (data: {
+    tipo: string;
+    texto: string;
+    efeito: string;
+    valor: number;
+    ativo: boolean;
+  }) => prisma.card.create({ data }),
+
+  updateCard: (id: number, data: Partial<{
+    tipo: string;
+    texto: string;
+    efeito: string;
+    valor: number;
+    ativo: boolean;
+  }>) => prisma.card.update({ where: { id }, data }),
+
+  deleteCard: (id: number) =>
+    prisma.card.delete({ where: { id } }),
+
+  // GameSettings
+  findAllSettings: () =>
+    prisma.gameSettings.findMany(),
+
+  findSettingByKey: (key: string) =>
+    prisma.gameSettings.findUnique({ where: { key } }),
+
+  updateSetting: (key: string, value: string) =>
+    prisma.gameSettings.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    }),
+
+  updateSettingsBatch: async (settings: Record<string, string>) => {
+    const updates = Object.entries(settings).map(([key, value]) =>
+      prisma.gameSettings.upsert({
+        where: { key },
+        create: { key, value },
+        update: { value },
+      })
+    );
+    await prisma.$transaction(updates);
+  },
+
+  // Banners
+  findAllBanners: () =>
+    prisma.banner.findMany({ orderBy: { id: "asc" } }),
+
+  findBannerById: (id: number) =>
+    prisma.banner.findUnique({ where: { id } }),
+
+  createBanner: (data: {
+    nome: string;
+    css: string;
+    spriteId?: string;
+    disponibilidade: boolean;
+  }) => prisma.banner.create({ data }),
+
+  updateBanner: (id: number, data: Partial<{
+    nome: string;
+    css: string;
+    spriteId: string;
+    disponibilidade: boolean;
+  }>) => prisma.banner.update({ where: { id }, data }),
+
+  deleteBanner: (id: number) =>
+    prisma.banner.delete({ where: { id } }),
 };

@@ -30,4 +30,20 @@ adminRouter.delete("/missions/:id", adminController.deleteMission);
 adminRouter.get("/users", adminController.listUsers);
 adminRouter.patch("/users/:id/coins", adminController.adjustCoins);
 
+// Cards
+adminRouter.get("/cards", adminController.listCards);
+adminRouter.post("/cards", adminController.createCard);
+adminRouter.patch("/cards/:id", adminController.updateCard);
+adminRouter.delete("/cards/:id", adminController.deleteCard);
+
+// GameSettings
+adminRouter.get("/settings", adminController.getSettings);
+adminRouter.patch("/settings", adminController.updateSettings);
+
+// Banners
+adminRouter.get("/banners", adminController.listBanners);
+adminRouter.post("/banners", adminController.createBanner);
+adminRouter.patch("/banners/:id", adminController.updateBanner);
+adminRouter.delete("/banners/:id", adminController.deleteBanner);
+
 export default adminRouter;
