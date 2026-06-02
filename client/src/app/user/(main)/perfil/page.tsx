@@ -229,7 +229,7 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                 key={item.id}
                 type="button"
                 onClick={() => handleEquip(item)}
-                className={`relative rounded-xl border p-3 text-left transition-all cursor-pointer ${item.equipped
+                className={`relative overflow-hidden rounded-xl border p-3 text-left transition-all cursor-pointer ${item.equipped
                     ? acc.ring
                     : "border-zinc-700 bg-zinc-800/60 hover:border-zinc-500"
                   }`}

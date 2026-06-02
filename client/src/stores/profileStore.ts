@@ -56,6 +56,14 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     try {
       const profile = await getProfileApi()
       set({ profile, loading: { ...get().loading, profile: false } })
+      const authUser = useAuthStore.getState().user
+      if (authUser) {
+        useAuthStore.getState().updateUser({
+          ...authUser,
+          banner: profile.banner ?? null,
+          spriteId: profile.spriteId ?? null,
+        })
+      }
     } catch (err: any) {
       set({ error: err?.response?.data?.message || "Erro ao carregar perfil", loading: { ...get().loading, profile: false } })
     }
