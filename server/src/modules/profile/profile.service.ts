@@ -63,6 +63,7 @@ export class ProfileService {
         icon: i.icon,
         value: i.value,
         type: i.type,
+        spriteId: i.spriteId ?? null,
         equipped: i.equipped,
       })),
       missions: user.missions.map((m) => ({

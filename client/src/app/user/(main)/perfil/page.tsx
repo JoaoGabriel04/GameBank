@@ -47,7 +47,14 @@ const INV_ACCENT: Record<InvTab, { color: string; ring: string }> = {
 function ProfileHero({ onEdit }: { onEdit: () => void }) {
   const { user } = useAuthStore();
   const { profile } = useProfileStore();
+
   if (!profile || !user) return null;
+
+  const equippedBanner = profile.items?.find(
+    (i) => i.type === "banner" && i.equipped
+  );
+  const resolvedSpriteId =
+    profile.spriteId ?? user.spriteId ?? equippedBanner?.spriteId ?? null;
 
   const xpCurrent = xpForLevel(profile.level);
   const xpPrevious = totalXpForLevels(profile.level);
@@ -60,7 +67,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
       <div className="h-32 rounded-t-2xl relative overflow-hidden">
         <UserBanner
           banner={profile.banner ?? user.banner}
-          spriteId={profile.spriteId ?? user.spriteId}
+          spriteId={resolvedSpriteId}
           className="absolute inset-0 w-full h-full"
         />
         <div
