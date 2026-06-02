@@ -19,7 +19,14 @@ export function mapSessionPlayers<T extends {
     const items = (user?.items ?? []) as Array<{ equipped: boolean; type: string; value: string | null }>;
     const badgeItem = items.find((i) => i.equipped && i.type === "badge");
     const badgeValue = badgeItem?.value;
-    const parsedBadge = badgeValue ? JSON.parse(badgeValue) : null;
+    let parsedBadge = null;
+    if (badgeValue) {
+      try {
+        parsedBadge = JSON.parse(badgeValue);
+      } catch {
+        // Invalid JSON in badge value, skip parsing
+      }
+    }
     return {
       ...rest,
       avatarUrl: user?.avatarUrl ?? null,

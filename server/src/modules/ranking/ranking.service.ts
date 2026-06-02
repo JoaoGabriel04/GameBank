@@ -22,9 +22,23 @@ export class RankingService {
     const result = users.map((user, index) => {
       const items = (user.items ?? []) as unknown as UserItemSnapshot[];
       const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
-      const parsedTitle = equippedTitle ? JSON.parse(equippedTitle) : null;
+      let parsedTitle = null;
+      if (equippedTitle) {
+        try {
+          parsedTitle = JSON.parse(equippedTitle);
+        } catch {
+          // Invalid JSON in title value, skip parsing
+        }
+      }
       const equippedBadge = items.find((i) => i.equipped && i.type === "badge")?.value;
-      const parsedBadge = equippedBadge ? JSON.parse(equippedBadge) : null;
+      let parsedBadge = null;
+      if (equippedBadge) {
+        try {
+          parsedBadge = JSON.parse(equippedBadge);
+        } catch {
+          // Invalid JSON in badge value, skip parsing
+        }
+      }
       const { items: _, ...rest } = user;
       return {
         position: index + 1,
