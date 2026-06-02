@@ -1,9 +1,9 @@
--- 1. Inserir registros na tabela banners
-INSERT INTO "banners" ("nome", "css", "disponibilidade", "createdAt")
+-- 1. Inserir registros na tabela banners (com spriteId)
+INSERT INTO "banners" ("nome", "css", "spriteId", "disponibilidade", "createdAt")
 VALUES
-  ('Floresta',    'preset:banner-01', true, NOW()),
-  ('Oceano',      'preset:banner-02', true, NOW()),
-  ('Crepúsculo',  'preset:banner-03', true, NOW())
+  ('Floresta',    'preset:banner-01', 'palette', true, NOW()),
+  ('Oceano',      'preset:banner-02', 'sparkles', true, NOW()),
+  ('Crepúsculo',  'preset:banner-03', 'crown', true, NOW())
 ON CONFLICT DO NOTHING;
 
 -- 2. Inserir ShopItems para esses banners (price=0, available=false)
