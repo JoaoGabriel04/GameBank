@@ -5,9 +5,7 @@ import { X, Camera } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import UserAvatar from "@/components/UserAvatar";
-import UserBanner from "@/components/UserBanner";
 import { PROFILE_AVATAR_PRESETS, presetAvatarValue } from "@/constants/avatars";
-import { PROFILE_BANNER_PRESETS } from "@/constants/banners";
 import { toast } from "@/lib/toast";
 
 const MAX_NICK = 30;
@@ -28,7 +26,6 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
   const [avatarPreset, setAvatarPreset] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [banner, setBanner] = useState<string>("banner-01");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -38,8 +35,6 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
     setPreviewUrl(null);
     const current = profile.avatarUrl;
     setAvatarPreset(current?.startsWith("preset:") ? current.replace("preset:", "") : null);
-    const currentBanner = profile.banner;
-    setBanner(currentBanner?.startsWith("preset:") ? currentBanner.replace("preset:", "") : "banner-01");
   }, [isOpen, profile]);
 
   useEffect(() => {
@@ -85,7 +80,6 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
 
     const formData = new FormData();
     formData.append("nome", trimmed);
-    formData.append("banner", banner);
     if (pendingFile) {
       formData.append("avatar", pendingFile);
     } else if (avatarPreset) {
@@ -124,32 +118,6 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
-
-          {/* ── Banner ── */}
-          <div>
-            <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-2">
-              Banner
-            </p>
-            <UserBanner banner={`preset:${banner}`} className="h-16 w-full rounded-xl mb-3" />
-            <div className="grid grid-cols-3 gap-2">
-              {PROFILE_BANNER_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setBanner(preset.id)}
-                  className={`h-10 rounded-lg bg-gradient-to-r ${preset.gradient} transition-all cursor-pointer disabled:opacity-50 ${
-                    banner === preset.id
-                      ? "ring-2 ring-green-400 scale-105"
-                      : "opacity-70 hover:opacity-100 hover:scale-105"
-                  }`}
-                  title={preset.label}
-                >
-                  <span className="text-white/80 text-xs font-inconsolata drop-shadow">{preset.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex flex-col items-center gap-2">
             <div className="relative">

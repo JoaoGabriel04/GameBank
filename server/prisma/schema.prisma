@@ -43,7 +43,8 @@ model User {
   avatarUrl        String?
   avatarPublicId   String?
   avatarUpdatedAt  DateTime?
-  banner           String?   @default("preset:banner-01")
+  banner           String?
+  spriteId         String?
   profileComplete  Boolean   @default(false)
   isAdmin          Boolean   @default(false)
   createdAt        DateTime  @default(now())
@@ -55,11 +56,17 @@ model User {
   totalWins    Int       @default(0)
   totalTop3    Int       @default(0)
 
+  banned       Boolean   @default(false)
+  bannedAt     DateTime?
+  banReason    String?
+
+  items        Json      @default("[]")
+
   sessions        Session[]
   players         SessionPlayer[]
   missions        UserMission[]
-  items           UserItem[]
   gameResults     GameResult[]
+  auditLogs       AuditLog[]
 
   @@map("users")
 }
@@ -293,6 +300,8 @@ model UserMission {
   progress    Float     @default(0)
   completed   Boolean   @default(false)
   completedAt DateTime?
+  claimed     Boolean   @default(false)
+  claimedAt   DateTime?
 
   user    User    @relation(fields: [userId], references: [id])
   mission Mission @relation(fields: [missionId], references: [id])
@@ -307,27 +316,14 @@ model ShopItem {
   description String
   price       Int
   icon        String?
-  type        String   // title | badge | color
+  type        String   // title | badge | banner
   value       String?
   available   Boolean  @default(true)
 
-  userItems UserItem[]
+  bannerId Int?
+  banner   Banner? @relation(fields: [bannerId], references: [id], onDelete: SetNull)
 
   @@map("loja_itens")
-}
-
-model UserItem {
-  id         Int       @id @default(autoincrement())
-  userId     Int
-  itemId     Int
-  equipped   Boolean   @default(false)
-  acquiredAt DateTime  @default(now())
-
-  user User     @relation(fields: [userId], references: [id])
-  item ShopItem @relation(fields: [itemId], references: [id])
-
-  @@unique([userId, itemId])
-  @@map("usuario_itens")
 }
 
 model GameResult {
@@ -375,5 +371,23 @@ model Banner {
   disponibilidade Boolean @default(true)
   createdAt DateTime @default(now())
 
+  shopItems ShopItem[]
+
   @@map("banners")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  target    String?
+  metadata  Json?
+  severity  String   @default("info") // info | success | warn | danger
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
 }

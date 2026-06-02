@@ -1,95 +1,86 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from "react"
-import { Pencil, Settings, Gamepad2, Crown, Trophy, Star, Clock } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/stores/authStore"
-import { useProfileStore } from "@/stores/profileStore"
+/**
+ * Perfil — redesign
+ * Salve em: src/app/user/(main)/perfil/page.tsx
+ *
+ * Melhorias vs atual:
+ * - Hero: UserBanner sem overflow-hidden bug, sprite visível, avatar sem clip
+ * - Nome em linha única, título + badge na linha abaixo
+ * - Inventário por tipo (Títulos / Emblemas / Banners) com equip/desequip
+ * - Histórico de partidas full
+ * - Mantém EditProfileModal, UserAvatar, UserBanner, UserBadge, BadgeCollection
+ */
 
+import { useEffect, useState } from "react";
+import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp, Clock } from "lucide-react";
+import Link from "next/link";
+import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
+import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop";
+import { getProfileHistoryApi } from "@/services/api/profile";
+import { useToast } from "@/components/Toast";
+import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
+import UserBadge from "@/components/UserBadge";
+import BadgeCollection from "@/components/BadgeCollection";
+import EditProfileModal from "@/components/EditProfileModal";
+import { Progress, Chip, Panel, PanelHead, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
+import type { UserItem, UserMission, GameResult } from "@/types/shop";
 
-import UserAvatar from "@/components/UserAvatar"
-import EditProfileModal from "@/components/EditProfileModal"
-import UserBanner from "@/components/UserBanner"
-import UserBadge from "@/components/UserBadge"
-import BadgeCollection from "@/components/BadgeCollection"
-import { getProfileHistoryApi } from "@/services/api/profile"
+/* ─── Inventory type tabs ─── */
+type InvTab = "title" | "badge" | "banner";
 
-const xpForLevel = (level: number) => Math.floor(200 * Math.pow(1.04, level - 1))
-const totalXpForLevels = (level: number) => {
-  let total = 0
-  for (let i = 1; i < level; i++) total += xpForLevel(i)
-  return total
-}
+const INV_TABS: { id: InvTab; label: string }[] = [
+  { id: "title", label: "Títulos" },
+  { id: "badge", label: "Emblemas" },
+  { id: "banner", label: "Banners" },
+];
 
-const TYPE_GRADIENT: Record<string, string> = {
-  title: "from-violet-500/20 to-violet-600/5 border-violet-500/30 text-violet-300",
-  badge: "from-cyan-500/20 to-cyan-600/5 border-cyan-500/30 text-cyan-300",
-}
+const INV_ACCENT: Record<InvTab, { color: string; ring: string }> = {
+  title: { color: "#a78bfa", ring: "border-violet-500/50 bg-violet-500/5" },
+  badge: { color: "#22d3ee", ring: "border-cyan-500/50 bg-cyan-500/5" },
+  banner: { color: "#34d399", ring: "border-emerald-500/50 bg-emerald-500/5" },
+};
 
-const MISSION_ICON: Record<string, string> = {
-  properties_bought: "🏢",
-  houses_built: "🏠",
-  rent_earned: "💰",
-  games_played: "🎮",
-  wins: "👑",
-  top3: "🏆",
-}
+/* ─── Profile hero ─── */
+function ProfileHero({ onEdit }: { onEdit: () => void }) {
+  const { user } = useAuthStore();
+  const { profile } = useProfileStore();
+  if (!profile || !user) return null;
 
-export default function PerfilPage() {
-  const router = useRouter()
-  const { user, token, loadFromStorage } = useAuthStore()
-  const { profile, loading, loadProfile } = useProfileStore()
-  const [history, setHistory] = useState<any[] | null>(null)
-  const [editOpen, setEditOpen] = useState(false)
-
-  useEffect(() => { loadFromStorage() }, [loadFromStorage])
-
-  useEffect(() => {
-    if (token && !profile) loadProfile()
-  }, [token, profile, loadProfile])
-  useEffect(() => {
-    if (token && history === null) {
-      getProfileHistoryApi().then(setHistory).catch(() => setHistory([]))
-    }
-  }, [token, history])
-
-  if (!user || !token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-400">
-        <p>Faça login para ver seu perfil.</p>
-      </div>
-    )
-  }
-
-  if (loading.profile || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-400">
-        <p>Carregando...</p>
-      </div>
-    )
-  }
-
-  const xpCurrent = xpForLevel(profile.level)
-  const xpPrevious = totalXpForLevels(profile.level)
-  const xpIntoLevel = profile.xp - xpPrevious
-  const xpProgress = Math.min((xpIntoLevel / xpCurrent) * 100, 100)
-  const equippedItems = profile.items.filter((i: any) => i.equipped)
+  const xpCurrent = xpForLevel(profile.level);
+  const xpPrevious = totalXpForLevels(profile.level);
+  const xpInto = profile.xp - xpPrevious;
+  const pct = Math.min(Math.round((xpInto / xpCurrent) * 100), 100);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white pb-24">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950">
+      {/* Banner (not overflow-hidden so avatar clip never happens) */}
+      <div className="h-32 rounded-t-2xl relative overflow-hidden">
+        <UserBanner
+          banner={profile.banner ?? user.banner}
+          spriteId={profile.spriteId ?? user.spriteId}
+          className="absolute inset-0 w-full h-full"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }}
+        />
+        {/* Edit button */}
+        <button
+          onClick={onEdit}
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 font-inconsolata text-xs bg-black/50 text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 cursor-pointer backdrop-blur-sm transition-colors"
+        >
+          <Pencil size={12} />Editar perfil
+        </button>
+      </div>
 
-
-      {/* Glow decorativo */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
-
-
-      <main className="pt-30 px-4 max-w-lg mx-auto space-y-4">
-        <div className="bg-zinc-800 rounded-2xl">
-          <div className="overflow-hidden rounded-t-2xl">
-            <UserBanner banner={profile.banner} className="h-20 w-full" />
-          </div>
-          <div className="px-4 pb-4 flex items-center gap-4 -mt-6">
+      {/* Content below banner — avatar overlaps via negative margin */}
+      <div className="px-4 pb-5">
+        <div className="flex items-start justify-between -mt-9 mb-2">
+          {/* Avatar with ring forms its own circular clip */}
+          <div className="ring-4 ring-zinc-950 rounded-full z-10 relative">
             <UserAvatar
               avatarUrl={profile.avatarUrl}
               avatarUpdatedAt={profile.avatarUpdatedAt}
@@ -97,167 +88,298 @@ export default function PerfilPage() {
               size="lg"
               ring
             />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold truncate">{profile.nome}</h1>
-                <UserBadge badge={profile.badge} variant="medium" showLabel={true} />
-              </div>
-              {profile.title && <p className="text-sm text-green-400">{profile.title}</p>}
-              <p className="text-xs text-zinc-400">Nível {profile.level}</p>
+          </div>
+          {/* Coins top-right */}
+          <div className="text-right pt-10 shrink-0 flex flex-col items-end gap-2">
+
+            <div className="inline-flex items-center gap-1.5 rounded-xl">
+              <span className="font-jaro text-base text-amber-300">
+                {profile.coins.toLocaleString("pt-BR")}
+              </span>
+              <span className="font-inconsolata text-[10px] text-amber-500">coins</span>
             </div>
-            <div className="text-right flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setEditOpen(true)}
-                  className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
-                  title="Editar perfil"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <Link
-                  href="/user/configuracoes"
-                  className="text-zinc-500 hover:text-zinc-200 transition-colors"
-                  title="Configurações"
-                >
-                  <Settings className="w-4 h-4" />
-                </Link>
-              </div>
-              <p className="text-sm text-yellow-400 font-bold">{profile.coins} coins</p>
-              <p className="text-xs text-zinc-500">ID #{profile.id}</p>
-            </div>
+
+            <Link
+              href="/user/configuracoes"
+              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+              title="Configurações"
+            >
+              <Settings size={16} />
+            </Link>
+
           </div>
         </div>
 
-        <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
+        {/* Name row — never wraps the name */}
+        <div className="flex items-center gap-2 flex-wrap mt-1">
+          <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
+          <UserBadge badge={profile.badge ?? user.badge} variant="small" />
+        </div>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {profile.title && <Chip tone="emerald">{profile.title}</Chip>}
+          <span className="font-inconsolata text-xs text-zinc-500">
+            Nível {profile.level} · #{profile.id}
+          </span>
+        </div>
 
-        <div className="bg-zinc-800 rounded-2xl p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-inconsolata text-zinc-400">Nível {profile.level}</span>
-            <span className="text-xs font-inconsolata text-zinc-500">{xpIntoLevel.toLocaleString()} / {xpCurrent.toLocaleString()} XP</span>
+        {/* XP progress */}
+        <div className="mt-3">
+          <div className="flex justify-between font-inconsolata text-[10px] text-zinc-500 mb-1.5">
+            <span>{xpInto.toLocaleString("pt-BR")} XP</span>
+            <span>{pct}% → nível {profile.level + 1}</span>
           </div>
-          <div className="w-full h-3 bg-zinc-950 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-700"
-              style={{ width: `${xpProgress}%` }}
+          <Progress value={xpInto} max={xpCurrent} tone="green" height={6} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Stats row ─── */
+interface ProfileStats {
+  totalGames: number;
+  totalWins: number;
+  totalTop3: number;
+}
+
+function StatsRow({ profile }: { profile: ProfileStats }) {
+  const stats = [
+    { icon: Gamepad2, value: profile.totalGames, label: "Partidas", color: "text-violet-400" },
+    { icon: Crown, value: profile.totalWins, label: "Vitórias", color: "text-yellow-400" },
+    { icon: Trophy, value: profile.totalTop3, label: "Top 3", color: "text-amber-400" },
+    {
+      icon: TrendingUp, value: profile.totalGames > 0
+        ? Math.round((profile.totalWins / profile.totalGames) * 100) + "%"
+        : "0%",
+      label: "Win Rate", color: "text-green-400"
+    },
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {stats.map(({ icon: Icon, value, label, color }) => (
+        <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+          <Icon size={16} className={`mx-auto mb-1 ${color}`} />
+          <p className="font-jaro text-xl text-white leading-none">{value}</p>
+          <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{label}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Inventory with type tabs ─── */
+function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banner?: string | null }; onRefresh: () => void }) {
+  const [tab, setTab] = useState<InvTab>("title");
+  const [equipping, setEq] = useState<number | null>(null);
+  const { success: ok, error: err } = useToast();
+  const { loadProfile } = useProfileStore();
+
+  const items: UserItem[] = profile.items ?? [];
+  const acc = INV_ACCENT[tab];
+
+  const owned = items.filter((i) => i.type === tab);
+
+  async function handleEquip(item: UserItem) {
+    setEq(item.id);
+    try {
+      await equipShopItemApi(item.id);
+      const wasEquipped = item.equipped;
+      ok(wasEquipped ? `"${item.name}" desequipado.` : `"${item.name}" equipado!`);
+      loadProfile();
+    } catch {
+      err("Erro ao equipar item.");
+    } finally {
+      setEq(null);
+    }
+  }
+
+  return (
+    <Panel flush>
+      <PanelHead
+        title="Inventário"
+        sub="Seus cosméticos"
+        right={
+          <div className="flex gap-1 p-1 mr-1">
+            {INV_TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`px-2.5 py-1 rounded-lg font-inconsolata text-[11px] cursor-pointer transition-all ${tab === id
+                    ? "text-white font-semibold"
+                    : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                style={tab === id ? { background: INV_ACCENT[id].color + "22", color: INV_ACCENT[id].color } : undefined}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        }
+      />
+      <div className="p-4">
+        {owned.length === 0 ? (
+          <p className="font-inconsolata text-sm text-zinc-600 italic text-center py-4">
+            Você não possui {INV_TABS.find((t) => t.id === tab)?.label.toLowerCase()} ainda.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {owned.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleEquip(item)}
+                className={`relative rounded-xl border p-3 text-left transition-all cursor-pointer ${item.equipped
+                    ? acc.ring
+                    : "border-zinc-700 bg-zinc-800/60 hover:border-zinc-500"
+                  }`}
+              >
+                {item.equipped && (
+                  <span
+                    className="absolute top-2 right-2 w-2 h-2 rounded-full"
+                    style={{ background: acc.color }}
+                  />
+                )}
+                {/* Banner preview */}
+                {item.type === "banner" && item.value && (
+                  <UserBanner
+                    banner={item.value}
+                    className="h-10 rounded-lg mb-2 w-full"
+                  />
+                )}
+                <p
+                  className="font-jaro text-sm leading-tight"
+                  style={{ color: item.type === "banner" && item.value ? item.value : "#f4f4f5" }}
+                >
+                  {item.name}
+                </p>
+                <p className="font-inconsolata text-[9px] text-zinc-500 mt-0.5">
+                  {item.equipped
+                    ? "✓ Equipado — clique para desequipar"
+                    : "Clique para equipar"}
+                </p>
+                {equipping === item.id && (
+                  <div className="absolute inset-0 grid place-items-center bg-zinc-900/80 rounded-xl">
+                    <Loader2 size={16} className="animate-spin text-green-400" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* BadgeCollection for badges tab */}
+        {tab === "badge" && (
+          <div className="mt-4">
+            <BadgeCollection
+              userBadges={items
+                .filter((i) => i.type === "badge")
+                .map((i) => {
+                  try { return JSON.parse(i.value ?? "")?.badge; } catch { return null; }
+                })
+                .filter(Boolean)}
+              isOwner
             />
           </div>
-          <p className="text-[10px] font-inconsolata text-zinc-600 text-right mt-1">XP total: {profile.xp.toLocaleString()}</p>
-        </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { icon: <Gamepad2 className="w-6 h-6 text-green-400" />, value: profile.totalGames, label: "Partidas" },
-            { icon: <Crown className="w-6 h-6 text-yellow-400" />, value: profile.totalWins, label: "Vitórias" },
-            { icon: <Trophy className="w-6 h-6 text-amber-500" />, value: profile.totalTop3, label: "Top 3" },
-          ].map(({ icon, value, label }) => (
-            <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-center">
-              <div className="flex justify-center mb-1">{icon}</div>
-              <p className="font-jaro text-2xl text-white">{value}</p>
-              <p className="text-xs font-inconsolata text-zinc-500">{label}</p>
+/* ─── Match history ─── */
+function MatchHistory({ history }: { history: GameResult[] }) {
+  const POS_COLOR: Record<number, string> = {
+    1: "text-yellow-400",
+    2: "text-zinc-300",
+    3: "text-amber-600",
+  };
+  return (
+    <Panel flush>
+      <PanelHead
+        title="Histórico de partidas"
+        sub={`${history.length} partidas registradas`}
+      />
+      {history.length === 0 ? (
+        <p className="font-inconsolata text-sm text-zinc-600 text-center py-10">
+          Nenhuma partida disputada ainda.
+        </p>
+      ) : (
+        <div className="divide-y divide-zinc-800/60">
+          {history.map((r) => (
+            <div key={r.id} className="flex items-center gap-3 px-4 py-3">
+              <span
+                className={`font-jaro text-xl w-7 text-center shrink-0 ${POS_COLOR[r.position] || "text-zinc-500"
+                  }`}
+              >
+                #{r.position}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="font-inconsolata text-sm text-zinc-100 truncate">
+                  R$ {(r.patrimony ?? 0).toLocaleString("pt-BR")}
+                </p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">
+                  {new Date(r.createdAt).toLocaleDateString("pt-BR")}
+                </p>
+              </div>
+              <div className="text-right shrink-0 space-y-0.5">
+                <p className="font-inconsolata text-xs text-green-400">+{r.xpEarned} XP</p>
+                <p className="font-inconsolata text-[10px] text-amber-400">
+                  +{r.coinsEarned} coins
+                </p>
+              </div>
             </div>
           ))}
         </div>
+      )}
+    </Panel>
+  );
+}
 
-        {/* Itens equipados */}
-        {equippedItems.length > 0 && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-            <h2 className="font-jaro text-base text-white mb-3 flex items-center gap-2">
-              <Star className="w-4 h-4 text-yellow-400" /> Itens Equipados
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              {equippedItems.map((item: any) => (
-                <div
-                  key={item.id}
-                  className={`rounded-xl border bg-gradient-to-br px-3 py-2 ${TYPE_GRADIENT[item.type] ?? "from-zinc-800/50 border-zinc-700 text-zinc-300"}`}
-                >
-                  <p className="text-xs font-inconsolata font-semibold truncate">{item.name}</p>
-                  <p className="text-[10px] font-inconsolata opacity-60 capitalize">{item.type}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+/* ─── Main page ─── */
+export default function PerfilPage() {
+  const { user, token, loadFromStorage } = useAuthStore();
+  const { profile, loading, loadProfile } = useProfileStore();
+  const [history, setHistory] = useState<GameResult[]>([]);
+  const [editOpen, setEditOpen] = useState(false);
 
-        {/* Coleção de Emblemas */}
-        <BadgeCollection
-          userBadges={profile.items
-            .filter((i: any) => i.type === "badge")
-            .map((i: any) => JSON.parse(i.value).badge)
-            .filter(Boolean)}
-          isOwner={true}
-        />
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
-        {/* Missões */}
-        {profile.missions.length > 0 && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-            <h2 className="font-jaro text-base text-white mb-3">Missões</h2>
-            <div className="space-y-3">
-              {profile.missions.slice(0, 4).map((m: any) => {
-                const pct = Math.min((m.progress / m.target) * 100, 100)
-                return (
-                  <div key={m.id} className={`rounded-xl border p-3 ${m.completed ? "border-green-500/30 bg-green-500/5" : "border-zinc-800 bg-zinc-800/30"}`}>
-                    <div className="flex items-start gap-3 mb-2">
-                      <span className="text-lg leading-none">{MISSION_ICON[m.metric] ?? "⭐"}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className={`text-sm font-inconsolata font-semibold ${m.completed ? "text-green-400" : "text-zinc-200"}`}>{m.name}</p>
-                          <div className="flex gap-2 shrink-0 ml-2">
-                            <span className="text-[10px] font-inconsolata text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded-full">+{m.coinReward}</span>
-                            <span className="text-[10px] font-inconsolata text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded-full">+{m.xpReward} XP</span>
-                          </div>
-                        </div>
-                        <p className="text-xs font-inconsolata text-zinc-500">{m.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${m.completed ? "bg-green-500" : "bg-gradient-to-r from-blue-500 to-blue-400"}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-inconsolata text-zinc-500 shrink-0">{Math.floor(m.progress)}/{m.target}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+  useEffect(() => {
+    if (token && !profile) loadProfile();
+  }, [token, profile, loadProfile]);
 
-        {/* Histórico */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <h2 className="font-jaro text-base text-white mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-zinc-400" /> Histórico de Partidas
-          </h2>
-          {!history ? (
-            <p className="text-xs font-inconsolata text-zinc-500 text-center py-4">Carregando...</p>
-          ) : history.length === 0 ? (
-            <p className="text-xs font-inconsolata text-zinc-500 text-center py-4">Nenhuma partida disputada ainda.</p>
-          ) : (
-            <div className="space-y-2">
-              {history.map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between bg-zinc-800/50 border border-zinc-800 rounded-xl px-3 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <span className={`font-jaro text-lg w-6 text-center ${r.position === 1 ? "text-yellow-400" : r.position === 2 ? "text-zinc-300" : r.position === 3 ? "text-amber-600" : "text-zinc-500"}`}>
-                      #{r.position}
-                    </span>
-                    <span className="text-xs font-inconsolata text-zinc-400">R$ {r.patrimony.toLocaleString("pt-BR")}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-inconsolata text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">+{r.xpEarned} XP</span>
-                    <span className="text-[10px] font-inconsolata text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full">+{r.coinsEarned}</span>
-                    <span className="text-[10px] font-inconsolata text-zinc-600">{new Date(r.createdAt).toLocaleDateString("pt-BR")}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+  useEffect(() => {
+    if (token) {
+      getProfileHistoryApi()
+        .then(setHistory)
+        .catch(() => setHistory([]));
+    }
+  }, [token]);
 
+  if (!user || !token) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-zinc-500 font-inconsolata text-sm">
+        Faça login para ver seu perfil.
+      </div>
+    );
+  }
 
+  if (loading.profile || !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">
+      <ProfileHero onEdit={() => setEditOpen(true)} />
+      <StatsRow profile={profile} />
+      <Inventory profile={profile} onRefresh={loadProfile} />
+      <MatchHistory history={history} />
+      <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
     </div>
-  )
+  );
 }

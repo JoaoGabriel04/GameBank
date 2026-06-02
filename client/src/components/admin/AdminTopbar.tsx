@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu, Search, Bell } from "lucide-react";
-import { Clock, Avatar, Chip, LiveDot } from "./AdminBase";
+import { Chip, LiveDot, Clock, Avatar } from "./AdminUI";
 
 interface AdminTopbarProps {
   title: string;
@@ -18,7 +18,6 @@ export default function AdminTopbar({
 }: AdminTopbarProps) {
   return (
     <header className="sticky top-0 z-30 bg-zinc-950/85 backdrop-blur-md border-b border-zinc-800 h-16 flex items-center gap-3 px-4 lg:px-6">
-      {/* Menu Button (mobile) */}
       <button
         onClick={onMenuClick}
         className="lg:hidden text-zinc-400 hover:text-white cursor-pointer"
@@ -26,7 +25,6 @@ export default function AdminTopbar({
         <Menu size={20} />
       </button>
 
-      {/* Title */}
       <div className="min-w-0 flex-1">
         <h1 className="font-jaro text-lg lg:text-xl text-white whitespace-nowrap">
           {title}
@@ -38,7 +36,6 @@ export default function AdminTopbar({
         )}
       </div>
 
-      {/* Global Search */}
       <button className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-zinc-600 cursor-pointer transition-colors w-56">
         <Search size={14} />
         <span className="font-mono text-xs flex-1 text-left">Buscar…</span>
@@ -47,24 +44,20 @@ export default function AdminTopbar({
         </span>
       </button>
 
-      {/* Status Bar (desktop) */}
       <div className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900">
         <LiveDot />
         <Clock />
       </div>
 
-      {/* PROD Chip (desktop) */}
       <Chip tone="emerald" className="hidden xl:inline-flex">
         PROD
       </Chip>
 
-      {/* Notifications */}
       <button className="relative text-zinc-400 hover:text-white cursor-pointer p-1.5">
         <Bell size={18} />
         <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-400" />
       </button>
 
-      {/* Avatar */}
       <Avatar user={ADMIN_USER} size={32} />
     </header>
   );

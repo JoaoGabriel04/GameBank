@@ -323,7 +323,7 @@ export function AdminSelect({
 /* ─── User avatar wrapper (uses real UserAvatar component) ─── */
 export function AdminAvatar({
   user,
-  size = 36,
+  size = "md",
 }: {
   user: Pick<AdminUser, "avatarUrl" | "avatarUpdatedAt" | "nome">;
   size?: "sm" | "md" | "lg";
@@ -496,5 +496,45 @@ export function ConfirmDelete({
         <XIcon size={14} />
       </button>
     </div>
+  );
+}
+
+/* ─── Mock avatar (gradient with initial) ─── */
+export function Avatar({
+  user,
+  size = 36,
+}: {
+  user: { nome?: string; avatar?: { initial: string; hue: number } };
+  size?: number;
+}) {
+  const a = user.avatar || { initial: (user.nome || "?").charAt(0), hue: 200 };
+  return (
+    <span
+      className="rounded-full grid place-items-center font-jaro text-white shrink-0 ring-1 ring-white/10"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.42,
+        background: `linear-gradient(135deg, hsl(${a.hue} 65% 45%), hsl(${
+          (a.hue + 40) % 360
+        } 70% 35%))`,
+      }}
+    >
+      {a.initial}
+    </span>
+  );
+}
+
+/* ─── Live clock ─── */
+export function Clock() {
+  const [t, setT] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setT(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="font-inconsolata text-xs text-zinc-400 tabular-nums">
+      {t.toLocaleTimeString("pt-BR")}
+    </span>
   );
 }

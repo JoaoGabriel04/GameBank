@@ -1,5 +1,6 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { shopRepository } from "./shop.repository.js";
+import { shopRepository, type UserItemSnapshot } from "./shop.repository.js";
+import { prisma } from "../../lib/prisma.js";
 
 export class ShopService {
   async listItems() {
@@ -7,28 +8,139 @@ export class ShopService {
   }
 
   async buyItem(userId: number, itemId: number) {
-    const item = await shopRepository.findShopItem(itemId);
-    if (!item || !item.available) throw new AppError(404, "Item não encontrado");
+    // Fetch shop item with full details
+    const shopItem = await shopRepository.findShopItem(itemId);
+    if (!shopItem || !shopItem.available) {
+      throw new AppError(404, "Item não encontrado");
+    }
 
+    // Fetch user with current items
     const user = await shopRepository.findUser(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    const alreadyOwns = await shopRepository.findUserItem(userId, itemId);
-    if (alreadyOwns) throw new AppError(400, "Você já possui este item");
+    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
 
-    if (user.coins < item.price) throw new AppError(400, "Coins insuficientes");
+    // Check if user already owns this item
+    if (currentItems.some(i => i.id === itemId)) {
+      throw new AppError(400, "Você já possui este item");
+    }
 
-    await shopRepository.purchaseItem(userId, itemId, item.price);
+    // Check coins
+    if (user.coins < shopItem.price) {
+      throw new AppError(400, "Coins insuficientes");
+    }
 
-    return { message: "Item comprado com sucesso", item };
+    // Create snapshot of new item
+    const newItem: UserItemSnapshot = {
+      id: shopItem.id,
+      name: shopItem.name,
+      description: shopItem.description,
+      type: shopItem.type as 'title' | 'badge' | 'banner',
+      value: shopItem.value,
+      icon: shopItem.icon,
+      spriteId: shopItem.banner?.spriteId ?? null,
+      equipped: false,
+      acquiredAt: new Date().toISOString(),
+    };
+
+    // Transact: decrement coins and add item
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { coins: { decrement: shopItem.price } },
+      });
+      await shopRepository.saveUserItems(userId, [...currentItems, newItem]);
+    });
+
+    return { message: "Item comprado com sucesso", item: shopItem };
   }
 
   async equipItem(userId: number, itemId: number) {
-    const userItem = await shopRepository.findUserItemWithType(userId, itemId);
-    if (!userItem) throw new AppError(404, "Item não encontrado");
+    // Special case: id=0 is the "Padrão" (default banner)
+    if (itemId === 0) {
+      return this.equipDefaultBanner(userId);
+    }
 
-    await shopRepository.toggleEquip(userId, itemId, userItem.item.type, userItem.equipped);
+    // Fetch user with current items
+    const user = await shopRepository.findUser(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    return { message: "Item atualizado", equipped: !userItem.equipped };
+    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
+
+    // Find target item
+    const targetItem = currentItems.find(i => i.id === itemId);
+    if (!targetItem) throw new AppError(404, "Item não encontrado");
+
+    // Calculate next state
+    const nextEquipped = !targetItem.equipped;
+
+    // Update items array
+    const updatedItems = currentItems.map(item => {
+      // Deequip all items of same type
+      if (item.type === targetItem.type && item.equipped && item.id !== itemId) {
+        return { ...item, equipped: false };
+      }
+      // Toggle target item
+      if (item.id === itemId) {
+        return { ...item, equipped: nextEquipped };
+      }
+      return item;
+    });
+
+    // If deequipping a banner, auto-equip the default
+    if (targetItem.type === 'banner' && !nextEquipped) {
+      const hasDefault = updatedItems.some(i => i.id === 0);
+      if (hasDefault) {
+        updatedItems.forEach(item => {
+          if (item.id === 0) {
+            item.equipped = true;
+          }
+        });
+      }
+    }
+
+    // Update user: items array + banner/sprite if needed
+    const updateData: any = { items: updatedItems };
+
+    if (targetItem.type === 'banner') {
+      if (nextEquipped && targetItem.value) {
+        updateData.banner = targetItem.value;
+        updateData.spriteId = targetItem.spriteId ?? null;
+      } else if (!nextEquipped) {
+        updateData.banner = null;
+        updateData.spriteId = null;
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    return { message: "Item atualizado", equipped: nextEquipped };
+  }
+
+  private async equipDefaultBanner(userId: number) {
+    const user = await shopRepository.findUser(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado");
+
+    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
+
+    // Deequip all banners, equip default
+    const updatedItems = currentItems.map(item => ({
+      ...item,
+      equipped: item.id === 0 ? true : (item.type === 'banner' ? false : item.equipped),
+    }));
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        items: updatedItems,
+        banner: null,
+        spriteId: null,
+      },
+    });
+
+    return { message: "Item atualizado", equipped: true };
   }
 }

@@ -5,21 +5,22 @@ export const adminRepository = {
   findAllItems: () =>
     prisma.shopItem.findMany({
       orderBy: { id: "asc" },
-      include: { _count: { select: { userItems: true } } },
+      include: { banner: true },
     }),
 
   findItemById: (id: number) =>
     prisma.shopItem.findUnique({ where: { id } }),
 
   createItem: (data: {
-    name: string;
+    name?: string;
     description: string;
     price: number;
     type: string;
     value?: string | null;
     icon?: string | null;
     available: boolean;
-  }) => prisma.shopItem.create({ data }),
+    bannerId?: number | null;
+  }) => prisma.shopItem.create({ data: { name: data.name ?? "", ...data } }),
 
   updateItem: (id: number, data: Partial<{
     name: string;
@@ -29,13 +30,11 @@ export const adminRepository = {
     value: string | null;
     icon: string | null;
     available: boolean;
+    bannerId: number | null;
   }>) => prisma.shopItem.update({ where: { id }, data }),
 
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
-
-  deleteUserItemsByItemId: (itemId: number) =>
-    prisma.userItem.deleteMany({ where: { itemId } }),
 
   // Sessions
   findAllSessions: () =>
@@ -189,4 +188,144 @@ export const adminRepository = {
 
   deleteBanner: (id: number) =>
     prisma.banner.delete({ where: { id } }),
+
+  // AuditLog
+  createAuditLog: (data: {
+    userId?: number | null;
+    action: string;
+    target?: string | null;
+    metadata?: Record<string, unknown> | null;
+    severity?: string;
+  }) =>
+    prisma.auditLog.create({
+      data: {
+        ...(data.userId !== null && data.userId !== undefined ? { userId: data.userId } : {}),
+        action: data.action,
+        ...(data.target !== null && data.target !== undefined ? { target: data.target } : {}),
+        ...(data.metadata !== null && data.metadata !== undefined ? { metadata: data.metadata as any } : {}),
+        ...(data.severity ? { severity: data.severity } : {}),
+      },
+    }),
+
+  listAuditLogs: (opts: {
+    userId?: number;
+    action?: string;
+    severity?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    prisma.auditLog.findMany({
+      where: {
+        ...(opts.userId !== undefined ? { userId: opts.userId } : {}),
+        ...(opts.action ? { action: opts.action } : {}),
+        ...(opts.severity ? { severity: opts.severity } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: opts.limit ?? 50,
+      skip: opts.offset ?? 0,
+      include: { user: { select: { id: true, nome: true, email: true } } },
+    }),
+
+  // Sessions — extra
+  findSessionById: (id: number) =>
+    prisma.session.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nome: true,
+        modo: true,
+        status: true,
+        maxJogadores: true,
+        saldoInicial: true,
+        dataInicio: true,
+        ownerId: true,
+        senha: true,
+        jogadores: {
+          select: {
+            id: true,
+            nome: true,
+            cor: true,
+            saldo: true,
+            carta_prisao: true,
+            desistiu: true,
+            userId: true,
+            user: { select: { nome: true, avatarUrl: true, avatarUpdatedAt: true } },
+          },
+        },
+      },
+    }),
+
+  endSession: (id: number) =>
+    prisma.session.update({
+      where: { id },
+      data: { status: "Finalizada" },
+      select: {
+        id: true,
+        nome: true,
+        modo: true,
+        status: true,
+        maxJogadores: true,
+        saldoInicial: true,
+        dataInicio: true,
+        ownerId: true,
+      },
+    }),
+
+  adjustPlayerBalance: (playerId: number, delta: number) =>
+    prisma.sessionPlayer.update({
+      where: { id: playerId },
+      data: { saldo: { increment: delta } },
+      select: { id: true, nome: true, cor: true, saldo: true, sessionId: true },
+    }),
+
+  // Users — extra
+  findUserById: (id: number) =>
+    prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        isAdmin: true,
+        banned: true,
+        bannedAt: true,
+        banReason: true,
+      },
+    }),
+
+  setUserBanned: (id: number, banned: boolean, reason?: string) =>
+    prisma.user.update({
+      where: { id },
+      data: {
+        banned,
+        bannedAt: banned ? new Date() : null,
+        banReason: banned ? reason ?? null : null,
+      },
+      select: { id: true, nome: true, email: true, banned: true, bannedAt: true, banReason: true },
+    }),
+
+  setUserAdmin: (id: number, isAdmin: boolean) =>
+    prisma.user.update({
+      where: { id },
+      data: { isAdmin },
+      select: { id: true, nome: true, email: true, isAdmin: true },
+    }),
+
+  deleteUser: (id: number) =>
+    prisma.$transaction(async (tx) => {
+      await tx.auditLog.updateMany({ where: { userId: id }, data: { userId: null } });
+      await tx.session.updateMany({ where: { ownerId: id }, data: { ownerId: null } });
+      await tx.sessionPlayer.updateMany({ where: { userId: id }, data: { userId: null } });
+      await tx.userMission.deleteMany({ where: { userId: id } });
+      await tx.gameResult.deleteMany({ where: { userId: id } });
+      await tx.user.delete({ where: { id } });
+    }),
+
+  // Missions — extra
+  toggleMissionActive: (id: number, active: boolean) =>
+    prisma.mission.update({
+      where: { id },
+      data: { active },
+      select: { id: true, name: true, active: true },
+    }),
 };

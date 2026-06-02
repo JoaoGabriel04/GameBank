@@ -1,9 +1,10 @@
 import { create } from "zustand"
 import { getProfileApi, updateProfileApi } from "@/services/api/profile"
-import { getMissionsApi } from "@/services/api/missions"
+import { getMissionsApi, claimMissionApi } from "@/services/api/missions"
 import { getShopItemsApi } from "@/services/api/shop"
 import { getRankingApi } from "@/services/api/ranking"
 import { useAuthStore } from "@/stores/authStore"
+import type { ShopItem, UserItem, UserMission, RankingUser, ClaimResult } from "@/types/shop"
 
 interface ProfileData {
   id: number
@@ -11,6 +12,7 @@ interface ProfileData {
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null
+  spriteId?: string | null
   level: number
   xp: number
   coins: number
@@ -19,23 +21,24 @@ interface ProfileData {
   totalTop3: number
   title?: string | null
   badge?: string | null
-  items: any[]
-  missions: any[]
+  items: UserItem[]
+  missions: UserMission[]
 }
 
 interface ProfileStore {
   profile: ProfileData | null
-  missions: any[]
-  shopItems: any[]
-  ranking: any[]
+  missions: UserMission[]
+  shopItems: ShopItem[]
+  ranking: RankingUser[]
   loading: Record<string, boolean>
   error: string | null
-  
+
   loadProfile: () => Promise<void>
   loadMissions: () => Promise<void>
   loadShopItems: () => Promise<void>
   loadRanking: () => Promise<void>
   updateProfile: (formData: FormData) => Promise<void>
+  claimMission: (missionId: number) => Promise<ClaimResult>
   clearProfile: () => void
   clearError: () => void
 }
@@ -104,6 +107,19 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
         banner: result.banner,
       })
     }
+  },
+
+  claimMission: async (missionId: number) => {
+    const result = await claimMissionApi(missionId)
+    set((state) => ({
+      missions: state.missions.map((m) =>
+        m.id === missionId ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
+      ),
+      profile: state.profile
+        ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
+        : null,
+    }))
+    return result
   },
 
   clearProfile: () => set({ profile: null }),

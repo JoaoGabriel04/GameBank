@@ -1,15 +1,18 @@
 import api from "./index";
 
+export type ShopItemType = "title" | "badge" | "banner";
+
 export interface AdminShopItem {
   id: number;
   name: string;
   description: string;
   price: number;
-  type: "title" | "badge";
+  type: ShopItemType;
   value: string | null;
   icon: string | null;
   available: boolean;
   ownerCount: number;
+  bannerId?: number | null;
 }
 
 export interface AdminUser {
@@ -25,6 +28,9 @@ export interface AdminUser {
   totalGames: number;
   totalWins: number;
   createdAt: string;
+  banned?: boolean;
+  bannedAt?: string | null;
+  banReason?: string | null;
 }
 
 export interface AdminSession {
@@ -38,6 +44,21 @@ export interface AdminSession {
   ownerId: number | null;
   protegida: boolean;
   jogadoresCount: number;
+}
+
+export interface AdminSessionDetail extends AdminSession {
+  jogadores: SessionPlayer[];
+}
+
+export interface SessionPlayer {
+  id: number;
+  nome: string;
+  cor: string;
+  saldo: number;
+  cartaPrisao: boolean;
+  desistiu: boolean;
+  userId: number | null;
+  user: { nome: string; avatarUrl: string | null; avatarUpdatedAt: string | null } | null;
 }
 
 export interface AdminMission {
@@ -58,7 +79,7 @@ export interface AdminDashboard {
   totalFinished: number;
   totalItems: number;
   recentUsers: { id: number; nome: string; email: string; avatarUrl: string | null; avatarUpdatedAt: string | null; createdAt: string }[];
-  recentSessions: { id: number; nome: string | null; status: string; maxJogadores: number; dataInicio: string; jogadores: { id: number }[] }[];
+  recentSessions: { id: number; nome: string | null; status: string; modo: string; maxJogadores: number; dataInicio: string; jogadores: { id: number }[]; saldoTotal: number; duracao: number }[];
   recentGames: { id: number; sessionId: number; userId: number; position: number; patrimony: number; xpEarned: number; coinsEarned: number; createdAt: string; user: { nome: string } }[];
 }
 
@@ -78,12 +99,32 @@ export interface Banner {
   id: number;
   nome: string;
   css: string;
-  spriteId?: string;
+  spriteId?: string | null;
   disponibilidade: boolean;
 }
 
 export type CardInput = Omit<Card, "id">;
 export type BannerInput = Omit<Banner, "id">;
+
+export interface AuditEntry {
+  id: number;
+  ts: string;
+  actorId: number | null;
+  actorNome: string | null;
+  actorEmail: string | null;
+  action: string;
+  target: string | null;
+  metadata: Record<string, unknown> | null;
+  severity: "info" | "success" | "warn" | "danger";
+}
+
+export interface AuditListOpts {
+  userId?: number;
+  action?: string;
+  severity?: "info" | "success" | "warn" | "danger";
+  limit?: number;
+  offset?: number;
+}
 
 export const adminApi = {
   // ShopItems
@@ -100,18 +141,31 @@ export const adminApi = {
 
   // Sessions
   listSessions: () => api.get<AdminSession[]>("/admin/sessions").then((r) => r.data),
+  getSessionDetail: (id: number) => api.get<AdminSessionDetail>(`/admin/sessions/${id}`).then((r) => r.data),
+  endSession: (id: number) => api.post<AdminSession>(`/admin/sessions/${id}/end`).then((r) => r.data),
+  adjustPlayerBalance: (sessionId: number, playerId: number, delta: number) =>
+    api.patch<SessionPlayer>(`/admin/sessions/${sessionId}/players/${playerId}/balance`, { delta }).then((r) => r.data),
 
   // Missions
   listMissions: () => api.get<AdminMission[]>("/admin/missions").then((r) => r.data),
   createMission: (data: MissionInput) => api.post<AdminMission>("/admin/missions", data).then((r) => r.data),
   updateMission: (id: number, data: Partial<MissionInput>) =>
     api.patch<AdminMission>(`/admin/missions/${id}`, data).then((r) => r.data),
+  toggleMission: (id: number) =>
+    api.patch<{ id: number; name: string; active: boolean }>(`/admin/missions/${id}/toggle`).then((r) => r.data),
   deleteMission: (id: number) => api.delete(`/admin/missions/${id}`),
 
   // Users
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; coins: number }>(`/admin/users/${userId}/coins`, { delta }).then((r) => r.data),
+  banUser: (userId: number, reason?: string) =>
+    api.post<{ id: number; nome: string; email: string; banned: boolean; bannedAt: string | null; banReason: string | null }>(`/admin/users/${userId}/ban`, { reason }).then((r) => r.data),
+  unbanUser: (userId: number) =>
+    api.post<{ id: number; nome: string; email: string; banned: boolean; bannedAt: string | null; banReason: string | null }>(`/admin/users/${userId}/unban`).then((r) => r.data),
+  setUserAdmin: (userId: number, isAdmin: boolean) =>
+    api.patch<{ id: number; nome: string; email: string; isAdmin: boolean }>(`/admin/users/${userId}/admin`, { isAdmin }).then((r) => r.data),
+  deleteUser: (userId: number) => api.delete(`/admin/users/${userId}`),
 
   // Cards
   listCards: () => api.get<Card[]>("/admin/cards").then((r) => r.data),
@@ -131,4 +185,16 @@ export const adminApi = {
   updateBanner: (id: number, data: Partial<BannerInput>) =>
     api.patch<Banner>(`/admin/banners/${id}`, data).then((r) => r.data),
   deleteBanner: (id: number) => api.delete(`/admin/banners/${id}`),
+
+  // Audit
+  listAudit: (opts: AuditListOpts = {}) => {
+    const params = new URLSearchParams();
+    if (opts.userId !== undefined) params.set("userId", String(opts.userId));
+    if (opts.action) params.set("action", opts.action);
+    if (opts.severity) params.set("severity", opts.severity);
+    if (opts.limit !== undefined) params.set("limit", String(opts.limit));
+    if (opts.offset !== undefined) params.set("offset", String(opts.offset));
+    const qs = params.toString();
+    return api.get<AuditEntry[]>(`/admin/audit${qs ? `?${qs}` : ""}`).then((r) => r.data);
+  },
 };

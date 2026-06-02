@@ -15,6 +15,22 @@ export const missionsController = {
       res.status(500).json({ message: "Erro ao listar missões" });
     }
   },
+
+  claim: async (req: Request, res: Response) => {
+    try {
+      const missionId = parseInt(req.params.id, 10);
+      if (isNaN(missionId)) {
+        return res.status(400).json({ message: "ID de missão inválido" });
+      }
+
+      const result = await missionsService.claimMission(req.user!.userId, missionId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao resgatar missão:", err);
+      res.status(500).json({ message: "Erro ao resgatar missão" });
+    }
+  },
 };
 
 export default missionsController;

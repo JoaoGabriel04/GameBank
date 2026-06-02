@@ -59,8 +59,9 @@ function MissionModal({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setForm(isNew ? EMPTY : mission && mission !== "new" ? { ...mission } : EMPTY);
-  }, [mission]);
+    if (mission && mission !== "new") setForm({ ...mission });
+    else if (isNew) setForm(EMPTY);
+  }, [mission, isNew]);
 
   if (!mission) return null;
 
@@ -213,7 +214,7 @@ function MissionCard({
 
 /* ── Main page ── */
 export default function AdminRecompensasPage() {
-  const { missions, loadingMissions, loadMissions, createMission, updateMission, deleteMission } = useAdminStore();
+  const { missions, loadingMissions, loadMissions, createMission, updateMission, deleteMission, toggleMission } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [modal, setModal] = useState<AdminMission | "new" | null>(null);
 
@@ -232,7 +233,7 @@ export default function AdminRecompensasPage() {
   }
 
   async function handleToggle(m: AdminMission) {
-    try { await updateMission(m.id, { active: !m.active }); }
+    try { await toggleMission(m.id); }
     catch { err("Erro ao alternar missão."); }
   }
 

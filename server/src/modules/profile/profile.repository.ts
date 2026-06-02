@@ -5,7 +5,6 @@ export const profileRepository = {
     prisma.user.findUnique({
       where: { id: userId },
       include: {
-        items: { include: { item: true } },
         missions: { include: { mission: true } },
       },
     }),

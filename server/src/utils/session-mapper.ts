@@ -4,7 +4,7 @@ export function mapSessionPlayers<T extends {
     avatarUrl: string | null;
     avatarUpdatedAt: Date | null;
     banner?: string | null;
-    items?: Array<{ equipped: boolean; item: { type: string; value: string | null } }>;
+    items?: any;
   } | null;
 }>(players: T[]) {
   return players.map((player) => {
@@ -13,11 +13,12 @@ export function mapSessionPlayers<T extends {
         avatarUrl: string | null;
         avatarUpdatedAt: Date | null;
         banner?: string | null;
-        items?: Array<{ equipped: boolean; item: { type: string; value: string | null } }>;
+        items?: any;
       } | null;
     };
-    const badgeItem = user?.items?.find((i) => i.equipped && i.item.type === "badge");
-    const badgeValue = badgeItem?.item?.value;
+    const items = (user?.items ?? []) as Array<{ equipped: boolean; type: string; value: string | null }>;
+    const badgeItem = items.find((i) => i.equipped && i.type === "badge");
+    const badgeValue = badgeItem?.value;
     const parsedBadge = badgeValue ? JSON.parse(badgeValue) : null;
     return {
       ...rest,

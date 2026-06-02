@@ -20,11 +20,8 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                items: {
-                  where: { equipped: true, item: { type: "badge" } },
-                  include: { item: true },
-                },
+                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                items: true,
               },
             },
           },
@@ -66,11 +63,8 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                items: {
-                  where: { equipped: true, item: { type: "badge" } },
-                  include: { item: true },
-                },
+                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                items: true,
               },
             },
           },
@@ -106,11 +100,8 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                items: {
-                  where: { equipped: true, item: { type: "badge" } },
-                  include: { item: true },
-                },
+                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                items: true,
               },
             },
           },

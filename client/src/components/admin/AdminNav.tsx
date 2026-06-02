@@ -16,11 +16,27 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Avatar } from "./AdminBase";
+import { usePathname, useRouter } from "next/navigation";
+import UserAvatar from "@/components/UserAvatar";
+import { useAuthStore } from "@/stores/authStore";
 
-const NAV_SECTIONS = [
+interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  badge?: boolean;
+  live?: boolean;
+}
+
+interface NavSection {
+  group: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
   {
     group: "Visão geral",
     items: [
@@ -34,7 +50,7 @@ const NAV_SECTIONS = [
       {
         id: "sessions",
         label: "Sessões",
-        href: "/admin/sessions",
+        href: "/admin/sessoes",
         icon: Server,
         badge: true,
         live: true,
@@ -47,7 +63,7 @@ const NAV_SECTIONS = [
       {
         id: "users",
         label: "Usuários",
-        href: "/admin/users",
+        href: "/admin/usuarios",
         icon: Users,
         badge: true,
       },
@@ -56,13 +72,13 @@ const NAV_SECTIONS = [
   {
     group: "Conteúdo",
     items: [
-      { id: "shop", label: "Loja", href: "/admin/shop", icon: Store },
-      { id: "missions", label: "Missões", href: "/admin/missions", icon: Target },
-      { id: "cards", label: "Cartas", href: "/admin/cards", icon: Dice5 },
+      { id: "shop", label: "Loja", href: "/admin/loja", icon: Store },
+      { id: "missions", label: "Missões", href: "/admin/recompensas", icon: Target },
+      { id: "cards", label: "Cartas", href: "/admin/cartas", icon: Dice5 },
       {
         id: "cosmetics",
         label: "Cosméticos",
-        href: "/admin/cosmetics",
+        href: "/admin/cosmeticos",
         icon: Image,
       },
     ],
@@ -73,14 +89,14 @@ const NAV_SECTIONS = [
       {
         id: "economy",
         label: "Economia",
-        href: "/admin/economy",
+        href: "/admin/economia",
         icon: DollarSign,
       },
     ],
   },
 ];
 
-const ADMIN_USER = { nome: "João Gabriel", avatar: { initial: "J", hue: 200 } };
+const ADMIN_USER = { nome: "João Gabriel", avatarUrl: "/images/admin.avif", avatarUpdatedAt: new Date().toISOString() };
 
 interface AdminNavProps {
   open: boolean;
@@ -89,7 +105,14 @@ interface AdminNavProps {
 
 export default function AdminNav({ open, onClose }: AdminNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
 
   const W = collapsed ? 72 : 240;
 
@@ -197,7 +220,7 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
           {/* Footer */}
           <div className="border-t border-zinc-800 p-2.5 space-y-1">
             <a
-              href="#"
+              href="/"
               className={`flex items-center gap-2 px-2.5 py-2 rounded-lg font-mono text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 ${
                 collapsed ? "justify-center" : ""
               }`}
@@ -206,7 +229,7 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
               {!collapsed && "Voltar ao site"}
             </a>
             <div className={`flex items-center gap-2.5 px-2.5 py-2 ${collapsed ? "justify-center" : ""}`}>
-              <Avatar user={ADMIN_USER} size={28} />
+              <UserAvatar nome={ADMIN_USER.nome} avatarUrl={ADMIN_USER.avatarUrl} avatarUpdatedAt={ADMIN_USER.avatarUpdatedAt} size="md" />
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-xs text-zinc-200 truncate leading-none">
@@ -218,7 +241,11 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
                 </div>
               )}
               {!collapsed && (
-                <button className="text-zinc-600 hover:text-rose-400 cursor-pointer">
+                <button
+                  onClick={handleLogout}
+                  className="text-zinc-600 hover:text-rose-400 cursor-pointer"
+                  title="Logout"
+                >
                   <LogOut size={15} />
                 </button>
               )}

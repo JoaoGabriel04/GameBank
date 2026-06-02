@@ -117,9 +117,9 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
         selected ? "border-green-500" : "border-zinc-700 hover:border-zinc-500"
       }`}
     >
-      <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-0 bg-black/60" />
-      <div className="relative z-10 flex items-center gap-3 p-3">
+      <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full -z-10" />
+      <div className="absolute inset-0 bg-black/60 z-1" />
+      <div className="relative z-20 flex items-center gap-3 p-3">
         <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">

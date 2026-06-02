@@ -19,16 +19,24 @@ adminRouter.delete("/shop/items/:id", adminController.deleteItem);
 
 // Sessions
 adminRouter.get("/sessions", adminController.listSessions);
+adminRouter.get("/sessions/:id", adminController.getSessionDetail);
+adminRouter.post("/sessions/:id/end", adminController.endSession);
+adminRouter.patch("/sessions/:id/players/:pid/balance", adminController.adjustPlayerBalance);
 
 // Missions
 adminRouter.get("/missions", adminController.listMissions);
 adminRouter.post("/missions", adminController.createMission);
 adminRouter.patch("/missions/:id", adminController.updateMission);
+adminRouter.patch("/missions/:id/toggle", adminController.toggleMission);
 adminRouter.delete("/missions/:id", adminController.deleteMission);
 
 // Users
 adminRouter.get("/users", adminController.listUsers);
 adminRouter.patch("/users/:id/coins", adminController.adjustCoins);
+adminRouter.post("/users/:id/ban", adminController.banUser);
+adminRouter.post("/users/:id/unban", adminController.unbanUser);
+adminRouter.patch("/users/:id/admin", adminController.setUserAdmin);
+adminRouter.delete("/users/:id", adminController.deleteUser);
 
 // Cards
 adminRouter.get("/cards", adminController.listCards);
@@ -45,5 +53,8 @@ adminRouter.get("/banners", adminController.listBanners);
 adminRouter.post("/banners", adminController.createBanner);
 adminRouter.patch("/banners/:id", adminController.updateBanner);
 adminRouter.delete("/banners/:id", adminController.deleteBanner);
+
+// Audit
+adminRouter.get("/audit", adminController.listAudit);
 
 export default adminRouter;

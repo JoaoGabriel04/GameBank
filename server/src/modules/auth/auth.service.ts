@@ -11,6 +11,8 @@ import {
   rollbackCloudinaryUpload,
 } from "../avatar/avatar.service.js";
 import { authRepository } from "./auth.repository.js";
+import { prisma } from "../../lib/prisma.js";
+import { type UserItemSnapshot } from "../shop/shop.repository.js";
 
 type OAuthProvider = "google" | "discord";
 
@@ -58,6 +60,49 @@ export class AuthService {
     return { token, user: toAuthUserPayload(user) };
   }
 
+  private async buildInitialItems(): Promise<UserItemSnapshot[]> {
+    // Padrão banner (id=0, always equipped for new users)
+    const padraoItem: UserItemSnapshot = {
+      id: 0,
+      name: "Padrão",
+      description: "Banner padrão do jogador",
+      type: "banner",
+      value: null,
+      icon: null,
+      spriteId: null,
+      equipped: true,
+      acquiredAt: new Date().toISOString(),
+    };
+
+    // Free banners (price=0, available=false)
+    const freeBanners = await prisma.shopItem.findMany({
+      where: { type: "banner", available: false, price: 0 },
+      include: { banner: true },
+    });
+
+    const freeItems: UserItemSnapshot[] = freeBanners.map((b) => ({
+      id: b.id,
+      name: b.name,
+      description: b.description,
+      type: "banner" as const,
+      value: b.value,
+      icon: b.icon,
+      spriteId: b.banner?.spriteId ?? null,
+      equipped: false,
+      acquiredAt: new Date().toISOString(),
+    }));
+
+    return [padraoItem, ...freeItems];
+  }
+
+  private async grantFreeBanners(userId: number): Promise<void> {
+    const items = await this.buildInitialItems();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { items: JSON.stringify(items) },
+    });
+  }
+
   async register(email: string, senha: string) {
     const normalizedEmail = normalizeEmail(email);
     const existing = await this.findUserByEmail(normalizedEmail);
@@ -71,6 +116,8 @@ export class AuthService {
         passwordHash,
         profileComplete: false,
       });
+      // Grant free banners to new user
+      await this.grantFreeBanners(user.id);
       return this.authResponse(user);
     } catch (err) {
       if (isPrismaUniqueViolation(err)) {
@@ -236,7 +283,10 @@ export class AuthService {
         : { email, nome: "", discordId: providerId, profileComplete: false };
 
     try {
-      return await authRepository.create(createData);
+      const newUser = await authRepository.create(createData);
+      // Grant free banners to new user
+      await this.grantFreeBanners(newUser.id);
+      return newUser;
     } catch (err) {
       if (!isPrismaUniqueViolation(err)) throw err;
 

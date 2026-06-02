@@ -7,6 +7,8 @@ export interface AuthUser {
   avatarUrl?: string | null;
   avatarUpdatedAt?: string | null;
   banner?: string | null;
+  spriteId?: string | null;
+  badge?: string | null;
   profileComplete: boolean;
   isAdmin?: boolean;
 }

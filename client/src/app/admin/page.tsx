@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { adminApi, type AdminDashboard } from "@/services/api/admin";
-import { Panel, PanelHead, Delta, Chip, LiveDot } from "@/components/admin/AdminBase";
+import { Panel, PanelHead, Chip, LiveDot, Delta } from "@/components/admin/AdminUI";
 import { AreaChart, MultiLine, Donut, Sparkline, BarChart } from "@/components/admin/AdminCharts";
-import { Users, Coins, Store, Server, Activity, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, Coins, Store, Server, Activity, TrendingUp } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboard | null>(null);
@@ -345,12 +345,7 @@ function KpiCard({
         <div className={`w-9 h-9 rounded-lg grid place-items-center ${rings[tone]}`}>
           <Icon size={18} />
         </div>
-        {delta !== undefined && (
-          <Delta
-            value={delta}
-            Icon={delta >= 0 ? TrendingUp : TrendingDown}
-          />
-        )}
+        {delta !== undefined && <Delta value={delta} />}
       </div>
       <p className="font-jaro text-2xl text-white mt-3 leading-none">{value}</p>
       <p className="font-mono text-[11px] text-zinc-500 mt-1.5 uppercase tracking-wider">

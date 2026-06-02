@@ -9,6 +9,7 @@ import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants
 import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
 import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
+import { type UserItemSnapshot } from "../shop/shop.repository.js";
 
 export class ProfileService {
   async getProfile(userId: number) {
@@ -20,9 +21,10 @@ export class ProfileService {
       await profileRepository.updateLevel(user.id, correctLevel);
     }
 
-    const equippedTitle = user.items.find((i) => i.equipped && i.item.type === "title")?.item.value;
+    const items = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
     const parsedTitle = equippedTitle ? JSON.parse(equippedTitle) : null;
-    const equippedBadge = user.items.find((i) => i.equipped && i.item.type === "badge")?.item.value;
+    const equippedBadge = items.find((i) => i.equipped && i.type === "badge")?.value;
     const parsedBadge = equippedBadge ? JSON.parse(equippedBadge) : null;
 
     return {
@@ -31,6 +33,7 @@ export class ProfileService {
       avatarUrl: user.avatarUrl,
       avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
       banner: user.banner ?? null,
+      spriteId: user.spriteId ?? null,
       level: correctLevel,
       xp: user.xp,
       coins: user.coins,
@@ -39,13 +42,13 @@ export class ProfileService {
       totalTop3: user.totalTop3,
       title: parsedTitle?.title || null,
       badge: parsedBadge?.badge || null,
-      items: user.items.map((i) => ({
-        id: i.item.id,
-        name: i.item.name,
-        description: i.item.description,
-        icon: i.item.icon,
-        value: i.item.value,
-        type: i.item.type,
+      items: items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        description: i.description,
+        icon: i.icon,
+        value: i.value,
+        type: i.type,
         equipped: i.equipped,
       })),
       missions: user.missions.map((m) => ({
@@ -78,7 +81,7 @@ export class ProfileService {
 
   async updateProfile(
     userId: number,
-    data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string; banner?: string }
+    data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string }
   ) {
     const current = await profileRepository.findUser(userId);
     if (!current) throw new AppError(404, "Usuário não encontrado");
@@ -87,13 +90,8 @@ export class ProfileService {
       throw new AppError(400, "Apelido deve ter entre 1 e 30 caracteres");
     }
 
-    if (data.banner !== undefined && !isAllowedBannerPreset(data.banner)) {
-      throw new AppError(400, "Banner inválido");
-    }
-
     const updateData: Record<string, unknown> = {};
     if (data.nome !== undefined) updateData.nome = data.nome;
-    if (data.banner !== undefined) updateData.banner = `preset:${data.banner}`;
 
     let newPublicId: string | null = null;
 
@@ -118,6 +116,7 @@ export class ProfileService {
         avatarUrl: current.avatarUrl,
         avatarUpdatedAt: current.avatarUpdatedAt?.toISOString() ?? null,
         banner: current.banner ?? null,
+        spriteId: current.spriteId ?? null,
       };
     }
 
@@ -137,6 +136,7 @@ export class ProfileService {
         avatarUrl: user.avatarUrl,
         avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
         banner: user.banner ?? null,
+        spriteId: user.spriteId ?? null,
       };
     } catch (err) {
       if (newPublicId) await rollbackCloudinaryUpload(newPublicId);

@@ -1,89 +1,366 @@
 "use client";
 
+/**
+ * UserNav — redesign completo
+ * Salve em: src/components/UserNav/index.tsx
+ * (substitui o atual em src/components/UserNav/index.tsx)
+ *
+ * Desktop: header fixo — logo, links de nav (ícone lg / ícone+label xl),
+ *          pill coins+nível, relógio, sino de notificações com dropdown, avatar.
+ * Mobile:  bottom nav de 5 abas com ícone + label + glow verde no ativo.
+ */
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faStore, faGift, faUsers, faChartLine, faUser,
-} from "@fortawesome/free-solid-svg-icons";
+  LayoutDashboard, Users, Store, Gift, User, Trophy,
+  Coins, Bell, X,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
 import UserAvatar from "@/components/UserAvatar";
-import Button1 from "@/components/Button01";
 
+/* ── Nav tab definitions ── */
 const NAV_TABS = [
-  { label: "Dashboard",   icon: faChartLine, path: "/user" },
-  { label: "Salas",       icon: faUsers,     path: "/user/sessions" },
-  { label: "Loja",        icon: faStore,     path: "/user/loja" },
-  { label: "Recompensas", icon: faGift,      path: "/user/recompensas" },
-  { label: "Perfil",      icon: faUser,      path: "/user/perfil" },
+  { label: "Dashboard",   icon: LayoutDashboard, path: "/user"             },
+  { label: "Salas",       icon: Users,           path: "/user/sessions"    },
+  { label: "Loja",        icon: Store,           path: "/user/loja"        },
+  { label: "Recompensas", icon: Gift,            path: "/user/recompensas" },
+  { label: "Ranking",     icon: Trophy,          path: "/user/ranking"     },
+  { label: "Perfil",      icon: User,            path: "/user/perfil"      },
 ];
 
+// Notificações vazias — TODO: Integrar com API de notificações quando disponível
+interface Notification {
+  icon: React.ComponentType<{ size?: number }>;
+  color: string;
+  bg: string;
+  text: string;
+  time: string;
+}
+
+const NOTIF_SAMPLE: Notification[] = [];
+
+/* ── Live clock ── */
+function Clock() {
+  const [t, setT] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setT(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="font-inconsolata text-xs text-zinc-500 tabular-nums hidden xl:block select-none">
+      {t.toLocaleTimeString("pt-BR")}
+    </span>
+  );
+}
+
+/* ── Notifications dropdown ── */
+function NotifBell() {
+  const [open, setOpen] = useState(false);
+  // TODO: fetch real notifications from API
+  const count = NOTIF_SAMPLE.length;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="relative p-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl hover:bg-zinc-800 transition-colors"
+        aria-label="Notificações"
+      >
+        <Bell size={18} />
+        {count > 0 && (
+          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 font-inconsolata text-[9px] text-white grid place-items-center leading-none">
+            {count}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          {/* Dropdown */}
+          <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <h3 className="font-jaro text-sm text-white">Notificações</h3>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-zinc-500 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            {NOTIF_SAMPLE.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-zinc-500">
+                <p className="font-inconsolata text-xs">Sem notificações</p>
+              </div>
+            ) : (
+              NOTIF_SAMPLE.map((n, i) => {
+                const Icon = n.icon;
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 hover:bg-zinc-900 transition-colors cursor-pointer"
+                  >
+                    <span
+                      className={`w-8 h-8 rounded-xl grid place-items-center border shrink-0 ${n.bg} ${n.color}`}
+                    >
+                      <Icon size={15} />
+                    </span>
+                    <p className="flex-1 font-inconsolata text-xs text-zinc-300 leading-snug">
+                      {n.text}
+                    </p>
+                    <span className="font-inconsolata text-[9px] text-zinc-600 shrink-0">
+                      {n.time}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Main component ── */
 export default function UserNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user } = useAuthStore();
+  const router   = useRouter();
+  const { user, token, loadFromStorage } = useAuthStore();
+  const { profile, loadProfile } = useProfileStore();
+
+  // Carrega dados ao montar o componente
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
+  // Carrega perfil quando houver token
+  useEffect(() => {
+    if (token) {
+      loadProfile();
+    }
+  }, [token, loadProfile]);
 
   const isActive = (path: string) =>
     path === "/user" ? pathname === "/user" : pathname.startsWith(path);
 
   return (
     <>
-      {/* Desktop — header fixo no topo */}
-      <header className="hidden lg:flex fixed top-0 left-0 w-full h-16 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 items-center justify-between px-10 z-50">
-        <Link href="/user">
-          <Image src="/images/gamebank-logo.png" alt="GameBank" width={100} height={100} className="w-12" />
+      {/* ── Desktop header ── */}
+      <header className="hidden lg:flex fixed top-0 left-0 w-full h-16 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 items-center gap-3 px-6 z-50">
+
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group hover:opacity-80 transition-opacity">
+          <Image
+            src="/images/gamebank-logo.png"
+            alt="GameBank"
+            width={36}
+            height={36}
+            className="object-contain"
+          />
+          <div className="hidden sm:block">
+            <p className="font-jaro text-sm text-white leading-none">GameBank</p>
+            <p className="font-inconsolata text-[9px] text-green-400 uppercase tracking-[0.2em] mt-0.5">
+              Super Gerenciador
+            </p>
+          </div>
         </Link>
 
-        <nav className="flex items-center gap-8">
-          {NAV_TABS.slice(1).map((tab) => (
-            <Link
-              key={tab.path}
-              href={tab.path}
-              className={`font-jaro text-sm transition-colors ${
-                isActive(tab.path) ? "text-green-400" : "text-zinc-400 hover:text-zinc-100"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          ))}
+        {/* Nav links */}
+        <nav className="flex items-center gap-1 ml-4">
+          {NAV_TABS.map((tab) => {
+            const active = isActive(tab.path);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.path}
+                href={tab.path}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-inconsolata text-sm transition-all whitespace-nowrap border ${
+                  active
+                    ? "bg-green-500/10 text-green-300 border-green-500/25"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 border-transparent"
+                }`}
+              >
+                <Icon
+                  size={15}
+                  style={active ? { filter: "drop-shadow(0 0 6px rgba(74,222,128,0.4))" } : undefined}
+                />
+                <span className="hidden xl:block">{tab.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-4">
-          <Button1 size="md" color="green" handle={() => router.push("/user/new-session")}>
-            Criar Sala
-          </Button1>
+        <div className="flex-1" />
+
+        {/* Coins + Level pill */}
+        {user && (
+          <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
+            <Coins size={14} className="text-yellow-400" />
+            <span className="font-jaro text-sm text-yellow-300">
+              {profile ? (
+                profile.coins >= 1000
+                  ? (profile.coins / 1000).toFixed(1).replace(".0", "") + "k"
+                  : String(profile.coins)
+              ) : (
+                "—"
+              )}
+            </span>
+            <span className="w-px h-4 bg-zinc-700 mx-1" />
+            <span className="font-jaro text-sm text-green-300">
+              Nv.{profile?.level ?? "—"}
+            </span>
+          </div>
+        )}
+
+        <Clock />
+        <NotifBell />
+
+        {/* Avatar → perfil */}
+        {user && (
+          <Link href="/user/perfil" className="hover:opacity-80 transition-opacity">
+            <div
+              className={`rounded-full transition-all ${
+                isActive("/user/perfil")
+                  ? "ring-2 ring-green-400/80 ring-offset-1 ring-offset-zinc-950"
+                  : "ring-1 ring-white/10"
+              }`}
+            >
+              <UserAvatar
+                avatarUrl={user.avatarUrl}
+                avatarUpdatedAt={user.avatarUpdatedAt}
+                nome={user.nome}
+                size="sm"
+              />
+            </div>
+          </Link>
+        )}
+      </header>
+
+      {/* ── Mobile header ── */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800">
+        <div className="flex items-center justify-between px-4 h-14">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
+            <Image
+              src="/images/gamebank-logo.png"
+              alt="GameBank"
+              width={28}
+              height={28}
+              className="object-contain"
+            />
+          </Link>
+
+          {/* Right side: coins, clock, notif, avatar */}
+          <div className="flex items-center gap-2">
+            {/* Coins + Level (compact) */}
+            {user && (
+              <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1">
+                <Coins size={12} className="text-yellow-400 shrink-0" />
+                <span className="font-jaro text-xs text-yellow-300">
+                  {profile ? (
+                    profile.coins >= 1000
+                      ? (profile.coins / 1000).toFixed(1).replace(".0", "") + "k"
+                      : String(profile.coins)
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </div>
+            )}
+
+            {/* Clock */}
+            <span className="font-inconsolata text-[10px] text-zinc-500 hidden sm:block">
+              {(() => {
+                const now = new Date();
+                return now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              })()}
+            </span>
+
+            {/* Notif bell */}
+            <button
+              type="button"
+              className="relative p-1.5 text-zinc-400 hover:text-white cursor-pointer rounded-lg hover:bg-zinc-800 transition-colors"
+              aria-label="Notificações"
+            >
+              <Bell size={16} />
+              {NOTIF_SAMPLE.length > 0 && (
+                <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-rose-500" />
+              )}
+            </button>
+
+            {/* Avatar */}
+            {user && (
+              <Link href="/user/perfil" className="hover:opacity-80 transition-opacity">
+                <div className="rounded-full ring-1 ring-white/10">
+                  <UserAvatar
+                    avatarUrl={user.avatarUrl}
+                    avatarUpdatedAt={user.avatarUpdatedAt}
+                    nome={user.nome}
+                    size="xs"
+                  />
+                </div>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Mobile — bottom nav fixo */}
+      {/* ── Mobile bottom nav ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
-        <ul className="grid grid-cols-5 w-full">
-          {NAV_TABS.map((tab) => (
-            <li
-              key={tab.path}
-              onClick={() => router.push(tab.path)}
-              className={`flex flex-col items-center justify-center py-3 gap-0.5 cursor-pointer transition-colors select-none active:scale-95 ${
-                isActive(tab.path) ? "text-green-400" : "text-zinc-500"
-              }`}
-            >
-              {tab.path === "/user/perfil" && user ? (
-                <UserAvatar
-                  avatarUrl={user.avatarUrl}
-                  avatarUpdatedAt={user.avatarUpdatedAt}
-                  nome={user.nome}
-                  size="sm"
-                  ring={isActive("/user/perfil")}
-                />
-              ) : (
-                <FontAwesomeIcon
-                  icon={tab.icon}
-                  className={`text-xl ${isActive(tab.path) ? "drop-shadow-[0_0_8px_rgba(74,222,128,0.3)]" : ""}`}
-                />
-              )}
-              <span className="text-[10px] font-inconsolata font-medium">{tab.label}</span>
-            </li>
-          ))}
+        {/* Mobile — 6 tabs */}
+        <ul className="grid grid-cols-6 w-full">
+          {NAV_TABS.map((tab) => {
+            const active = isActive(tab.path);
+            const Icon   = tab.icon;
+            return (
+              <li key={tab.path}>
+                <button
+                  type="button"
+                  onClick={() => router.push(tab.path)}
+                  className={`w-full flex flex-col items-center justify-center py-2.5 gap-0.5 cursor-pointer transition-colors select-none active:scale-95 ${
+                    active ? "text-green-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {tab.path === "/user/perfil" && user ? (
+                    <div
+                      className={`rounded-full transition-all ${
+                        active
+                          ? "ring-2 ring-green-400/80 ring-offset-1 ring-offset-zinc-950"
+                          : "ring-1 ring-white/10"
+                      }`}
+                    >
+                      <UserAvatar
+                        avatarUrl={user.avatarUrl}
+                        avatarUpdatedAt={user.avatarUpdatedAt}
+                        nome={user.nome}
+                        size="xs"
+                      />
+                    </div>
+                  ) : (
+                    <Icon
+                      size={24}
+                      style={
+                        active
+                          ? { filter: "drop-shadow(0 0 6px rgba(74,222,128,0.5))" }
+                          : undefined
+                      }
+                    />
+                  )}
+                  <span className="font-inconsolata text-[10px] font-medium leading-none">
+                    {tab.label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
     </>

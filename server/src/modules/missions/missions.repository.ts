@@ -25,12 +25,47 @@ export const missionsRepository = {
   ) =>
     prisma.userMission.upsert({
       where: { userId_missionId: { userId, missionId } },
-      create: { userId, missionId, progress, completed, completedAt },
+      create: { userId, missionId, progress, completed, completedAt, claimed: false },
       update: {
         progress,
         completed,
         completedAt: completedAt ?? previousCompletedAt ?? undefined,
       },
+    }),
+
+  findUserMissionForClaim: (userId: number, missionId: number) =>
+    prisma.userMission.findUnique({
+      where: { userId_missionId: { userId, missionId } },
+      include: {
+        mission: { select: { xpReward: true, coinReward: true } },
+      },
+    }),
+
+  claimMission: (
+    userId: number,
+    missionId: number,
+    xpReward: number,
+    coinReward: number,
+    newLevel?: number
+  ) =>
+    prisma.$transaction(async (tx) => {
+      const updated = await tx.userMission.updateMany({
+        where: { userId, missionId, claimed: false },
+        data: { claimed: true, claimedAt: new Date() },
+      });
+
+      if (updated.count === 0) {
+        throw new Error("Mission already claimed");
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          xp: { increment: xpReward },
+          coins: { increment: coinReward },
+          ...(newLevel !== undefined ? { level: newLevel } : {}),
+        },
+      });
     }),
 
   findUserForReward: (userId: number) =>

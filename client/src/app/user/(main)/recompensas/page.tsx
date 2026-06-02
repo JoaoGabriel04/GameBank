@@ -1,263 +1,256 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useAuthStore } from "@/stores/authStore"
-import { useProfileStore } from "@/stores/profileStore"
+/**
+ * Recompensas / Missões — redesign
+ * Salve em: src/app/user/(main)/recompensas/page.tsx
+ *
+ * Visual do protótipo: cards com glow, ícone por métrica, barra de progresso
+ * colorida por tipo, chip de status, botão "Resgatar" com estado otimista.
+ *
+ * ⚠️  Claim: não existe endpoint /missions/:id/claim ainda.
+ *    Quando criado, substitua o TODO abaixo por: await claimMissionApi(m.id)
+ */
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCrown, faXmark } from "@fortawesome/free-solid-svg-icons"
-import UserAvatar from "@/components/UserAvatar"
-import UserBanner from "@/components/UserBanner"
-import UserBadge from "@/components/UserBadge"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
+} from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import { useProfileStore } from "@/stores/profileStore";
+import { useToast } from "@/components/Toast";
+import { Progress, Chip, Segmented, UBtn } from "@/components/user/UserUI";
+import type { UserMission } from "@/types/shop";
 
-const MISSION_ICON: Record<string, string> = {
-  properties_bought: "🏢",
-  houses_built: "🏠",
-  rent_earned: "💰",
-  games_played: "🎮",
-  wins: "👑",
-  top3: "🏆",
+/* ── Metric → visual metadata ── */
+type MetricTone = "emerald" | "teal" | "amber" | "violet" | "sky" | "cyan";
+
+interface MetricMeta {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  tone: MetricTone;
+  label: string;
 }
 
-const MEDAL: Record<number, { emoji: string; border: string; glow: string; size: string }> = {
-  1: { emoji: "🥇", border: "border-yellow-400/60", glow: "shadow-yellow-500/20 shadow-lg", size: "scale-110" },
-  2: { emoji: "🥈", border: "border-zinc-300/40", glow: "shadow-zinc-300/10 shadow-md", size: "scale-100" },
-  3: { emoji: "🥉", border: "border-amber-600/50", glow: "shadow-amber-600/15 shadow-md", size: "scale-100" },
+const METRIC_META: Record<string, MetricMeta> = {
+  properties_bought: { icon: Building2, tone: "cyan",    label: "Propriedades compradas" },
+  houses_built:      { icon: Home,      tone: "emerald", label: "Casas construídas"      },
+  rent_earned:       { icon: Coins,     tone: "amber",   label: "Aluguéis recebidos"     },
+  games_played:      { icon: Gamepad2,  tone: "violet",  label: "Partidas jogadas"        },
+  wins:              { icon: Crown,     tone: "amber",   label: "Vitórias"               },
+  top3:              { icon: Trophy,    tone: "sky",     label: "Pódios (Top 3)"          },
+};
+
+const TONE_ICON_COLOR: Record<MetricTone, string> = {
+  emerald: "#34d399",
+  teal:    "#2dd4bf",
+  amber:   "#fbbf24",
+  violet:  "#a78bfa",
+  sky:     "#38bdf8",
+  cyan:    "#22d3ee",
+};
+
+const TONE_BG: Record<MetricTone, string> = {
+  emerald: "bg-emerald-500/10 border-emerald-500/20",
+  teal:    "bg-teal-500/10 border-teal-500/20",
+  amber:   "bg-amber-500/10 border-amber-500/20",
+  violet:  "bg-violet-500/10 border-violet-500/20",
+  sky:     "bg-sky-500/10 border-sky-500/20",
+  cyan:    "bg-cyan-500/10 border-cyan-500/20",
+};
+
+function getMetaMeta(metric: string): MetricMeta {
+  return METRIC_META[metric] ?? { icon: Trophy, tone: "emerald", label: metric };
 }
 
-export default function RecompensasPage() {
-  const router = useRouter()
-  const { user, token, loadFromStorage } = useAuthStore()
-  const { missions, ranking, loading, loadMissions, loadRanking } = useProfileStore()
-  const [tab, setTab] = useState<"missoes" | "ranking">("missoes")
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null)
+/* ── Mission card ── */
+function MissionCard({
+  m,
+  onClaim,
+  claiming,
+}: {
+  m: UserMission;
+  onClaim: (id: number) => void;
+  claiming: Set<number>;
+}) {
+  const meta    = getMetaMeta(m.metric);
+  const tone    = meta.tone;
+  const Icon    = meta.icon;
+  const iconClr = TONE_ICON_COLOR[tone];
+  const iconBg  = TONE_BG[tone];
 
-  useEffect(() => { loadFromStorage() }, [loadFromStorage])
-  useEffect(() => { if (user?.isAdmin) router.replace("/admin/recompensas") }, [user, router])
-  useEffect(() => {
-    if (token) {
-      loadMissions()
-      loadRanking()
-    }
-  }, [token, loadMissions, loadRanking])
-
-  const top3 = ranking.slice(0, 3)
-  const rest = ranking.slice(3)
+  const progress   = m.progress ?? 0;
+  const target     = m.target ?? 1;
+  const pct        = Math.min(100, Math.round((progress / target) * 100));
+  const isDone     = m.completed && !m.claimed;
+  const isClaimed  = m.claimed;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white pb-24">
-      
-
-      {/* Glow */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-yellow-500/5 blur-3xl rounded-full pointer-events-none" />
-
-      <main className="pt-28 px-4 max-w-lg mx-auto space-y-4 relative">
-
-        {/* Tabs em pills */}
-        <div className="flex gap-2">
-          {(["missoes", "ranking"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2 rounded-full text-sm font-inconsolata transition-colors cursor-pointer border ${
-                tab === t
-                  ? "bg-zinc-100 text-zinc-900 border-zinc-100"
-                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
-              }`}
-            >
-              {t === "missoes" ? "Missões" : "Ranking Global"}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Missões ── */}
-        {tab === "missoes" && (
-          <>
-            {loading.missions ? (
-              <p className="text-zinc-500 font-inconsolata text-center py-20">Carregando missões...</p>
-            ) : missions.length === 0 ? (
-              <p className="text-zinc-500 font-inconsolata text-center py-20">Nenhuma missão disponível.</p>
-            ) : (
-              <div className="space-y-3">
-                {missions.map((m: any) => {
-                  const pct = Math.min((m.progress / m.target) * 100, 100)
-                  return (
-                    <div
-                      key={m.id}
-                      className={`rounded-2xl border p-4 ${m.completed ? "border-green-500/30 bg-green-500/5" : "border-zinc-800 bg-zinc-900"}`}
-                    >
-                      <div className="flex items-start gap-3 mb-3">
-                        <span className="text-2xl leading-none shrink-0">{MISSION_ICON[m.metric] ?? "⭐"}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className={`text-sm font-inconsolata font-semibold ${m.completed ? "text-green-400" : "text-zinc-100"}`}>
-                              {m.name}
-                            </p>
-                            <div className="flex gap-1.5 shrink-0">
-                              <span className="text-[10px] font-inconsolata text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full border border-yellow-400/20">
-                                +{m.coinReward} coins
-                              </span>
-                              <span className="text-[10px] font-inconsolata text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full border border-green-400/20">
-                                +{m.xpReward} XP
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-xs font-inconsolata text-zinc-500 mt-0.5">{m.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-700 ${m.completed ? "bg-gradient-to-r from-green-500 to-emerald-400" : "bg-gradient-to-r from-blue-500 to-blue-400"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-inconsolata text-zinc-500 shrink-0 tabular-nums">
-                          {Math.floor(m.progress)}/{m.target}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Ranking ── */}
-        {tab === "ranking" && (
-          <>
-            {loading.ranking ? (
-              <p className="text-zinc-500 font-inconsolata text-center py-20">Carregando ranking...</p>
-            ) : ranking.length === 0 ? (
-              <p className="text-zinc-500 font-inconsolata text-center py-20">Nenhum jogador no ranking ainda.</p>
-            ) : (
-              <div className="space-y-4">
-                {/* Top 3 pódio */}
-                {top3.length > 0 && (
-                  <div className="flex items-end justify-center gap-3 py-2">
-                    {/* #2 */}
-                    {top3[1] && (
-                      <button
-                        onClick={() => setSelectedPlayer(top3[1])}
-                        className={`flex-1 max-w-[130px] flex flex-col items-center gap-2 bg-zinc-900 border rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 ${MEDAL[2].border} ${MEDAL[2].glow}`}
-                      >
-                        <span className="text-xl">{MEDAL[2].emoji}</span>
-                        <UserAvatar avatarUrl={top3[1].avatarUrl} avatarUpdatedAt={top3[1].avatarUpdatedAt} nome={top3[1].nome} size="sm" />
-                        <div className="text-center">
-                          <p className="text-xs font-inconsolata text-zinc-200 font-semibold truncate max-w-[100px]">{top3[1].nome}</p>
-                          <p className="text-[10px] font-inconsolata text-zinc-500">Lv.{top3[1].level}</p>
-                          <p className="text-[10px] font-inconsolata text-green-400">{top3[1].xp.toLocaleString()} XP</p>
-                        </div>
-                      </button>
-                    )}
-                    {/* #1 */}
-                    <button
-                      onClick={() => setSelectedPlayer(top3[0])}
-                      className={`flex-1 max-w-[140px] flex flex-col items-center gap-2 bg-zinc-900 border rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 ${MEDAL[1].border} ${MEDAL[1].glow} ${MEDAL[1].size}`}
-                    >
-                      <span className="text-2xl">{MEDAL[1].emoji}</span>
-                      <UserAvatar avatarUrl={top3[0].avatarUrl} avatarUpdatedAt={top3[0].avatarUpdatedAt} nome={top3[0].nome} size="md" ring />
-                      <div className="text-center">
-                        <p className="text-sm font-inconsolata text-white font-bold truncate max-w-[110px]">{top3[0].nome}</p>
-                        <p className="text-[10px] font-inconsolata text-zinc-400">Lv.{top3[0].level}</p>
-                        <p className="text-xs font-inconsolata text-green-400 font-semibold">{top3[0].xp.toLocaleString()} XP</p>
-                      </div>
-                    </button>
-                    {/* #3 */}
-                    {top3[2] && (
-                      <button
-                        onClick={() => setSelectedPlayer(top3[2])}
-                        className={`flex-1 max-w-[130px] flex flex-col items-center gap-2 bg-zinc-900 border rounded-2xl p-3 cursor-pointer transition-all hover:scale-105 ${MEDAL[3].border} ${MEDAL[3].glow}`}
-                      >
-                        <span className="text-xl">{MEDAL[3].emoji}</span>
-                        <UserAvatar avatarUrl={top3[2].avatarUrl} avatarUpdatedAt={top3[2].avatarUpdatedAt} nome={top3[2].nome} size="sm" />
-                        <div className="text-center">
-                          <p className="text-xs font-inconsolata text-zinc-200 font-semibold truncate max-w-[100px]">{top3[2].nome}</p>
-                          <p className="text-[10px] font-inconsolata text-zinc-500">Lv.{top3[2].level}</p>
-                          <p className="text-[10px] font-inconsolata text-green-400">{top3[2].xp.toLocaleString()} XP</p>
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* #4+ lista */}
-                {rest.length > 0 && (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden divide-y divide-zinc-800">
-                    {rest.map((player: any) => (
-                      <button
-                        key={player.id}
-                        onClick={() => setSelectedPlayer(player)}
-                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 transition-colors cursor-pointer text-left"
-                      >
-                        <span className="w-6 text-xs font-inconsolata text-zinc-500 text-center shrink-0">#{player.position}</span>
-                        <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-inconsolata text-zinc-200 truncate">{player.nome}</p>
-                          <p className="text-xs font-inconsolata text-zinc-500">Lv.{player.level} · {player.totalGames} partidas</p>
-                        </div>
-                        <p className="text-xs font-inconsolata text-green-400 shrink-0">{player.xp.toLocaleString()} XP</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* Modal de jogador */}
-      {selectedPlayer && (
-        <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedPlayer(null)}>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="overflow-hidden rounded-t-2xl h-20">
-              <UserBanner banner={selectedPlayer.banner} className="w-full h-full" />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/80 pointer-events-none" />
-            </div>
-            <div className="px-5 pb-5 -mt-8 space-y-4 z-10">
-              <div className="flex items-end justify-between">
-                <div className="flex items-end gap-3">
-                  <UserAvatar avatarUrl={selectedPlayer.avatarUrl} avatarUpdatedAt={selectedPlayer.avatarUpdatedAt} nome={selectedPlayer.nome} size="lg" ring />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-jaro text-lg text-white">{selectedPlayer.nome}</h3>
-                      <UserBadge badge={selectedPlayer.badge} variant="medium" showLabel={true} />
-                    </div>
-                    {selectedPlayer.title && <p className="text-xs text-green-400">{selectedPlayer.title}</p>}
-                    <p className="text-xs font-inconsolata text-zinc-400">Nível {selectedPlayer.level}</p>
-                  </div>
-                </div>
-                <button onClick={() => setSelectedPlayer(null)} className="text-zinc-400 hover:text-white cursor-pointer pb-2">
-                  <FontAwesomeIcon icon={faXmark} className="text-xl" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center">
-                {[
-                  { label: "XP", value: selectedPlayer.xp.toLocaleString(), color: "text-green-400" },
-                  { label: "Vitórias", value: selectedPlayer.totalWins, color: "text-yellow-400" },
-                  { label: "Partidas", value: selectedPlayer.totalGames, color: "text-zinc-200" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-zinc-800/50 border border-zinc-800 rounded-xl py-3">
-                    <p className={`font-jaro text-xl ${color}`}>{value}</p>
-                    <p className="text-[10px] font-inconsolata text-zinc-500">{label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center text-xs font-inconsolata text-zinc-500">
-                <span>#{selectedPlayer.position}º no ranking</span>
-                <span>{selectedPlayer.totalWins} vitórias · {selectedPlayer.totalTop3} top 3</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div
+      className={`relative rounded-2xl border p-4 overflow-hidden transition-all ${
+        isDone
+          ? "border-green-500/40 bg-gradient-to-br from-green-500/5 to-transparent shadow-[0_0_40px_-15px_rgba(74,222,128,.3)]"
+          : isClaimed
+          ? "border-zinc-800/60 bg-zinc-900/40 opacity-60"
+          : "border-zinc-800 bg-zinc-900"
+      }`}
+    >
+      {/* Top glow stripe for completed */}
+      {isDone && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500/0 via-green-400 to-green-500/0" />
       )}
 
-      
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <span
+          className={`w-11 h-11 rounded-xl grid place-items-center border shrink-0 ${iconBg}`}
+          style={{ color: iconClr }}
+        >
+          <Icon size={20} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-jaro text-base text-zinc-100">{m.name}</h3>
+            {isClaimed && <Chip tone="zinc">Resgatada</Chip>}
+            {isDone    && <Chip tone="green" dot>Concluída!</Chip>}
+          </div>
+          <p className="font-inconsolata text-[11px] text-zinc-500 mt-0.5">{m.description}</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mt-3 space-y-1.5">
+        <div className="flex justify-between font-inconsolata text-[10px]">
+          <span className="text-zinc-500">Progresso</span>
+          <span className="text-zinc-300">
+            {Math.min(progress, target).toLocaleString("pt-BR")} / {target.toLocaleString("pt-BR")} · {pct}%
+          </span>
+        </div>
+        <Progress value={Math.min(progress, target)} max={target} tone={tone} height={6} />
+      </div>
+
+      {/* Footer: rewards + action */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
+        <div className="flex items-center gap-3">
+          <span className="font-inconsolata text-xs text-cyan-300">
+            +{m.xpReward?.toLocaleString("pt-BR")} XP
+          </span>
+          <span className="inline-flex items-center gap-1 font-inconsolata text-xs text-amber-300">
+            <Coins size={12} />+{m.coinReward?.toLocaleString("pt-BR")}
+          </span>
+        </div>
+
+        {isDone && (
+          <UBtn
+            variant="primary"
+            size="sm"
+            icon={claiming.has(m.id) ? Loader2 : Sparkles}
+            onClick={() => onClaim(m.id)}
+            disabled={claiming.has(m.id)}
+          >
+            Resgatar
+          </UBtn>
+        )}
+        {isClaimed && (
+          <span className="font-inconsolata text-[11px] text-zinc-600 italic">
+            Já resgatada
+          </span>
+        )}
+        {!m.completed && (
+          <span className="font-inconsolata text-[11px] text-zinc-500">
+            {100 - pct}% restante
+          </span>
+        )}
+      </div>
     </div>
-  )
+  );
+}
+
+/* ── Main page ── */
+export default function RecompensasPage() {
+  const router = useRouter();
+  const { user, token, loadFromStorage } = useAuthStore();
+  const { missions, loading, loadMissions, claimMission } = useProfileStore();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [filter, setFilter] = useState("Todas");
+  const [claimingIds, setClaimingIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (user?.isAdmin) router.replace("/admin/recompensas");
+  }, [user, router]);
+
+  useEffect(() => {
+    if (token) loadMissions();
+  }, [token, loadMissions]);
+
+  async function handleClaim(id: number) {
+    if (claimingIds.has(id)) return;
+
+    setClaimingIds((prev) => new Set(prev).add(id));
+    try {
+      const result = await claimMission(id);
+      toastSuccess(`+${result.xpEarned} XP e +${result.coinsEarned} moedas resgatados!`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao resgatar recompensa";
+      toastError(msg);
+    } finally {
+      setClaimingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  }
+
+  const available    = missions.filter((m) => m.completed && !m.claimed).length;
+  const inProgress   = missions.filter((m) => !m.completed).length;
+  const claimedCount = missions.filter((m) => m.claimed).length;
+
+  const list = missions.filter((m) => {
+    if (filter === "Disponíveis")   return m.completed && !m.claimed;
+    if (filter === "Em andamento")  return !m.completed;
+    if (filter === "Resgatadas")    return m.claimed;
+    return true;
+  });
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Para resgatar", val: available,    tone: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
+          { label: "Em andamento",  val: inProgress,   tone: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
+          { label: "Resgatadas",    val: claimedCount, tone: "text-zinc-400",  bg: "bg-zinc-800 border-zinc-700"         },
+        ].map((s) => (
+          <div key={s.label} className={`border rounded-2xl p-3 text-center ${s.bg}`}>
+            <p className={`font-jaro text-2xl leading-none ${s.tone}`}>{s.val}</p>
+            <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter */}
+      <Segmented
+        value={filter}
+        onChange={setFilter}
+        options={["Todas", "Disponíveis", "Em andamento", "Resgatadas"]}
+      />
+
+      {/* Mission list */}
+      {loading.missions ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
+        </div>
+      ) : list.length === 0 ? (
+        <p className="text-center font-inconsolata text-sm text-zinc-600 py-12">
+          Nenhuma missão nesta categoria.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {list.map((m) => (
+            <MissionCard key={m.id} m={m} onClaim={handleClaim} claiming={claimingIds} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

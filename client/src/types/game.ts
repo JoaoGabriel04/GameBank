@@ -60,6 +60,7 @@ export interface Player {
   avatarUrl?: string | null;
   avatarUpdatedAt?: string | null;
   banner?: string | null;
+  spriteId?: string | null;
   badge?: string | null;
   posses: SessionPropriedade[];
   teamId?: number;
@@ -175,7 +176,7 @@ export const MIN_PLAYERS = 2;
 
 export interface RankedPlayer {
   position: number
-  player: { id: number; nome: string; cor?: string; userId?: number | null; desistiu?: boolean; avatarUrl?: string | null; avatarUpdatedAt?: string | null; banner?: string | null; badge?: string | null }
+  player: { id: number; nome: string; cor?: string; userId?: number | null; desistiu?: boolean; avatarUrl?: string | null; avatarUpdatedAt?: string | null; banner?: string | null; spriteId?: string | null; badge?: string | null }
   patrimony: number
   xpEarned: number
   coinsEarned: number

@@ -34,7 +34,7 @@ export default function ConfiguracoesPage() {
     <div className="min-h-screen bg-zinc-900 text-white pb-24">
 
 
-      <main className="pt-8 px-4 max-w-lg mx-auto space-y-4">
+      <main className="pt-16 lg:pt-8 px-4 max-w-lg mx-auto space-y-4">
         {/* Back link */}
         <Link
           href="/user/perfil"

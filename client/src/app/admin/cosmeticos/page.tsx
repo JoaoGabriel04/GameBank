@@ -1,59 +1,17 @@
 "use client";
 
-/**
- * Cosméticos — Banners & Sprites — Admin
- * Salve em: src/app/admin/cosmeticos/page.tsx
- *
- * ⚠️  BACKEND NECESSÁRIO:
- *   - Models `Banner` e `Sprite` (ou novo ShopItem.type = "banner") no Prisma
- *   - CRUD: /admin/banners  e  /admin/sprites
- *   - Upload de imagens (seguir padrão do UserAvatar)
- * Por ora, usa estado local.
- */
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Image as ImageIcon, Layers, Upload, Plus, Pencil, Trash2,
-  Crown, Trophy, Shield, Target, TrendingUp, Palette,
-  Sparkles, Coins, Gamepad2, Building, Home, Check, X,
+  Sparkles, Check, X,
 } from "lucide-react";
 import {
-  Panel, PanelHead, Chip, Btn, Field, AdminInput, Segmented,
+  Panel, PanelHead, Chip, Btn, Field, Segmented,
 } from "@/components/admin/AdminUI";
-import { adminApi } from "@/services/api/admin";
-import type { LucideIcon } from "lucide-react";
-
-/* ── Types ── */
-interface Banner {
-  id: string;
-  nome: string;
-  css: string;
-  spriteId?: string;
-}
-
-/* ── Sample data (replace with API) ── */
-const SAMPLE_BANNERS: Banner[] = [
-  { id: "b1", nome: "Aurora",   css: "linear-gradient(120deg,#0e7490,#22d3ee 60%,#5eead4)", spriteId: "crown" },
-  { id: "b2", nome: "Magnata",  css: "linear-gradient(120deg,#7c2d12,#f59e0b 70%,#fde047)", spriteId: "trophy" },
-  { id: "b3", nome: "Vinho",    css: "linear-gradient(120deg,#4c0519,#be123c 70%,#fb7185)", spriteId: "shield" },
-  { id: "b4", nome: "Floresta", css: "linear-gradient(120deg,#064e3b,#10b981 70%,#a7f3d0)", spriteId: "sparkles" },
-  { id: "b5", nome: "Noturno",  css: "linear-gradient(120deg,#1e1b4b,#6366f1 70%,#c4b5fd)", spriteId: "target" },
-  { id: "b6", nome: "Brasa",    css: "linear-gradient(120deg,#7f1d1d,#ea580c 70%,#fdba74)", spriteId: "trending" },
-];
-
-const SPRITE_LIST: { id: string; icon: LucideIcon }[] = [
-  { id: "crown",    icon: Crown    },
-  { id: "trophy",   icon: Trophy   },
-  { id: "shield",   icon: Shield   },
-  { id: "target",   icon: Target   },
-  { id: "trending", icon: TrendingUp },
-  { id: "palette",  icon: Palette  },
-  { id: "sparkles", icon: Sparkles },
-  { id: "coins",    icon: Coins    },
-  { id: "gamepad",  icon: Gamepad2 },
-  { id: "building", icon: Building },
-  { id: "home",     icon: Home     },
-];
+import { useAdminStore } from "@/stores/adminStore";
+import { useToast } from "@/components/Toast";
+import { SPRITE_CATALOG, resolveSprite } from "@/constants/sprites";
+import type { Banner as ApiBanner, BannerInput } from "@/services/api/admin";
 
 const SWATCHES = [
   "#0e7490","#22d3ee","#5eead4","#10b981",
@@ -61,19 +19,17 @@ const SWATCHES = [
   "#be123c","#fb7185","#ea580c","#1e1b4b",
 ];
 
-/* ── Sprite icon renderer ── */
-function SpriteIcon({ id, size = 20 }: { id?: string; size?: number }) {
-  const found = SPRITE_LIST.find((s) => s.id === id);
+function SpriteIcon({ id, size = 20 }: { id?: string | null; size?: number }) {
+  const found = resolveSprite(id);
   if (!found) return <Sparkles size={size} />;
   const I = found.icon;
   return <I size={size} />;
 }
 
-/* ── Profile mock preview ── */
 function BannerPreview({
   css, sprite, name,
 }: {
-  css: string; sprite?: string; name: string;
+  css: string; sprite?: string | null; name: string;
 }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
@@ -100,32 +56,96 @@ function BannerPreview({
   );
 }
 
-/* ── Banner builder ── */
-function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) {
-  const [c1, setC1] = useState("#0e7490");
-  const [c2, setC2] = useState("#22d3ee");
-  const [c3, setC3] = useState("#5eead4");
-  const [angle, setAngle] = useState(120);
-  const [nome, setNome] = useState("Novo banner");
-  const [sprite, setSprite] = useState("crown");
-  const [avail, setAvail] = useState<"loja" | "evento" | "premio">("loja");
+const DEFAULT_BANNER: {
+  c1: string; c2: string; c3: string;
+  angle: number; nome: string; sprite: string; disponibilidade: boolean;
+} = {
+  c1: "#0e7490",
+  c2: "#22d3ee",
+  c3: "#5eead4",
+  angle: 120,
+  nome: "Novo banner",
+  sprite: "crown",
+  disponibilidade: true,
+};
+
+function parseBannerCss(css: string): { angle: number; c1: string; c2: string; c3: string } {
+  const m = css.match(/linear-gradient\(\s*(\d+)deg\s*,\s*([^,]+)\s*,\s*([^,]+?)(?:\s+\d+%)?\s*,\s*([^)]+)\s*\)/i);
+  if (!m) return { angle: DEFAULT_BANNER.angle, c1: DEFAULT_BANNER.c1, c2: DEFAULT_BANNER.c2, c3: DEFAULT_BANNER.c3 };
+  return {
+    angle: Number(m[1]) || DEFAULT_BANNER.angle,
+    c1: m[2].trim(),
+    c2: m[3].trim(),
+    c3: m[4].trim(),
+  };
+}
+
+function BannerBuilder({
+  onSave, onUpdate, onCancel, editing,
+}: {
+  onSave: (b: BannerInput) => Promise<void>;
+  onUpdate?: (id: number, b: BannerInput) => Promise<void>;
+  onCancel?: () => void;
+  editing?: ApiBanner | null;
+}) {
+  const [c1, setC1] = useState(DEFAULT_BANNER.c1);
+  const [c2, setC2] = useState(DEFAULT_BANNER.c2);
+  const [c3, setC3] = useState(DEFAULT_BANNER.c3);
+  const [angle, setAngle] = useState(DEFAULT_BANNER.angle);
+  const [nome, setNome] = useState(DEFAULT_BANNER.nome);
+  const [sprite, setSprite] = useState(DEFAULT_BANNER.sprite);
+  const [disponibilidade, setDisponibilidade] = useState(DEFAULT_BANNER.disponibilidade);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setC1(DEFAULT_BANNER.c1);
+      setC2(DEFAULT_BANNER.c2);
+      setC3(DEFAULT_BANNER.c3);
+      setAngle(DEFAULT_BANNER.angle);
+      setNome(DEFAULT_BANNER.nome);
+      setSprite(DEFAULT_BANNER.sprite);
+      setDisponibilidade(DEFAULT_BANNER.disponibilidade);
+      return;
+    }
+    const p = parseBannerCss(editing.css);
+    setC1(p.c1);
+    setC2(p.c2);
+    setC3(p.c3);
+    setAngle(p.angle);
+    setNome(editing.nome);
+    setSprite(editing.spriteId ?? DEFAULT_BANNER.sprite);
+    setDisponibilidade(editing.disponibilidade);
+    setSaved(false);
+  }, [editing]);
 
   const css = `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`;
 
-  function handleSave() {
-    // TODO: adminApi.createBanner({ nome, css, spriteId: sprite, disponibilidade: avail })
-    onSave({ nome, css, spriteId: sprite });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  async function handleSave() {
+    setSaving(true);
+    try {
+      if (editing && onUpdate) {
+        await onUpdate(editing.id, { nome, css, spriteId: sprite, disponibilidade });
+      } else {
+        await onSave({ nome, css, spriteId: sprite, disponibilidade });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <Panel flush>
-      <PanelHead title="Construtor de banner" icon={ImageIcon} sub="Crie um banner de perfil personalizado"
-        right={<Chip tone="cyan">editor</Chip>} />
+      <PanelHead
+        title={editing ? "Editar banner" : "Construtor de banner"}
+        icon={ImageIcon}
+        sub={editing ? `Editando #${editing.id} · ${editing.nome}` : "Crie um banner de perfil personalizado"}
+        right={<Chip tone={editing ? "amber" : "cyan"}>{editing ? "editando" : "editor"}</Chip>}
+      />
       <div className="grid lg:grid-cols-[1fr_300px] gap-5 p-5">
-        {/* Preview + color controls */}
         <div className="space-y-4">
           <div>
             <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
@@ -134,7 +154,6 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
             <BannerPreview css={css} sprite={sprite} name={nome} />
           </div>
 
-          {/* Color stops */}
           <div className="grid grid-cols-3 gap-3">
             {([["Cor inicial", c1, setC1], ["Cor central", c2, setC2], ["Cor final", c3, setC3]] as [string, string, (v: string) => void][]).map(([lbl, val, set]) => (
               <div key={lbl}>
@@ -149,7 +168,6 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
             ))}
           </div>
 
-          {/* Swatches */}
           <div className="flex flex-wrap gap-1.5">
             {SWATCHES.map((s) => (
               <button key={s} type="button"
@@ -159,7 +177,6 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
             ))}
           </div>
 
-          {/* Angle */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">Ângulo</span>
@@ -170,7 +187,6 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
           </div>
         </div>
 
-        {/* Right controls */}
         <div className="space-y-4">
           <Field label="Nome do banner">
             <input value={nome} onChange={(e) => setNome(e.target.value)}
@@ -179,7 +195,7 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
 
           <Field label="Sprite / emblema">
             <div className="grid grid-cols-6 gap-1.5">
-              {SPRITE_LIST.slice(0, 12).map((sp) => {
+              {SPRITE_CATALOG.slice(0, 12).map((sp) => {
                 const I = sp.icon;
                 return (
                   <button key={sp.id} type="button" onClick={() => setSprite(sp.id)}
@@ -199,13 +215,12 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
 
           <Field label="Disponibilidade">
             <Segmented
-              value={avail} onChange={(v) => setAvail(v as typeof avail)}
-              options={[{ value: "loja", label: "Vender" }, { value: "evento", label: "Evento" }, { value: "premio", label: "Prêmio" }]}
+              value={disponibilidade ? "sim" : "nao"} onChange={(v) => setDisponibilidade(v === "sim")}
+              options={[{ value: "sim", label: "Disponível" }, { value: "nao", label: "Oculto" }]}
               size="sm"
             />
           </Field>
 
-          {/* Upload placeholder */}
           <div className="border border-dashed border-zinc-700 rounded-xl p-4 text-center">
             <Upload size={20} className="text-zinc-600 mx-auto" />
             <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
@@ -218,76 +233,77 @@ function BannerBuilder({ onSave }: { onSave: (b: Omit<Banner, "id">) => void }) 
             icon={saved ? Check : undefined}
             className="w-full justify-center"
             onClick={handleSave}
+            disabled={saving}
           >
-            {saved ? "Banner salvo!" : "Salvar banner"}
+            {saving ? "Salvando…" : saved ? "Banner salvo!" : editing ? "Salvar alterações" : "Salvar banner"}
           </Btn>
+          {editing && onCancel && (
+            <Btn variant="ghost" className="w-full justify-center" onClick={onCancel}>
+              Cancelar
+            </Btn>
+          )}
         </div>
       </div>
     </Panel>
   );
 }
 
-/* ── Main page ── */
 export default function AdminCosmeticosPage() {
-  const [banners, setBanners] = useState<Banner[]>(SAMPLE_BANNERS);
-  const [confirmDel, setConfirmDel] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { banners, loadingBanners, loadBanners, createBanner, updateBanner, deleteBanner } = useAdminStore();
+  const { success: ok, error: err } = useToast();
+  const [confirmDel, setConfirmDel] = useState<number | null>(null);
+  const [editing, setEditing] = useState<ApiBanner | null>(null);
 
   useEffect(() => {
-    loadBanners();
-  }, []);
+    loadBanners().catch(() => err("Erro ao carregar banners."));
+  }, [loadBanners, err]);
 
-  async function loadBanners() {
+  async function addBanner(b: BannerInput) {
     try {
-      setLoading(true);
-      const data = await adminApi.listBanners();
-      setBanners(data);
-    } catch (err) {
-      console.error("Erro ao carregar banners:", err);
-    } finally {
-      setLoading(false);
+      await createBanner(b);
+      ok("Banner criado!");
+    } catch {
+      err("Erro ao criar banner.");
     }
   }
 
-  async function addBanner(b: Omit<Banner, "id">) {
+  async function editBanner(id: number, b: BannerInput) {
     try {
-      const newBanner = await adminApi.createBanner(b);
-      setBanners((p) => [...p, newBanner]);
-    } catch (err) {
-      console.error("Erro ao salvar banner:", err);
+      const updated = await updateBanner(id, b);
+      ok(`Banner #${updated.id} atualizado!`);
+      setEditing(null);
+    } catch {
+      err("Erro ao atualizar banner.");
     }
   }
 
-  async function deleteBanner(id: string) {
+  async function removeBanner(id: number) {
     try {
-      const idNum = parseInt(id.replace("b", ""));
-      await adminApi.deleteBanner(idNum);
-      setBanners((p) => p.filter((b) => b.id !== id));
+      await deleteBanner(id);
+      ok("Banner removido.");
       setConfirmDel(null);
-    } catch (err) {
-      console.error("Erro ao deletar banner:", err);
+      if (editing?.id === id) setEditing(null);
+    } catch {
+      err("Erro ao remover banner.");
     }
   }
 
   return (
     <div className="space-y-4">
-      {loading && (
-        <div className="bg-blue-500/5 border border-blue-500/30 rounded-xl px-4 py-2.5 font-inconsolata text-xs text-blue-300">
-          ℹ️ Carregando banners...
-        </div>
-      )}
+      <BannerBuilder
+        onSave={addBanner}
+        onUpdate={editBanner}
+        onCancel={() => setEditing(null)}
+        editing={editing}
+      />
 
-      <BannerBuilder onSave={addBanner} />
-
-      {/* Banner gallery */}
       <Panel flush>
         <PanelHead
           title="Banners publicados" icon={Layers}
-          sub={`${banners.length} presets disponíveis`}
-          right={<Btn variant="ghost" icon={Plus} size="sm">Novo</Btn>}
+          sub={loadingBanners ? "carregando…" : `${banners.length} presets disponíveis`}
         />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
-          {banners.map((b) => (
+          {banners.map((b: ApiBanner) => (
             <div key={b.id} className="group rounded-xl overflow-hidden border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-colors">
               <div className="h-20 relative" style={{ background: b.css }}>
                 {b.spriteId && (
@@ -296,10 +312,10 @@ export default function AdminCosmeticosPage() {
                   </div>
                 )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center gap-2">
-                  <button type="button" className="p-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25"><Pencil size={13} /></button>
+                  <button type="button" onClick={() => setEditing(b)} title="Editar banner" className="p-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25"><Pencil size={13} /></button>
                   {confirmDel === b.id ? (
                     <div className="flex gap-1">
-                      <button type="button" onClick={() => deleteBanner(b.id)} className="p-1.5 rounded-lg bg-rose-500/60 text-white"><Check size={13} /></button>
+                      <button type="button" onClick={() => removeBanner(b.id)} className="p-1.5 rounded-lg bg-rose-500/60 text-white"><Check size={13} /></button>
                       <button type="button" onClick={() => setConfirmDel(null)} className="p-1.5 rounded-lg bg-white/15 text-white"><X size={13} /></button>
                     </div>
                   ) : (
@@ -309,14 +325,18 @@ export default function AdminCosmeticosPage() {
               </div>
               <div className="px-3 py-2 bg-zinc-900 flex items-center justify-between">
                 <span className="font-inconsolata text-xs text-zinc-300">{b.nome}</span>
-                <span className="font-inconsolata text-[9px] text-zinc-600">{b.id}</span>
+                <span className="font-inconsolata text-[9px] text-zinc-600">#{b.id}</span>
               </div>
             </div>
           ))}
+          {!loadingBanners && banners.length === 0 && (
+            <p className="col-span-full py-12 text-center font-inconsolata text-xs text-zinc-600">
+              Nenhum banner cadastrado.
+            </p>
+          )}
         </div>
       </Panel>
 
-      {/* Sprite library */}
       <Panel flush>
         <PanelHead
           title="Biblioteca de sprites" icon={Sparkles}
@@ -324,7 +344,7 @@ export default function AdminCosmeticosPage() {
           right={<Btn variant="ghost" icon={Upload} size="sm">Enviar</Btn>}
         />
         <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 p-4">
-          {SPRITE_LIST.map((sp) => {
+          {SPRITE_CATALOG.map((sp) => {
             const I = sp.icon;
             return (
               <div key={sp.id}

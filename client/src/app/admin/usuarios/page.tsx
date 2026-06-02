@@ -7,19 +7,17 @@
  */
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Users, Pencil, Download, Search, Shield, Ban,
-  Check, Coins, MessageSquare, ChevronRight,
+  Users, Pencil, Download, Search, Shield, Ban, Trash2,
+  Check, Coins, MessageSquare, ChevronRight, X, AlertTriangle,
 } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import type { AdminUser } from "@/services/api/admin";
 import {
   Panel, PanelHead, Chip, Toggle, Progress, Segmented,
   Btn, Field, AdminInput, AdminSelect, AdminAvatar,
-  Drawer, LiveDot,
+  Drawer, LiveDot, AdminModal,
 } from "@/components/admin/AdminUI";
 
 /* ── Status helpers ── */
@@ -28,7 +26,7 @@ const STATUS_TONE: Record<string, "emerald" | "rose" | "zinc"> = {
 };
 
 /* ── User Edit Drawer ── */
-function UserEditDrawer({
+function DeleteUserDialog({
   user,
   open,
   onClose,
@@ -37,7 +35,113 @@ function UserEditDrawer({
   open: boolean;
   onClose: () => void;
 }) {
-  const { adjustCoins } = useAdminStore();
+  const { deleteUser } = useAdminStore();
+  const { success: ok, error: err } = useToast();
+  const [confirmation, setConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (open) setConfirmation("");
+  }, [open]);
+
+  if (!user) return null;
+
+  const canConfirm = confirmation === user.email;
+  const isAdminSelf = false;
+
+  async function handleDelete() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await deleteUser(user.id);
+      ok(`Usuário ${user.nome} removido do banco.`);
+      onClose();
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error
+        ?? (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? "Erro ao excluir usuário.";
+      err(msg);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <AdminModal open={open} onClose={onClose} width={500}>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+        <h2 className="font-jaro text-lg text-white flex items-center gap-2 whitespace-nowrap">
+          <AlertTriangle size={18} className="text-rose-400" />
+          Excluir usuário permanentemente
+        </h2>
+        <button type="button" onClick={onClose} className="text-zinc-500 hover:text-white cursor-pointer p-1">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div className="bg-rose-500/5 border border-rose-500/30 rounded-xl p-4 space-y-2">
+          <p className="font-inconsolata text-sm text-rose-200">
+            Esta ação é <b>irreversível</b>. O usuário será removido do banco de dados e:
+          </p>
+          <ul className="font-inconsolata text-xs text-rose-300/80 list-disc pl-5 space-y-0.5">
+            <li>Todas as missões, itens comprados e resultados de partidas serão apagados</li>
+            <li>Sessões que ele criou ficarão sem dono</li>
+            <li>Logs de auditoria serão anonimizados (mantidos sem referência)</li>
+            <li>Não é possível recuperar a conta depois</li>
+          </ul>
+        </div>
+
+        <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+          <AdminAvatar user={user} size="md" />
+          <div className="min-w-0">
+            <p className="font-jaro text-base text-white truncate">{user.nome}</p>
+            <p className="font-inconsolata text-xs text-zinc-500 truncate">{user.email}</p>
+          </div>
+        </div>
+
+        <Field label="Para confirmar, digite o e-mail do usuário">
+          <AdminInput
+            value={confirmation}
+            onChange={(e) => setConfirmation(e.target.value)}
+            placeholder={user.email}
+            autoComplete="off"
+          />
+        </Field>
+
+        <div className="flex gap-2 pt-1">
+          <Btn variant="ghost" className="flex-1 justify-center" onClick={onClose}>Cancelar</Btn>
+          <Btn
+            variant="danger"
+            icon={Trash2}
+            className="flex-1 justify-center"
+            onClick={handleDelete}
+            disabled={!canConfirm || deleting}
+          >
+            {deleting ? "Excluindo…" : "Excluir permanentemente"}
+          </Btn>
+        </div>
+        {isAdminSelf && (
+          <p className="text-[10px] text-zinc-500 font-inconsolata text-center">
+            Você não pode excluir seu próprio usuário.
+          </p>
+        )}
+      </div>
+    </AdminModal>
+  );
+}
+
+function UserEditDrawer({
+  user,
+  open,
+  onClose,
+  onRequestDelete,
+}: {
+  user: AdminUser | null;
+  open: boolean;
+  onClose: () => void;
+  onRequestDelete: (u: AdminUser) => void;
+}) {
+  const { adjustCoins, setUserAdmin, banUser, unbanUser } = useAdminStore();
   const { success: ok, error: err } = useToast();
 
   const [coins, setCoins] = useState(0);
@@ -49,7 +153,7 @@ function UserEditDrawer({
     if (user) {
       setCoins(user.coins);
       setIsAdmin(user.isAdmin);
-      setBanned(false); // add isBanned to AdminUser when backend supports it
+      setBanned(!!user.banned);
     }
   }, [user]);
 
@@ -65,6 +169,10 @@ function UserEditDrawer({
     try {
       const delta = coins - user.coins;
       if (delta !== 0) await adjustCoins(user.id, delta);
+      if (isAdmin !== user.isAdmin) await setUserAdmin(user.id, isAdmin);
+      const wasBanned = !!user.banned;
+      if (banned && !wasBanned) await banUser(user.id);
+      else if (!banned && wasBanned) await unbanUser(user.id);
       ok("Usuário atualizado!");
       onClose();
     } catch {
@@ -170,6 +278,23 @@ function UserEditDrawer({
             {saving ? "Salvando…" : "Salvar"}
           </Btn>
         </div>
+
+        {/* Danger zone */}
+        <div className="pt-4 mt-2 border-t border-rose-500/20">
+          <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+            Zona de perigo
+          </p>
+          <Btn
+            variant="danger" icon={Trash2}
+            className="w-full justify-center"
+            onClick={() => user && onRequestDelete(user)}
+          >
+            Excluir usuário do banco
+          </Btn>
+          <p className="font-inconsolata text-[10px] text-zinc-600 mt-2 leading-snug">
+            Remove o usuário permanentemente. Esta ação não pode ser desfeita.
+          </p>
+        </div>
       </div>
     </Drawer>
   );
@@ -177,23 +302,20 @@ function UserEditDrawer({
 
 /* ── Main page ── */
 export default function AdminUsuariosPage() {
-  const router = useRouter();
-  const user = useAuthStore((s) => s.user);
   const { users, loadingUsers, loadUsers } = useAdminStore();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [selected, setSelected] = useState<number[]>([]);
   const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [deleting, setDeleting] = useState<AdminUser | null>(null);
 
-  useEffect(() => {
-    if (user !== null && !user.isAdmin) router.replace("/");
-  }, [user, router]);
+  function closeDrawer() { setEditing(null); setDeleting(null); }
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const filtered = users.filter((u) => {
     if (filter === "Admins" && !u.isAdmin) return false;
-    // if (filter === "Banidos" && !u.isBanned) return false; // enable when backend supports
+    if (filter === "Banidos" && !u.banned) return false;
     const term = q.toLowerCase();
     return u.nome.toLowerCase().includes(term) || u.email.toLowerCase().includes(term);
   });
@@ -202,6 +324,7 @@ export default function AdminUsuariosPage() {
     setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
 
   const adminsCount = users.filter((u) => u.isAdmin).length;
+  const bannedCount = users.filter((u) => u.banned).length;
 
   return (
     <div className="space-y-4">
@@ -213,6 +336,7 @@ export default function AdminUsuariosPage() {
           options={[
             { value: "Todos",   label: `Todos ${users.length}` },
             { value: "Admins",  label: `Admins ${adminsCount}` },
+            { value: "Banidos", label: `Banidos ${bannedCount}` },
           ]}
         />
         <div className="flex items-center gap-2 flex-1 justify-end">
@@ -339,7 +463,11 @@ export default function AdminUsuariosPage() {
 
                       {/* Status */}
                       <td className="px-4 py-3">
-                        <Chip tone="emerald" dot>ativo</Chip>
+                        {u.banned ? (
+                          <Chip tone="rose" dot>banido</Chip>
+                        ) : (
+                          <Chip tone="emerald" dot>ativo</Chip>
+                        )}
                       </td>
 
                       {/* Edit */}
@@ -366,7 +494,15 @@ export default function AdminUsuariosPage() {
         )}
       </Panel>
 
-      <UserEditDrawer user={editing} open={!!editing} onClose={() => setEditing(null)} />
+      <UserEditDrawer
+        user={editing} open={!!editing}
+        onClose={closeDrawer}
+        onRequestDelete={(u) => { setDeleting(u); }}
+      />
+      <DeleteUserDialog
+        user={deleting} open={!!deleting}
+        onClose={() => setDeleting(null)}
+      />
     </div>
   );
 }

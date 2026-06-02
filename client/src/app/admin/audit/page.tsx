@@ -1,197 +1,211 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Panel, PanelHead } from "@/components/admin/AdminBase";
-import { AuditLog } from "@/lib/admin/types";
-import { Scroll, Search, Filter } from "lucide-react";
+import {
+  ScrollText, Search, Download, Activity, Check,
+  Bell, Ban,
+} from "lucide-react";
+import {
+  Panel, Chip, Segmented, Btn, AdminInput,
+} from "@/components/admin/AdminUI";
+import type { ChipTone } from "@/components/admin/AdminUI";
+import { useAdminStore } from "@/stores/adminStore";
+import { useToast } from "@/components/Toast";
+import type { AuditEntry } from "@/services/api/admin";
+
+type Severity = "info" | "success" | "warn" | "danger";
+type ActorRole = "admin" | "system" | "user";
+
+const SEV_META: Record<Severity, { tone: ChipTone; label: string; icon: React.ComponentType<{ size?: number }> }> = {
+  info:    { tone: "sky",     label: "Info",    icon: Activity  },
+  success: { tone: "emerald", label: "Sucesso", icon: Check     },
+  warn:    { tone: "amber",   label: "Aviso",   icon: Bell      },
+  danger:  { tone: "rose",    label: "Crítico", icon: Ban       },
+};
+
+const SEV_TONE_BG: Record<ChipTone, string> = {
+  cyan:    "bg-cyan-500/10 text-cyan-300 border-cyan-500/20",
+  sky:     "bg-sky-500/10 text-sky-300 border-sky-500/20",
+  emerald: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+  amber:   "bg-amber-500/10 text-amber-300 border-amber-500/20",
+  rose:    "bg-rose-500/10 text-rose-300 border-rose-500/20",
+  violet:  "bg-violet-500/10 text-violet-300 border-violet-500/20",
+  zinc:    "bg-zinc-700/30 text-zinc-400 border-zinc-600/40",
+  teal:    "bg-teal-500/10 text-teal-300 border-teal-500/20",
+};
+
+const ROLE_TONE: Record<ActorRole, ChipTone> = {
+  admin: "violet", system: "zinc", user: "cyan",
+};
+
+function inferRole(entry: AuditEntry): ActorRole {
+  if (!entry.actorId) return "system";
+  if (entry.action.startsWith("user.") || entry.action.startsWith("session.") || entry.action.startsWith("mission.")) return "admin";
+  return "user";
+}
+
+function fmtTs(ts: string) {
+  return new Date(ts).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function exportCsv(rows: AuditEntry[]) {
+  const header = "id,ts,actorId,actorNome,action,target,severity\n";
+  const body = rows.map((r) => [
+    r.id,
+    r.ts,
+    r.actorId ?? "",
+    (r.actorNome ?? "").replace(/,/g, " "),
+    r.action,
+    (r.target ?? "").replace(/,/g, " "),
+    r.severity,
+  ].join(",")).join("\n");
+  const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `audit-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function AdminAuditPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterAction, setFilterAction] = useState("");
-
-  async function load() {
-    setLoading(true);
-    try {
-      const mockLogs: AuditLog[] = [
-        {
-          id: 1,
-          timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-          actorId: 1,
-          action: "user_ban",
-          targetType: "user",
-          targetId: 42,
-          details: { reason: "Comportamento ofensivo" },
-        },
-        {
-          id: 2,
-          timestamp: new Date(Date.now() - 15 * 60000).toISOString(),
-          actorId: 1,
-          action: "item_created",
-          targetType: "shop_item",
-          targetId: 15,
-          details: { name: "Badge Lenda", price: 5000 },
-        },
-        {
-          id: 3,
-          timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-          actorId: 2,
-          action: "config_updated",
-          targetType: "economy",
-          details: { coinMultiplier: 1.5 },
-        },
-        {
-          id: 4,
-          timestamp: new Date(Date.now() - 1 * 3600000).toISOString(),
-          actorId: 3,
-          action: "session_ended",
-          targetType: "session",
-          targetId: 156,
-          details: { duration: 3600, winner: "João Silva" },
-        },
-      ];
-      setLogs(mockLogs);
-    } catch (error) {
-      console.error("Erro:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { audit, loadingAudit, loadAudit } = useAdminStore();
+  const { error: err } = useToast();
+  const [sev, setSev] = useState("Todos");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
-    load();
-  }, []);
+    loadAudit({ limit: 200 }).catch(() => err("Erro ao carregar auditoria."));
+  }, [loadAudit, err]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin w-8 h-8 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full" />
-      </div>
-    );
-  }
-
-  const ACTION_LABELS: Record<string, string> = {
-    user_ban: "Usuário Banido",
-    user_unban: "Usuário Desbanido",
-    item_created: "Item Criado",
-    item_deleted: "Item Deletado",
-    config_updated: "Config Atualizada",
-    session_ended: "Sessão Finalizada",
+  const counts = {
+    info:    audit.filter((l) => l.severity === "info").length,
+    success: audit.filter((l) => l.severity === "success").length,
+    warn:    audit.filter((l) => l.severity === "warn").length,
+    danger:  audit.filter((l) => l.severity === "danger").length,
   };
 
-  const ACTION_ICONS: Record<string, string> = {
-    user_ban: "🚫",
-    user_unban: "✅",
-    item_created: "➕",
-    item_deleted: "🗑️",
-    config_updated: "⚙️",
-    session_ended: "🏁",
-  };
-
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch =
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.targetId?.toString().includes(searchTerm) ||
-      log.actorId.toString().includes(searchTerm);
-
-    const matchesFilter = !filterAction || log.action === filterAction;
-
-    return matchesSearch && matchesFilter;
+  const list = audit.filter((l) => {
+    const matchSev =
+      sev === "Todos" ||
+      (sev === "Info"    && l.severity === "info") ||
+      (sev === "Sucesso" && l.severity === "success") ||
+      (sev === "Aviso"   && l.severity === "warn") ||
+      (sev === "Crítico" && l.severity === "danger");
+    const term = q.toLowerCase();
+    const matchQ = !q ||
+      (l.actorNome ?? "").toLowerCase().includes(term) ||
+      l.action.toLowerCase().includes(term) ||
+      (l.target ?? "").toLowerCase().includes(term);
+    return matchSev && matchQ;
   });
 
-  const uniqueActions = [...new Set(logs.map((l) => l.action))];
-
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="font-jaro text-xl text-white">
-          {logs.length} log(s) de ação
-        </h2>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3 top-3 text-zinc-600" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Pesquisar por ação, ID, usuário..."
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-3 py-2 font-mono text-sm text-zinc-100 focus:outline-none focus:border-cyan-500 transition-colors placeholder:text-zinc-600"
-        />
-      </div>
-
-      {/* Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setFilterAction("")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
-            filterAction === ""
-              ? "bg-cyan-500 text-zinc-950"
-              : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-          }`}
-        >
-          <Filter size={14} />
-          Todas as Ações
-        </button>
-
-        {uniqueActions.map((action) => (
-          <button
-            key={action}
-            onClick={() => setFilterAction(filterAction === action ? "" : action)}
-            className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
-              filterAction === action
-                ? "bg-cyan-500 text-zinc-950"
-                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-            }`}
-          >
-            {ACTION_ICONS[action] || "•"} {ACTION_LABELS[action] || action}
-          </button>
-        ))}
-      </div>
-
-      {/* Logs Table */}
-      <Panel flush>
-        <PanelHead title="Log de auditoria" icon={Scroll} />
-        <div className="divide-y divide-zinc-800">
-          {filteredLogs.length === 0 ? (
-            <p className="px-4 py-8 text-xs text-zinc-500 text-center">
-              Nenhum log encontrado
-            </p>
-          ) : (
-            filteredLogs.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <span className="text-lg">
-                    {ACTION_ICONS[log.action] || "•"}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-mono text-sm text-zinc-200">
-                      {ACTION_LABELS[log.action] || log.action}
-                    </p>
-                    <p className="font-mono text-xs text-zinc-600">
-                      {log.targetType}
-                      {log.targetId && `#${log.targetId}`}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right ml-4">
-                  <p className="font-mono text-xs text-zinc-400">
-                    Admin #{log.actorId}
-                  </p>
-                  <p className="font-mono text-xs text-zinc-600">
-                    {new Date(log.timestamp).toLocaleString("pt-BR")}
-                  </p>
-                </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {(Object.entries(SEV_META) as [Severity, typeof SEV_META[Severity]][]).map(([key, meta]) => {
+          const Icon = meta.icon;
+          return (
+            <div key={key} className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-4 flex items-center gap-3">
+              <span className={`w-9 h-9 rounded-xl grid place-items-center border ${SEV_TONE_BG[meta.tone]}`}>
+                <Icon size={16} />
+              </span>
+              <div>
+                <p className="font-jaro text-xl text-white leading-none">{counts[key]}</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wider">{meta.label}</p>
               </div>
-            ))
-          )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <Segmented
+          value={sev} onChange={setSev}
+          options={[
+            { value: "Todos",   label: `Todos ${audit.length}` },
+            { value: "Info",    label: `Info ${counts.info}` },
+            { value: "Sucesso", label: `Sucesso ${counts.success}` },
+            { value: "Aviso",   label: `Avisos ${counts.warn}` },
+            { value: "Crítico", label: `Críticos ${counts.danger}` },
+          ]}
+        />
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" />
+            <AdminInput
+              placeholder="Buscar no log"
+              value={q} onChange={(e) => setQ(e.target.value)}
+              className="!pl-9"
+            />
+          </div>
+          <Btn variant="ghost" icon={Download} size="sm" className="hidden sm:inline-flex" onClick={() => exportCsv(list)}>
+            Exportar
+          </Btn>
         </div>
+      </div>
+
+      <Panel flush>
+        {loadingAudit ? (
+          <p className="py-20 text-center font-inconsolata text-sm text-zinc-500">Carregando auditoria…</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="border-b border-zinc-800 text-left">
+                  {["Severidade", "Quando", "Autor", "Ação", "Alvo"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-2.5 font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((l) => {
+                  const meta = SEV_META[l.severity];
+                  const role = inferRole(l);
+                  return (
+                    <tr
+                      key={l.id}
+                      className="border-b border-zinc-800/70 hover:bg-zinc-800/30 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <Chip tone={meta.tone} dot>{meta.label}</Chip>
+                      </td>
+                      <td className="px-4 py-3 font-inconsolata text-[11px] text-zinc-500 whitespace-nowrap">
+                        {fmtTs(l.ts)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-inconsolata text-xs text-zinc-200 whitespace-nowrap">
+                            {l.actorNome ?? "—"}
+                          </span>
+                          <Chip tone={ROLE_TONE[role]}>{role}</Chip>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-inconsolata text-xs text-zinc-300 whitespace-nowrap">
+                        {l.action}
+                      </td>
+                      <td className="px-4 py-3 font-inconsolata text-xs text-zinc-400">
+                        {l.target ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!loadingAudit && list.length === 0 && (
+          <p className="py-12 text-center font-inconsolata text-sm text-zinc-600">
+            {audit.length === 0 ? "Nenhuma ação registrada ainda." : "Nenhum registro encontrado."}
+          </p>
+        )}
       </Panel>
     </div>
   );

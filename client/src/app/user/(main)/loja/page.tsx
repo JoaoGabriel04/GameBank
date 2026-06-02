@@ -7,18 +7,19 @@ import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
 import UserBadge from "@/components/UserBadge"
 import { resolveBadge } from "@/constants/badges"
+import type { ShopItem, UserItem } from "@/types/shop"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag } from "@fortawesome/free-solid-svg-icons"
-import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
+import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag, faImage } from "@fortawesome/free-solid-svg-icons"
+import { Loader2, Sparkles, CheckCircle2, XCircle, Image as ImageIcon } from "lucide-react"
 
 // ── Configuração visual por tipo de item ─────────────────────────────────────
 
-type ItemType = "title" | "badge" | string
+type ItemType = "title" | "badge" | "banner" | string
 
 const TYPE_CONFIG: Record<string, {
   label: string
-  icon: any
+  icon: React.ComponentType<{ className?: string; size?: number }>
   gradient: string
   glow: string
   accent: string
@@ -40,6 +41,14 @@ const TYPE_CONFIG: Record<string, {
     accent: "text-cyan-400",
     iconColor: "text-cyan-400",
   },
+  banner: {
+    label: "Banners",
+    icon: faImage,
+    gradient: "from-emerald-600/20 via-teal-600/10 to-transparent",
+    glow: "shadow-[0_0_24px_rgba(16,185,129,0.25)]",
+    accent: "text-emerald-400",
+    iconColor: "text-emerald-400",
+  },
 }
 
 function getConfig(type: string) {
@@ -57,6 +66,7 @@ const FILTER_OPTIONS = [
   { value: "all", label: "Todos" },
   { value: "title", label: "Títulos" },
   { value: "badge", label: "Emblemas" },
+  { value: "banner", label: "Banners" },
 ]
 
 // ── Componente do card de item ────────────────────────────────────────────────
@@ -70,7 +80,7 @@ function ShopItemCard({
   onEquip,
   buying,
 }: {
-  item: any
+  item: ShopItem
   owned: boolean
   equipped: boolean
   canAfford: boolean
@@ -79,6 +89,7 @@ function ShopItemCard({
   buying: boolean
 }) {
   const cfg = getConfig(item.type)
+  const isBanner = item.type === "banner"
 
   return (
     <div
@@ -96,7 +107,10 @@ function ShopItemCard({
       `}
     >
       {/* Faixa superior com gradiente */}
-      <div className={`h-24 w-full bg-gradient-to-br ${cfg.gradient} flex items-center justify-center relative`}>
+      <div
+        className={`h-24 w-full bg-gradient-to-br ${cfg.gradient} flex items-center justify-center relative`}
+        style={isBanner && item.value ? { background: item.value } : undefined}
+      >
         {/* Ícone central */}
         <div className={`${item.type === "badge" ? "flex flex-col items-center gap-1" : ""}`}>
           <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
@@ -105,6 +119,8 @@ function ShopItemCard({
                 badge={item.value ? JSON.parse(item.value).badge : undefined}
                 variant="medium"
               />
+            ) : item.type === "banner" ? (
+              <ImageIcon className={`text-2xl ${cfg.iconColor}`} size={26} />
             ) : (
               <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
             )}
@@ -179,6 +195,10 @@ function ShopItemCard({
               })()}
             </div>
           </div>
+        ) : item.type === "banner" ? (
+          <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed line-clamp-2 flex-1">
+            {item.description || "Banner de perfil personalizável."}
+          </p>
         ) : (
           <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed line-clamp-2 flex-1">
             {item.description}
@@ -245,7 +265,7 @@ export default function LojaPage() {
   const router = useRouter()
   const { user, token, loadFromStorage } = useAuthStore()
   const { profile, shopItems, loading, loadShopItems, loadProfile } = useProfileStore()
-  const [myItems, setMyItems] = useState<any[]>([])
+  const [myItems, setMyItems] = useState<UserItem[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [buyingId, setBuyingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null)
@@ -275,14 +295,14 @@ export default function LojaPage() {
 
   const filteredItems = useMemo(() => {
     if (filter === "all") return shopItems
-    return shopItems.filter((i: any) => i.type === filter)
+    return shopItems.filter((i) => i.type === filter)
   }, [shopItems, filter])
 
   const coins = profile?.coins ?? 0
   const ownedCount = myItems.length
   const totalCount = shopItems.length
 
-  const handleBuy = async (item: any) => {
+  const handleBuy = async (item: ShopItem) => {
     setBuyingId(item.id)
     setFeedback(null)
     try {
@@ -297,12 +317,12 @@ export default function LojaPage() {
     }
   }
 
-  const handleEquip = async (item: any) => {
+  const handleEquip = async (item: ShopItem) => {
     setBuyingId(item.id)
     setFeedback(null)
     try {
       await equipShopItemApi(item.id)
-      const equipped = myItems.some((i: any) => i.id === item.id && i.equipped)
+      const equipped = myItems.some((i) => i.id === item.id && i.equipped)
       setFeedback({ type: "success", msg: equipped ? `"${item.name}" desequipado.` : `"${item.name}" equipado!` })
       loadProfile()
     } catch (err: any) {
@@ -322,7 +342,7 @@ export default function LojaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white pb-24">
+    <div className="min-h-screen bg-zinc-950 text-white pb-24 pt-16 lg:pt-0">
       
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
@@ -426,9 +446,9 @@ export default function LojaPage() {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {filteredItems.map((item: any) => {
-              const owned = myItems.some((i: any) => i.id === item.id)
-              const equipped = myItems.some((i: any) => i.id === item.id && i.equipped)
+            {filteredItems.map((item) => {
+              const owned = myItems.some((i) => i.id === item.id)
+              const equipped = myItems.some((i) => i.id === item.id && i.equipped)
               return (
                 <ShopItemCard
                   key={item.id}

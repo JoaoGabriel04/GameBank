@@ -13,6 +13,8 @@ import { useSession } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
 import { Eye, EyeOff } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
+import UserBanner from "@/components/UserBanner";
+import UserBadge from "@/components/UserBadge";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
@@ -246,6 +248,28 @@ export default function Game() {
     "Finalizada": "text-red-400 bg-red-500/10 border-red-500/30",
   };
 
+  // ── Player Card for Waiting Room ────────────────────────────────────────
+  function WaitingPlayerCard({ player }: { player: typeof currentSession["jogadores"][0] }) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-zinc-800">
+        <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 flex items-center gap-3 p-3">
+          <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
+              <UserBadge badge={player.badge} variant="small" />
+            </div>
+            <span className="text-zinc-400 text-sm font-inconsolata">
+              R$ {(player.saldo || 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── Waiting Room ────────────────────────────────────────────────────────
   function renderWaitingRoom() {
     if (!currentSession) return null;
@@ -369,33 +393,18 @@ export default function Game() {
                           {teamPlayers.length} jogador{teamPlayers.length !== 1 ? 'es' : ''}
                         </span>
                       </div>
-                      {teamPlayers.map((p) => {
-                        const pColor = PLAYER_COLORS.find(c => c.value === p.cor);
-                        return (
-                          <div key={p.id} className="px-4 py-3 bg-zinc-950/50 flex items-center gap-3 border-t border-zinc-800">
-                            <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" />
-                            <span className="text-zinc-100 font-inconsolata">{p.nome}</span>
-                          </div>
-                        );
-                      })}
+                      {teamPlayers.map((p) => (
+                        <div key={p.id} className="px-4 py-3 border-t border-zinc-800">
+                          <WaitingPlayerCard player={p} />
+                        </div>
+                      ))}
                     </div>
                   );
                 })
               ) : (
-                activePlayers.map((p) => {
-                  const pColor = PLAYER_COLORS.find(c => c.value === p.cor);
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800">
-                      <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="md" />
-                      <div>
-                        <span className="text-zinc-100 font-inconsolata font-medium">{p.nome}</span>
-                        <span className="text-zinc-500 text-sm ml-2 font-inconsolata">
-                          Saldo: R$ {(p.saldo || 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
+                activePlayers.map((p) => (
+                  <WaitingPlayerCard key={p.id} player={p} />
+                ))
               )}
             </div>
           )}

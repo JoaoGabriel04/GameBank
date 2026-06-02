@@ -95,7 +95,7 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                 </motion.div>
 
                 <div className="relative mb-1">
-                  <UserBanner banner={entry.player.banner} className="h-8 w-20 rounded-t-xl" />
+                  <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="h-8 w-20 rounded-t-xl" />
                   <div className="flex justify-center -mt-5">
                     <UserAvatar
                       avatarUrl={entry.player.avatarUrl}

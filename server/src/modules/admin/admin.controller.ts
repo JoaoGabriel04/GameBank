@@ -7,13 +7,14 @@ import { prisma } from "../../lib/prisma.js";
 const adminService = new AdminService();
 
 const ItemSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().optional(),
   description: z.string().min(1),
   price: z.number().int().min(0),
-  type: z.enum(["title", "badge"]),
+  type: z.enum(["title", "badge", "banner"]),
   value: z.string().nullable().optional(),
   icon: z.string().nullable().optional(),
   available: z.boolean(),
+  bannerId: z.number().int().positive().nullable().optional(),
 });
 
 function parseError(res: Response, err: unknown) {
@@ -68,6 +69,31 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  getSessionDetail: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      res.json(await adminService.getSessionDetail(id));
+    } catch (err) { parseError(res, err); }
+  },
+
+  endSession: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      res.json(await adminService.endSession(id, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  adjustPlayerBalance: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const pid = z.coerce.number().int().positive().parse(req.params.pid);
+      const { delta } = z.object({ delta: z.number().finite() }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.adjustPlayerBalance(pid, delta, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   // Missions
   listMissions: async (_req: Request, res: Response) => {
     try {
@@ -116,6 +142,14 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  toggleMission: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      res.json(await adminService.toggleMission(id, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   // Users
   listUsers: async (_req: Request, res: Response) => {
     try {
@@ -127,7 +161,43 @@ export const adminController = {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
-      res.json(await adminService.adjustCoins(userId, delta));
+      const user = (req as any).user;
+      res.json(await adminService.adjustCoins(userId, delta, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  banUser: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { reason } = z.object({ reason: z.string().optional() }).parse(req.body ?? {});
+      const user = (req as any).user;
+      res.json(await adminService.banUser(userId, reason, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  unbanUser: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      res.json(await adminService.unbanUser(userId, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  setUserAdmin: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { isAdmin } = z.object({ isAdmin: z.boolean() }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.setUserAdmin(userId, isAdmin, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  deleteUser: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      await adminService.deleteUser(userId, { id: user?.userId, email: user?.email });
+      res.status(204).send();
     } catch (err) { parseError(res, err); }
   },
 
@@ -231,7 +301,7 @@ export const adminController = {
     try {
       const [
         totalUsers, totalSessions, totalFinished, totalItems,
-        recentUsers, recentSessions, recentGames,
+        recentUsers, recentSessionsRaw, recentGames,
       ] = await Promise.all([
         prisma.user.count(),
         prisma.session.count(),
@@ -246,8 +316,9 @@ export const adminController = {
           orderBy: { dataInicio: "desc" },
           take: 5,
           select: {
-            id: true, nome: true, status: true, maxJogadores: true, dataInicio: true,
-            jogadores: { select: { id: true } },
+            id: true, nome: true, status: true, modo: true, maxJogadores: true,
+            saldoInicial: true, dataInicio: true,
+            jogadores: { select: { id: true, saldo: true } },
           },
         }),
         prisma.gameResult.findMany({
@@ -257,10 +328,35 @@ export const adminController = {
           include: { user: { select: { nome: true } } },
         }),
       ]);
+      const now = Date.now();
+      const recentSessions = recentSessionsRaw.map((s) => ({
+        id: s.id,
+        nome: s.nome,
+        status: s.status,
+        modo: s.modo,
+        maxJogadores: s.maxJogadores,
+        dataInicio: s.dataInicio,
+        jogadores: s.jogadores.map((j) => ({ id: j.id })),
+        saldoTotal: s.jogadores.reduce((acc, j) => acc + (j.saldo ?? 0), 0),
+        duracao: Math.max(0, Math.floor((now - s.dataInicio.getTime()) / 1000)),
+      }));
       res.json({ totalUsers, totalSessions, totalFinished, totalItems, recentUsers, recentSessions, recentGames });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Erro ao carregar dashboard" });
     }
+  },
+
+  listAudit: async (req: Request, res: Response) => {
+    try {
+      const { userId, action, severity, limit, offset } = z.object({
+        userId: z.coerce.number().int().positive().optional(),
+        action: z.string().optional(),
+        severity: z.enum(["info", "success", "warn", "danger"]).optional(),
+        limit: z.coerce.number().int().min(1).max(200).optional(),
+        offset: z.coerce.number().int().min(0).optional(),
+      }).parse(req.query);
+      res.json(await adminService.listAudit({ userId, action, severity, limit, offset }));
+    } catch (err) { parseError(res, err); }
   },
 };
