@@ -244,6 +244,7 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                 {item.type === "banner" && item.value && (
                   <UserBanner
                     banner={item.value}
+                    spriteId={item.spriteId}
                     className="h-10 rounded-lg mb-2 w-full"
                   />
                 )}

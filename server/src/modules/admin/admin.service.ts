@@ -241,6 +241,21 @@ export class AdminService {
     return result;
   }
 
+  async adjustXp(userId: number, delta: number, actor: Actor) {
+    if (!Number.isInteger(delta) || delta === 0) {
+      throw new AppError(400, "Delta de XP deve ser um inteiro não-zero.");
+    }
+    const result = await adminRepository.updateUserXp(userId, delta);
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "user.adjust_xp",
+      target: `user:${userId}`,
+      metadata: { delta, resultingXp: result.xp },
+      severity: "info",
+    });
+    return result;
+  }
+
   async banUser(userId: number, reason: string | undefined, actor: Actor) {
     const user = await adminRepository.findUserById(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado.");

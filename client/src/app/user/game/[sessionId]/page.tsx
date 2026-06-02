@@ -252,7 +252,7 @@ export default function Game() {
   function WaitingPlayerCard({ player }: { player: typeof currentSession["jogadores"][0] }) {
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-800">
-        <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
+        <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative z-10 flex items-center gap-3 p-3">
           <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />

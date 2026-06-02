@@ -114,6 +114,13 @@ export const adminRepository = {
       select: { id: true, nome: true, coins: true },
     }),
 
+  updateUserXp: (id: number, delta: number) =>
+    prisma.user.update({
+      where: { id },
+      data: { xp: { increment: delta } },
+      select: { id: true, nome: true, xp: true, level: true },
+    }),
+
   // Cards
   findAllCards: () =>
     prisma.card.findMany({ orderBy: { id: "asc" } }),

@@ -117,7 +117,7 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
         selected ? "border-green-500" : "border-zinc-700 hover:border-zinc-500"
       }`}
     >
-      <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full -z-10" />
+      <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
       <div className="absolute inset-0 bg-black/60 z-1" />
       <div className="relative z-20 flex items-center gap-3 p-3">
         <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
@@ -469,7 +469,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
     <div className="space-y-6 px-4 sm:px-6 lg:px-10">
       {/* ── Balance Widget ── */}
       <div className="relative overflow-hidden border border-zinc-800 rounded-xl">
-        <UserBanner banner={currentPlayer?.banner} className="absolute inset-0 w-full h-full" />
+        <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
         <div className="absolute inset-0 bg-black/60" />
         <div className="relative z-10 p-6">
           <div className="flex items-center justify-between mb-1">

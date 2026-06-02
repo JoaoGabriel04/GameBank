@@ -166,6 +166,15 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  adjustXp: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.adjustXp(userId, delta, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   banUser: async (req: Request, res: Response) => {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
