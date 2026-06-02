@@ -11,5 +11,9 @@ export default defineConfig({
   },
   datasource: {
     url: env('DATABASE_URL'),
+    // directUrl: conexão SEM pooler (PgBouncer/Neon-pooled não suporta DDL de migrations)
+    // Em produção (Render/Neon), defina DIRECT_URL com a URL não-pooled
+    // Em dev local, pode ficar sem — DATABASE_URL conecta direto
+    ...(process.env.DIRECT_URL ? { directUrl: env('DIRECT_URL') } : {}),
   },
 })
