@@ -175,6 +175,15 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  setLevel: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { level } = z.object({ level: z.number().int().min(1).max(100) }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.setLevel(userId, level, { id: user?.id, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   banUser: async (req: Request, res: Response) => {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);

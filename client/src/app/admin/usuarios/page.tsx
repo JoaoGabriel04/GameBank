@@ -141,11 +141,12 @@ function UserEditDrawer({
   onClose: () => void;
   onRequestDelete: (u: AdminUser) => void;
 }) {
-  const { adjustCoins, adjustXp, setUserAdmin, banUser, unbanUser } = useAdminStore();
+  const { adjustCoins, adjustXp, setLevel, setUserAdmin, banUser, unbanUser } = useAdminStore();
   const { success: ok, error: err } = useToast();
 
   const [coins, setCoins] = useState(0);
   const [xp, setXp] = useState(0);
+  const [level, setLevelState] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [banned, setBanned] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -154,6 +155,7 @@ function UserEditDrawer({
     if (user) {
       setCoins(user.coins);
       setXp(user.xp);
+      setLevelState(user.level);
       setIsAdmin(user.isAdmin);
       setBanned(!!user.banned);
     }
@@ -173,6 +175,7 @@ function UserEditDrawer({
       if (coinsDelta !== 0) await adjustCoins(user.id, coinsDelta);
       const xpDelta = xp - user.xp;
       if (xpDelta !== 0) await adjustXp(user.id, xpDelta);
+      if (level !== user.level) await setLevel(user.id, level);
       if (isAdmin !== user.isAdmin) await setUserAdmin(user.id, isAdmin);
       const wasBanned = !!user.banned;
       if (banned && !wasBanned) await banUser(user.id);
@@ -249,10 +252,25 @@ function UserEditDrawer({
           </div>
         </Field>
 
-        {/* Level progress */}
+        {/* Level slider */}
+        <Field label={`Nível — ${level}`}>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min={1} max={100} step={1} value={level}
+              onChange={(e) => setLevelState(+e.target.value)}
+              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
+            />
+            <AdminInput
+              type="number" min={1} max={100} value={level} onChange={(e) => setLevelState(+e.target.value)}
+              className="!w-16 !py-1.5 text-right"
+            />
+          </div>
+        </Field>
+
+        {/* XP progress display */}
         <div>
           <div className="flex justify-between font-inconsolata text-[11px] text-zinc-500 mb-1.5">
-            <span>Nível {user.level}</span>
+            <span>XP para nível {level}</span>
             <span>{xp.toLocaleString("pt-BR")} XP</span>
           </div>
           <Progress value={xp} max={xp + 2000} tone="cyan" />

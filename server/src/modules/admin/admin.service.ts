@@ -1,6 +1,7 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { auditLog } from "../../lib/audit.js";
+import { getLevelFromXp } from "../../utils/level.js";
 import { adminRepository } from "./admin.repository.js";
 
 interface Actor {
@@ -246,11 +247,42 @@ export class AdminService {
       throw new AppError(400, "Delta de XP deve ser um inteiro não-zero.");
     }
     const result = await adminRepository.updateUserXp(userId, delta);
+    // Recalculate level based on new XP
+    const newLevel = getLevelFromXp(result.xp);
+    const levelChanged = newLevel !== result.level;
+    if (levelChanged) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { level: newLevel },
+      });
+    }
+    const finalResult = { ...result, level: newLevel };
     await auditLog({
       userId: actor.id ?? null,
       action: "user.adjust_xp",
       target: `user:${userId}`,
-      metadata: { delta, resultingXp: result.xp },
+      metadata: { delta, resultingXp: result.xp, oldLevel: result.level, newLevel },
+      severity: "info",
+    });
+    return finalResult;
+  }
+
+  async setLevel(userId: number, level: number, actor: Actor) {
+    const user = await adminRepository.findUserById(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado.");
+    if (level < 1 || level > 100) {
+      throw new AppError(400, "Nível deve estar entre 1 e 100.");
+    }
+    const result = await prisma.user.update({
+      where: { id: userId },
+      data: { level },
+      select: { id: true, nome: true, xp: true, level: true },
+    });
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "user.set_level",
+      target: `user:${userId}`,
+      metadata: { oldLevel: user.level, newLevel: level },
       severity: "info",
     });
     return result;

@@ -214,6 +214,7 @@ function ItemModal({
   const isBanner = form.type === "banner";
   const selectedBanner = banners.find((b) => b.id === form.bannerId);
   const bannerCss = isBanner ? selectedBanner?.css ?? null : null;
+  const bannerSpriteId = isBanner ? selectedBanner?.spriteId ?? null : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -325,7 +326,7 @@ function ItemModal({
               <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
                 Pré-visualização
               </p>
-              <ItemPreview form={form} bannerCss={bannerCss} />
+              <ItemPreview form={form} bannerCss={bannerCss} bannerSpriteId={bannerSpriteId} />
             </div>
             <Btn type="submit" variant="primary" icon={Check} className="justify-center w-full" disabled={saving}>
               {saving ? "Salvando…" : isNew ? "Criar item" : "Salvar"}
