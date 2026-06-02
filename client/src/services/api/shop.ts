@@ -9,3 +9,4 @@ export const shopApi = {
 export const getShopItemsApi = () => shopApi.items().then(res => res.data)
 export const buyShopItemApi = (itemId: number) => shopApi.buy(itemId).then(res => res.data)
 export const equipShopItemApi = (itemId: number) => shopApi.equip(itemId).then(res => res.data)
+export const syncBannerApi = () => api.post<{ message: string }>('/shop/sync-banner').then(res => res.data)

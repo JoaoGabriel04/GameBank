@@ -36,6 +36,22 @@ export const shopRepository = {
   setUserBannerAndSprite: (userId: number, banner: string | null, spriteId: string | null) =>
     prisma.user.update({ where: { id: userId }, data: { banner, spriteId } }),
 
+  syncUserBanner: async (userId: number) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return null;
+
+    const items = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const equippedBanner = items.find(i => i.equipped && i.type === 'banner');
+
+    const banner = equippedBanner?.id === 0 ? null : (equippedBanner?.value ?? null);
+    const spriteId = equippedBanner?.spriteId ?? null;
+
+    return prisma.user.update({
+      where: { id: userId },
+      data: { banner, spriteId }
+    });
+  },
+
   // Legacy functions removed:
   // - findUserItem (no longer needed, work with items array)
   // - findUserItemWithType (no longer needed, work with items array)

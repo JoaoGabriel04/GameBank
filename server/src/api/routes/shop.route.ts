@@ -7,5 +7,6 @@ const shopRouter = Router();
 shopRouter.get("/items", shopController.listItems);
 shopRouter.post("/buy/:itemId", authenticate, shopController.buyItem);
 shopRouter.post("/equip/:itemId", authenticate, shopController.equipItem);
+shopRouter.post("/sync-banner", authenticate, shopController.syncBanner);
 
 export default shopRouter;

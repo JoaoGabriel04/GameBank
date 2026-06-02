@@ -232,10 +232,22 @@ export default function RankingPage() {
   const [selected, setSelected] = useState<RankingUser | null>(null);
 
   useEffect(() => {
-    getRankingApi()
-      .then((data) => setRaw(data))
-      .catch(() => setRaw([]))
-      .finally(() => setLoading(false));
+    const loadRanking = async () => {
+      setLoading(true);
+      try {
+        const data = await getRankingApi();
+        setRaw(data);
+      } catch {
+        setRaw([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRanking();
+    // Refresh ranking every 2 minutes to show updated banners/items
+    const interval = setInterval(loadRanking, 2 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Client-side sort by selected metric

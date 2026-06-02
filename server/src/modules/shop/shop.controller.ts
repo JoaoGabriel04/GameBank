@@ -37,6 +37,17 @@ export const shopController = {
       res.status(500).json({ message: "Erro ao equipar item" });
     }
   },
+
+  syncBanner: async (req: Request, res: Response) => {
+    try {
+      await shopService.syncUserBanner(req.user!.userId);
+      res.json({ message: "Banner sincronizado" });
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao sincronizar banner:", err);
+      res.status(500).json({ message: "Erro ao sincronizar banner" });
+    }
+  },
 };
 
 export default shopController;

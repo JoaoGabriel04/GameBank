@@ -349,13 +349,15 @@ export default function PerfilPage() {
     if (token && !profile) loadProfile();
   }, [token, profile, loadProfile]);
 
+  // Reload profile and history when page opens to ensure fresh data
   useEffect(() => {
     if (token) {
+      loadProfile();
       getProfileHistoryApi()
         .then(setHistory)
         .catch(() => setHistory([]));
     }
-  }, [token]);
+  }, [token, loadProfile]);
 
   if (!user || !token) {
     return (

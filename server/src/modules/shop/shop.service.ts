@@ -1,8 +1,11 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { shopRepository, type UserItemSnapshot } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
+import { RankingService } from "../ranking/ranking.service.js";
 
 export class ShopService {
+  private rankingService = new RankingService();
+
   async listItems() {
     return shopRepository.findAvailableItems();
   }
@@ -52,6 +55,9 @@ export class ShopService {
       await shopRepository.saveUserItems(userId, [...currentItems, newItem]);
     });
 
+    // Invalidate ranking cache since user inventory changed
+    await this.rankingService.invalidateCache();
+
     return { message: "Item comprado com sucesso", item: shopItem };
   }
 
@@ -88,25 +94,29 @@ export class ShopService {
     });
 
     // If deequipping a banner, auto-equip the default
+    let defaultBannerEquipped = false;
     if (targetItem.type === 'banner' && !nextEquipped) {
       const hasDefault = updatedItems.some(i => i.id === 0);
       if (hasDefault) {
         updatedItems.forEach(item => {
           if (item.id === 0) {
             item.equipped = true;
+            defaultBannerEquipped = true;
           }
         });
       }
     }
 
     // Update user: items array + banner/sprite if needed
-    const updateData: any = { items: updatedItems };
+    const updateData: any = { items: JSON.stringify(updatedItems) };
 
     if (targetItem.type === 'banner') {
       if (nextEquipped && targetItem.value) {
+        // Equiping a banner: set its value
         updateData.banner = targetItem.value;
         updateData.spriteId = targetItem.spriteId ?? null;
-      } else if (!nextEquipped) {
+      } else if (!nextEquipped || defaultBannerEquipped) {
+        // Deequipping a banner or auto-equipping default: clear banner
         updateData.banner = null;
         updateData.spriteId = null;
       }
@@ -116,6 +126,9 @@ export class ShopService {
       where: { id: userId },
       data: updateData,
     });
+
+    // Invalidate ranking cache since user banner/items changed
+    await this.rankingService.invalidateCache();
 
     return { message: "Item atualizado", equipped: nextEquipped };
   }
@@ -135,12 +148,20 @@ export class ShopService {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        items: updatedItems,
+        items: JSON.stringify(updatedItems),
         banner: null,
         spriteId: null,
       },
     });
 
+    // Invalidate ranking cache since user banner changed
+    await this.rankingService.invalidateCache();
+
     return { message: "Item atualizado", equipped: true };
+  }
+
+  async syncUserBanner(userId: number) {
+    await shopRepository.syncUserBanner(userId);
+    await this.rankingService.invalidateCache();
   }
 }

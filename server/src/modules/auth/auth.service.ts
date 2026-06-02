@@ -13,6 +13,7 @@ import {
 import { authRepository } from "./auth.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { type UserItemSnapshot } from "../shop/shop.repository.js";
+import { RankingService } from "../ranking/ranking.service.js";
 
 type OAuthProvider = "google" | "discord";
 
@@ -28,6 +29,7 @@ type AuthUser = {
 };
 
 export class AuthService {
+  private rankingService = new RankingService();
   private async findUserByEmail(email: string): Promise<AuthUser | null> {
     const normalized = normalizeEmail(email);
     const exact = await authRepository.findByEmailExact(normalized);
@@ -118,6 +120,8 @@ export class AuthService {
       });
       // Grant free banners to new user
       await this.grantFreeBanners(user.id);
+      // Invalidate ranking cache since new user joined
+      await this.rankingService.invalidateCache();
       return this.authResponse(user);
     } catch (err) {
       if (isPrismaUniqueViolation(err)) {
@@ -286,6 +290,8 @@ export class AuthService {
       const newUser = await authRepository.create(createData);
       // Grant free banners to new user
       await this.grantFreeBanners(newUser.id);
+      // Invalidate ranking cache since new user joined
+      await this.rankingService.invalidateCache();
       return newUser;
     } catch (err) {
       if (!isPrismaUniqueViolation(err)) throw err;
