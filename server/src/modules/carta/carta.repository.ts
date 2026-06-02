@@ -21,6 +21,30 @@ export function carregarBaralho(): { sorte: CardData[]; reves: CardData[] } {
   return baralhoCache!;
 }
 
+const sessionDecks = new Map<number, number[]>();
+
+function shuffleIndices(total: number): number[] {
+  const arr = Array.from({ length: total }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+export function getNextCardIndex(sessionId: number, total: number): number {
+  let deck = sessionDecks.get(sessionId);
+  if (!deck || deck.length === 0) {
+    deck = shuffleIndices(total);
+    sessionDecks.set(sessionId, deck);
+  }
+  return deck.pop()!;
+}
+
+export function clearSessionDeck(sessionId: number): void {
+  sessionDecks.delete(sessionId);
+}
+
 export class CartaRepository {
   async findPlayerById(id: number) {
     return prisma.sessionPlayer.findUnique({ where: { id } });

@@ -1,4 +1,4 @@
-import { CartaRepository, carregarBaralho, type CardData } from "./carta.repository.js";
+import { CartaRepository, carregarBaralho, getNextCardIndex, type CardData } from "./carta.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 
@@ -26,7 +26,7 @@ export class CartaService {
     ];
 
     const total = todosOsBaralhos.reduce((acc, b) => acc + b.cartas.length, 0);
-    const escolha = Math.floor(Math.random() * total);
+    const escolha = getNextCardIndex(sessionId, total);
     let acum = 0;
     let tipoBaralho: "sorte" | "reves" = "sorte";
     let carta: CardData | null = null;

@@ -8,6 +8,7 @@ import { RankingService } from "../ranking/ranking.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
 import { getLevelFromXp } from "../../utils/level.js";
+import { clearSessionDeck } from "../carta/carta.repository.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
@@ -475,6 +476,7 @@ export class SessionService {
     }
 
     await this.invalidateCache(sessionId);
+    clearSessionDeck(sessionId);
 
     const session = await this.repo.findByIdSimple(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
