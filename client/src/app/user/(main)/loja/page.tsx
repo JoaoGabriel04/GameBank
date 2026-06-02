@@ -12,6 +12,7 @@ import { useBannerCatalog } from "@/hooks/useBannerCatalog"
 import type { ShopItem, UserItem } from "@/types/shop"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core"
 import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag, faImage } from "@fortawesome/free-solid-svg-icons"
 import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
 
@@ -21,7 +22,7 @@ type ItemType = "title" | "badge" | "banner" | string
 
 const TYPE_CONFIG: Record<string, {
   label: string
-  icon: React.ComponentType<{ className?: string; size?: number }>
+  icon: IconDefinition
   gradient: string
   glow: string
   accent: string
