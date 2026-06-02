@@ -7,7 +7,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 
-import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore, useAluguelReceivedStore } from "@/stores/socketStore";
+import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore } from "@/stores/socketStore";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
@@ -103,17 +103,6 @@ export default function Game() {
     });
     return unsub;
   }, [toastSuccess, toastError]);
-
-  // ─── Aluguel recebido → toast verde para o dono ────────────────────────
-  useEffect(() => {
-    const unsub = useAluguelReceivedStore.subscribe((state, prev) => {
-      if (state.events.length > prev.events.length) {
-        const last = state.events[state.events.length - 1];
-        toastSuccess(`Você recebeu R$ ${(last.valor).toLocaleString("pt-BR")} de aluguel de ${last.fromPlayerNome} pela ${last.propriedadeNome}`);
-      }
-    });
-    return unsub;
-  }, [toastSuccess]);
 
   // ─── SWR → Zustand (fallback) ────────────────────────────────────────────
   useEffect(() => {

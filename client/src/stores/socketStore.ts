@@ -106,7 +106,6 @@ export function connectSocket(sessionId: number) {
   // Aluguel recebido — broadcast na sala, filtrado por toUserId
   socket.on("aluguel:toast", (data: { fromPlayerNome: string; toPlayerId: number; toUserId?: number | null; valor: number; propriedadeNome: string }) => {
     const myId = useAuthStore.getState().user?.id;
-    useAluguelReceivedStore.getState().addEvent(data);
     if (data.toUserId && data.toUserId === myId) {
       toast.success(`Você recebeu R$ ${data.valor.toLocaleString("pt-BR")} de ${data.fromPlayerNome} (${data.propriedadeNome})`);
     }
@@ -272,27 +271,6 @@ export const useCardStore = create<CardStore>((set) => ({
   clearEvents: () => set({ events: [] }),
 }));
 
-// ─── Aluguel Received Store ─────────────────────────────────────────────
-
-interface AluguelRecebidoEvent {
-  fromPlayerNome: string;
-  toPlayerId: number;
-  valor: number;
-  propriedadeNome: string;
-}
-
-interface AluguelReceivedStore {
-  events: AluguelRecebidoEvent[];
-  addEvent: (data: AluguelRecebidoEvent) => void;
-  clearEvents: () => void;
-}
-
-export const useAluguelReceivedStore = create<AluguelReceivedStore>((set) => ({
-  events: [],
-  addEvent: (data) => set((s) => ({ events: [...s.events, data] })),
-  clearEvents: () => set({ events: [] }),
-}));
-
 export function disconnectSocket() {
   if (socket) {
     if (currentSessionId) {
@@ -312,6 +290,5 @@ function clearChatAndNotifications() {
   useChatStore.getState().clearMessages();
   useNotificationStore.getState().clearNotifications();
   useCardStore.getState().clearEvents();
-  useAluguelReceivedStore.getState().clearEvents();
   useNegotiationStore.getState().clearNegotiations();
 }
