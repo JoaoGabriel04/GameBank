@@ -27,6 +27,7 @@ import BadgeCollection from "@/components/BadgeCollection";
 import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
 import type { UserItem, UserMission, GameResult } from "@/types/shop";
+import { resolveSprite } from "@/constants/sprites";
 
 /* ─── Inventory type tabs ─── */
 type InvTab = "title" | "badge" | "banner";
@@ -47,6 +48,7 @@ const INV_ACCENT: Record<InvTab, { color: string; ring: string }> = {
 function ProfileHero({ onEdit }: { onEdit: () => void }) {
   const { user } = useAuthStore();
   const { profile } = useProfileStore();
+
 
   if (!profile || !user) return null;
 

@@ -3,6 +3,8 @@ export interface ShopItem {
   name: string
   description: string
   price: number
+  /** Generic icon field. For banners, use bannerId+banner.spriteId instead.
+   * For badges, this may contain badge preset ID. */
   icon?: string | null
   type: 'title' | 'badge' | 'banner'
   value?: string | null
@@ -14,9 +16,10 @@ export interface UserItem {
   id: number
   name: string
   description: string
-  icon?: string | null
   type: 'title' | 'badge' | 'banner'
   value?: string | null
+  /** Slug do sprite exibido no canto superior direito de banners premium (ex: "sparkles", "crown").
+   * Apenas para type='banner'. Passa para `<UserBanner spriteId={...}>` */
   spriteId?: string | null
   equipped: boolean
 }
