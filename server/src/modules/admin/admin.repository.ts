@@ -297,6 +297,7 @@ export const adminRepository = {
         banned: true,
         bannedAt: true,
         banReason: true,
+        level: true,
       },
     }),
 

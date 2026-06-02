@@ -71,7 +71,7 @@ export const missionsRepository = {
   findUserForReward: (userId: number) =>
     prisma.user.findUnique({
       where: { id: userId },
-      select: { xp: true, level: true },
+      select: { xp: true, level: true, coins: true },
     }),
 
   rewardUser: (userId: number, xpReward: number, coinReward: number, newLevel?: number) =>

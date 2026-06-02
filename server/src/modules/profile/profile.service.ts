@@ -95,7 +95,7 @@ export class ProfileService {
 
   async updateProfile(
     userId: number,
-    data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string }
+    data: { nome?: string; avatarPreset?: string; fileBuffer?: Buffer; fileMime?: string; banner?: string | null }
   ) {
     const current = await profileRepository.findUser(userId);
     if (!current) throw new AppError(404, "Usuário não encontrado");
@@ -104,8 +104,13 @@ export class ProfileService {
       throw new AppError(400, "Apelido deve ter entre 1 e 30 caracteres");
     }
 
+    if (data.banner !== undefined && data.banner !== null && data.banner.length > 2000) {
+      throw new AppError(400, "Banner muito longo");
+    }
+
     const updateData: Record<string, unknown> = {};
     if (data.nome !== undefined) updateData.nome = data.nome;
+    if (data.banner !== undefined) updateData.banner = data.banner;
 
     let newPublicId: string | null = null;
 
