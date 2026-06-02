@@ -101,7 +101,7 @@ export class AuthService {
     const items = await this.buildInitialItems();
     await prisma.user.update({
       where: { id: userId },
-      data: { items: JSON.stringify(items) },
+      data: { items: items as any },
     });
   }
 

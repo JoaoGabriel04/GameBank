@@ -73,18 +73,18 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
           className="absolute inset-0"
           style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }}
         />
-        {isMe && (
-          <div className="absolute top-3 left-3 z-10">
-            <Chip tone="green" dot>você</Chip>
-          </div>
-        )}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3 right-3 z-10 text-white/60 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-black/30 transition-colors"
+          className="absolute top-3 left-3 z-20 text-white/60 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-black/30 transition-colors"
         >
           <X size={16} />
         </button>
+        {isMe && (
+          <div className="absolute top-3 left-10 z-10">
+            <Chip tone="green" dot>você</Chip>
+          </div>
+        )}
       </div>
 
       <div className="px-5 pb-5 bg-zinc-950 rounded-b-2xl">

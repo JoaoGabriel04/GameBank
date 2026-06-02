@@ -1,6 +1,6 @@
 import { rankingRepository } from "./ranking.repository.js";
 import { getRedis } from "../../lib/redis.js";
-import { type UserItemSnapshot } from "../shop/shop.repository.js";
+import { parseUserItems, type UserItemSnapshot } from "../shop/shop.repository.js";
 
 const CACHE_KEY = "ranking:global";
 const CACHE_TTL_S = 5 * 60; // 5 minutos
@@ -20,7 +20,7 @@ export class RankingService {
 
     const users = await rankingRepository.findTopUsers(limit);
     const result = users.map((user, index) => {
-      const items = (user.items ?? []) as unknown as UserItemSnapshot[];
+      const items = parseUserItems(user.items);
       const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
       let parsedTitle = null;
       if (equippedTitle) {

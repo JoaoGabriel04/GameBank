@@ -9,7 +9,7 @@ import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants
 import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
 import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
-import { type UserItemSnapshot } from "../shop/shop.repository.js";
+import { parseUserItems, type UserItemSnapshot } from "../shop/shop.repository.js";
 
 export class ProfileService {
   async getProfile(userId: number) {
@@ -21,7 +21,7 @@ export class ProfileService {
       await profileRepository.updateLevel(user.id, correctLevel);
     }
 
-    const items = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const items = parseUserItems(user.items);
     const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
     let parsedTitle = null;
     if (equippedTitle) {

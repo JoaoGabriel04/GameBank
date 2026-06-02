@@ -1,5 +1,5 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { shopRepository, type UserItemSnapshot } from "./shop.repository.js";
+import { shopRepository, parseUserItems, type UserItemSnapshot } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { RankingService } from "../ranking/ranking.service.js";
 
@@ -21,7 +21,7 @@ export class ShopService {
     const user = await shopRepository.findUser(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const currentItems = parseUserItems(user.items);
 
     // Check if user already owns this item
     if (currentItems.some(i => i.id === itemId)) {
@@ -71,7 +71,7 @@ export class ShopService {
     const user = await shopRepository.findUser(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const currentItems = parseUserItems(user.items);
 
     // Find target item
     const targetItem = currentItems.find(i => i.id === itemId);
@@ -108,7 +108,7 @@ export class ShopService {
     }
 
     // Update user: items array + banner/sprite if needed
-    const updateData: any = { items: JSON.stringify(updatedItems) };
+    const updateData: any = { items: updatedItems };
 
     if (targetItem.type === 'banner') {
       if (nextEquipped && targetItem.value) {
@@ -137,7 +137,7 @@ export class ShopService {
     const user = await shopRepository.findUser(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    const currentItems = (user.items ?? []) as unknown as UserItemSnapshot[];
+    const currentItems = parseUserItems(user.items);
 
     // Deequip all banners, equip default
     const updatedItems = currentItems.map(item => ({
@@ -148,7 +148,7 @@ export class ShopService {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        items: JSON.stringify(updatedItems),
+        items: updatedItems,
         banner: null,
         spriteId: null,
       },
