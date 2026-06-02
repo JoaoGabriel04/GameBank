@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
+import { resolveSprite } from "@/constants/sprites";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
   Panel, Chip, Toggle, Segmented, Btn, Field,
@@ -128,10 +129,11 @@ function ItemCard({
   );
 }
 
-function ItemPreview({ form, bannerCss }: { form: Partial<ItemInput>; bannerCss?: string | null }) {
+function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemInput>; bannerCss?: string | null; bannerSpriteId?: string | null }) {
   const meta = getTypeMeta(form.type ?? "title");
   const isBanner = form.type === "banner";
   const bg = isBanner && bannerCss ? bannerCss : "linear-gradient(150deg,#1f2937,#111827)";
+  const SpriteIcon = isBanner && bannerSpriteId ? resolveSprite(bannerSpriteId)?.icon : null;
 
   return (
     <div
@@ -141,7 +143,11 @@ function ItemPreview({ form, bannerCss }: { form: Partial<ItemInput>; bannerCss?
       <div className="relative p-5 bg-zinc-900/40 backdrop-blur-sm">
         <div className="flex items-start justify-between">
           <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/70 text-zinc-200">
-            {isBanner ? <ImageIcon size={22} /> : <ItemIcon name={form.icon ?? "sparkles"} size={22} />}
+            {SpriteIcon
+              ? <SpriteIcon size={22} />
+              : isBanner
+              ? <ImageIcon size={22} />
+              : <ItemIcon name={form.icon ?? "sparkles"} size={22} />}
           </div>
           <Chip tone={meta.tone}>{meta.label}</Chip>
         </div>

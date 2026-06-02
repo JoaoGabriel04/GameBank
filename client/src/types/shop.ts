@@ -7,6 +7,7 @@ export interface ShopItem {
   type: 'title' | 'badge' | 'banner'
   value?: string | null
   available: boolean
+  bannerId?: number | null
 }
 
 export interface UserItem {

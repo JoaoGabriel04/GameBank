@@ -6,12 +6,14 @@ import { useAuthStore } from "@/stores/authStore"
 import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
 import UserBadge from "@/components/UserBadge"
+import UserBanner from "@/components/UserBanner"
 import { resolveBadge } from "@/constants/badges"
+import { useBannerCatalog } from "@/hooks/useBannerCatalog"
 import type { ShopItem, UserItem } from "@/types/shop"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag, faImage } from "@fortawesome/free-solid-svg-icons"
-import { Loader2, Sparkles, CheckCircle2, XCircle, Image as ImageIcon } from "lucide-react"
+import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
 
 // ── Configuração visual por tipo de item ─────────────────────────────────────
 
@@ -79,6 +81,7 @@ function ShopItemCard({
   onBuy,
   onEquip,
   buying,
+  spriteId,
 }: {
   item: ShopItem
   owned: boolean
@@ -87,6 +90,7 @@ function ShopItemCard({
   onBuy: () => void
   onEquip: () => void
   buying: boolean
+  spriteId?: string | null
 }) {
   const cfg = getConfig(item.type)
   const isBanner = item.type === "banner"
@@ -107,34 +111,36 @@ function ShopItemCard({
       `}
     >
       {/* Faixa superior com gradiente */}
-      <div
-        className={`h-24 w-full bg-gradient-to-br ${cfg.gradient} flex items-center justify-center relative`}
-        style={isBanner && item.value ? { background: item.value } : undefined}
-      >
-        {/* Ícone central */}
-        <div className={`${item.type === "badge" ? "flex flex-col items-center gap-1" : ""}`}>
-          <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
-            {item.type === "badge" ? (
-              <UserBadge
-                badge={item.value ? JSON.parse(item.value).badge : undefined}
-                variant="medium"
-              />
-            ) : item.type === "banner" ? (
-              <ImageIcon className={`text-2xl ${cfg.iconColor}`} size={26} />
-            ) : (
-              <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
-            )}
+      <div className={`h-24 w-full relative`}>
+        {isBanner ? (
+          <UserBanner banner={item.value ?? null} spriteId={spriteId ?? null} className="absolute inset-0" />
+        ) : (
+          <div
+            className={`absolute inset-0 bg-gradient-to-br ${cfg.gradient} flex items-center justify-center`}
+          >
+            <div className={`${item.type === "badge" ? "flex flex-col items-center gap-1" : ""}`}>
+              <div className={`w-14 h-14 rounded-2xl bg-zinc-900/70 backdrop-blur-sm border border-white/5 flex items-center justify-center`}>
+                {item.type === "badge" ? (
+                  <UserBadge
+                    badge={item.value ? JSON.parse(item.value).badge : undefined}
+                    variant="medium"
+                  />
+                ) : (
+                  <FontAwesomeIcon icon={cfg.icon} className={`text-2xl ${cfg.iconColor}`} />
+                )}
+              </div>
+              {item.type === "badge" && (
+                <span className="text-[10px] font-inconsolata text-zinc-400 text-center max-w-[70px]">
+                  {(() => {
+                    const badgeData = item.value ? JSON.parse(item.value) : null;
+                    const preset = resolveBadge(badgeData?.badge);
+                    return preset?.label || "";
+                  })()}
+                </span>
+              )}
+            </div>
           </div>
-          {item.type === "badge" && (
-            <span className="text-[10px] font-inconsolata text-zinc-400 text-center max-w-[70px]">
-              {(() => {
-                const badgeData = item.value ? JSON.parse(item.value) : null;
-                const preset = resolveBadge(badgeData?.badge);
-                return preset?.label || "";
-              })()}
-            </span>
-          )}
-        </div>
+        )}
 
         {/* Badge "Equipado" */}
         {equipped && (
@@ -269,6 +275,12 @@ export default function LojaPage() {
   const [filter, setFilter] = useState<string>("all")
   const [buyingId, setBuyingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null)
+  const bannerCatalog = useBannerCatalog()
+  const spriteByBannerId = useMemo(() => {
+    const m = new Map<number, string | null>();
+    bannerCatalog?.forEach((b) => m.set(b.id, b.spriteId));
+    return m;
+  }, [bannerCatalog])
 
   useEffect(() => { loadFromStorage() }, [loadFromStorage])
 
@@ -459,6 +471,7 @@ export default function LojaPage() {
                   onBuy={() => handleBuy(item)}
                   onEquip={() => handleEquip(item)}
                   buying={buyingId === item.id}
+                  spriteId={item.bannerId != null ? spriteByBannerId.get(item.bannerId) ?? null : null}
                 />
               )
             })}

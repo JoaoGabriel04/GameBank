@@ -13,6 +13,7 @@ import profileRouter from "./profile.route.js"
 import missionsRouter from "./missions.route.js"
 import shopRouter from "./shop.route.js"
 import rankingRouter from "./ranking.route.js"
+import bannerRouter from "./banner.route.js"
 
 const apiRouter = Router()
 
@@ -29,6 +30,7 @@ apiRouter.use("/profile", profileRouter)
 apiRouter.use("/missions", missionsRouter)
 apiRouter.use("/shop", shopRouter)
 apiRouter.use("/ranking", rankingRouter)
+apiRouter.use("/banners", bannerRouter)
 apiRouter.use("/admin", adminRouter)
 
 export default apiRouter

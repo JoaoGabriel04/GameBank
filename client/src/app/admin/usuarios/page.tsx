@@ -141,10 +141,11 @@ function UserEditDrawer({
   onClose: () => void;
   onRequestDelete: (u: AdminUser) => void;
 }) {
-  const { adjustCoins, setUserAdmin, banUser, unbanUser } = useAdminStore();
+  const { adjustCoins, adjustXp, setUserAdmin, banUser, unbanUser } = useAdminStore();
   const { success: ok, error: err } = useToast();
 
   const [coins, setCoins] = useState(0);
+  const [xp, setXp] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [banned, setBanned] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -152,6 +153,7 @@ function UserEditDrawer({
   useEffect(() => {
     if (user) {
       setCoins(user.coins);
+      setXp(user.xp);
       setIsAdmin(user.isAdmin);
       setBanned(!!user.banned);
     }
@@ -167,8 +169,10 @@ function UserEditDrawer({
     if (!user) return;
     setSaving(true);
     try {
-      const delta = coins - user.coins;
-      if (delta !== 0) await adjustCoins(user.id, delta);
+      const coinsDelta = coins - user.coins;
+      if (coinsDelta !== 0) await adjustCoins(user.id, coinsDelta);
+      const xpDelta = xp - user.xp;
+      if (xpDelta !== 0) await adjustXp(user.id, xpDelta);
       if (isAdmin !== user.isAdmin) await setUserAdmin(user.id, isAdmin);
       const wasBanned = !!user.banned;
       if (banned && !wasBanned) await banUser(user.id);
@@ -230,13 +234,28 @@ function UserEditDrawer({
           </div>
         </Field>
 
+        {/* XP slider */}
+        <Field label={`XP — ${xp.toLocaleString("pt-BR")}`}>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min={0} max={1000000} step={1000} value={xp}
+              onChange={(e) => setXp(+e.target.value)}
+              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
+            />
+            <AdminInput
+              type="number" value={xp} onChange={(e) => setXp(+e.target.value)}
+              className="!w-32 !py-1.5 text-right"
+            />
+          </div>
+        </Field>
+
         {/* Level progress */}
         <div>
           <div className="flex justify-between font-inconsolata text-[11px] text-zinc-500 mb-1.5">
             <span>Nível {user.level}</span>
-            <span>{user.xp.toLocaleString("pt-BR")} XP</span>
+            <span>{xp.toLocaleString("pt-BR")} XP</span>
           </div>
-          <Progress value={user.xp} max={user.xp + 2000} tone="cyan" />
+          <Progress value={xp} max={xp + 2000} tone="cyan" />
         </div>
 
         {/* Role toggles */}

@@ -159,6 +159,8 @@ export const adminApi = {
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; coins: number }>(`/admin/users/${userId}/coins`, { delta }).then((r) => r.data),
+  adjustXp: (userId: number, delta: number) =>
+    api.patch<{ id: number; nome: string; xp: number; level: number }>(`/admin/users/${userId}/xp`, { delta }).then((r) => r.data),
   banUser: (userId: number, reason?: string) =>
     api.post<{ id: number; nome: string; email: string; banned: boolean; bannedAt: string | null; banReason: string | null }>(`/admin/users/${userId}/ban`, { reason }).then((r) => r.data),
   unbanUser: (userId: number) =>
