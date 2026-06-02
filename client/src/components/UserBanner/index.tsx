@@ -10,14 +10,14 @@ type UserBannerProps = {
 };
 
 export default function UserBanner({ banner, spriteId, className = "" }: UserBannerProps) {
-  let bgClass = "bg-gradient-to-r from-zinc-700 to-zinc-800";
+  let bgClass = "bg-gradient-to-r from-zinc-600 to-zinc-800";
   let style: React.CSSProperties | undefined;
 
   if (banner?.startsWith("preset:")) {
     const preset = resolveBanner(banner);
     bgClass = preset
       ? `bg-gradient-to-r ${preset.gradient}`
-      : "bg-gradient-to-r from-zinc-700 to-zinc-800";
+      : "bg-gradient-to-r from-zinc-600 to-zinc-800";
   } else if (
     banner?.startsWith("linear-gradient") ||
     banner?.startsWith("radial-gradient") ||
@@ -32,7 +32,7 @@ export default function UserBanner({ banner, spriteId, className = "" }: UserBan
   const SpriteIcon = sprite?.icon;
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={className}>
       <div className={`absolute inset-0 overflow-hidden ${bgClass}`} style={style}>
         {SpriteIcon && (
           <div className="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-zinc-900/70 backdrop-blur-sm border border-white/10 grid place-items-center text-white shadow-sm">

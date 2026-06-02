@@ -187,8 +187,7 @@ function Podium({
             onClick={() => onSelect(p)}
             className={`flex flex-col items-center gap-2 ${scales[i]} cursor-pointer group`}
           >
-            <div className="relative w-24 mb-1">
-              <UserBanner banner={p.banner} spriteId={p.spriteId} className="h-10 w-full rounded-t-xl" />
+            <div className="relative">
               <UserAvatar
                 avatarUrl={p.avatarUrl}
                 avatarUpdatedAt={p.avatarUpdatedAt}
@@ -197,7 +196,7 @@ function Podium({
                 ring={isMe}
               />
               {isMe && (
-                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-zinc-950 grid place-items-center z-20">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-zinc-950 grid place-items-center">
                   <span className="w-2 h-2 rounded-full bg-zinc-950" />
                 </span>
               )}
@@ -210,7 +209,7 @@ function Podium({
                 <p className="font-inconsolata text-[9px] text-zinc-500">{p.title}</p>
               )}
             </div>
-            <div className={`${heights[i]} w-24 rounded-b-xl flex flex-col items-center justify-end pb-3 ${podiumStyles[i]} hover:brightness-110 transition-all`}>
+            <div className={`${heights[i]} w-24 rounded-t-xl flex flex-col items-center justify-end pb-3 ${podiumStyles[i]} hover:brightness-110 transition-all`}>
               <span className="text-2xl leading-none">{["🥈","🥇","🥉"][i]}</span>
               <p className="font-jaro text-base mt-1 text-zinc-100">{meta.format(value)}</p>
               <p className="font-inconsolata text-[9px] text-zinc-500">{meta.unit}</p>

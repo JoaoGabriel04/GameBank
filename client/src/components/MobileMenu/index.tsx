@@ -112,7 +112,7 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
 
           {user ? (
             <div className="w-full flex flex-col items-center gap-3 mt-2">
-              <div className="w-full overflow-hidden rounded-xl">
+              <div className="relative w-full overflow-hidden rounded-xl">
                 <UserBanner banner={user.banner} spriteId={user.spriteId} className="h-14 w-full" />
                 <div className="flex items-center gap-3 px-4 py-2 bg-zinc-800 -mt-5">
                   <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" ring />
