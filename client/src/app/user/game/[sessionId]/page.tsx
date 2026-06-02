@@ -31,7 +31,7 @@ import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPowerOff, faPlay, faUsers, faClock, faGamepad } from "@fortawesome/free-solid-svg-icons";
-import type { RankedPlayer } from "@/types/game";
+import type { RankedPlayer, Player } from "@/types/game";
 import { PLAYER_COLORS } from "@/types/game";
 
 const linksNav = ["Loja", "Especiais", "Início", "Ranking", "Histórico"];
@@ -249,7 +249,7 @@ export default function Game() {
   };
 
   // ── Player Card for Waiting Room ────────────────────────────────────────
-  function WaitingPlayerCard({ player }: { player: typeof currentSession["jogadores"][0] }) {
+  function WaitingPlayerCard({ player }: { player: Player }) {
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-800">
         <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />

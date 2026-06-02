@@ -59,7 +59,7 @@ function JoinModal({
   const isLive = session.status === "Em Andamento";
 
   async function handleJoin() {
-    if (!user) return;
+    if (!user || !session) return;
     setLoading(true);
     setError("");
     try {
