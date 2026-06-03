@@ -10,6 +10,7 @@ import {
   type ItemInput,
   type MissionInput,
   type AdminSessionDetail,
+  type AdminDashboard,
   type Card,
   type CardInput,
   type Banner,
@@ -28,6 +29,7 @@ interface AdminStore {
   banners: Banner[];
   audit: AuditEntry[];
   settings: Record<string, any>;
+  dashboard: AdminDashboard | null;
 
   loadingItems: boolean;
   loadingUsers: boolean;
@@ -37,10 +39,12 @@ interface AdminStore {
   loadingBanners: boolean;
   loadingAudit: boolean;
   loadingSettings: boolean;
+  loadingDashboard: boolean;
 
   loadItems: () => Promise<void>;
   loadUsers: () => Promise<void>;
   loadSessions: () => Promise<void>;
+  loadDashboard: () => Promise<void>;
   loadSessionDetail: (id: number) => Promise<AdminSessionDetail>;
   endSession: (id: number) => Promise<void>;
   adjustPlayerBalance: (sessionId: number, playerId: number, delta: number) => Promise<void>;
@@ -87,6 +91,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   banners: [],
   audit: [],
   settings: {},
+  dashboard: null,
 
   loadingItems: false,
   loadingUsers: false,
@@ -96,6 +101,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   loadingBanners: false,
   loadingAudit: false,
   loadingSettings: false,
+  loadingDashboard: false,
 
   loadItems: async () => {
     set({ loadingItems: true });
@@ -121,6 +127,15 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
       set({ sessions: await adminApi.listSessions() });
     } finally {
       set({ loadingSessions: false });
+    }
+  },
+
+  loadDashboard: async () => {
+    set({ loadingDashboard: true });
+    try {
+      set({ dashboard: await adminApi.getDashboard() });
+    } finally {
+      set({ loadingDashboard: false });
     }
   },
 

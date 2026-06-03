@@ -15,12 +15,13 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import UserAvatar from "@/components/UserAvatar";
 import { useAuthStore } from "@/stores/authStore";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface NavItem {
   id: string;
@@ -96,8 +97,6 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-const ADMIN_USER = { nome: "João Gabriel", avatarUrl: "/images/admin.avif", avatarUpdatedAt: new Date().toISOString() };
-
 interface AdminNavProps {
   open: boolean;
   onClose: () => void;
@@ -106,7 +105,8 @@ interface AdminNavProps {
 export default function AdminNav({ open, onClose }: AdminNavProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
+  const dashboard = useAdminStore((s) => s.dashboard);
   const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = () => {
@@ -116,13 +116,15 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
 
   const W = collapsed ? 72 : 240;
 
-  // Mock badge count - replace with real data
+  const activeSessions = dashboard
+    ? dashboard.totalSessions - dashboard.totalFinished
+    : 0;
+  const totalUsers = dashboard?.totalUsers ?? 0;
+
   const badgeCount = (id: string) => {
-    const counts: Record<string, number> = {
-      sessions: 3,
-      users: 247,
-    };
-    return counts[id] || 0;
+    if (id === "sessions") return activeSessions;
+    if (id === "users") return totalUsers;
+    return 0;
   };
 
   return (
@@ -229,11 +231,13 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
               {!collapsed && "Voltar ao site"}
             </a>
             <div className={`flex items-center gap-2.5 px-2.5 py-2 ${collapsed ? "justify-center" : ""}`}>
-              <UserAvatar nome={ADMIN_USER.nome} avatarUrl={ADMIN_USER.avatarUrl} avatarUpdatedAt={ADMIN_USER.avatarUpdatedAt} size="md" />
+              <div className="w-9 h-9 rounded-full bg-violet-500/15 border border-violet-500/30 grid place-items-center shrink-0">
+                <ShieldCheck size={17} className="text-violet-400" />
+              </div>
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-xs text-zinc-200 truncate leading-none">
-                    {ADMIN_USER.nome}
+                    {user?.nome ?? "Admin"}
                   </p>
                   <p className="font-mono text-[9px] text-violet-400 mt-1">
                     administrador

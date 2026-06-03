@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import AdminNav from "./AdminNav";
 import AdminTopbar from "./AdminTopbar";
 import { usePathname } from "next/navigation";
+import { useAdminStore } from "@/stores/adminStore";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const [title, sub] = TITLES[pathname] || ["Admin", ""];
+  const { loadDashboard } = useAdminStore();
+
+  useEffect(() => {
+    loadDashboard();
+    const interval = setInterval(loadDashboard, 30000);
+    return () => clearInterval(interval);
+  }, [loadDashboard]);
 
   useEffect(() => {
     setSidebarOpen(false);

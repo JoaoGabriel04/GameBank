@@ -20,6 +20,34 @@ import {
   Drawer, LiveDot, AdminModal,
 } from "@/components/admin/AdminUI";
 
+function exportCsvUsers(rows: AdminUser[]) {
+  const header = "id,nome,email,nivel,xp,coins,partidas,vitorias,admin,banido,criado\n";
+  const body = rows
+    .map((u) =>
+      [
+        u.id,
+        `"${u.nome.replace(/"/g, "")}"`,
+        u.email,
+        u.level,
+        u.xp,
+        u.coins,
+        u.totalGames,
+        u.totalWins,
+        u.isAdmin,
+        u.banned ?? false,
+        new Date(u.createdAt).toLocaleDateString("pt-BR"),
+      ].join(",")
+    )
+    .join("\n");
+  const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `usuarios-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ── Status helpers ── */
 const STATUS_TONE: Record<string, "emerald" | "rose" | "zinc"> = {
   ativo: "emerald", banido: "rose", inativo: "zinc",
@@ -339,12 +367,26 @@ function UserEditDrawer({
 
 /* ── Main page ── */
 export default function AdminUsuariosPage() {
-  const { users, loadingUsers, loadUsers } = useAdminStore();
+  const { users, loadingUsers, loadUsers, banUser } = useAdminStore();
+  const { success: ok, error: err } = useToast();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [selected, setSelected] = useState<number[]>([]);
+  const [banning, setBanning] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
+
+  async function handleBatchBan() {
+    if (selected.length === 0) return;
+    setBanning(true);
+    let count = 0;
+    for (const id of selected) {
+      try { await banUser(id); count++; } catch { /* individual errors silently skipped */ }
+    }
+    ok(`${count} usuário(s) banido(s).`);
+    setSelected([]);
+    setBanning(false);
+  }
 
   function closeDrawer() { setEditing(null); setDeleting(null); }
 
@@ -385,7 +427,7 @@ export default function AdminUsuariosPage() {
               className="!pl-9"
             />
           </div>
-          <Btn variant="ghost" icon={Download} size="sm" className="hidden sm:inline-flex">
+          <Btn variant="ghost" icon={Download} size="sm" className="hidden sm:inline-flex" onClick={() => exportCsvUsers(filtered)}>
             Exportar
           </Btn>
         </div>
@@ -400,7 +442,9 @@ export default function AdminUsuariosPage() {
           <div className="flex items-center gap-2 ml-auto">
             <Btn variant="subtle" icon={Coins} size="sm">Dar coins</Btn>
             <Btn variant="subtle" icon={MessageSquare} size="sm">Notificar</Btn>
-            <Btn variant="danger" icon={Ban} size="sm">Banir</Btn>
+            <Btn variant="danger" icon={Ban} size="sm" onClick={handleBatchBan} disabled={banning}>
+              {banning ? "Banindo…" : "Banir"}
+            </Btn>
           </div>
         </div>
       )}
