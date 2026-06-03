@@ -52,8 +52,10 @@ const SEV_COLOR: Record<string, string> = {
 };
 
 // Stable sparkline seeds — avoid random re-renders
-const SPARK_SEED = Array(30).fill(0).map((_, i) => 100 + ((i * 37 + 13) % 80));
-const SPARK_COINS = SPARK_SEED.map((v) => v * 1.5);
+function fmtDateLabel(daysAgo: number): string {
+  const d = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 
 export default function AdminDashboardPage() {
   const { dashboard, loadingDashboard, loadDashboard, items, loadItems } = useAdminStore();
@@ -98,14 +100,14 @@ export default function AdminDashboardPage() {
           label="Usuários totais"
           value={fmt(dashboard.totalUsers)}
           delta={dashboard.deltaUsers ?? undefined}
-          spark={SPARK_SEED}
+          spark={dashboard.userGrowth30d}
         />
         <KpiCard
           icon={UserCheck}
           tone="amber"
           label="Ativos hoje"
           value={fmt(dashboard.activeUsersToday)}
-          spark={SPARK_COINS}
+          spark={dashboard.userGrowth30d}
           sparkTone="amber"
         />
         <KpiCard
@@ -114,7 +116,7 @@ export default function AdminDashboardPage() {
           label="Sessões finalizadas"
           value={fmt(dashboard.totalFinished)}
           delta={dashboard.deltaSessions ?? undefined}
-          spark={SPARK_SEED.map((v) => v * 0.8)}
+          spark={dashboard.sessions30d}
           sparkTone="emerald"
         />
         <KpiCard
@@ -122,7 +124,7 @@ export default function AdminDashboardPage() {
           tone="violet"
           label="Sessões totais"
           value={dashboard.totalSessions}
-          spark={SPARK_SEED}
+          spark={dashboard.sessions30d}
           sparkTone="violet"
         />
       </div>
@@ -131,9 +133,9 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Panel flush className="lg:col-span-2">
           <PanelHead
-            title="Crescimento & Economia"
+            title="Crescimento"
             icon={Activity}
-            sub="Usuários e coins em circulação · últimos 30 dias"
+            sub="Novos usuários e sessões · últimos 30 dias"
             right={
               <div className="hidden sm:flex items-center gap-3">
                 <span className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
@@ -142,7 +144,7 @@ export default function AdminDashboardPage() {
                 </span>
                 <span className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Coins
+                  Sessões
                 </span>
               </div>
             }
@@ -151,13 +153,15 @@ export default function AdminDashboardPage() {
             <MultiLine
               h={210}
               series={[
-                { data: SPARK_SEED, color: "#22d3ee" },
-                { data: SPARK_COINS, color: "#fbbf24" },
+                { data: dashboard.userGrowth30d, color: "#22d3ee" },
+                { data: dashboard.sessions30d, color: "#fbbf24" },
               ]}
             />
-            <p className="text-center font-mono text-[10px] text-zinc-600 mt-2">
-              Dados históricos em desenvolvimento
-            </p>
+            <div className="flex justify-between mt-2 font-mono text-[10px] text-zinc-600">
+              <span>{fmtDateLabel(29)}</span>
+              <span>{fmtDateLabel(14)}</span>
+              <span>{fmtDateLabel(0)}</span>
+            </div>
           </div>
         </Panel>
 
@@ -293,10 +297,10 @@ export default function AdminDashboardPage() {
       {/* Secondary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Panel flush>
-          <PanelHead title="Sessões / dia" icon={Server} />
+          <PanelHead title="Sessões / dia" icon={Server} sub="últimos 14 dias" />
           <div className="p-4">
             <BarChart
-              data={SPARK_SEED.slice(-14)}
+              data={dashboard.sessions30d.slice(-14)}
               tone="violet"
               h={120}
             />

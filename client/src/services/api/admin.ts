@@ -85,6 +85,8 @@ export interface AdminDashboard {
   deltaSessions: number | null;
   activeUsersToday: number;
   weeklyRetention: number | null;
+  userGrowth30d: number[];
+  sessions30d: number[];
 }
 
 export type ItemInput = Omit<AdminShopItem, "id" | "ownerCount">;

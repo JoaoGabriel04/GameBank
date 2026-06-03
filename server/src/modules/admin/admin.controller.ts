@@ -342,6 +342,7 @@ export const adminController = {
       const nowDate = new Date();
       const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       const fourteenDaysAgo = new Date(nowDate.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(nowDate.getTime() - 30 * 24 * 60 * 60 * 1000);
       const todayStart = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()));
 
       const [
@@ -350,6 +351,7 @@ export const adminController = {
         countUsersThisWeek, countUsersLastWeek,
         countSessionsThisWeek, countSessionsLastWeek,
         activeUsersTodayRaw, ativosEssaSemanaRaw, ativosSemanaPassadaRaw,
+        usersLast30Raw, sessionsLast30Raw,
       ] = await Promise.all([
         prisma.user.count(),
         prisma.session.count(),
@@ -398,11 +400,34 @@ export const adminController = {
           distinct: ["userId"],
           select: { userId: true },
         }),
+        // J: série temporal — novos usuários por dia (30 dias)
+        prisma.user.findMany({
+          where: { createdAt: { gte: thirtyDaysAgo } },
+          select: { createdAt: true },
+        }),
+        // J: série temporal — sessões por dia (30 dias)
+        prisma.session.findMany({
+          where: { dataInicio: { gte: thirtyDaysAgo } },
+          select: { dataInicio: true },
+        }),
       ]);
 
       function calcDelta(curr: number, prev: number): number | null {
         return prev > 0 ? Math.round(((curr - prev) / prev) * 100 * 10) / 10 : null;
       }
+
+      function buildDailyArray(dates: Date[], days: number): number[] {
+        const counts = new Array(days).fill(0);
+        const nowMs = nowDate.getTime();
+        for (const d of dates) {
+          const daysAgo = Math.floor((nowMs - d.getTime()) / (24 * 60 * 60 * 1000));
+          if (daysAgo >= 0 && daysAgo < days) counts[days - 1 - daysAgo]++;
+        }
+        return counts;
+      }
+
+      const userGrowth30d = buildDailyArray(usersLast30Raw.map((u) => u.createdAt), 30);
+      const sessions30d = buildDailyArray(sessionsLast30Raw.map((s) => s.dataInicio), 30);
 
       const setEssaSemana = new Set(ativosEssaSemanaRaw.map((r) => r.userId));
       const retidos = ativosSemanaPassadaRaw.filter((r) => setEssaSemana.has(r.userId)).length;
@@ -426,6 +451,8 @@ export const adminController = {
       res.json({
         totalUsers, totalSessions, totalFinished, totalItems,
         recentUsers, recentSessions, recentGames,
+        userGrowth30d,
+        sessions30d,
         deltaUsers: calcDelta(countUsersThisWeek, countUsersLastWeek),
         deltaSessions: calcDelta(countSessionsThisWeek, countSessionsLastWeek),
         activeUsersToday: activeUsersTodayRaw.length,
