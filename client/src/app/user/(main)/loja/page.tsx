@@ -297,7 +297,14 @@ export default function LojaPage() {
   }, [token, loadShopItems, loadProfile])
 
   useEffect(() => {
-    if (profile) setMyItems(profile.items)
+    if (!profile) return
+    // Drop items with invalid (null/0/NaN) id — they would never match a real
+    // ShopItem and cause confusing 'Item não encontrado' errors on equip/buy.
+    // Padrão (id=0) is the synthetic default banner and is always kept.
+    const cleaned = profile.items.filter(
+      (i) => i.id === 0 || (Number.isFinite(i.id) && (i.id as number) > 0)
+    )
+    setMyItems(cleaned)
   }, [profile])
 
   useEffect(() => {

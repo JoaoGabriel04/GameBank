@@ -18,7 +18,11 @@ export const shopController = {
 
   buyItem: async (req: Request, res: Response) => {
     try {
-      const result = await shopService.buyItem(req.user!.userId, parseInt(req.params.itemId));
+      const itemId = parseInt(req.params.itemId);
+      if (!Number.isFinite(itemId)) {
+        return res.status(400).json({ message: "ID de item inválido" });
+      }
+      const result = await shopService.buyItem(req.user!.userId, itemId);
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
@@ -29,7 +33,11 @@ export const shopController = {
 
   equipItem: async (req: Request, res: Response) => {
     try {
-      const result = await shopService.equipItem(req.user!.userId, parseInt(req.params.itemId));
+      const itemId = parseInt(req.params.itemId);
+      if (!Number.isFinite(itemId)) {
+        return res.status(400).json({ message: "ID de item inválido" });
+      }
+      const result = await shopService.equipItem(req.user!.userId, itemId);
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
