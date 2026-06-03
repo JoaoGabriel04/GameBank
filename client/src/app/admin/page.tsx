@@ -5,7 +5,7 @@ import { adminApi, type AuditEntry } from "@/services/api/admin";
 import { useAdminStore } from "@/stores/adminStore";
 import { Panel, PanelHead, Chip, LiveDot, Delta } from "@/components/admin/AdminUI";
 import { AreaChart, MultiLine, Donut, Sparkline, BarChart } from "@/components/admin/AdminCharts";
-import { Users, Coins, Store, Server, Activity, TrendingUp, Check, Bell, Ban } from "lucide-react";
+import { Users, UserCheck, Coins, Store, Server, Activity, TrendingUp, Check, Bell, Ban, RefreshCw } from "lucide-react";
 
 function relativeTime(ts: string) {
   const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
@@ -97,13 +97,14 @@ export default function AdminDashboardPage() {
           tone="cyan"
           label="Usuários totais"
           value={fmt(dashboard.totalUsers)}
+          delta={dashboard.deltaUsers ?? undefined}
           spark={SPARK_SEED}
         />
         <KpiCard
-          icon={Coins}
+          icon={UserCheck}
           tone="amber"
-          label="Itens na loja"
-          value={fmt(dashboard.totalItems)}
+          label="Ativos hoje"
+          value={fmt(dashboard.activeUsersToday)}
           spark={SPARK_COINS}
           sparkTone="amber"
         />
@@ -112,6 +113,7 @@ export default function AdminDashboardPage() {
           tone="emerald"
           label="Sessões finalizadas"
           value={fmt(dashboard.totalFinished)}
+          delta={dashboard.deltaSessions ?? undefined}
           spark={SPARK_SEED.map((v) => v * 0.8)}
           sparkTone="emerald"
         />
@@ -300,16 +302,21 @@ export default function AdminDashboardPage() {
             />
           </div>
         </Panel>
-        <Panel flush>
-          <PanelHead title="Gasto na loja" icon={Coins} />
-          <div className="p-4">
-            <AreaChart
-              data={SPARK_SEED.slice(-14).map((v) => v * 0.8)}
-              tone="emerald"
-              h={120}
-              grid={false}
-            />
+        <Panel className="flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-500">
+              Retenção semanal
+            </span>
+            <RefreshCw size={14} className="text-emerald-400" />
           </div>
+          <p className="font-jaro text-3xl text-white mt-2">
+            {dashboard.weeklyRetention !== null ? `${dashboard.weeklyRetention}%` : "—"}
+          </p>
+          <p className="font-mono text-[11px] text-zinc-500">
+            {dashboard.weeklyRetention !== null
+              ? "dos jogadores retornaram"
+              : "sem dados da semana anterior"}
+          </p>
         </Panel>
         <Panel className="flex flex-col justify-between">
           <div className="flex items-center justify-between">

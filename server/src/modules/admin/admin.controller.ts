@@ -339,9 +339,17 @@ export const adminController = {
 
   getDashboard: async (_req: Request, res: Response) => {
     try {
+      const nowDate = new Date();
+      const sevenDaysAgo = new Date(nowDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const fourteenDaysAgo = new Date(nowDate.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const todayStart = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()));
+
       const [
         totalUsers, totalSessions, totalFinished, totalItems,
         recentUsers, recentSessionsRaw, recentGames,
+        countUsersThisWeek, countUsersLastWeek,
+        countSessionsThisWeek, countSessionsLastWeek,
+        activeUsersTodayRaw, ativosEssaSemanaRaw, ativosSemanaPassadaRaw,
       ] = await Promise.all([
         prisma.user.count(),
         prisma.session.count(),
@@ -367,7 +375,41 @@ export const adminController = {
           where: { position: 1 },
           include: { user: { select: { nome: true } } },
         }),
+        // G: deltas semana-a-semana
+        prisma.user.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+        prisma.user.count({ where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
+        prisma.session.count({ where: { dataInicio: { gte: sevenDaysAgo } } }),
+        prisma.session.count({ where: { dataInicio: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
+        // H: ativos hoje
+        prisma.gameResult.findMany({
+          where: { createdAt: { gte: todayStart } },
+          distinct: ["userId"],
+          select: { userId: true },
+        }),
+        // I: retenção — ativos nos últimos 7 dias
+        prisma.gameResult.findMany({
+          where: { createdAt: { gte: sevenDaysAgo } },
+          distinct: ["userId"],
+          select: { userId: true },
+        }),
+        // I: retenção — ativos nos 7 dias anteriores
+        prisma.gameResult.findMany({
+          where: { createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } },
+          distinct: ["userId"],
+          select: { userId: true },
+        }),
       ]);
+
+      function calcDelta(curr: number, prev: number): number | null {
+        return prev > 0 ? Math.round(((curr - prev) / prev) * 100 * 10) / 10 : null;
+      }
+
+      const setEssaSemana = new Set(ativosEssaSemanaRaw.map((r) => r.userId));
+      const retidos = ativosSemanaPassadaRaw.filter((r) => setEssaSemana.has(r.userId)).length;
+      const weeklyRetention = ativosSemanaPassadaRaw.length > 0
+        ? Math.round((retidos / ativosSemanaPassadaRaw.length) * 100)
+        : null;
+
       const now = Date.now();
       const recentSessions = recentSessionsRaw.map((s) => ({
         id: s.id,
@@ -380,7 +422,15 @@ export const adminController = {
         saldoTotal: s.jogadores.reduce((acc, j) => acc + (j.saldo ?? 0), 0),
         duracao: Math.max(0, Math.floor((now - s.dataInicio.getTime()) / 1000)),
       }));
-      res.json({ totalUsers, totalSessions, totalFinished, totalItems, recentUsers, recentSessions, recentGames });
+
+      res.json({
+        totalUsers, totalSessions, totalFinished, totalItems,
+        recentUsers, recentSessions, recentGames,
+        deltaUsers: calcDelta(countUsersThisWeek, countUsersLastWeek),
+        deltaSessions: calcDelta(countSessionsThisWeek, countSessionsLastWeek),
+        activeUsersToday: activeUsersTodayRaw.length,
+        weeklyRetention,
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Erro ao carregar dashboard" });

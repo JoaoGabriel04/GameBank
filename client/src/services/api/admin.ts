@@ -81,6 +81,10 @@ export interface AdminDashboard {
   recentUsers: { id: number; nome: string; email: string; avatarUrl: string | null; avatarUpdatedAt: string | null; createdAt: string }[];
   recentSessions: { id: number; nome: string | null; status: string; modo: string; maxJogadores: number; dataInicio: string; jogadores: { id: number }[]; saldoTotal: number; duracao: number }[];
   recentGames: { id: number; sessionId: number; userId: number; position: number; patrimony: number; xpEarned: number; coinsEarned: number; createdAt: string; user: { nome: string } }[];
+  deltaUsers: number | null;
+  deltaSessions: number | null;
+  activeUsersToday: number;
+  weeklyRetention: number | null;
 }
 
 export type ItemInput = Omit<AdminShopItem, "id" | "ownerCount">;
