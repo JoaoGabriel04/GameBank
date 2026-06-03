@@ -46,14 +46,21 @@ export class ShopService {
       acquiredAt: new Date().toISOString(),
     };
 
-    // Transact: decrement coins and add item
+    // Transact: decrement coins and add item.
+    // Both updates MUST go through `tx` so they share the same connection
+    // and row lock — calling shopRepository.saveUserItems (which uses the
+    // global prisma) inside the callback deadlocks against itself and
+    // the transaction times out at ~15s with P2028.
     await prisma.$transaction(
       async (tx) => {
         await tx.user.update({
           where: { id: userId },
           data: { coins: { decrement: shopItem.price } },
         });
-        await shopRepository.saveUserItems(userId, [...currentItems, newItem]);
+        await tx.user.update({
+          where: { id: userId },
+          data: { items: [...currentItems, newItem] as any },
+        });
       },
       { timeout: 15000, maxWait: 10000 }
     );
