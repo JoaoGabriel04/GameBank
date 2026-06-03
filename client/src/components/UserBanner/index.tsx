@@ -17,8 +17,11 @@ export default function UserBanner({ banner, spriteId, imageUrl, className = "" 
   const sprite = resolveSprite(spriteId);
   const SpriteIcon = sprite?.icon;
 
+  const callerPositions = /\b(absolute|fixed|sticky)\b/.test(className);
+  const wrapperClass = `${callerPositions ? "" : "relative"} overflow-hidden ${className}`.trim();
+
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={wrapperClass}>
       <div className="absolute inset-0" style={bg.style} />
       {SpriteIcon && (
         <div className="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-zinc-900/70 backdrop-blur-sm border border-white/10 grid place-items-center text-white shadow-sm">
