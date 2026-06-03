@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { auditLog } from "../../lib/audit.js";
 import { getLevelFromXp } from "../../utils/level.js";
 import { adminRepository } from "./admin.repository.js";
+import { ShopService } from "../shop/shop.service.js";
 
 interface Actor {
   id?: number | null;
@@ -448,6 +449,24 @@ export class AdminService {
     const exists = await adminRepository.findBannerById(id);
     if (!exists) throw new AppError(404, "Banner não encontrado.");
     return adminRepository.deleteBanner(id);
+  }
+
+  async syncUserBanner(userId: number, actor: Actor) {
+    const exists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!exists) throw new AppError(404, "Usuário não encontrado.");
+    await new ShopService().syncUserBanner(userId);
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "admin.user.sync_banner",
+      target: `user:${userId}`,
+      metadata: { syncedBy: actor.email ?? null },
+      severity: "info",
+    });
+    const updated = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, nome: true, banner: true, spriteId: true },
+    });
+    return updated;
   }
 
   // ── Audit Log ──────────────────────────────────────────────────────────

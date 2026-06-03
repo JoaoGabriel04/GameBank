@@ -56,6 +56,9 @@ adminRouter.post("/banners", adminController.createBanner);
 adminRouter.patch("/banners/:id", adminController.updateBanner);
 adminRouter.delete("/banners/:id", adminController.deleteBanner);
 
+// User banner sync (re-sync User.spriteId from equipped item JSON)
+adminRouter.post("/users/:id/sync-banner", adminController.syncUserBanner);
+
 // Audit
 adminRouter.get("/audit", adminController.listAudit);
 

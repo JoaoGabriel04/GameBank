@@ -315,6 +315,14 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  syncUserBanner: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      res.json(await adminService.syncUserBanner(userId, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   getDashboard: async (_req: Request, res: Response) => {
     try {
       const [
