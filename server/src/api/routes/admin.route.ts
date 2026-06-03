@@ -22,6 +22,7 @@ adminRouter.delete("/shop/items/:id", adminController.deleteItem);
 // Sessions
 adminRouter.get("/sessions", adminController.listSessions);
 adminRouter.get("/sessions/:id", adminController.getSessionDetail);
+adminRouter.get("/sessions/:id/chat", adminController.getSessionChat);
 adminRouter.post("/sessions/:id/end", adminController.endSession);
 adminRouter.patch("/sessions/:id/players/:pid/balance", adminController.adjustPlayerBalance);
 
@@ -33,6 +34,7 @@ adminRouter.patch("/missions/:id/toggle", adminController.toggleMission);
 adminRouter.delete("/missions/:id", adminController.deleteMission);
 
 // Users
+adminRouter.post("/users/notify", adminController.notifyUsers);
 adminRouter.get("/users", adminController.listUsers);
 adminRouter.patch("/users/:id/coins", adminController.adjustCoins);
 adminRouter.patch("/users/:id/xp", adminController.adjustXp);

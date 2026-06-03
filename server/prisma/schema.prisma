@@ -62,11 +62,12 @@ model User {
 
   items        Json      @default("[]")
 
-  sessions        Session[]
-  players         SessionPlayer[]
-  missions        UserMission[]
-  gameResults     GameResult[]
-  auditLogs       AuditLog[]
+  sessions             Session[]
+  players              SessionPlayer[]
+  missions             UserMission[]
+  gameResults          GameResult[]
+  auditLogs            AuditLog[]
+  userNotifications    UserNotification[]
 
   @@map("users")
 }
@@ -376,6 +377,21 @@ model Banner {
   shopItems ShopItem[]
 
   @@map("banners")
+}
+
+model UserNotification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  titulo    String
+  corpo     String
+  lida      Boolean   @default(false)
+  lidaEm    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_notifications")
 }
 
 model AuditLog {

@@ -12,6 +12,7 @@ import {
   Check, Coins, MessageSquare, ChevronRight, X, AlertTriangle,
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
+import { adminApi } from "@/services/api/admin";
 import { useToast } from "@/components/Toast";
 import type { AdminUser } from "@/services/api/admin";
 import {
@@ -373,8 +374,29 @@ export default function AdminUsuariosPage() {
   const [filter, setFilter] = useState("Todos");
   const [selected, setSelected] = useState<number[]>([]);
   const [banning, setBanning] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifTitulo, setNotifTitulo] = useState("");
+  const [notifCorpo, setNotifCorpo] = useState("");
+  const [sending, setSending] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
+
+  async function handleNotify() {
+    if (!notifTitulo.trim() || !notifCorpo.trim()) return;
+    setSending(true);
+    try {
+      const { sent } = await adminApi.notifyUsers(selected, notifTitulo.trim(), notifCorpo.trim());
+      ok(`Notificação enviada para ${sent} usuário(s).`);
+      setSelected([]);
+      setNotifOpen(false);
+      setNotifTitulo("");
+      setNotifCorpo("");
+    } catch {
+      err("Erro ao enviar notificação.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function handleBatchBan() {
     if (selected.length === 0) return;
@@ -441,7 +463,7 @@ export default function AdminUsuariosPage() {
           </span>
           <div className="flex items-center gap-2 ml-auto">
             <Btn variant="subtle" icon={Coins} size="sm">Dar coins</Btn>
-            <Btn variant="subtle" icon={MessageSquare} size="sm">Notificar</Btn>
+            <Btn variant="subtle" icon={MessageSquare} size="sm" onClick={() => setNotifOpen(true)}>Notificar</Btn>
             <Btn variant="danger" icon={Ban} size="sm" onClick={handleBatchBan} disabled={banning}>
               {banning ? "Banindo…" : "Banir"}
             </Btn>
@@ -584,6 +606,56 @@ export default function AdminUsuariosPage() {
         user={deleting} open={!!deleting}
         onClose={() => setDeleting(null)}
       />
+
+      {/* Modal de notificação */}
+      <AdminModal open={notifOpen} onClose={() => setNotifOpen(false)} width={480}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+          <h2 className="font-jaro text-lg text-white flex items-center gap-2">
+            <MessageSquare size={18} className="text-cyan-400" />
+            Notificar {selected.length} usuário(s)
+          </h2>
+          <button type="button" onClick={() => setNotifOpen(false)} className="text-zinc-500 hover:text-white cursor-pointer p-1">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <Field label="Título">
+            <AdminInput
+              value={notifTitulo}
+              onChange={(e) => setNotifTitulo(e.target.value)}
+              placeholder="Ex: Atualização do sistema"
+              maxLength={100}
+            />
+          </Field>
+          <Field label="Mensagem">
+            <textarea
+              value={notifCorpo}
+              onChange={(e) => setNotifCorpo(e.target.value)}
+              placeholder="Texto da notificação…"
+              maxLength={500}
+              rows={4}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 font-inconsolata text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 resize-none"
+            />
+            <p className="font-inconsolata text-[10px] text-zinc-600 text-right mt-1">
+              {notifCorpo.length}/500
+            </p>
+          </Field>
+          <div className="flex gap-2 pt-1">
+            <Btn variant="ghost" className="flex-1 justify-center" onClick={() => setNotifOpen(false)}>
+              Cancelar
+            </Btn>
+            <Btn
+              variant="primary"
+              icon={MessageSquare}
+              className="flex-1 justify-center"
+              onClick={handleNotify}
+              disabled={sending || !notifTitulo.trim() || !notifCorpo.trim()}
+            >
+              {sending ? "Enviando…" : "Enviar"}
+            </Btn>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   );
 }

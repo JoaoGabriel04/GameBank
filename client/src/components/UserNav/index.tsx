@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useUserNotificationStore } from "@/stores/userNotificationStore";
 import UserAvatar from "@/components/UserAvatar";
 
 /* ── Nav tab definitions ── */
@@ -32,16 +33,13 @@ const NAV_TABS = [
   { label: "Perfil",      icon: User,            path: "/user/perfil"      },
 ];
 
-// Notificações vazias — TODO: Integrar com API de notificações quando disponível
-interface Notification {
-  icon: React.ComponentType<{ size?: number }>;
-  color: string;
-  bg: string;
-  text: string;
-  time: string;
+function relativeTime(ts: string): string {
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
-
-const NOTIF_SAMPLE: Notification[] = [];
 
 /* ── Live clock ── */
 function Clock() {
@@ -60,67 +58,90 @@ function Clock() {
 /* ── Notifications dropdown ── */
 function NotifBell() {
   const [open, setOpen] = useState(false);
-  // TODO: fetch real notifications from API
-  const count = NOTIF_SAMPLE.length;
+  const { notifications, unreadCount, load, markAllRead } = useUserNotificationStore();
+
+  useEffect(() => { load(); }, [load]);
+
+  function handleOpen() {
+    setOpen((o) => !o);
+    if (!open) load();
+  }
+
+  async function handleMarkAllRead() {
+    await markAllRead();
+  }
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleOpen}
         className="relative p-2 text-zinc-400 hover:text-white cursor-pointer rounded-xl hover:bg-zinc-800 transition-colors"
         aria-label="Notificações"
       >
         <Bell size={18} />
-        {count > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 font-inconsolata text-[9px] text-white grid place-items-center leading-none">
-            {count}
+            {unreadCount}
           </span>
         )}
       </button>
 
       {open && (
         <>
-          {/* Backdrop */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          {/* Dropdown */}
           <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50">
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
               <h3 className="font-jaro text-sm text-white">Notificações</h3>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-zinc-500 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-zinc-800 transition-colors"
-              >
-                <X size={15} />
-              </button>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="font-inconsolata text-[10px] text-zinc-500 hover:text-green-400 cursor-pointer transition-colors"
+                  >
+                    Marcar como lidas
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-zinc-500 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-zinc-800 transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
-            {NOTIF_SAMPLE.length === 0 ? (
+            {notifications.length === 0 ? (
               <div className="flex items-center justify-center py-8 text-zinc-500">
                 <p className="font-inconsolata text-xs">Sem notificações</p>
               </div>
             ) : (
-              NOTIF_SAMPLE.map((n, i) => {
-                const Icon = n.icon;
-                return (
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.map((n) => (
                   <div
-                    key={i}
-                    className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 hover:bg-zinc-900 transition-colors cursor-pointer"
+                    key={n.id}
+                    className={`flex items-start gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 transition-colors ${
+                      !n.lida ? "bg-green-500/5" : "hover:bg-zinc-900"
+                    }`}
                   >
-                    <span
-                      className={`w-8 h-8 rounded-xl grid place-items-center border shrink-0 ${n.bg} ${n.color}`}
-                    >
-                      <Icon size={15} />
-                    </span>
-                    <p className="flex-1 font-inconsolata text-xs text-zinc-300 leading-snug">
-                      {n.text}
-                    </p>
-                    <span className="font-inconsolata text-[9px] text-zinc-600 shrink-0">
-                      {n.time}
+                    {!n.lida && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 mt-1.5 shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-inconsolata text-xs text-zinc-100 font-semibold leading-snug truncate">
+                        {n.titulo}
+                      </p>
+                      <p className="font-inconsolata text-[11px] text-zinc-400 leading-snug mt-0.5">
+                        {n.corpo}
+                      </p>
+                    </div>
+                    <span className="font-inconsolata text-[9px] text-zinc-600 shrink-0 mt-0.5">
+                      {relativeTime(n.createdAt)}
                     </span>
                   </div>
-                );
-              })
+                ))}
+              </div>
             )}
           </div>
         </>
@@ -284,17 +305,8 @@ export default function UserNav() {
               })()}
             </span>
 
-            {/* Notif bell */}
-            <button
-              type="button"
-              className="relative p-1.5 text-zinc-400 hover:text-white cursor-pointer rounded-lg hover:bg-zinc-800 transition-colors"
-              aria-label="Notificações"
-            >
-              <Bell size={16} />
-              {NOTIF_SAMPLE.length > 0 && (
-                <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-rose-500" />
-              )}
-            </button>
+            {/* Notif bell (mobile — opens desktop dropdown via same store) */}
+            <NotifBell />
 
             {/* Avatar */}
             {user && (

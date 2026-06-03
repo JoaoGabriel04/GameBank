@@ -476,4 +476,33 @@ export const adminController = {
       res.json(await adminService.listAudit({ userId, action, severity, limit, offset }));
     } catch (err) { parseError(res, err); }
   },
+
+  // K — chat de sessão
+  getSessionChat: async (req: Request, res: Response) => {
+    try {
+      const sessionId = z.coerce.number().int().positive().parse(req.params.id);
+      const messages = await prisma.message.findMany({
+        where: { sessionId },
+        orderBy: { createdAt: "asc" },
+        take: 100,
+        include: { player: { select: { nome: true, cor: true } } },
+      });
+      res.json(messages);
+    } catch (err) { parseError(res, err); }
+  },
+
+  // L — notificar usuários (batch)
+  notifyUsers: async (req: Request, res: Response) => {
+    try {
+      const { userIds, titulo, corpo } = z.object({
+        userIds: z.array(z.number().int().positive()).min(1),
+        titulo: z.string().min(1).max(100),
+        corpo: z.string().min(1).max(500),
+      }).parse(req.body);
+      await prisma.userNotification.createMany({
+        data: userIds.map((userId) => ({ userId, titulo, corpo })),
+      });
+      res.json({ sent: userIds.length });
+    } catch (err) { parseError(res, err); }
+  },
 };

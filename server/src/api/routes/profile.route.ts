@@ -8,6 +8,8 @@ const profileRouter = Router();
 
 profileRouter.get("/me", authenticate, profileController.me);
 profileRouter.get("/history", authenticate, profileController.history);
+profileRouter.get("/notifications", authenticate, profileController.getNotifications);
+profileRouter.patch("/notifications/read", authenticate, profileController.markNotificationsRead);
 profileRouter.patch(
   "/me",
   authenticate,

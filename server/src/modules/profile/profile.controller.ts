@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { ProfileService } from "./profile.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
+import { prisma } from "../../lib/prisma.js";
 
 const profileService = new ProfileService();
 
@@ -47,6 +48,39 @@ export const profileController = {
       if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
       console.error("Erro ao atualizar perfil:", err);
       res.status(500).json({ error: "Erro ao atualizar perfil" });
+    }
+  },
+
+  getNotifications: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      await prisma.userNotification.deleteMany({
+        where: { userId, lida: true, lidaEm: { lt: oneDayAgo } },
+      });
+      const notifications = await prisma.userNotification.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      res.json(notifications);
+    } catch (err) {
+      console.error("Erro ao buscar notificações:", err);
+      res.status(500).json({ message: "Erro ao buscar notificações" });
+    }
+  },
+
+  markNotificationsRead: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+      await prisma.userNotification.updateMany({
+        where: { userId, lida: false },
+        data: { lida: true, lidaEm: new Date() },
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Erro ao marcar notificações:", err);
+      res.status(500).json({ message: "Erro ao marcar notificações" });
     }
   },
 };

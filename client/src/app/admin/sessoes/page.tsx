@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import type { AdminSession, SessionPlayer } from "@/services/api/admin";
+import { adminApi, type AdminSession, type SessionPlayer, type AdminChatMessage } from "@/services/api/admin";
 import {
   Panel, Chip, Segmented, Btn, LiveDot, AdminInput, Drawer,
 } from "@/components/admin/AdminUI";
@@ -101,7 +101,23 @@ function SessionDrawer({
 }) {
   const [ending, setEnding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<AdminChatMessage[]>([]);
+  const [loadingChat, setLoadingChat] = useState(false);
   const detail = useAdminStore((s) => (session ? s.sessionDetails[session.id] : undefined));
+
+  async function handleToggleChat() {
+    if (!session) return;
+    if (!showChat && chatMessages.length === 0) {
+      setLoadingChat(true);
+      try {
+        const msgs = await adminApi.getSessionChat(session.id);
+        setChatMessages(msgs);
+      } catch { /* ignore */ }
+      finally { setLoadingChat(false); }
+    }
+    setShowChat((v) => !v);
+  }
 
   if (!session) return null;
 
@@ -141,8 +157,11 @@ function SessionDrawer({
 
         {isLive && (
           <div className="grid grid-cols-3 gap-2">
-            <Btn variant="subtle" icon={MessageSquare} size="sm" className="justify-center">
-              Ver chat
+            <Btn
+              variant="subtle" icon={MessageSquare} size="sm" className="justify-center"
+              onClick={handleToggleChat} disabled={loadingChat}
+            >
+              {loadingChat ? "Carregando…" : showChat ? "Fechar chat" : "Ver chat"}
             </Btn>
             <Btn
               variant="subtle" icon={RefreshCw} size="sm" className="justify-center"
@@ -198,6 +217,44 @@ function SessionDrawer({
             </p>
           )}
         </div>
+
+        {showChat && (
+          <div>
+            <p className="font-inconsolata text-xs text-zinc-400 font-semibold uppercase tracking-wider mb-2">
+              Chat da sala
+            </p>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden max-h-64 overflow-y-auto flex flex-col-reverse">
+              {chatMessages.length === 0 ? (
+                <p className="font-inconsolata text-xs text-zinc-600 p-3 text-center">
+                  Nenhuma mensagem.
+                </p>
+              ) : (
+                <div className="p-3 space-y-2">
+                  {chatMessages.map((msg) => (
+                    <div key={msg.id} className="flex items-start gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full mt-1 shrink-0"
+                        style={{ background: msg.player.cor || "#52525b" }}
+                      />
+                      <div className="min-w-0">
+                        <span className="font-inconsolata text-[10px] text-zinc-500">
+                          {msg.player.nome} ·{" "}
+                          {new Date(msg.createdAt).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        <p className="font-inconsolata text-xs text-zinc-300 leading-snug">
+                          {msg.texto}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Drawer>
   );

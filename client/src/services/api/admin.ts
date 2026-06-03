@@ -126,6 +126,15 @@ export interface AuditEntry {
   severity: "info" | "success" | "warn" | "danger";
 }
 
+export interface AdminChatMessage {
+  id: number;
+  sessionId: number;
+  playerId: number;
+  texto: string;
+  createdAt: string;
+  player: { nome: string; cor: string };
+}
+
 export interface AuditListOpts {
   userId?: number;
   action?: string;
@@ -150,6 +159,7 @@ export const adminApi = {
   // Sessions
   listSessions: () => api.get<AdminSession[]>("/admin/sessions").then((r) => r.data),
   getSessionDetail: (id: number) => api.get<AdminSessionDetail>(`/admin/sessions/${id}`).then((r) => r.data),
+  getSessionChat: (id: number) => api.get<AdminChatMessage[]>(`/admin/sessions/${id}/chat`).then((r) => r.data),
   endSession: (id: number) => api.post<AdminSession>(`/admin/sessions/${id}/end`).then((r) => r.data),
   adjustPlayerBalance: (sessionId: number, playerId: number, delta: number) =>
     api.patch<SessionPlayer>(`/admin/sessions/${sessionId}/players/${playerId}/balance`, { delta }).then((r) => r.data),
@@ -216,4 +226,7 @@ export const adminApi = {
     const qs = params.toString();
     return api.get<AuditEntry[]>(`/admin/audit${qs ? `?${qs}` : ""}`).then((r) => r.data);
   },
+
+  notifyUsers: (userIds: number[], titulo: string, corpo: string) =>
+    api.post<{ sent: number }>("/admin/users/notify", { userIds, titulo, corpo }).then((r) => r.data),
 };
