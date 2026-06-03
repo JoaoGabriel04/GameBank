@@ -261,7 +261,7 @@ export default function NegotiationResponseModal() {
           {targetPlayer && (
             <div className="relative overflow-hidden rounded-xl border border-zinc-700">
               <UserBanner banner={targetPlayer.banner} spriteId={targetPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/35" />
               <div className="relative z-10 flex items-center gap-3 p-3">
                 <UserAvatar
                   avatarUrl={targetPlayer.avatarUrl}
@@ -352,7 +352,7 @@ export default function NegotiationResponseModal() {
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
                   <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="absolute inset-0 bg-black/35" />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar
                       avatarUrl={fromPlayer.avatarUrl}
@@ -424,7 +424,7 @@ export default function NegotiationResponseModal() {
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
                   <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="absolute inset-0 bg-black/35" />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar
                       avatarUrl={fromPlayer.avatarUrl}

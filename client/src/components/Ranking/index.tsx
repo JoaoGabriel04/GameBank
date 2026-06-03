@@ -85,7 +85,7 @@ export default function Ranking() {
               }`}
             >
               <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="absolute inset-0 w-full h-full" />
-              <div className="absolute inset-0 bg-black/60" />
+              <div className="absolute inset-0 bg-black/35" />
               <div className="relative z-10 flex items-center gap-4 p-4">
                 <div className="w-8 text-center shrink-0">
                   {entry.pos <= 3 ? (

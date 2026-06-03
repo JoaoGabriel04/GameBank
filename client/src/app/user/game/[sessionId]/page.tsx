@@ -242,7 +242,7 @@ export default function Game() {
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-800">
         <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-black/35" />
         <div className="relative z-10 flex items-center gap-3 p-3">
           <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />
           <div className="min-w-0 flex-1">
