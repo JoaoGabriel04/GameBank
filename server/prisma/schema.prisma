@@ -364,12 +364,14 @@ model GameSettings {
 }
 
 model Banner {
-  id        Int     @id @default(autoincrement())
-  nome      String
-  css       String
-  spriteId  String?
-  disponibilidade Boolean @default(true)
-  createdAt DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  nome            String
+  css             String           // pode ser URL https:// OU gradiente CSS
+  spriteId        String?
+  imagePublicId   String?          // public_id do Cloudinary (para deleção)
+  imageUpdatedAt  DateTime?        // última vez que a imagem foi trocada
+  disponibilidade Boolean  @default(true)
+  createdAt       DateTime @default(now())
 
   shopItems ShopItem[]
 

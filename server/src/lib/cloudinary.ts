@@ -31,3 +31,7 @@ export function getCloudinary() {
 export function getAvatarFolder() {
   return process.env.CLOUDINARY_AVATAR_FOLDER || "gamebank/avatars";
 }
+
+export function getBannerFolder() {
+  return process.env.CLOUDINARY_BANNER_FOLDER || "gamebank/banners";
+}

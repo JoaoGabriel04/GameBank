@@ -6,6 +6,12 @@ const MIN_DIM = Number(process.env.AVATAR_MIN_DIM || 100);
 const MAX_DIM = Number(process.env.AVATAR_MAX_DIM || 4096);
 const OUTPUT_SIZE = Number(process.env.AVATAR_OUTPUT_SIZE || 512);
 
+const BANNER_MAX_BYTES = Number(process.env.BANNER_MAX_BYTES || 8 * 1024 * 1024);
+const BANNER_MIN_DIM = Number(process.env.BANNER_MIN_DIM || 600);
+const BANNER_MAX_DIM = Number(process.env.BANNER_MAX_DIM || 4096);
+const BANNER_OUTPUT_WIDTH = Number(process.env.BANNER_OUTPUT_WIDTH || 1200);
+const BANNER_OUTPUT_HEIGHT = Number(process.env.BANNER_OUTPUT_HEIGHT || 400);
+
 const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function detectMime(buffer: Buffer): string | null {
@@ -84,5 +90,65 @@ export async function validateAndProcessAvatar(
     mime: "image/jpeg",
     width: OUTPUT_SIZE,
     height: OUTPUT_SIZE,
+  };
+}
+
+export type ProcessedBanner = {
+  buffer: Buffer;
+  mime: "image/jpeg";
+  width: number;
+  height: number;
+};
+
+export async function validateAndProcessBanner(
+  buffer: Buffer,
+  declaredMime?: string
+): Promise<ProcessedBanner> {
+  if (buffer.length > BANNER_MAX_BYTES) {
+    throw new AppError(400, `Banner muito grande (máx. ${Math.round(BANNER_MAX_BYTES / 1024 / 1024)}MB)`);
+  }
+
+  const detected = detectMime(buffer);
+  if (!detected || !ALLOWED_MIMES.has(detected)) {
+    throw new AppError(400, "Formato não permitido. Use JPG, PNG ou WebP.");
+  }
+
+  if (declaredMime && declaredMime !== detected) {
+    throw new AppError(400, "Tipo de arquivo não corresponde ao conteúdo real.");
+  }
+
+  let meta;
+  try {
+    meta = await sharp(buffer, { failOn: "error" }).rotate().metadata();
+  } catch {
+    throw new AppError(400, "Arquivo de imagem inválido ou corrompido.");
+  }
+
+  const width = meta.width ?? 0;
+  const height = meta.height ?? 0;
+
+  // Banner is landscape — each axis has its own minimum (not "both ≥ 600")
+  if (width < BANNER_MIN_DIM) {
+    throw new AppError(400, `Banner muito estreito (mín. ${BANNER_MIN_DIM}px de largura).`);
+  }
+  if (height < 200) {
+    throw new AppError(400, `Banner muito baixo (mín. 200px de altura).`);
+  }
+
+  if (width > BANNER_MAX_DIM || height > BANNER_MAX_DIM) {
+    throw new AppError(400, `Banner muito grande (máx. ${BANNER_MAX_DIM}px em cada dimensão).`);
+  }
+
+  const processed = await sharp(buffer)
+    .rotate()
+    .resize(BANNER_OUTPUT_WIDTH, BANNER_OUTPUT_HEIGHT, { fit: "cover", position: "centre" })
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toBuffer();
+
+  return {
+    buffer: processed,
+    mime: "image/jpeg",
+    width: BANNER_OUTPUT_WIDTH,
+    height: BANNER_OUTPUT_HEIGHT,
   };
 }
