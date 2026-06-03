@@ -27,7 +27,6 @@ import BadgeCollection from "@/components/BadgeCollection";
 import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
 import type { UserItem, UserMission, GameResult } from "@/types/shop";
-import { resolveSprite } from "@/constants/sprites";
 
 /* ─── Inventory type tabs ─── */
 type InvTab = "title" | "badge" | "banner";
@@ -52,9 +51,8 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
 
   if (!profile || !user) return null;
 
-  const equippedBanner = profile.items?.find(
-    (i) => i.type === "banner" && i.equipped
-  );
+  const equippedBanner = profile.items?.find(i => i.type === "banner" && i.equipped);
+
   const resolvedSpriteId =
     profile.spriteId ?? user.spriteId ?? equippedBanner?.spriteId ?? null;
 
@@ -215,8 +213,8 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                 type="button"
                 onClick={() => setTab(id)}
                 className={`px-2.5 py-1 rounded-lg font-inconsolata text-[11px] cursor-pointer transition-all ${tab === id
-                    ? "text-white font-semibold"
-                    : "text-zinc-500 hover:text-zinc-300"
+                  ? "text-white font-semibold"
+                  : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 style={tab === id ? { background: INV_ACCENT[id].color + "22", color: INV_ACCENT[id].color } : undefined}
               >
@@ -239,8 +237,8 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                 type="button"
                 onClick={() => handleEquip(item)}
                 className={`relative overflow-hidden rounded-xl border p-3 text-left transition-all cursor-pointer ${item.equipped
-                    ? acc.ring
-                    : "border-zinc-700 bg-zinc-800/60 hover:border-zinc-500"
+                  ? acc.ring
+                  : "border-zinc-700 bg-zinc-800/60 hover:border-zinc-500"
                   }`}
               >
                 {item.equipped && (
