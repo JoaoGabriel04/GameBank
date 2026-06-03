@@ -178,7 +178,11 @@ function BannerBuilder({
       <PanelHead
         title={editing ? "Editar banner" : "Construtor de banner"}
         icon={ImageIcon}
-        sub={editing ? `Editando #${editing.id} · ${editing.nome}` : "Crie um banner de perfil personalizado"}
+        sub={
+          editing
+            ? `Editando #${editing.id} · ${editing.nome}`
+            : "1) Monte o gradiente · 2) Salve · 3) Clique no lápis do card para enviar uma imagem"
+        }
         right={<Chip tone={editing ? "amber" : "cyan"}>{editing ? "editando" : "editor"}</Chip>}
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-5 p-5">
@@ -328,10 +332,14 @@ function BannerBuilder({
           )}
 
           {!editing && (
-            <div className="border border-dashed border-zinc-700 rounded-xl p-4 text-center">
-              <Upload size={20} className="text-zinc-600 mx-auto" />
-              <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
-                Salve o banner primeiro<br />para enviar uma imagem
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
+              <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">
+                Imagem
+              </p>
+              <p className="font-inconsolata text-[11px] text-zinc-500 leading-snug">
+                Salve o banner primeiro, depois clique no&nbsp;
+                <Pencil size={11} className="inline -mt-0.5" />
+                &nbsp;do card abaixo para enviar uma imagem.
               </p>
             </div>
           )}
