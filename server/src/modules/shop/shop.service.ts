@@ -47,13 +47,16 @@ export class ShopService {
     };
 
     // Transact: decrement coins and add item
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: { coins: { decrement: shopItem.price } },
-      });
-      await shopRepository.saveUserItems(userId, [...currentItems, newItem]);
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: { coins: { decrement: shopItem.price } },
+        });
+        await shopRepository.saveUserItems(userId, [...currentItems, newItem]);
+      },
+      { timeout: 15000, maxWait: 10000 }
+    );
 
     // Invalidate ranking cache since user inventory changed
     await this.rankingService.invalidateCache();

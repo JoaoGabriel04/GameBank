@@ -8,6 +8,7 @@ import {
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import { resolveSprite } from "@/constants/sprites";
+import { resolveBannerBackground } from "@/constants/banners";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
   Panel, Chip, Toggle, Segmented, Btn, Field,
@@ -51,19 +52,17 @@ function ItemCard({
   const [confirmDel, setConfirmDel] = useState(false);
   const meta = getTypeMeta(item.type);
   const isBanner = item.type === "banner";
-  const bannerStyle = isBanner && item.value
-    ? { backgroundImage: item.value, boxShadow: `0 0 30px -14px rgba(34, 211, 238, 0.5)` }
-    : { boxShadow: "none" };
+  const bg = isBanner && item.value ? resolveBannerBackground(item.value) : null;
 
   return (
     <div
       className={`relative rounded-2xl border overflow-hidden transition-all bg-zinc-900 ${
         item.available ? "border-zinc-800" : "border-zinc-800/60 opacity-55"
       }`}
-      style={bannerStyle}
+      style={bg ? { ...bg.style, boxShadow: `0 0 30px -14px rgba(34, 211, 238, 0.5)` } : { boxShadow: "none" }}
     >
-      {isBanner && item.value && (
-        <div className="absolute inset-0 pointer-events-none" style={{ background: item.value, opacity: 0.35 }} />
+      {bg && (
+        <div className="absolute inset-0 pointer-events-none bg-zinc-900/60" />
       )}
 
       <div className="relative p-4">
@@ -132,17 +131,19 @@ function ItemCard({
 function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemInput>; bannerCss?: string | null; bannerSpriteId?: string | null }) {
   const meta = getTypeMeta(form.type ?? "title");
   const isBanner = form.type === "banner";
-  const bg = isBanner && bannerCss ? bannerCss : "linear-gradient(150deg,#1f2937,#111827)";
+  const bg = isBanner && bannerCss
+    ? resolveBannerBackground(bannerCss)
+    : { className: "", style: { background: "linear-gradient(150deg,#1f2937,#111827)" } };
   const SpriteIcon = isBanner && bannerSpriteId ? resolveSprite(bannerSpriteId)?.icon : null;
 
   return (
     <div
       className="relative rounded-2xl border border-zinc-800 overflow-hidden"
-      style={{ background: bg, boxShadow: `0 0 40px -18px rgba(34,211,238,0.5)` }}
+      style={{ ...bg.style, boxShadow: `0 0 40px -18px rgba(34,211,238,0.5)` }}
     >
-      <div className="relative p-5 bg-zinc-900/40 backdrop-blur-sm">
+      <div className="relative p-5 bg-zinc-900/55 backdrop-blur-sm rounded-2xl">
         <div className="flex items-start justify-between">
-          <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/70 text-zinc-200">
+          <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/80 text-zinc-200">
             {SpriteIcon
               ? <SpriteIcon size={22} />
               : isBanner
