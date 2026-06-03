@@ -83,7 +83,7 @@ function ProfileHero() {
         </div>
         <p className="font-inconsolata text-xs text-zinc-500 mt-0.5">
           Nível {profile.level} · #{" "}
-          <Link href="/user/recompensas" className="hover:text-zinc-300 transition-colors">
+          <Link href="/user/ranking" className="hover:text-zinc-300 transition-colors">
             ver ranking
           </Link>
         </p>

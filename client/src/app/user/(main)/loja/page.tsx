@@ -366,7 +366,7 @@ export default function LojaPage() {
       
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div className="relative pt-24 overflow-hidden">
+      <div className="relative overflow-hidden">
         {/* Glow decorativo */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-40 bg-violet-600/10 blur-3xl rounded-full" />

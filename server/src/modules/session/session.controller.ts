@@ -157,9 +157,15 @@ export const sessionController = {
       const userId = req.user?.userId;
       if (!userId) return res.status(401).json({ message: "Não autenticado" });
 
-      await sessionService.quitSession(Number(sessionId), userId);
+      const sessionIdNum = Number(sessionId);
+      const result = await sessionService.quitSession(sessionIdNum, userId);
       res.clearCookie(`room_token_${sessionId}`, { path: "/" });
-      emitSessionUpdated(Number(sessionId), await sessionService.loadSession(Number(sessionId)));
+
+      if (result?.autoEnded) {
+        emitSessionClosed(sessionIdNum, result.ranking);
+      } else {
+        emitSessionUpdated(sessionIdNum, await sessionService.loadSession(sessionIdNum));
+      }
       return res.status(200).json({ message: "Você saiu da sala." });
     } catch (err) {
       if (err instanceof AppError) {
@@ -190,8 +196,14 @@ export const sessionController = {
       const userId = req.user?.userId;
       if (!userId) return res.status(401).json({ message: "Não autenticado" });
 
-      await sessionService.desistirSession(Number(sessionId), userId);
-      emitSessionUpdated(Number(sessionId), await sessionService.loadSession(Number(sessionId)));
+      const sessionIdNum = Number(sessionId);
+      const result = await sessionService.desistirSession(sessionIdNum, userId);
+
+      if (result?.autoEnded) {
+        emitSessionClosed(sessionIdNum, result.ranking);
+      } else {
+        emitSessionUpdated(sessionIdNum, await sessionService.loadSession(sessionIdNum));
+      }
       return res.status(200).json({ message: "Você desistiu da partida." });
     } catch (err) {
       if (err instanceof AppError) {
