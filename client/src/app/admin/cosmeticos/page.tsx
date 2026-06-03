@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Image as ImageIcon, Layers, Upload, Plus, Pencil, Trash2,
   Sparkles, Check, X,
@@ -11,6 +11,7 @@ import {
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import { SPRITE_CATALOG, resolveSprite } from "@/constants/sprites";
+import UserBanner from "@/components/UserBanner";
 import type { Banner as ApiBanner, BannerInput } from "@/services/api/admin";
 
 const SWATCHES = [
@@ -33,14 +34,7 @@ function BannerPreview({
 }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
-      <div className="h-28 relative" style={{ background: css }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.7),transparent 60%)" }} />
-        {sprite && (
-          <div className="absolute top-3 right-3 text-white/90">
-            <SpriteIcon id={sprite} size={28} />
-          </div>
-        )}
-      </div>
+      <UserBanner banner={css} spriteId={sprite} className="h-28 w-full" />
       <div className="bg-zinc-900 px-4 pb-4 -mt-7 relative">
         <div className="w-14 h-14 rounded-full ring-4 ring-zinc-900 grid place-items-center font-jaro text-xl text-white"
           style={{ background: "linear-gradient(135deg,hsl(150 65% 45%),hsl(190 70% 35%))" }}>
@@ -80,11 +74,16 @@ function parseBannerCss(css: string): { angle: number; c1: string; c2: string; c
   };
 }
 
+function isImageUrl(s: string): boolean {
+  return s.startsWith("http://") || s.startsWith("https://");
+}
+
 function BannerBuilder({
-  onSave, onUpdate, onCancel, editing,
+  onSave, onUpdate, onUploadImage, onCancel, editing,
 }: {
   onSave: (b: BannerInput) => Promise<void>;
   onUpdate?: (id: number, b: BannerInput) => Promise<void>;
+  onUploadImage?: (id: number, file: File) => Promise<ApiBanner>;
   onCancel?: () => void;
   editing?: ApiBanner | null;
 }) {
@@ -97,6 +96,11 @@ function BannerBuilder({
   const [disponibilidade, setDisponibilidade] = useState(DEFAULT_BANNER.disponibilidade);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [mode, setMode] = useState<"gradient" | "image">("gradient");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!editing) {
@@ -107,34 +111,66 @@ function BannerBuilder({
       setNome(DEFAULT_BANNER.nome);
       setSprite(DEFAULT_BANNER.sprite);
       setDisponibilidade(DEFAULT_BANNER.disponibilidade);
+      setImageUrl(null);
+      setMode("gradient");
       return;
     }
-    const p = parseBannerCss(editing.css);
-    setC1(p.c1);
-    setC2(p.c2);
-    setC3(p.c3);
-    setAngle(p.angle);
+    if (isImageUrl(editing.css)) {
+      setMode("image");
+      setImageUrl(editing.css);
+    } else {
+      setMode("gradient");
+      setImageUrl(null);
+      const p = parseBannerCss(editing.css);
+      setC1(p.c1);
+      setC2(p.c2);
+      setC3(p.c3);
+      setAngle(p.angle);
+    }
     setNome(editing.nome);
     setSprite(editing.spriteId ?? DEFAULT_BANNER.sprite);
     setDisponibilidade(editing.disponibilidade);
     setSaved(false);
   }, [editing]);
 
-  const css = `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`;
+  const gradientCss = `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`;
+  const previewCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
+
+  async function handleFile(file: File) {
+    if (!editing || !onUploadImage) {
+      // Creating new banner — first save as gradient placeholder, then upload
+      // For simplicity here, require the banner to exist first
+      return;
+    }
+    setUploading(true);
+    try {
+      const updated = await onUploadImage(editing.id, file);
+      setImageUrl(updated.css);
+      setMode("image");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
+      const finalCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
       if (editing && onUpdate) {
-        await onUpdate(editing.id, { nome, css, spriteId: sprite, disponibilidade });
+        await onUpdate(editing.id, { nome, css: finalCss, spriteId: sprite, disponibilidade });
       } else {
-        await onSave({ nome, css, spriteId: sprite, disponibilidade });
+        await onSave({ nome, css: finalCss, spriteId: sprite, disponibilidade });
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
     }
+  }
+
+  function switchToGradient() {
+    setMode("gradient");
+    setImageUrl(null);
   }
 
   return (
@@ -151,40 +187,68 @@ function BannerBuilder({
             <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
               Pré-visualização do perfil
             </p>
-            <BannerPreview css={css} sprite={sprite} name={nome} />
+            <BannerPreview css={previewCss} sprite={sprite} name={nome} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            {([["Cor inicial", c1, setC1], ["Cor central", c2, setC2], ["Cor final", c3, setC3]] as [string, string, (v: string) => void][]).map(([lbl, val, set]) => (
-              <div key={lbl}>
-                <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">{lbl}</p>
-                <div className="flex items-center gap-2">
-                  <input type="color" value={val} onChange={(e) => set(e.target.value)}
-                    className="w-8 h-8 rounded-lg bg-transparent border border-zinc-700 cursor-pointer shrink-0" />
-                  <input value={val} onChange={(e) => set(e.target.value)}
-                    className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-2 py-1.5 font-inconsolata text-xs text-zinc-100 focus:outline-none focus:border-cyan-500" />
-                </div>
+          {mode === "gradient" && (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                {([["Cor inicial", c1, setC1], ["Cor central", c2, setC2], ["Cor final", c3, setC3]] as [string, string, (v: string) => void][]).map(([lbl, val, set]) => (
+                  <div key={lbl}>
+                    <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">{lbl}</p>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={val} onChange={(e) => set(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border border-zinc-700 cursor-pointer shrink-0" />
+                      <input value={val} onChange={(e) => set(e.target.value)}
+                        className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-2 py-1.5 font-inconsolata text-xs text-zinc-100 focus:outline-none focus:border-cyan-500" />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {SWATCHES.map((s) => (
-              <button key={s} type="button"
-                onClick={() => setC2(s)}
-                className="w-6 h-6 rounded-lg ring-1 ring-white/10 cursor-pointer hover:scale-110 transition-transform"
-                style={{ background: s }} title={s} />
-            ))}
-          </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SWATCHES.map((s) => (
+                  <button key={s} type="button"
+                    onClick={() => setC2(s)}
+                    className="w-6 h-6 rounded-lg ring-1 ring-white/10 cursor-pointer hover:scale-110 transition-transform"
+                    style={{ background: s }} title={s} />
+                ))}
+              </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">Ângulo</span>
-              <span className="font-jaro text-base text-cyan-300">{angle}°</span>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">Ângulo</span>
+                  <span className="font-jaro text-base text-cyan-300">{angle}°</span>
+                </div>
+                <input type="range" min={0} max={360} value={angle} onChange={(e) => setAngle(+e.target.value)}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400" />
+              </div>
+            </>
+          )}
+
+          {mode === "image" && (
+            <div className="rounded-xl border border-zinc-800 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">
+                  Imagem atual
+                </p>
+                {editing && (
+                  <button type="button" onClick={switchToGradient}
+                    className="font-inconsolata text-[10px] text-cyan-400 hover:text-cyan-300">
+                    voltar para gradiente
+                  </button>
+                )}
+              </div>
+              {imageUrl && (
+                <div className="rounded-lg overflow-hidden border border-zinc-700">
+                  <img src={imageUrl} alt="banner atual" className="w-full h-32 object-cover" />
+                </div>
+              )}
+              <p className="font-inconsolata text-[10px] text-zinc-600">
+                1200×400px · JPG/PNG/WebP · máx. 8MB
+              </p>
             </div>
-            <input type="range" min={0} max={360} value={angle} onChange={(e) => setAngle(+e.target.value)}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400" />
-          </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -221,19 +285,63 @@ function BannerBuilder({
             />
           </Field>
 
-          <div className="border border-dashed border-zinc-700 rounded-xl p-4 text-center">
-            <Upload size={20} className="text-zinc-600 mx-auto" />
-            <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
-              Arraste uma imagem<br />ou clique para enviar sprite
-            </p>
-          </div>
+          {editing && onUploadImage && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+              />
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => !uploading && fileRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleFile(f);
+                }}
+                className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                  dragOver ? "border-cyan-500 bg-cyan-500/5" : "border-zinc-700 hover:border-zinc-600"
+                } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+              >
+                <Upload size={20} className="text-zinc-500 mx-auto" />
+                <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
+                  {uploading
+                    ? "Enviando…"
+                    : mode === "image"
+                      ? "Trocar imagem"
+                      : "Arraste uma imagem\nou clique para enviar"}
+                </p>
+              </div>
+            </>
+          )}
+
+          {!editing && (
+            <div className="border border-dashed border-zinc-700 rounded-xl p-4 text-center">
+              <Upload size={20} className="text-zinc-600 mx-auto" />
+              <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
+                Salve o banner primeiro<br />para enviar uma imagem
+              </p>
+            </div>
+          )}
 
           <Btn
             variant={saved ? "subtle" : "primary"}
             icon={saved ? Check : undefined}
             className="w-full justify-center"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
           >
             {saving ? "Salvando…" : saved ? "Banner salvo!" : editing ? "Salvar alterações" : "Salvar banner"}
           </Btn>
@@ -249,7 +357,7 @@ function BannerBuilder({
 }
 
 export default function AdminCosmeticosPage() {
-  const { banners, loadingBanners, loadBanners, createBanner, updateBanner, deleteBanner } = useAdminStore();
+  const { banners, loadingBanners, loadBanners, createBanner, updateBanner, deleteBanner, uploadBannerImage } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [confirmDel, setConfirmDel] = useState<number | null>(null);
   const [editing, setEditing] = useState<ApiBanner | null>(null);
@@ -260,8 +368,9 @@ export default function AdminCosmeticosPage() {
 
   async function addBanner(b: BannerInput) {
     try {
-      await createBanner(b);
+      const created = await createBanner(b);
       ok("Banner criado!");
+      setEditing(created);
     } catch {
       err("Erro ao criar banner.");
     }
@@ -271,16 +380,27 @@ export default function AdminCosmeticosPage() {
     try {
       const updated = await updateBanner(id, b);
       ok(`Banner #${updated.id} atualizado!`);
-      setEditing(null);
+      setEditing(updated);
     } catch {
       err("Erro ao atualizar banner.");
+    }
+  }
+
+  async function uploadBannerImageFn(id: number, file: File) {
+    try {
+      const updated = await uploadBannerImage(id, file);
+      ok(`Imagem do banner #${id} atualizada!`);
+      return updated;
+    } catch (e: any) {
+      err(e?.response?.data?.error || "Erro ao enviar imagem.");
+      throw e;
     }
   }
 
   async function removeBanner(id: number) {
     try {
       await deleteBanner(id);
-      ok("Banner removido.");
+      ok("Banner removido (imagem do Cloudinary também).");
       setConfirmDel(null);
       if (editing?.id === id) setEditing(null);
     } catch {
@@ -293,6 +413,7 @@ export default function AdminCosmeticosPage() {
       <BannerBuilder
         onSave={addBanner}
         onUpdate={editBanner}
+        onUploadImage={uploadBannerImageFn}
         onCancel={() => setEditing(null)}
         editing={editing}
       />
