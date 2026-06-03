@@ -24,6 +24,15 @@ export const avatarProfileLimiter = rateLimit({
   keyGenerator: (req) => req.user?.userId != null ? String(req.user.userId) : ipKeyGenerator(req.ip ?? ""),
 });
 
+export const bannerAdminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.BANNER_UPLOAD_RATE_LIMIT || 5),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitos uploads de banner. Tente novamente em 1 minuto." },
+  keyGenerator: (req) => req.user?.userId != null ? String(req.user.userId) : ipKeyGenerator(req.ip ?? ""),
+});
+
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
   if (err instanceof z.ZodError) return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });

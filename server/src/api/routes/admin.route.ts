@@ -2,6 +2,8 @@ import { Router } from "express";
 import { adminController } from "../../modules/admin/admin.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { requireAdmin } from "../../middleware/admin.middleware.js";
+import { bannerUpload } from "../../middleware/upload.middleware.js";
+import { bannerAdminLimiter } from "../../modules/auth/auth.controller.js";
 
 const adminRouter = Router();
 
@@ -55,6 +57,12 @@ adminRouter.get("/banners", adminController.listBanners);
 adminRouter.post("/banners", adminController.createBanner);
 adminRouter.patch("/banners/:id", adminController.updateBanner);
 adminRouter.delete("/banners/:id", adminController.deleteBanner);
+adminRouter.post(
+  "/banners/:id/image",
+  bannerAdminLimiter,
+  bannerUpload.single("image"),
+  adminController.uploadBannerImage
+);
 
 // User banner sync (re-sync User.spriteId from equipped item JSON)
 adminRouter.post("/users/:id/sync-banner", adminController.syncUserBanner);

@@ -4,6 +4,8 @@ import { auditLog } from "../../lib/audit.js";
 import { getLevelFromXp } from "../../utils/level.js";
 import { adminRepository } from "./admin.repository.js";
 import { ShopService } from "../shop/shop.service.js";
+import { validateAndProcessBanner } from "../../lib/image-validation.js";
+import { uploadBannerToCloudinary, deleteCloudinaryBanner, rollbackBannerUpload } from "../banner/banner-upload.service.js";
 
 interface Actor {
   id?: number | null;
@@ -91,10 +93,27 @@ export class AdminService {
     return adminRepository.updateItem(id, { available: !item.available });
   }
 
-  async deleteItem(id: number) {
+  async deleteItem(id: number, actor?: Actor) {
     const exists = await adminRepository.findItemById(id);
     if (!exists) throw new AppError(404, "Item não encontrado.");
+
+    // Cascade: if the item is a banner and a user has it equipped, reset to Padrão
+    let resetCount = 0;
+    if (exists.type === "banner") {
+      resetCount = await adminRepository.resetEquippedBannerForUsers(id);
+    }
+    // Remove the item from every user's items[] JSON
+    const removedCount = await adminRepository.removeItemFromAllUsers(id);
+
     await adminRepository.deleteItem(id);
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.shopitem.delete",
+      target: `shopitem:${id}`,
+      metadata: { type: exists.type, usersReset: resetCount, usersCleaned: removedCount, deletedBy: actor?.email ?? null },
+      severity: "warn",
+    });
   }
 
   // ── Sessions ───────────────────────────────────────────────────────────
@@ -439,16 +458,120 @@ export class AdminService {
     css: string;
     spriteId: string;
     disponibilidade: boolean;
-  }>) {
+  }>, actor?: Actor) {
     const exists = await adminRepository.findBannerById(id);
     if (!exists) throw new AppError(404, "Banner não encontrado.");
-    return adminRepository.updateBanner(id, data);
+
+    const payload: typeof data & { imagePublicId?: string | null; imageUpdatedAt?: Date | null } = { ...data };
+
+    // If css is being updated, decide what happens to the old Cloudinary image
+    if (data.css !== undefined) {
+      const isUrl = data.css.startsWith("http://") || data.css.startsWith("https://");
+      if (!isUrl && exists.imagePublicId) {
+        // Admin switched the banner back to a CSS gradient/preset: delete old image
+        deleteCloudinaryBanner(exists.imagePublicId).catch((err) =>
+          console.error("[banner] Falha ao remover imagem antiga do Cloudinary:", err)
+        );
+        payload.imagePublicId = null;
+        payload.imageUpdatedAt = null;
+      } else if (isUrl && !data.css.includes("res.cloudinary.com")) {
+        // Admin pasted a non-Cloudinary URL — reject to keep the contract
+        throw new AppError(400, "URL deve ser do Cloudinary. Use POST /admin/banners/:id/image para upload.");
+      }
+    }
+
+    const updated = await adminRepository.updateBanner(id, payload);
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.banner.update",
+      target: `banner:${id}`,
+      metadata: { changedFields: Object.keys(data), deletedOldImage: !!(data.css !== undefined && exists.imagePublicId && !(data.css.startsWith("http://") || data.css.startsWith("https://"))), updatedBy: actor?.email ?? null },
+      severity: "info",
+    });
+
+    return updated;
   }
 
-  async deleteBanner(id: number) {
+  async deleteBanner(id: number, actor?: Actor) {
     const exists = await adminRepository.findBannerById(id);
     if (!exists) throw new AppError(404, "Banner não encontrado.");
-    return adminRepository.deleteBanner(id);
+
+    // Find all shop items that reference this banner — they need to be cascaded too
+    const linkedItems = await prisma.shopItem.findMany({
+      where: { bannerId: id },
+      select: { id: true, type: true },
+    });
+
+    // Cascade each linked shop item to users (same logic as deleteItem)
+    let totalReset = 0;
+    for (const item of linkedItems) {
+      if (item.type === "banner") {
+        totalReset += await adminRepository.resetEquippedBannerForUsers(item.id);
+      }
+      await adminRepository.removeItemFromAllUsers(item.id);
+      await prisma.shopItem.delete({ where: { id: item.id } });
+    }
+
+    // Delete image from Cloudinary (fire-and-forget — don't block on Cloudinary failure)
+    if (exists.imagePublicId) {
+      deleteCloudinaryBanner(exists.imagePublicId).catch((err) =>
+        console.error("[banner] Falha ao deletar imagem do Cloudinary:", err)
+      );
+    }
+
+    await adminRepository.deleteBanner(id);
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.banner.delete",
+      target: `banner:${id}`,
+      metadata: { cascadedItems: linkedItems.length, usersReset: totalReset, deletedBy: actor?.email ?? null },
+      severity: "warn",
+    });
+  }
+
+  async uploadBannerImage(id: number, fileBuffer: Buffer, fileMime: string | undefined, actor?: Actor) {
+    const exists = await adminRepository.findBannerById(id);
+    if (!exists) throw new AppError(404, "Banner não encontrado.");
+
+    const processed = await validateAndProcessBanner(fileBuffer, fileMime);
+
+    const uploaded = await uploadBannerToCloudinary(id, processed.buffer);
+    const oldPublicId = exists.imagePublicId;
+
+    try {
+      const updated = await prisma.banner.update({
+        where: { id },
+        data: {
+          css: uploaded.url,
+          imagePublicId: uploaded.publicId,
+          imageUpdatedAt: new Date(),
+        },
+        select: { id: true, nome: true, css: true, spriteId: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
+      });
+
+      // Delete the old image (fire-and-forget)
+      if (oldPublicId && oldPublicId !== uploaded.publicId) {
+        deleteCloudinaryBanner(oldPublicId).catch((err) =>
+          console.error("[banner] Falha ao deletar imagem antiga do Cloudinary:", err)
+        );
+      }
+
+      await auditLog({
+        userId: actor?.id ?? null,
+        action: "admin.banner.upload_image",
+        target: `banner:${id}`,
+        metadata: { publicId: uploaded.publicId, replacedOld: !!oldPublicId, uploadedBy: actor?.email ?? null },
+        severity: "info",
+      });
+
+      return updated;
+    } catch (err) {
+      // Rollback: remove the orphan upload if DB update fails
+      await rollbackBannerUpload(uploaded.publicId);
+      throw err;
+    }
   }
 
   async syncUserBanner(userId: number, actor: Actor) {

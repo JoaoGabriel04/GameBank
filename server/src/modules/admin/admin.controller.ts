@@ -57,7 +57,8 @@ export const adminController = {
   deleteItem: async (req: Request, res: Response) => {
     try {
       const id = z.coerce.number().int().positive().parse(req.params.id);
-      await adminService.deleteItem(id);
+      const user = (req as any).user;
+      await adminService.deleteItem(id, { id: user?.userId, email: user?.email });
       res.status(204).send();
     } catch (err) { parseError(res, err); }
   },
@@ -298,20 +299,33 @@ export const adminController = {
     try {
       const id = z.coerce.number().int().positive().parse(req.params.id);
       const data = z.object({
-        nome: z.string().min(1),
-        css: z.string().min(1),
-        spriteId: z.string(),
-        disponibilidade: z.boolean(),
-      }).partial().parse(req.body);
-      res.json(await adminService.updateBanner(id, data));
+        nome: z.string().min(1).optional(),
+        css: z.string().min(1).optional(),
+        spriteId: z.string().optional(),
+        disponibilidade: z.boolean().optional(),
+      }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.updateBanner(id, data, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
   deleteBanner: async (req: Request, res: Response) => {
     try {
       const id = z.coerce.number().int().positive().parse(req.params.id);
-      await adminService.deleteBanner(id);
+      const user = (req as any).user;
+      await adminService.deleteBanner(id, { id: user?.userId, email: user?.email });
       res.status(204).send();
+    } catch (err) { parseError(res, err); }
+  },
+
+  uploadBannerImage: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const fileBuffer = req.file?.buffer;
+      const fileMime = req.file?.mimetype;
+      if (!fileBuffer) return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      const user = (req as any).user;
+      res.json(await adminService.uploadBannerImage(id, fileBuffer, fileMime, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 

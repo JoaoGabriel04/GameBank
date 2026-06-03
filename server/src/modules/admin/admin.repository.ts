@@ -36,6 +36,49 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
+  // Removes every occurrence of the given shopItem.id from User.items[].jsonb
+  // for all users. Idempotent (running again is a no-op for already-removed items).
+  removeItemFromAllUsers: async (itemId: number): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET "items" = COALESCE((
+        SELECT jsonb_agg(item)
+        FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'id')::int != ${itemId}
+      ), '[]'::jsonb)
+    `;
+    return Number(result);
+  },
+
+  // For each user that has the given banner item equipped, reset to Padrão
+  // (id=0) and clear User.banner / User.spriteId. Returns number of users reset.
+  resetEquippedBannerForUsers: async (itemId: number): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET
+        "items" = (
+          SELECT COALESCE(jsonb_agg(
+            CASE
+              WHEN (item->>'id')::int = ${itemId}
+                THEN jsonb_set(item, '{equipped}', 'false'::jsonb, true)
+              WHEN (item->>'id')::int = 0
+                THEN jsonb_set(item, '{equipped}', 'true'::jsonb, true)
+              ELSE item
+            END
+          ), '[]'::jsonb)
+          FROM jsonb_array_elements(u.items) item
+        ),
+        "banner" = NULL,
+        "spriteId" = NULL
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'id')::int = ${itemId}
+          AND (item->>'equipped')::boolean = true
+      )
+    `;
+    return Number(result);
+  },
+
   // Sessions
   findAllSessions: () =>
     prisma.session.findMany({
