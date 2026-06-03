@@ -9,6 +9,7 @@ import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
 import { getLevelFromXp } from "../../utils/level.js";
 import { clearSessionDeck } from "../carta/carta.repository.js";
+import { getMinPlayersToStart } from "../../shared/constants/session.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
@@ -213,8 +214,9 @@ export class SessionService {
     }
 
     const activePlayers = session.jogadores.filter((p) => !p.desistiu);
-    if (activePlayers.length < 2) {
-      throw new AppError(400, "São necessários pelo menos 2 jogadores ativos para iniciar.");
+    const minPlayers = getMinPlayersToStart();
+    if (activePlayers.length < minPlayers) {
+      throw new AppError(400, `São necessários pelo menos ${minPlayers} jogadores ativos para iniciar.`);
     }
 
     if (session.modo === "duplas") {
@@ -400,10 +402,11 @@ export class SessionService {
 
     await this.invalidateCache(sessionId);
 
-    // Se não restarem jogadores ativos na sala, auto-encerra
+    // Auto-end: se sobrar 0 ou 1 jogador ativo, finaliza a partida
     const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount === 0) {
-      await this.endSession(sessionId);
+    if (activeCount <= 1) {
+      const ranking = await this.endSession(sessionId);
+      return { autoEnded: true as const, ranking };
     }
   }
 
@@ -458,6 +461,13 @@ export class SessionService {
     });
 
     await this.invalidateCache(sessionId);
+
+    // Auto-end: se sobrar 0 ou 1 jogador ativo, finaliza a partida
+    const activeCount = await this.repo.countActivePlayers(sessionId);
+    if (activeCount <= 1) {
+      const ranking = await this.endSession(sessionId);
+      return { autoEnded: true as const, ranking };
+    }
   }
 
   async getPlayerByUser(sessionId: number, userId: number) {
