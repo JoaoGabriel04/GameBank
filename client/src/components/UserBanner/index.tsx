@@ -25,6 +25,12 @@ export default function UserBanner({ banner, spriteId, imageUrl, className = "" 
     bgClass = preset
       ? `bg-gradient-to-r ${preset.gradient}`
       : "bg-gradient-to-r from-zinc-600 to-zinc-800";
+  } else if (banner?.startsWith("http://") || banner?.startsWith("https://")) {
+    style = {
+      backgroundImage: `url(${banner})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
   } else if (
     banner?.startsWith("linear-gradient") ||
     banner?.startsWith("radial-gradient") ||

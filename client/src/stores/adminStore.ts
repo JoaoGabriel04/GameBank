@@ -74,6 +74,7 @@ interface AdminStore {
   createBanner: (data: BannerInput) => Promise<Banner>;
   updateBanner: (id: number, data: Partial<BannerInput>) => Promise<Banner>;
   deleteBanner: (id: number) => Promise<void>;
+  uploadBannerImage: (id: number, file: File) => Promise<Banner>;
 }
 
 export const useAdminStore = create<AdminStore>((set, get) => ({
@@ -329,5 +330,11 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   deleteBanner: async (id) => {
     await adminApi.deleteBanner(id);
     set({ banners: get().banners.filter((b) => b.id !== id) });
+  },
+
+  uploadBannerImage: async (id, file) => {
+    const updated = await adminApi.uploadBannerImage(id, file);
+    set({ banners: get().banners.map((b) => (b.id === id ? updated : b)) });
+    return updated;
   },
 }));

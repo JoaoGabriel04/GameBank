@@ -5,6 +5,8 @@ export type PublicBanner = {
   name: string
   css: string
   spriteId: string | null
+  imagePublicId: string | null
+  imageUpdatedAt: string | null
   available: boolean
 }
 

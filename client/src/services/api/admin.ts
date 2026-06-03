@@ -100,11 +100,13 @@ export interface Banner {
   nome: string;
   css: string;
   spriteId?: string | null;
+  imagePublicId?: string | null;
+  imageUpdatedAt?: string | null;
   disponibilidade: boolean;
 }
 
 export type CardInput = Omit<Card, "id">;
-export type BannerInput = Omit<Banner, "id">;
+export type BannerInput = Omit<Banner, "id" | "imagePublicId" | "imageUpdatedAt">;
 
 export interface AuditEntry {
   id: number;
@@ -189,6 +191,13 @@ export const adminApi = {
   updateBanner: (id: number, data: Partial<BannerInput>) =>
     api.patch<Banner>(`/admin/banners/${id}`, data).then((r) => r.data),
   deleteBanner: (id: number) => api.delete(`/admin/banners/${id}`),
+  uploadBannerImage: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return api.post<Banner>(`/admin/banners/${id}/image`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
 
   // Audit
   listAudit: (opts: AuditListOpts = {}) => {
