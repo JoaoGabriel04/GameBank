@@ -1,274 +1,362 @@
-# Instruções de Integração — Páginas de Usuário
+# Refatoração: Sistema de Sprites e Banners — GameBank
 
-> **Para o Claude Code:** Leia este documento integralmente antes de executar qualquer ação. Siga cada fase na ordem indicada. Não pule etapas.
+## Contexto e histórico do problema
+
+O projeto possui um sistema de cosméticos (títulos, emblemas, banners) comprado na loja e equipável pelo usuário. Banners premium possuem um **sprite** — um ícone especial exibido no canto superior direito do banner.
+
+### O bug
+O sprite aparece corretamente **apenas** no painel Admin. Em todas as outras partes do app (perfil do usuário, modais de ranking, cards de jogador, etc.), o sprite nunca aparece.
+
+### Causa raiz identificada
+Há uma **inconsistência de nomenclatura** entre backend, tipos TypeScript e componentes:
+
+- O backend salva/retorna o ícone do sprite no campo **`icon`** (ex: `"sparkles"`)
+- O componente `UserBanner` espera o prop **`spriteId`**
+- Os tipos `ShopItem` e `UserItem` têm **`icon?: string | null`** mas também **`spriteId?: string | null`** — campos duplicados e sem contrato claro
+- O perfil do usuário autenticado **não retorna `spriteId` nem `icon`** — ambos chegam `null`
+- Quando um banner é equipado, o campo de sprite **não é propagado** para o registro do usuário
+
+### Prova dos logs
+```
+spriteId profile: null
+spriteId user: null
+resolveSprite result: undefined
+equippedBanner: { spriteId: null, icon: "sparkles", equipped: true, ... }
+```
+
+O dado existe (`icon: "sparkles"`), mas nunca chega ao componente por estar no campo errado.
 
 ---
 
-## Contexto
+## Objetivo da refatoração
 
-Foram criadas novas páginas de usuário (TSX) com dados mockados. O objetivo agora é:
-
-1. Mapear todos os dados fictícios usados nessas páginas.
-2. Criar as rotas, services e repositórios necessários no **backend**.
-3. Criar os services, hooks e tipos necessários no **frontend**.
-4. Substituir todos os mocks por dados reais vindos do servidor.
-5. Garantir tipagem consistente de ponta a ponta (backend → frontend).
+Padronizar **de ponta a ponta** o campo que representa o sprite de um banner, eliminando a ambiguidade entre `icon` e `spriteId`, e garantir que o sprite apareça em **todos** os lugares do app.
 
 ---
 
-## Regras Absolutas — Leia antes de tudo
+## Passo a passo — siga esta ordem, não pule etapas
 
-- **Nunca** crie arquivos fora dos diretórios canônicos da arquitetura já existente.
-- **Nunca** apague arquivos existentes sem antes confirmar que nenhuma outra parte do projeto os referencia.
-- **Nunca** altere arquivos de infraestrutura (configuração de banco, seed, migrations já consolidadas, arquivos de env) sem necessidade explícita.
-- **Nunca** duplique lógica já existente — reutilize services, repos e hooks existentes sempre que possível.
-- **Sempre** inferir o padrão arquitetural lendo os arquivos já existentes de cada camada antes de criar algo novo.
-- **Sempre** manter consistência de nomenclatura com o que já existe no projeto (camelCase, PascalCase, snake_case — o que já está em uso).
-- **Sempre** tipar explicitamente: sem `any`, sem `unknown` desnecessário, sem tipos inline quando já existe uma interface/type reutilizável.
-- Em caso de dúvida sobre onde um arquivo deve morar, **leia o `AGENTS.md`** e o diretório pai correspondente antes de decidir.
+### ETAPA 1 — Auditoria completa antes de tocar em qualquer código
 
----
+1. **Buscar todos os usos de `spriteId` no projeto inteiro:**
+   ```bash
+   grep -rn "spriteId" --include="*.ts" --include="*.tsx" .
+   ```
 
-## Fase 1 — Leitura e Mapeamento (somente leitura, zero escrita)
+2. **Buscar todos os usos de `icon` relacionados a banners/sprites:**
+   ```bash
+   grep -rn "\.icon" --include="*.ts" --include="*.tsx" . | grep -i "banner\|sprite\|shop\|item"
+   ```
 
-### 1.1 — Leia o AGENTS.md
+3. **Buscar todos os usos do componente `UserBanner`:**
+   ```bash
+   grep -rn "<UserBanner" --include="*.tsx" .
+   ```
 
-```
-Leia o arquivo AGENTS.md na raiz do projeto (e qualquer outro arquivo de convenções/arquitetura referenciado nele).
-Extraia e memorize:
-- Estrutura de diretórios do backend (onde ficam: rotas, controllers, services, repositórios, tipos/DTOs, middlewares).
-- Estrutura de diretórios do frontend (onde ficam: pages, components, hooks, services/api, tipos, utils).
-- Convenções de nomenclatura de arquivos e funções.
-- Padrão de resposta da API (envelope de resposta, paginação, erros).
-- Padrão de autenticação (header, token, middleware).
-```
+4. **Buscar a função `resolveSprite`:**
+   ```bash
+   grep -rn "resolveSprite" --include="*.ts" --include="*.tsx" .
+   ```
+   - Abrir o arquivo onde está definida
+   - Confirmar exatamente qual tipo de valor ela espera: slug string (`"sparkles"`), ID numérico, ou outro formato
+   - **Documentar o contrato dela antes de continuar**
 
-### 1.2 — Leia as novas páginas TSX criadas
+5. **Localizar no backend:**
+   - A rota que retorna o perfil do usuário autenticado
+   - A rota/service que processa "equipar item" (`equipShopItemApi`)
+   - O model/schema do usuário (Prisma schema, TypeORM entity, etc.)
+   - A tabela/model de itens do usuário (`UserItem`)
 
-```
-Para cada página nova de usuário (TSX):
-1. Liste todos os dados que estão hardcoded/mockados (arrays literais, objetos estáticos, strings fixas que deveriam ser dinâmicas).
-2. Liste todas as ações do usuário que precisam chamar o backend (submits, deletes, updates, fetches).
-3. Liste os tipos/interfaces que foram definidos inline ou que estão ausentes.
-4. Identifique quais hooks, services ou chamadas de API já existem no frontend que poderiam ser reutilizados.
-```
-
-### 1.3 — Leia o backend existente
-
-```
-Para cada entidade/recurso identificado no passo 1.2:
-1. Verifique se já existe uma rota correspondente.
-2. Verifique se já existe um service correspondente.
-3. Verifique se já existe um repositório correspondente.
-4. Verifique se já existem DTOs/tipos correspondentes.
-Documente o que existe e o que precisa ser criado.
-```
-
-### 1.4 — Leia o frontend existente (services/api/hooks)
-
-```
-1. Liste todos os arquivos em services/ (ou api/) do frontend.
-2. Liste todos os hooks customizados existentes.
-3. Liste todos os tipos/interfaces existentes.
-Identifique o que pode ser reutilizado ou estendido.
-```
-
-### 1.5 — Produza um plano de trabalho
-
-```
-Antes de escrever qualquer linha de código, gere um relatório no seguinte formato:
-
-## RELATÓRIO DE LACUNAS
-
-### Backend — O que precisa ser criado:
-- [ ] Rota: METHOD /caminho — descrição
-- [ ] Service: NomeService#metodo — descrição
-- [ ] Repositório: NomeRepo#metodo — descrição
-- [ ] DTO/Tipo: NomeDTO — campos
-
-### Frontend — O que precisa ser criado/alterado:
-- [ ] Tipo/Interface: NomeTipo — campos
-- [ ] Service/API call: nomeServico — endpoint que chama
-- [ ] Hook: useNomeHook — o que gerencia
-- [ ] Página TSX: NomePagina — mocks a substituir
-
-### Reutilizações identificadas:
-- ServiceX#metodoY já cobre o caso Z, será reutilizado.
-- HookW já faz fetch de W, será estendido com parâmetro X.
-
-Aguarde confirmação antes de prosseguir para a Fase 2.
-```
-
-> ⚠️ **Pause aqui.** Apresente o relatório acima ao usuário e aguarde aprovação explícita antes de executar qualquer escrita.
+6. **Montar um mapa** de todos os lugares encontrados antes de alterar qualquer arquivo.
 
 ---
 
-## Fase 2 — Implementação no Backend
+### ETAPA 2 — Decidir e documentar o nome canônico do campo
 
-> Execute somente após aprovação do relatório da Fase 1.
+Após a auditoria, escolher **um único nome** para o campo de sprite e usá-lo em todo o projeto. A recomendação é:
 
-### 2.1 — Tipos e DTOs
+**Usar `spriteIcon` como nome canônico** — é descritivo, não conflita com `icon` genérico de outros contextos, e não confunde com `spriteId` (que sugere ser um ID numérico).
 
-```
-Para cada DTO/tipo novo identificado:
-1. Crie no diretório canônico de tipos do backend (conforme AGENTS.md).
-2. Nomeie seguindo a convenção existente.
-3. Use os tipos primitivos corretos — não use `any`.
-4. Se um DTO de resposta já existe e só precisa de novos campos, ESTENDA-o, não duplique.
-```
+> Se após a auditoria você identificar que `icon` ou `spriteId` já é usado consistentemente em 80%+ dos lugares, pode manter esse nome — o importante é que seja **um único nome em todo o projeto**.
 
-### 2.2 — Repositórios
+Registrar a decisão como comentário no arquivo de tipos antes de prosseguir.
 
-```
-Para cada método de repositório novo:
-1. Verifique se o repositório da entidade já existe.
-   - Se sim: adicione apenas o novo método no arquivo existente.
-   - Se não: crie o arquivo no diretório canônico de repositórios.
-2. O método deve receber parâmetros tipados e retornar tipos explícitos.
-3. Não repita queries já existentes em outros repositórios — reutilize ou extraia para um helper se necessário.
-```
+---
 
-### 2.3 — Services
+### ETAPA 3 — Tipos TypeScript (`src/types/shop.ts` ou equivalente)
 
-```
-Para cada método de service novo:
-1. Verifique se o service da entidade já existe.
-   - Se sim: adicione apenas o novo método.
-   - Se não: crie no diretório canônico de services.
-2. O service deve depender do repositório (injeção ou instância, conforme o padrão do projeto).
-3. Valide entradas, trate erros, e retorne o tipo correto.
-4. Não acesse o banco diretamente no service — delegue ao repositório.
-```
+Atualizar as interfaces para usar o nome canônico escolhido. Remover o campo duplicado. Exemplo se o nome escolhido for `spriteIcon`:
 
-### 2.4 — Controllers/Handlers de Rota
+```typescript
+export interface ShopItem {
+  id: number
+  name: string
+  description: string
+  price: number
+  type: 'title' | 'badge' | 'banner'
+  value?: string | null
+  available: boolean
+  bannerId?: number | null
+  /** Slug do sprite exibido no canto do banner (ex: "sparkles"). Apenas banners premium. */
+  spriteIcon?: string | null
+}
 
-```
-Para cada rota nova:
-1. Identifique o arquivo de rotas correto (por entidade ou por domínio, conforme AGENTS.md).
-2. Adicione o handler no controller correspondente (ou crie se não existir).
-3. Aplique os middlewares necessários (autenticação, validação) seguindo o padrão das rotas existentes.
-4. O handler deve: receber request tipada → chamar service → retornar resposta no envelope padrão do projeto.
-5. Registre a rota no arquivo de registro de rotas (se o projeto tiver um router central).
+export interface UserItem {
+  id: number
+  name: string
+  description: string
+  type: 'title' | 'badge' | 'banner'
+  value?: string | null
+  equipped: boolean
+  /** Slug do sprite exibido no canto do banner (ex: "sparkles"). Apenas banners premium. */
+  spriteIcon?: string | null
+}
 ```
 
-### 2.5 — Validação de consistência do backend
+Remover `icon` e `spriteId` dos dois interfaces (ou manter como `@deprecated` com alias temporário se o backend ainda não foi atualizado).
 
-```
-Após criar todos os artefatos do backend:
-1. Confirme que cada nova rota está registrada.
-2. Confirme que os tipos de retorno dos services batem com os DTOs de resposta.
-3. Confirme que não há imports quebrados.
-4. Se o projeto tiver testes, verifique se os novos services precisam de teste unitário e crie os mínimos necessários.
+---
+
+### ETAPA 4 — Componente `UserBanner`
+
+Atualizar o prop para o nome canônico:
+
+```typescript
+type UserBannerProps = {
+  banner?: string | null
+  spriteIcon?: string | null   // ← nome canônico
+  imageUrl?: string | null
+  className?: string
+}
+
+export default function UserBanner({ banner, spriteIcon, imageUrl, className = "" }: UserBannerProps) {
+  // ...lógica do banner...
+
+  const sprite = resolveSprite(spriteIcon)  // ← usa o campo correto
+  const SpriteIcon = sprite?.icon
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      <div className={`absolute inset-0 ${bgClass}`} style={style} />
+      {SpriteIcon && (
+        <div className="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-zinc-900/70 backdrop-blur-sm border border-white/10 grid place-items-center text-white shadow-sm">
+          <SpriteIcon size={15} />
+        </div>
+      )}
+    </div>
+  )
+}
 ```
 
 ---
 
-## Fase 3 — Implementação no Frontend
+### ETAPA 5 — Backend
 
-> Execute somente após concluir e validar a Fase 2.
+#### 5a. Schema/Model do usuário
+Verificar se o campo de sprite existe no registro do usuário. Se não existir, criar migration:
 
-### 3.1 — Tipos e Interfaces
-
-```
-Para cada tipo/interface novo no frontend:
-1. Crie no diretório canônico de tipos do frontend (conforme AGENTS.md).
-2. Os tipos devem espelhar os DTOs de resposta do backend — não invente campos que o backend não retorna.
-3. Se um tipo já existe e só precisa de extensão, use `extends` ou `&` — não duplique.
-4. Exporte cada tipo corretamente para ser reutilizável.
-```
-
-### 3.2 — Services / Chamadas de API
-
-```
-Para cada nova chamada de API:
-1. Verifique se já existe um service para a entidade/domínio.
-   - Se sim: adicione o novo método no arquivo existente.
-   - Se não: crie no diretório canônico de services/api do frontend.
-2. Use o cliente HTTP já configurado no projeto (axios instance, fetch wrapper, etc.) — não crie um novo.
-3. Tipar: parâmetros de entrada e retorno explícitos, usando os tipos criados no passo 3.1.
-4. Trate erros seguindo o padrão dos outros services (throw, return null, etc.).
+```prisma
+// Exemplo Prisma — adaptar ao ORM usado no projeto
+model User {
+  // ...campos existentes...
+  spriteIcon  String?   // slug do sprite do banner equipado
+}
 ```
 
-### 3.3 — Hooks Customizados
+#### 5b. Service de "equipar item"
+Quando um banner é equipado, salvar o sprite no usuário:
 
-```
-Para cada hook novo:
-1. Verifique se um hook existente pode ser reutilizado ou levemente adaptado.
-2. Crie no diretório canônico de hooks (conforme AGENTS.md).
-3. O hook deve: chamar o service → gerenciar estado (loading, error, data) → retornar interface estável.
-4. Use o gerenciador de estado/fetching já adotado no projeto (React Query, SWR, useState+useEffect, Zustand, etc.) — não misture padrões.
-5. Não coloque lógica de negócio nos hooks — apenas orquestração de estado e chamada ao service.
+```typescript
+// Pseudocódigo — adaptar ao padrão do projeto
+async function equipItem(userId: number, itemId: number) {
+  const item = await getItem(itemId)
+  
+  // Desequipa todos os itens do mesmo tipo
+  await unequipAllOfType(userId, item.type)
+  
+  // Equipa o novo
+  await setEquipped(userId, itemId, true)
+  
+  // Se for banner, propaga o sprite para o perfil do usuário
+  if (item.type === 'banner') {
+    await updateUser(userId, {
+      banner: item.value,
+      spriteIcon: item.spriteIcon ?? null,  // ← propagar o sprite
+    })
+  }
+}
 ```
 
-### 3.4 — Substituição dos Mocks nas Páginas TSX
+#### 5c. Rota de perfil
+Garantir que `spriteIcon` está incluído no payload de resposta do usuário autenticado:
 
-```
-Para cada página TSX com dados mockados:
-1. Importe os hooks criados no passo 3.3.
-2. Substitua cada variável mockada pelo dado real retornado pelo hook.
-3. Adicione estados de loading (skeleton, spinner — o que o projeto já usa).
-4. Adicione tratamento de erro (toast, mensagem inline — o que o projeto já usa).
-5. Substitua cada handler de ação mockado (ex: onSave, onDelete) pela chamada real ao service/hook de mutação.
-6. Remova todos os imports de dados mockados que não são mais necessários.
-7. Remova todos os arquivos de mock que não têm mais referências no projeto (verifique antes de apagar).
-```
-
-### 3.5 — Validação de consistência do frontend
-
-```
-Após concluir todas as substituições:
-1. Confirme que nenhuma página ainda usa dados hardcoded que deveriam ser dinâmicos.
-2. Confirme que não há imports não utilizados em nenhum dos arquivos alterados.
-3. Confirme que os tipos de props de todos os componentes alterados estão corretos.
-4. Confirme que nenhum `any` foi introduzido.
-5. Se o projeto usa um linter/type-check, rode-o e corrija todos os erros antes de encerrar.
+```typescript
+// A resposta da rota GET /profile (ou equivalente) deve incluir:
+{
+  id, nome, level, xp, coins, banner, avatarUrl,
+  spriteIcon,   // ← garantir que está aqui
+  items: [...],
+  // ...
+}
 ```
 
 ---
 
-## Fase 4 — Revisão Final
+### ETAPA 6 — Todos os usos de `<UserBanner>` no frontend
 
+Para **cada** ocorrência encontrada na auditoria da Etapa 1, atualizar o prop:
+
+```tsx
+// Antes (qualquer variação que existia):
+<UserBanner banner={x} spriteId={y} />
+<UserBanner banner={x} spriteId={item.icon} />
+<UserBanner banner={x} />  // sem sprite nenhum
+
+// Depois — sempre passar spriteIcon:
+<UserBanner banner={x} spriteIcon={item.spriteIcon} />
 ```
-Produza um relatório final no seguinte formato:
 
-## RELATÓRIO DE INTEGRAÇÃO CONCLUÍDA
+#### Caso especial — `ProfileHero` em `perfil/page.tsx`
+Enquanto o backend não estiver atualizado (ou como camada de segurança extra), usar fallback que busca do item equipado:
 
-### Arquivos criados no backend:
-- caminho/do/arquivo — o que faz
+```tsx
+const equippedBanner = profile.items?.find(
+  (i) => i.type === "banner" && i.equipped
+)
+const resolvedSprite =
+  profile.spriteIcon ?? user.spriteIcon ?? equippedBanner?.spriteIcon ?? null
 
-### Arquivos alterados no backend:
-- caminho/do/arquivo — o que foi adicionado/modificado
+// ...
 
-### Arquivos criados no frontend:
-- caminho/do/arquivo — o que faz
-
-### Arquivos alterados no frontend:
-- caminho/do/arquivo — o que foi substituído/adicionado
-
-### Arquivos removidos:
-- caminho/do/arquivo — motivo
-
-### Mocks eliminados:
-- NomePagina.tsx: variável `X` substituída por hook `useY`
-- NomePagina.tsx: handler `onZ` substituído por mutação `useZMutation`
-
-### Pendências ou decisões tomadas:
-- Descreva qualquer ponto que exigiu interpretação ou que pode precisar de revisão humana.
+<UserBanner
+  banner={profile.banner ?? user.banner}
+  spriteIcon={resolvedSprite}
+  className="absolute inset-0 w-full h-full"
+/>
 ```
 
 ---
 
-## Checklist Rápido — Anti-Regressão
+### ETAPA 7 — Inventário (`Inventory` component em `perfil/page.tsx`)
 
-Antes de encerrar, confirme cada item:
+O preview de banner no inventário também deve mostrar o sprite:
 
-- [ ] Nenhum dado hardcoded permanece nas páginas de usuário
-- [ ] Nenhum import está quebrado em nenhum arquivo tocado
-- [ ] Nenhum `any` foi introduzido
-- [ ] Nenhum arquivo foi criado fora do diretório canônico
-- [ ] Nenhum arquivo foi apagado sem verificar referências
-- [ ] Nenhuma lógica duplicada foi introduzida
-- [ ] O cliente HTTP do frontend é o mesmo já usado no projeto
-- [ ] Os tipos do frontend espelham os DTOs do backend
-- [ ] Todos os estados de loading e erro estão tratados nas páginas
-- [ ] O AGENTS.md foi respeitado em cada decisão arquitetural
+```tsx
+{item.type === "banner" && item.value && (
+  <UserBanner
+    banner={item.value}
+    spriteIcon={item.spriteIcon}   // ← adicionar
+    className="h-10 rounded-lg mb-2 w-full"
+  />
+)}
+```
+
+---
+
+### ETAPA 8 — Verificação de `resolveSprite`
+
+Confirmar que a função aceita o valor que será passado:
+
+```typescript
+// Abrir src/constants/sprites.ts (ou onde estiver)
+// Verificar se "sparkles" (ou qualquer slug real) está mapeado
+// Se a função espera um formato diferente, adaptar os dados, não a função
+```
+
+Se `resolveSprite` espera um ID numérico mas o campo armazena slug string (ou vice-versa), isso também é um bug — corrigir o contrato aqui e ajustar os dados no banco se necessário.
+
+---
+
+### ETAPA 9 — Verificar outros contextos que exibem banners
+
+Buscar e corrigir **todos** esses contextos, não apenas o perfil:
+
+- Modal de perfil público (ao clicar em jogador no ranking)
+- Cards de jogadores em salas de jogo
+- Leaderboard/ranking
+- Modal de resultado de partida
+- Qualquer outro lugar que renderize banner de usuário
+
+---
+
+### ETAPA 10 — Testes manuais obrigatórios antes de encerrar
+
+- [ ] Usuário com banner premium equipado: sprite aparece na página de perfil
+- [ ] Sprite aparece no modal de perfil público (ranking)
+- [ ] Preview do banner no inventário mostra o sprite
+- [ ] Equip/desequip de banner atualiza o sprite imediatamente (sem reload)
+- [ ] Usuário com banner padrão (sem sprite): nenhum ícone aparece — sem erro
+- [ ] `resolveSprite(null)` e `resolveSprite(undefined)` retornam `undefined` sem quebrar
+
+---
+
+## O que NÃO fazer
+
+- ❌ Não criar um terceiro campo (ex: `spriteSlug`) — escolha um nome e migre tudo para ele
+- ❌ Não usar `item.icon` como gambiarra sem atualizar os tipos — isso é o que criou o bug original
+- ❌ Não corrigir só o `ProfileHero` e deixar os outros contextos para depois
+- ❌ Não rodar a migration sem verificar se o campo já existe com outro nome
+- ❌ Não assumir que o Admin usa o mesmo fluxo do usuário — verificar separadamente por que funciona lá e replicar a lógica
+
+---
+
+## Definição de "pronto"
+
+A tarefa está concluída quando:
+
+1. Existe **um único campo** representando o sprite em tipos, banco, API e componentes
+2. `<UserBanner>` recebe e exibe o sprite corretamente em **todos** os contextos do app
+3. O perfil do usuário autenticado retorna o sprite na API
+4. Equipar um banner propaga o sprite para o usuário no banco
+5. Nenhum `console.log` de debug foi deixado no código
+6. Nenhum `any`, cast forçado ou comentário `// TODO fix later` foi introduzido para contornar o problema
+
+---
+
+## Resolução aplicada (junho/2026)
+
+A auditoria completa do código revelou que **`spriteId` já é o campo canônico** em 95%+ do projeto (Prisma schema, services, repositories, DTOs, componentes). O bug não era de nomenclatura — era **dado corrompido**.
+
+### Causa raiz
+
+A migration `20260602150749_items_to_json` agregou os items da tabela `usuario_itens` para a coluna JSON em `User.items` **antes** da coluna `User.spriteId` existir (criada em `20260602022000_add_user_sprite_id`). O `jsonb_build_object(...)` da agregação simplesmente **não incluiu o campo `spriteId`**, então todos os items pré-existentes ficaram com `spriteId: null` permanentemente.
+
+A migration `20260603_populate_banner_sprites` corrigiu a tabela `banners` (setou `palette`/`sparkles`/`crown`), mas **não tocou nos items dos usuários**.
+
+### Decisão
+
+- **Manter `spriteId`** como nome canônico (já é o usado em 95%+ do projeto)
+- **Não renomear** para `spriteIcon` — risco de regressão sem benefício
+- **Não criar** um terceiro campo — `spriteId` é suficiente
+- O `icon: "sparkles"` em `ShopItem` é o **ícone FA legado** do item na loja, não tem relação com o sprite do banner
+- A cadeia de fallback no client: `profile.spriteId ?? user.spriteId ?? equippedBanner?.spriteId ?? null`
+
+### Correção aplicada
+
+1. **Migration `20260603_sync_user_item_sprites`** — popula `spriteId` no JSON de items e em `User.spriteId` para todos os users legados. Idempotente.
+2. **Cleanup** — removidos 4 `console.log` de debug e o fallback errado `?? equippedBanner?.icon` em `perfil/page.tsx`.
+3. **Rota admin `POST /api/admin/users/:id/sync-banner`** — re-sincroniza o banner/spriteId de um user específico a partir dos items do JSON. Útil para casos individuais sem rodar migration.
+
+### Quando aplicar migrations de sync no futuro
+
+Ao adicionar um campo novo a `UserItemSnapshot` (ex: novo campo `color?`), é obrigatório criar uma migration de sync que popule o valor nos items pré-existentes. Padrão:
+
+```sql
+UPDATE "users" u
+SET "items" = (
+  SELECT jsonb_agg(
+    CASE WHEN (item->>'type') = 'banner' AND (item->>'<novoCampo>') IS NULL
+         THEN jsonb_set(item, '{<novoCampo>', to_jsonb(<valor_default>), true)
+         ELSE item
+    END
+  )
+  FROM jsonb_array_elements(u.items) item
+);
+```
+
+### Roteiro para deploy
+
+1. Aplicar em dev primeiro (`make dev-shell SVC=server && npx prisma migrate deploy`)
+2. Validar com queries antes/depois (ver `server/prisma/migrations/20260603_sync_user_item_sprites/migration.sql` para as queries de validação)
+3. Commitar e pushar → Render re-aplica automaticamente
+4. Se aparecer um user inconsistente em produção, usar `POST /api/admin/users/:id/sync-banner`
