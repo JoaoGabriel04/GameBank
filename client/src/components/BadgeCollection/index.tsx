@@ -4,14 +4,16 @@ import { useMemo } from "react";
 import UserBadge from "@/components/UserBadge";
 import type { UserItem } from "@/types/shop";
 import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity";
-import { Star, Lock } from "lucide-react";
+import { Star, Loader2 } from "lucide-react";
 
 interface BadgeCollectionProps {
   badgeItems: UserItem[];
   isOwner?: boolean;
+  onEquip?: (item: UserItem) => void;
+  equippingId?: number | null;
 }
 
-export default function BadgeCollection({ badgeItems = [], isOwner = false }: BadgeCollectionProps) {
+export default function BadgeCollection({ badgeItems = [], isOwner = false, onEquip, equippingId }: BadgeCollectionProps) {
   const ownedCount = badgeItems.length;
 
   const byRarity = useMemo(() => {
@@ -66,29 +68,42 @@ export default function BadgeCollection({ badgeItems = [], isOwner = false }: Ba
                 {info.label}
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative rounded-xl border border-zinc-700 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 p-3 flex flex-col items-center gap-2"
-                  >
-                    <UserBadge badge={item.value ? JSON.parse(item.value).badge : null} imageUrl={item.imageUrl} variant="medium" />
-                    <div className="text-center w-full min-w-0">
-                      <p className="text-[10px] font-inconsolata text-zinc-200 font-semibold truncate">
-                        {item.name}
-                      </p>
-                      {item.rarity && (
-                        <p className={`text-[9px] font-inconsolata ${getRarityChipClass(item.rarity)} mt-0.5 inline-block px-1.5 py-0.5 rounded capitalize`}>
-                          {RARITY_LABELS[item.rarity] ?? item.rarity}
+                {items.map((item) => {
+                  const Tag = onEquip ? "button" : "div";
+                  return (
+                    <Tag
+                      key={item.id}
+                      onClick={onEquip ? () => onEquip(item) : undefined}
+                      className={`relative rounded-xl border ${
+                        item.equipped
+                          ? "border-cyan-500/50 bg-cyan-500/5"
+                          : "border-zinc-700 bg-gradient-to-br from-zinc-800/50 to-zinc-900/50"
+                      } p-3 flex flex-col items-center gap-2 ${onEquip ? "cursor-pointer hover:border-zinc-500 transition-all" : ""}`}
+                    >
+                      <UserBadge badge={item.value ? JSON.parse(item.value).badge : null} imageUrl={item.imageUrl} variant="medium" />
+                      <div className="text-center w-full min-w-0">
+                        <p className="text-[10px] font-inconsolata text-zinc-200 font-semibold truncate">
+                          {item.name}
                         </p>
-                      )}
-                    </div>
-                    {item.equipped && (
-                      <div className="px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded text-[8px] text-green-400 font-inconsolata font-semibold">
-                        EQUIPADO
+                        {item.rarity && (
+                          <p className={`text-[9px] font-inconsolata ${getRarityChipClass(item.rarity)} mt-0.5 inline-block px-1.5 py-0.5 rounded capitalize`}>
+                            {RARITY_LABELS[item.rarity] ?? item.rarity}
+                          </p>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {item.equipped && (
+                        <div className="px-2 py-0.5 bg-green-500/20 border border-green-500/30 rounded text-[8px] text-green-400 font-inconsolata font-semibold">
+                          EQUIPADO
+                        </div>
+                      )}
+                      {equippingId === item.id && (
+                        <div className="absolute inset-0 grid place-items-center bg-zinc-900/80 rounded-xl">
+                          <Loader2 size={16} className="animate-spin text-cyan-400" />
+                        </div>
+                      )}
+                    </Tag>
+                  );
+                })}
               </div>
             </div>
           );
