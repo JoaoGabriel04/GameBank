@@ -329,6 +329,17 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  uploadBadgeImage: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const fileBuffer = req.file?.buffer;
+      const fileMime = req.file?.mimetype;
+      if (!fileBuffer) return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      const user = (req as any).user;
+      res.json(await adminService.uploadBadgeImage(id, fileBuffer, fileMime, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   syncUserBanner: async (req: Request, res: Response) => {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);

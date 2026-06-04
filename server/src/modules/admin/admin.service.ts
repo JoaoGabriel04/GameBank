@@ -6,6 +6,8 @@ import { adminRepository } from "./admin.repository.js";
 import { ShopService } from "../shop/shop.service.js";
 import { validateAndProcessBanner } from "../../lib/image-validation.js";
 import { uploadBannerToCloudinary, deleteCloudinaryBanner, rollbackBannerUpload } from "../banner/banner-upload.service.js";
+import { validateAndProcessBadge } from "../../lib/badge-validation.js";
+import { uploadBadgeToCloudinary, deleteCloudinaryBadge, rollbackBadgeUpload } from "../badge/badge-upload.service.js";
 
 interface Actor {
   id?: number | null;
@@ -28,6 +30,8 @@ export class AdminService {
     value?: string | null;
     icon?: string | null;
     rarity?: string | null;
+    imageUrl?: string | null;
+    imagePublicId?: string | null;
     available: boolean;
     bannerId?: number | null;
   }) {
@@ -44,16 +48,6 @@ export class AdminService {
       };
     } else {
       if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title/badge.");
-      // Auto-derive value for badges from rarity if not provided
-      if (data.type === "badge" && !data.value && data.rarity) {
-        const BADGE_RARITY_MAP: Record<string, string> = {
-          common: "emerald",
-          rare: "emerald",
-          epic: "ruby",
-          legendary: "diamond",
-        };
-        payload.value = JSON.stringify({ badge: BADGE_RARITY_MAP[data.rarity] ?? "emerald" });
-      }
     }
     return adminRepository.createItem(payload);
   }
@@ -66,6 +60,8 @@ export class AdminService {
     value: string | null;
     icon: string | null;
     rarity: string | null;
+    imageUrl: string | null;
+    imagePublicId: string | null;
     available: boolean;
     bannerId: number | null;
   }>) {
@@ -94,17 +90,6 @@ export class AdminService {
       if (data.name !== undefined && !data.name) {
         throw new AppError(400, "name não pode ser vazio para itens do tipo title/badge.");
       }
-      // Auto-derive value for badges from rarity if not provided
-      const nextRarity = data.rarity ?? exists.rarity ?? null;
-      if (nextType === "badge" && !payload.value && nextRarity) {
-        const BADGE_RARITY_MAP: Record<string, string> = {
-          common: "emerald",
-          rare: "emerald",
-          epic: "ruby",
-          legendary: "diamond",
-        };
-        payload.value = JSON.stringify({ badge: BADGE_RARITY_MAP[nextRarity] ?? "emerald" });
-      }
     }
 
     return adminRepository.updateItem(id, payload);
@@ -128,6 +113,11 @@ export class AdminService {
     // Remove the item from every user's items[] JSON
     const removedCount = await adminRepository.removeItemFromAllUsers(id);
 
+    // Delete Cloudinary image if badge has one
+    if (exists.imagePublicId) {
+      await deleteCloudinaryBadge(exists.imagePublicId);
+    }
+
     await adminRepository.deleteItem(id);
 
     await auditLog({
@@ -137,6 +127,36 @@ export class AdminService {
       metadata: { type: exists.type, usersReset: resetCount, usersCleaned: removedCount, deletedBy: actor?.email ?? null },
       severity: "warn",
     });
+  }
+
+  async uploadBadgeImage(id: number, buffer: Buffer, mime: string | undefined, actor?: Actor) {
+    const exists = await adminRepository.findItemById(id);
+    if (!exists) throw new AppError(404, "Item não encontrado.");
+    if (exists.type !== "badge") throw new AppError(400, "Upload de imagem é permitido apenas para itens do tipo badge.");
+
+    const processed = await validateAndProcessBadge(buffer, mime);
+
+    // Delete previous image if exists
+    if (exists.imagePublicId) {
+      await deleteCloudinaryBadge(exists.imagePublicId);
+    }
+
+    const uploaded = await uploadBadgeToCloudinary(id, processed.buffer);
+
+    await adminRepository.updateItem(id, {
+      imageUrl: uploaded.url,
+      imagePublicId: uploaded.publicId,
+    });
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.shopitem.badge_image",
+      target: `shopitem:${id}`,
+      metadata: { uploaded: uploaded.publicId, updatedBy: actor?.email ?? null },
+      severity: "info",
+    });
+
+    return { imageUrl: uploaded.url, imagePublicId: uploaded.publicId };
   }
 
   // ── Sessions ───────────────────────────────────────────────────────────

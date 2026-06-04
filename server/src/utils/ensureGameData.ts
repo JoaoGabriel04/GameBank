@@ -23,9 +23,6 @@ const shopItems = [
   { name: "Título Banqueiro",     description: "O dinheiro é com você",                price: 500,  icon: "faBuilding",    type: "title", value: '{"title":"Banqueiro"}' },
   { name: "Título Magnata",       description: "Propriedades são seu sobrenome",       price: 2000, icon: "faTrophy",      type: "title", value: '{"title":"Magnata"}' },
   { name: "Título Lendário",      description: "Sua fama ecoa pelo tabuleiro",         price: 5000, icon: "faCrown",      type: "title", value: '{"title":"Lendário"}' },
-  { name: "Badge Diamante",       description: "Um brilho que poucos têm",             price: 1000, icon: "faGem",        type: "badge", value: '{"badge":"diamond"}' },
-  { name: "Badge Esmeralda",      description: "Um verde que atrai sorte",             price: 750,  icon: "faGem",        type: "badge", value: '{"badge":"emerald"}' },
-  { name: "Badge Rubi",           description: "Vermelho de sangue frio",              price: 500,  icon: "faGem",        type: "badge", value: '{"badge":"ruby"}' },
 ];
 
 export async function ensureGameData() {

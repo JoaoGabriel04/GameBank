@@ -40,6 +40,10 @@ export default function Chat() {
     currentSession?.jogadores.map((j) => [j.id, j.badge]) || []
   );
 
+  const playerBadgeImages = new Map(
+    currentSession?.jogadores.map((j) => [j.id, j.badgeImageUrl]) || []
+  );
+
   return (
     <>
       <button
@@ -73,7 +77,7 @@ export default function Chat() {
                   >
                     {playerNames.get(msg.playerId) || msg.playerNome}
                   </span>
-                  <UserBadge badge={playerBadges.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
+                  <UserBadge badge={playerBadges.get(msg.playerId)} imageUrl={playerBadgeImages.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
                   <span className="text-zinc-500 text-xs mr-1">:</span>
                 </span>
                 <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>

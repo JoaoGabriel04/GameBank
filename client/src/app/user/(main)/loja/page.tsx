@@ -7,7 +7,6 @@ import { useProfileStore } from "@/stores/profileStore"
 import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop"
 import UserBadge from "@/components/UserBadge"
 import UserBanner from "@/components/UserBanner"
-import { resolveBadge } from "@/constants/badges"
 import { useBannerCatalog } from "@/hooks/useBannerCatalog"
 import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity"
 import type { ShopItem, UserItem } from "@/types/shop"
@@ -126,6 +125,7 @@ function ShopItemCard({
                 {item.type === "badge" ? (
                   <UserBadge
                     badge={item.value ? JSON.parse(item.value).badge : undefined}
+                    imageUrl={item.imageUrl}
                     variant="medium"
                   />
                 ) : (
@@ -134,11 +134,7 @@ function ShopItemCard({
               </div>
               {item.type === "badge" && (
                 <span className="text-[10px] font-inconsolata text-zinc-400 text-center max-w-[70px]">
-                  {(() => {
-                    const badgeData = item.value ? JSON.parse(item.value) : null;
-                    const preset = resolveBadge(badgeData?.badge);
-                    return preset?.label || "";
-                  })()}
+                  {item.name}
                 </span>
               )}
             </div>
@@ -176,11 +172,7 @@ function ShopItemCard({
         {item.type === "badge" ? (
           <div className="space-y-2 flex-1">
             <p className="text-xs font-inconsolata text-zinc-500 leading-relaxed">
-              {(() => {
-                const badgeData = item.value ? JSON.parse(item.value) : null;
-                const preset = resolveBadge(badgeData?.badge);
-                return preset?.description || item.description;
-              })()}
+              {item.description}
             </p>
             <div className="flex items-center gap-2">
               {item.rarity && (

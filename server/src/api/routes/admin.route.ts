@@ -3,6 +3,7 @@ import { adminController } from "../../modules/admin/admin.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { requireAdmin } from "../../middleware/admin.middleware.js";
 import { bannerUpload } from "../../middleware/upload.middleware.js";
+import { badgeUpload } from "../../middleware/upload.middleware.js";
 import { bannerAdminLimiter } from "../../modules/auth/auth.controller.js";
 
 const adminRouter = Router();
@@ -68,6 +69,14 @@ adminRouter.post(
 
 // User banner sync (re-sync User.spriteId from equipped item JSON)
 adminRouter.post("/users/:id/sync-banner", adminController.syncUserBanner);
+
+// Badges
+adminRouter.post(
+  "/shop/badges/:id/image",
+  bannerAdminLimiter,
+  badgeUpload.single("image"),
+  adminController.uploadBadgeImage
+);
 
 // Audit
 adminRouter.get("/audit", adminController.listAudit);

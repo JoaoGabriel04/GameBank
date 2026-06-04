@@ -101,7 +101,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
             />
           </div>
           <div className="pt-9 flex items-center gap-1.5">
-            <UserBadge badge={player.badge} variant="small" />
+            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
           </div>
         </div>
 

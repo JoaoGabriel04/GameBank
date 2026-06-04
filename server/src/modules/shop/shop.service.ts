@@ -43,6 +43,7 @@ export class ShopService {
       icon: shopItem.icon,
       spriteId: shopItem.banner?.spriteId ?? null,
       rarity: shopItem.rarity ?? null,
+      imageUrl: shopItem.imageUrl ?? null,
       equipped: false,
       acquiredAt: new Date().toISOString(),
     };

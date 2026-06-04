@@ -35,3 +35,7 @@ export function getAvatarFolder() {
 export function getBannerFolder() {
   return process.env.CLOUDINARY_BANNER_FOLDER || "gamebank/banners";
 }
+
+export function getBadgeFolder() {
+  return process.env.CLOUDINARY_BADGE_FOLDER || "gamebank/badges";
+}

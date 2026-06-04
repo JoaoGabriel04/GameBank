@@ -136,13 +136,15 @@ function ItemCard({
   );
 }
 
-function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemInput>; bannerCss?: string | null; bannerSpriteId?: string | null }) {
+function ItemPreview({ form, bannerCss, bannerSpriteId, uploadPreview }: { form: Partial<ItemInput>; bannerCss?: string | null; bannerSpriteId?: string | null; uploadPreview?: string | null }) {
   const meta = getTypeMeta(form.type ?? "title");
   const isBanner = form.type === "banner";
+  const isBadge = form.type === "badge";
   const bg = isBanner && bannerCss
     ? resolveBannerBackground(bannerCss)
     : { className: "", style: { background: "linear-gradient(150deg,#1f2937,#111827)" } };
   const SpriteIcon = isBanner && bannerSpriteId ? resolveSprite(bannerSpriteId)?.icon : null;
+  const badgeImage = uploadPreview || form.imageUrl;
 
   return (
     <div
@@ -152,11 +154,15 @@ function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemIn
       <div className="relative p-5 bg-zinc-900/55 backdrop-blur-sm rounded-2xl">
         <div className="flex items-start justify-between">
           <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/80 text-zinc-200">
-            {SpriteIcon
-              ? <SpriteIcon size={22} />
-              : isBanner
-              ? <ImageIcon size={22} />
-              : <ItemIcon name={form.icon ?? "sparkles"} size={22} />}
+            {isBadge && badgeImage ? (
+              <img src={badgeImage} alt="" className="w-10 h-10 object-contain" />
+            ) : SpriteIcon ? (
+              <SpriteIcon size={22} />
+            ) : isBanner ? (
+              <ImageIcon size={22} />
+            ) : (
+              <ItemIcon name={form.icon ?? "sparkles"} size={22} />
+            )}
           </div>
           <Chip tone={meta.tone}>{meta.label}</Chip>
         </div>
@@ -182,7 +188,7 @@ function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemIn
 
 const EMPTY: ItemInput = {
   name: "", description: "", price: 0,
-  type: "title", value: null, icon: "sparkles", rarity: null, available: true, bannerId: null,
+  type: "title", value: null, icon: "sparkles", rarity: null, imageUrl: null, available: true, bannerId: null,
 };
 const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
 
@@ -191,11 +197,13 @@ function ItemModal({
   banners,
   onClose,
   onSave,
+  onUploadImage,
 }: {
   item: AdminShopItem | "new" | null;
   banners: ApiBanner[];
   onClose: () => void;
-  onSave: (data: ItemInput, id?: number) => Promise<void>;
+  onSave: (data: ItemInput, id?: number) => Promise<number | undefined>;
+  onUploadImage: (id: number, file: File) => Promise<void>;
 }) {
   const isNew = item === "new";
   const initial: ItemInput | null = isNew
@@ -209,14 +217,17 @@ function ItemModal({
           value: item.value,
           icon: item.icon,
           rarity: item.rarity,
+          imageUrl: item.imageUrl,
           available: item.available,
           bannerId: item.bannerId ?? null,
         }
       : null;
   const [form, setForm] = useState<ItemInput>(initial ?? EMPTY);
   const [saving, setSaving] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
-  useEffect(() => { setForm(initial ?? EMPTY); }, [item]);
+  useEffect(() => { setForm(initial ?? EMPTY); setUploadFile(null); setUploadPreview(null); }, [item]);
 
   if (!item) return null;
 
@@ -230,7 +241,11 @@ function ItemModal({
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave(form, isNew ? undefined : (item as AdminShopItem).id);
+      const id = isNew ? undefined : (item as AdminShopItem).id;
+      const savedId = await onSave(form, id);
+      if (form.type === "badge" && uploadFile && savedId !== undefined) {
+        await onUploadImage(savedId, uploadFile);
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -306,11 +321,33 @@ function ItemModal({
                   <Field label="Preço (coins)">
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
-                  <Field label="Ícone">
-                    <AdminSelect value={form.icon ?? "sparkles"} onChange={(e) => set("icon", e.target.value)}>
-                      {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
-                    </AdminSelect>
-                  </Field>
+                  {form.type !== "badge" ? (
+                    <Field label="Ícone">
+                      <AdminSelect value={form.icon ?? "sparkles"} onChange={(e) => set("icon", e.target.value)}>
+                        {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                      </AdminSelect>
+                    </Field>
+                  ) : (
+                    <Field label="Imagem">
+                      <label className="flex flex-col items-center justify-center w-full h-[38px] border border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-zinc-500 transition-colors bg-zinc-900/50">
+                        <span className="text-[11px] text-zinc-400 font-inconsolata">
+                          {uploadFile ? uploadFile.name : "Selecionar imagem (128x128)"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setUploadFile(file);
+                              setUploadPreview(URL.createObjectURL(file));
+                            }
+                          }}
+                        />
+                      </label>
+                    </Field>
+                  )}
                 </div>
                 <Field label="Raridade">
                   <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
@@ -338,7 +375,7 @@ function ItemModal({
               <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
                 Pré-visualização
               </p>
-              <ItemPreview form={form} bannerCss={bannerCss} bannerSpriteId={bannerSpriteId} />
+              <ItemPreview form={form} bannerCss={bannerCss} bannerSpriteId={bannerSpriteId} uploadPreview={uploadPreview} />
             </div>
             <Btn type="submit" variant="primary" icon={Check} className="justify-center w-full" disabled={saving}>
               {saving ? "Salvando…" : isNew ? "Criar item" : "Salvar"}
@@ -352,7 +389,7 @@ function ItemModal({
 }
 
 export default function AdminLojaPage() {
-  const { items, loadingItems, loadItems, createItem, updateItem, toggleItem, deleteItem } = useAdminStore();
+  const { items, loadingItems, loadItems, createItem, updateItem, toggleItem, deleteItem, uploadBadgeImage } = useAdminStore();
   const { banners, loadBanners } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [filter, setFilter] = useState("Todos");
@@ -371,10 +408,10 @@ export default function AdminLojaPage() {
     return true;
   });
 
-  async function handleSave(data: ItemInput, id?: number) {
+  async function handleSave(data: ItemInput, id?: number): Promise<number | undefined> {
     try {
-      if (id === undefined) { await createItem(data); ok("Item criado!"); }
-      else                  { await updateItem(id, data); ok("Item atualizado!"); }
+      if (id === undefined) { const created = await createItem(data); ok("Item criado!"); return created.id; }
+      else                  { await updateItem(id, data); ok("Item atualizado!"); return id; }
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { error?: string; message?: string } } })?.response?.data?.error
         ?? (e as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -393,6 +430,13 @@ export default function AdminLojaPage() {
     try { await deleteItem(id); ok("Item removido."); }
     catch { err("Erro ao remover item."); }
   }
+
+  const handleUploadBadgeImage = async (id: number, file: File) => {
+    try {
+      await uploadBadgeImage(id, file);
+      ok("Imagem do emblema enviada!");
+    } catch { err("Erro ao enviar imagem do emblema."); }
+  };
 
   return (
     <div className="space-y-4">
@@ -423,7 +467,7 @@ export default function AdminLojaPage() {
         </div>
       )}
 
-      <ItemModal item={editing} banners={banners} onClose={() => setEditing(null)} onSave={handleSave} />
+      <ItemModal item={editing} banners={banners} onClose={() => setEditing(null)} onSave={handleSave} onUploadImage={handleUploadBadgeImage} />
     </div>
   );
 }

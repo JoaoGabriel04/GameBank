@@ -31,11 +31,12 @@ export class ProfileService {
         // Invalid JSON in title value, skip parsing
       }
     }
-    const equippedBadge = items.find((i) => i.equipped && i.type === "badge")?.value;
+    const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
+    const badgeImageUrl = equippedBadgeItem?.imageUrl ?? null;
     let parsedBadge = null;
-    if (equippedBadge) {
+    if (equippedBadgeItem?.value) {
       try {
-        parsedBadge = JSON.parse(equippedBadge);
+        parsedBadge = JSON.parse(equippedBadgeItem.value);
       } catch {
         // Invalid JSON in badge value, skip parsing
       }
@@ -56,6 +57,7 @@ export class ProfileService {
       totalTop3: user.totalTop3,
       title: parsedTitle?.title || null,
       badge: parsedBadge?.badge || null,
+      badgeImageUrl,
       items: items.map((i) => ({
         id: i.id,
         name: i.name,
@@ -64,6 +66,7 @@ export class ProfileService {
         value: i.value,
         type: i.type,
         spriteId: i.spriteId ?? null,
+        imageUrl: i.imageUrl ?? null,
         equipped: i.equipped,
       })),
       missions: user.missions.map((m) => ({

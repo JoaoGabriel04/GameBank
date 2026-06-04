@@ -120,7 +120,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
         {/* Name row — never wraps the name */}
         <div className="flex items-center gap-2 flex-wrap mt-1">
           <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
-          <UserBadge badge={profile.badge ?? user.badge} variant="small" />
+          <UserBadge badge={profile.badge ?? user.badge} imageUrl={profile.badgeImageUrl ?? user.badgeImageUrl} variant="small" />
         </div>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {profile.title && <Chip tone="emerald">{profile.title}</Chip>}
@@ -280,12 +280,7 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
         {tab === "badge" && (
           <div className="mt-4">
             <BadgeCollection
-              userBadges={items
-                .filter((i) => i.type === "badge")
-                .map((i) => {
-                  try { return JSON.parse(i.value ?? "")?.badge; } catch { return null; }
-                })
-                .filter(Boolean)}
+              badgeItems={items.filter((i) => i.type === "badge")}
               isOwner
             />
           </div>

@@ -9,6 +9,7 @@ export interface UserItemSnapshot {
   icon: string | null;
   spriteId?: string | null;
   rarity?: string | null;
+  imageUrl?: string | null;
   equipped: boolean;
   acquiredAt: string;
 }

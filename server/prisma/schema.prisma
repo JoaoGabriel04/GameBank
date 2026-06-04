@@ -312,15 +312,17 @@ model UserMission {
 }
 
 model ShopItem {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String
-  price       Int
-  icon        String?
-  type        String   // title | badge | banner
-  value       String?
-  rarity      String?  // common | rare | epic | legendary
-  available   Boolean  @default(true)
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String
+  price         Int
+  icon          String?
+  type          String   // title | badge | banner
+  value         String?
+  rarity        String?  // common | rare | epic | legendary
+  imageUrl      String?  // Cloudinary URL for badge images
+  imagePublicId String?  // Cloudinary public ID for deletion
+  available     Boolean  @default(true)
 
   bannerId Int?
   banner   Banner? @relation(fields: [bannerId], references: [id], onDelete: SetNull)

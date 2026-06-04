@@ -248,7 +248,7 @@ export default function Game() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
-              <UserBadge badge={player.badge} variant="small" />
+              <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
             </div>
             <span className="text-zinc-400 text-sm font-inconsolata">
               R$ {(player.saldo || 0).toLocaleString()}

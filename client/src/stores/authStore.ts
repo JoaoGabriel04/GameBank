@@ -9,6 +9,7 @@ export interface AuthUser {
   banner?: string | null;
   spriteId?: string | null;
   badge?: string | null;
+  badgeImageUrl?: string | null;
   profileComplete: boolean;
   isAdmin?: boolean;
 }

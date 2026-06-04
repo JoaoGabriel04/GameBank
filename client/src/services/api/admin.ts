@@ -11,6 +11,7 @@ export interface AdminShopItem {
   value: string | null;
   icon: string | null;
   rarity: string | null;
+  imageUrl: string | null;
   available: boolean;
   ownerCount: number;
   bannerId?: number | null;
@@ -212,6 +213,14 @@ export const adminApi = {
     const form = new FormData();
     form.append("image", file);
     return api.post<Banner>(`/admin/banners/${id}/image`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
+
+  uploadBadgeImage: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return api.post<{ imageUrl: string; imagePublicId: string }>(`/admin/shop/badges/${id}/image`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     }).then((r) => r.data);
   },

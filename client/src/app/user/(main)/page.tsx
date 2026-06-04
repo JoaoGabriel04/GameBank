@@ -80,7 +80,7 @@ function ProfileHero() {
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
           {profile.title && <Chip tone="emerald">{profile.title}</Chip>}
-          <UserBadge badge={profile.badge ?? user.badge} variant="small" />
+          <UserBadge badge={profile.badge ?? user.badge} imageUrl={profile.badgeImageUrl ?? user.badgeImageUrl} variant="small" />
         </div>
         <p className="font-inconsolata text-xs text-zinc-500 mt-0.5">
           Nível {profile.level} · #{" "}

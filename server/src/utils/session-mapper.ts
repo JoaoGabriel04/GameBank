@@ -16,9 +16,10 @@ export function mapSessionPlayers<T extends {
         items?: any;
       } | null;
     };
-    const items = (user?.items ?? []) as Array<{ equipped: boolean; type: string; value: string | null }>;
+    const items = (user?.items ?? []) as Array<{ equipped: boolean; type: string; value: string | null; imageUrl?: string | null }>;
     const badgeItem = items.find((i) => i.equipped && i.type === "badge");
     const badgeValue = badgeItem?.value;
+    const badgeImageUrl = badgeItem?.imageUrl ?? null;
     let parsedBadge = null;
     if (badgeValue) {
       try {
@@ -33,6 +34,7 @@ export function mapSessionPlayers<T extends {
       avatarUpdatedAt: user?.avatarUpdatedAt?.toISOString?.() ?? null,
       banner: user?.banner ?? null,
       badge: parsedBadge?.badge || null,
+      badgeImageUrl,
     };
   });
 }

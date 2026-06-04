@@ -124,7 +124,7 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-inconsolata text-zinc-100 truncate">{player.nome}</p>
-            <UserBadge badge={player.badge} variant="small" />
+            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
           </div>
           <p className="text-xs font-inconsolata text-zinc-400">R$ {formatCurrency(player.saldo)}</p>
         </div>
@@ -485,7 +485,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                 <p className="text-sm font-inconsolata text-zinc-300">
                   {currentPlayer?.nome || "Você"}
                 </p>
-                <UserBadge badge={currentPlayer?.badge} />
+                <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />
               </div>
             </div>
             <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer">

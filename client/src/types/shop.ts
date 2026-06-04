@@ -3,12 +3,12 @@ export interface ShopItem {
   name: string
   description: string
   price: number
-  /** Generic icon field. For banners, use bannerId+banner.spriteId instead.
-   * For badges, this may contain badge preset ID. */
+  /** Generic icon field. For banners, use bannerId+banner.spriteId instead. */
   icon?: string | null
   type: 'title' | 'badge' | 'banner'
   value?: string | null
   rarity?: string | null
+  imageUrl?: string | null
   available: boolean
   bannerId?: number | null
 }
@@ -22,6 +22,7 @@ export interface UserItem {
   icon?: string | null 
   spriteId?: string | null
   rarity?: string | null
+  imageUrl?: string | null
   equipped: boolean
 }
 
@@ -71,6 +72,7 @@ export interface RankingUser {
   totalTop3: number
   title?: string | null
   badge?: string | null
+  badgeImageUrl?: string | null
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null

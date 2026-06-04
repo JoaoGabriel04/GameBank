@@ -79,6 +79,7 @@ interface AdminStore {
   updateBanner: (id: number, data: Partial<BannerInput>) => Promise<Banner>;
   deleteBanner: (id: number) => Promise<void>;
   uploadBannerImage: (id: number, file: File) => Promise<Banner>;
+  uploadBadgeImage: (id: number, file: File) => Promise<{ imageUrl: string; imagePublicId: string }>;
 }
 
 export const useAdminStore = create<AdminStore>((set, get) => ({
@@ -351,5 +352,10 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
     const updated = await adminApi.uploadBannerImage(id, file);
     set({ banners: get().banners.map((b) => (b.id === id ? updated : b)) });
     return updated;
+  },
+
+  uploadBadgeImage: async (id, file) => {
+    const result = await adminApi.uploadBadgeImage(id, file);
+    return result;
   },
 }));
