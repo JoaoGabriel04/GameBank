@@ -8,6 +8,7 @@ export interface ShopItem {
   icon?: string | null
   type: 'title' | 'badge' | 'banner'
   value?: string | null
+  rarity?: string | null
   available: boolean
   bannerId?: number | null
 }
@@ -20,6 +21,7 @@ export interface UserItem {
   value?: string | null
   icon?: string | null 
   spriteId?: string | null
+  rarity?: string | null
   equipped: boolean
 }
 

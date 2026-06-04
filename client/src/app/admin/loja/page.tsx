@@ -9,6 +9,7 @@ import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import { resolveSprite } from "@/constants/sprites";
 import { resolveBannerBackground } from "@/constants/banners";
+import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
   Panel, Chip, Toggle, Segmented, Btn, Field,
@@ -87,7 +88,13 @@ function ItemCard({
               {item.available ? "ativo" : "inativo"}
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            {item.rarity && (
+              <span className={`text-[10px] font-inconsolata font-semibold px-2 py-1 rounded capitalize ${getRarityChipClass(item.rarity)}`}>
+                {RARITY_LABELS[item.rarity] ?? item.rarity}
+              </span>
+            )}
+            <Chip tone={meta.tone}>{meta.label}</Chip>
             <button
               type="button"
               onClick={() => onEdit(item)}
@@ -174,7 +181,7 @@ function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemIn
 
 const EMPTY: ItemInput = {
   name: "", description: "", price: 0,
-  type: "title", value: null, icon: "sparkles", available: true, bannerId: null,
+  type: "title", value: null, icon: "sparkles", rarity: null, available: true, bannerId: null,
 };
 const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
 
@@ -200,6 +207,7 @@ function ItemModal({
           type: item.type,
           value: item.value,
           icon: item.icon,
+          rarity: item.rarity,
           available: item.available,
           bannerId: item.bannerId ?? null,
         }
@@ -303,12 +311,14 @@ function ItemModal({
                     </AdminSelect>
                   </Field>
                 </div>
-                <Field label={isBanner ? "Banner (css)" : "Valor / slug"} hint="slug ou valor">
-                  <AdminInput
-                    value={form.value ?? ""}
-                    onChange={(e) => set("value", e.target.value || null)}
-                    placeholder={isBanner ? "linear-gradient(120deg,…)" : "ex: legend"}
-                  />
+                <Field label="Raridade">
+                  <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
+                    <option value="">Sem raridade</option>
+                    <option value="common">Comum</option>
+                    <option value="rare">Raro</option>
+                    <option value="epic">Epico</option>
+                    <option value="legendary">Lendario</option>
+                  </AdminSelect>
                 </Field>
               </>
             )}

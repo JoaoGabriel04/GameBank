@@ -319,6 +319,7 @@ model ShopItem {
   icon        String?
   type        String   // title | badge | banner
   value       String?
+  rarity      String?  // common | rare | epic | legendary
   available   Boolean  @default(true)
 
   bannerId Int?

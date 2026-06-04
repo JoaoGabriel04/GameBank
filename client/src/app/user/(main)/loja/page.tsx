@@ -9,6 +9,7 @@ import UserBadge from "@/components/UserBadge"
 import UserBanner from "@/components/UserBanner"
 import { resolveBadge } from "@/constants/badges"
 import { useBannerCatalog } from "@/hooks/useBannerCatalog"
+import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity"
 import type { ShopItem, UserItem } from "@/types/shop"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -181,25 +182,11 @@ function ShopItemCard({
               })()}
             </p>
             <div className="flex items-center gap-2">
-              {(() => {
-                const badgeData = item.value ? JSON.parse(item.value) : null;
-                const preset = resolveBadge(badgeData?.badge);
-                if (preset) {
-                  const rarityColors: Record<string, string> = {
-                    common: "bg-zinc-700 text-zinc-200",
-                    rare: "bg-blue-700 text-blue-200",
-                    epic: "bg-purple-700 text-purple-200",
-                    legendary: "bg-yellow-700 text-yellow-200",
-                  };
-                  const color = rarityColors[preset.rarity] || rarityColors.common;
-                  return (
-                    <span className={`text-[10px] font-inconsolata font-semibold px-2 py-1 rounded ${color} capitalize`}>
-                      {preset.rarity}
-                    </span>
-                  );
-                }
-                return null;
-              })()}
+              {item.rarity && (
+                <span className={`text-[10px] font-inconsolata font-semibold px-2 py-1 rounded capitalize ${getRarityChipClass(item.rarity)}`}>
+                  {RARITY_LABELS[item.rarity] ?? item.rarity}
+                </span>
+              )}
             </div>
           </div>
         ) : item.type === "banner" ? (

@@ -27,6 +27,7 @@ export class AdminService {
     type: string;
     value?: string | null;
     icon?: string | null;
+    rarity?: string | null;
     available: boolean;
     bannerId?: number | null;
   }) {
@@ -43,6 +44,16 @@ export class AdminService {
       };
     } else {
       if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title/badge.");
+      // Auto-derive value for badges from rarity if not provided
+      if (data.type === "badge" && !data.value && data.rarity) {
+        const BADGE_RARITY_MAP: Record<string, string> = {
+          common: "emerald",
+          rare: "emerald",
+          epic: "ruby",
+          legendary: "diamond",
+        };
+        payload.value = JSON.stringify({ badge: BADGE_RARITY_MAP[data.rarity] ?? "emerald" });
+      }
     }
     return adminRepository.createItem(payload);
   }
@@ -54,6 +65,7 @@ export class AdminService {
     type: string;
     value: string | null;
     icon: string | null;
+    rarity: string | null;
     available: boolean;
     bannerId: number | null;
   }>) {
@@ -81,6 +93,17 @@ export class AdminService {
       payload = { ...payload, bannerId: null };
       if (data.name !== undefined && !data.name) {
         throw new AppError(400, "name não pode ser vazio para itens do tipo title/badge.");
+      }
+      // Auto-derive value for badges from rarity if not provided
+      const nextRarity = data.rarity ?? exists.rarity ?? null;
+      if (nextType === "badge" && !payload.value && nextRarity) {
+        const BADGE_RARITY_MAP: Record<string, string> = {
+          common: "emerald",
+          rare: "emerald",
+          epic: "ruby",
+          legendary: "diamond",
+        };
+        payload.value = JSON.stringify({ badge: BADGE_RARITY_MAP[nextRarity] ?? "emerald" });
       }
     }
 

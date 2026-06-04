@@ -18,6 +18,7 @@ export const adminRepository = {
     type: string;
     value?: string | null;
     icon?: string | null;
+    rarity?: string | null;
     available: boolean;
     bannerId?: number | null;
   }) => prisma.shopItem.create({ data: { name: data.name ?? "", ...data } }),
@@ -29,6 +30,7 @@ export const adminRepository = {
     type: string;
     value: string | null;
     icon: string | null;
+    rarity: string | null;
     available: boolean;
     bannerId: number | null;
   }>) => prisma.shopItem.update({ where: { id }, data }),

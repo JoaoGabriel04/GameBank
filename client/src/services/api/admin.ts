@@ -10,6 +10,7 @@ export interface AdminShopItem {
   type: ShopItemType;
   value: string | null;
   icon: string | null;
+  rarity: string | null;
   available: boolean;
   ownerCount: number;
   bannerId?: number | null;
