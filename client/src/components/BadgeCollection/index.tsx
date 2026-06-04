@@ -4,16 +4,18 @@ import { useMemo } from "react";
 import UserBadge from "@/components/UserBadge";
 import type { UserItem } from "@/types/shop";
 import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity";
-import { Star, Loader2 } from "lucide-react";
+import { Star, Loader2, Trash2 } from "lucide-react";
 
 interface BadgeCollectionProps {
   badgeItems: UserItem[];
   isOwner?: boolean;
   onEquip?: (item: UserItem) => void;
+  onSell?: (item: UserItem) => void;
   equippingId?: number | null;
+  sellingId?: number | null;
 }
 
-export default function BadgeCollection({ badgeItems = [], isOwner = false, onEquip, equippingId }: BadgeCollectionProps) {
+export default function BadgeCollection({ badgeItems = [], isOwner = false, onEquip, onSell, equippingId, sellingId }: BadgeCollectionProps) {
   const ownedCount = badgeItems.length;
 
   const byRarity = useMemo(() => {
@@ -96,7 +98,17 @@ export default function BadgeCollection({ badgeItems = [], isOwner = false, onEq
                           EQUIPADO
                         </div>
                       )}
-                      {equippingId === item.id && (
+                      {isOwner && onSell && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onSell(item); }}
+                          className="text-[9px] font-inconsolata text-zinc-500 hover:text-red-400 transition-colors mt-1 flex items-center gap-1"
+                        >
+                          <Trash2 size={10} />
+                          Vender
+                        </button>
+                      )}
+                      {(equippingId === item.id || sellingId === item.id) && (
                         <div className="absolute inset-0 grid place-items-center bg-zinc-900/80 rounded-xl">
                           <Loader2 size={16} className="animate-spin text-cyan-400" />
                         </div>

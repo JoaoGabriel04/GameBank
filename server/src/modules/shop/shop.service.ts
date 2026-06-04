@@ -172,6 +172,42 @@ export class ShopService {
     return { message: "Item atualizado", equipped: true };
   }
 
+  async sellItem(userId: number, itemId: number) {
+    if (itemId === 0) {
+      throw new AppError(400, "Não é possível vender o banner padrão.");
+    }
+
+    const user = await shopRepository.findUser(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado");
+
+    const currentItems = parseUserItems(user.items);
+    const targetItem = currentItems.find(i => i.id === itemId);
+    if (!targetItem) throw new AppError(404, "Item não encontrado no seu inventário.");
+
+    const shopItem = await shopRepository.findShopItem(itemId);
+    if (!shopItem) throw new AppError(404, "Item não encontrado na loja.");
+
+    const refund = Math.floor(shopItem.price / 2);
+
+    const updatedItems = currentItems.filter(i => i.id !== itemId);
+
+    const updateData: any = { items: updatedItems, coins: { increment: refund } };
+
+    if (targetItem.type === 'banner' && targetItem.equipped) {
+      updateData.banner = null;
+      updateData.spriteId = null;
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    await this.rankingService.invalidateCache();
+
+    return { message: `"${targetItem.name}" vendido por ${refund} coins.`, refund };
+  }
+
   async syncUserBanner(userId: number) {
     await shopRepository.syncUserBanner(userId);
     await this.rankingService.invalidateCache();

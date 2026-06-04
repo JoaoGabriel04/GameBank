@@ -13,11 +13,11 @@
  */
 
 import { useEffect, useState } from "react";
-import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp, Clock } from "lucide-react";
+import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp, Clock, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi, equipShopItemApi } from "@/services/api/shop";
+import { buyShopItemApi, equipShopItemApi, sellShopItemApi } from "@/services/api/shop";
 import { getProfileHistoryApi } from "@/services/api/profile";
 import { useToast } from "@/components/Toast";
 import UserAvatar from "@/components/UserAvatar";
@@ -178,6 +178,7 @@ function StatsRow({ profile }: { profile: ProfileStats }) {
 function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banner?: string | null }; onRefresh: () => void }) {
   const [tab, setTab] = useState<InvTab>("title");
   const [equipping, setEq] = useState<number | null>(null);
+  const [selling, setSel] = useState<number | null>(null);
   const { success: ok, error: err } = useToast();
   const { loadProfile } = useProfileStore();
 
@@ -197,6 +198,20 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
       err("Erro ao equipar item.");
     } finally {
       setEq(null);
+    }
+  }
+
+  async function handleSell(item: UserItem) {
+    if (!confirm(`Vender "${item.name}" por metade do preço?`)) return;
+    setSel(item.id);
+    try {
+      const result = await sellShopItemApi(item.id);
+      ok(result.message);
+      loadProfile();
+    } catch {
+      err("Erro ao vender item.");
+    } finally {
+      setSel(null);
     }
   }
 
@@ -230,7 +245,9 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
             badgeItems={items.filter((i) => i.type === "badge")}
             isOwner
             onEquip={handleEquip}
+            onSell={handleSell}
             equippingId={equipping}
+            sellingId={selling}
           />
         ) : owned.length === 0 ? (
           <p className="font-inconsolata text-sm text-zinc-600 italic text-center py-4">
@@ -276,6 +293,21 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                 {equipping === item.id && (
                   <div className="absolute inset-0 grid place-items-center bg-zinc-900/80 rounded-xl">
                     <Loader2 size={16} className="animate-spin text-green-400" />
+                  </div>
+                )}
+                {selling !== item.id && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleSell(item); }}
+                    className="absolute top-2 left-2 text-[9px] font-inconsolata text-zinc-600 hover:text-red-400 transition-colors"
+                    title="Vender"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+                {selling === item.id && (
+                  <div className="absolute inset-0 grid place-items-center bg-zinc-900/80 rounded-xl">
+                    <Loader2 size={16} className="animate-spin text-red-400" />
                   </div>
                 )}
               </button>
