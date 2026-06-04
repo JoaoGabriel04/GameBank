@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCrown, faCoins, faBolt, faXmark } from "@fortawesome/free-solid-svg-icons"
+import { faCrown, faBolt, faXmark } from "@fortawesome/free-solid-svg-icons"
+import CoinIcon from "@/components/CoinIcon"
 import type { RankedPlayer } from "@/types/game"
 import UserBanner from "@/components/UserBanner"
 import UserAvatar from "@/components/UserAvatar"
@@ -126,7 +127,7 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                   </p>
                   {entry.coinsEarned > 0 && (
                     <p className="text-xs text-yellow-400 flex items-center justify-center gap-1">
-                      <FontAwesomeIcon icon={faCoins} className="text-[10px]" /> {entry.coinsEarned} coins
+                      <CoinIcon size={12} className="inline" /> {entry.coinsEarned} coins
                     </p>
                   )}
                 </motion.div>

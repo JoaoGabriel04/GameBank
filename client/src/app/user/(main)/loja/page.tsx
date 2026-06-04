@@ -14,7 +14,8 @@ import type { ShopItem, UserItem } from "@/types/shop"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core"
-import { faCoins, faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag, faImage } from "@fortawesome/free-solid-svg-icons"
+import { faPalette, faGem, faCrown, faCheck, faLock, faShoppingBag, faImage } from "@fortawesome/free-solid-svg-icons"
+import CoinIcon from "@/components/CoinIcon"
 import { Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react"
 
 // ── Configuração visual por tipo de item ─────────────────────────────────────
@@ -203,7 +204,7 @@ function ShopItemCard({
         <div className="flex items-center justify-between mt-2 pt-3 border-t border-zinc-800 gap-2">
           {!owned ? (
             <div className="flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1 rounded-lg">
-              <FontAwesomeIcon icon={faCoins} className="text-amber-400 text-xs" />
+              <CoinIcon size={14} className="text-amber-400" />
               <span className="text-amber-300 text-xs font-inconsolata font-semibold">{item.price}</span>
             </div>
           ) : (
@@ -373,7 +374,7 @@ export default function LojaPage() {
             {/* Wallet de coins */}
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5">
-                <FontAwesomeIcon icon={faCoins} className="text-amber-400 text-base" />
+                <CoinIcon size={20} className="text-amber-400" />
                 <span className="font-jaro text-xl text-amber-300">{coins.toLocaleString("pt-BR")}</span>
               </div>
               <span className="text-[10px] font-inconsolata text-zinc-600">GameCoins</span>

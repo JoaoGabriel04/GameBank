@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { resolveSprite } from "@/constants/sprites";
 import { resolveBannerBackground } from "@/constants/banners";
 import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity";
+import CoinIcon from "@/components/CoinIcon";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
   Panel, Chip, Toggle, Segmented, Btn, Field,
@@ -169,7 +170,7 @@ function ItemPreview({ form, bannerCss, bannerSpriteId }: { form: Partial<ItemIn
         </p>
         <div className="flex items-center justify-between mt-4">
           <span className="inline-flex items-center gap-1.5 font-jaro text-lg text-amber-300">
-            <Coins size={15} />
+            <CoinIcon size={15} />
             {(form.price ?? 0).toLocaleString("pt-BR")}
           </span>
           <span className="font-inconsolata text-[10px] text-zinc-300/80">pré-visualização</span>

@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import {
   Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -136,7 +137,7 @@ function MissionCard({
             +{m.xpReward?.toLocaleString("pt-BR")} XP
           </span>
           <span className="inline-flex items-center gap-1 font-inconsolata text-xs text-amber-300">
-            <Coins size={12} />+{m.coinReward?.toLocaleString("pt-BR")}
+            <CoinIcon size={12} />+{m.coinReward?.toLocaleString("pt-BR")}
           </span>
         </div>
 

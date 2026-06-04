@@ -12,7 +12,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, Coins, ChevronRight, X } from "lucide-react";
+import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { getRankingApi } from "@/services/api/ranking";
@@ -140,7 +141,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
 
         {/* Coins */}
         <div className="flex items-center justify-center gap-2 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-2.5">
-          <Coins size={15} className="text-yellow-400" />
+          <CoinIcon size={15} className="text-yellow-400" />
           <span className="font-jaro text-xl text-yellow-300">
             {(player.coins ?? player.xp ?? 0).toLocaleString("pt-BR")}
           </span>

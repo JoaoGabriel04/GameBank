@@ -16,8 +16,9 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Store, Gift, User, Trophy,
-  Coins, Bell, X,
+  Bell, X,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
@@ -224,7 +225,7 @@ export default function UserNav() {
         {/* Coins + Level pill */}
         {user && (
           <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
-            <Coins size={14} className="text-yellow-400" />
+            <CoinIcon size={14} className="text-yellow-400" />
             <span className="font-jaro text-sm text-yellow-300">
               {profile ? (
                 profile.coins >= 1000
@@ -284,7 +285,7 @@ export default function UserNav() {
             {/* Coins + Level (compact) */}
             {user && (
               <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1">
-                <Coins size={12} className="text-yellow-400 shrink-0" />
+                <CoinIcon size={12} className="text-yellow-400 shrink-0" />
                 <span className="font-jaro text-xs text-yellow-300">
                   {profile ? (
                     profile.coins >= 1000

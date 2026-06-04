@@ -10,6 +10,7 @@ import {
   Target, Plus, Pencil, Trash2, Check, X, Coins,
   Building, Home, Trophy, Crown, Gamepad2,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import type { AdminMission, MissionInput } from "@/services/api/admin";
@@ -198,7 +199,7 @@ function MissionCard({
           </span>
           <span className="font-inconsolata text-xs text-cyan-300">+{m.xpReward} XP</span>
           <span className="inline-flex items-center gap-1 font-inconsolata text-xs text-amber-300">
-            <Coins size={11} />+{m.coinReward}
+            <CoinIcon size={11} />+{m.coinReward}
           </span>
         </div>
         <div className="flex items-center gap-2">

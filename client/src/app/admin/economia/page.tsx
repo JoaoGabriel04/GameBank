@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, DollarSign, Zap, Settings, Store, Trophy, Lock, Coins } from "lucide-react";
+import { Check, DollarSign, Zap, Settings, Store, Trophy, Lock } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import {
   Panel, PanelHead, Chip, Toggle, Btn,
 } from "@/components/admin/AdminUI";
@@ -220,7 +221,7 @@ export default function AdminEconomiaPage() {
                 <div className="flex items-center gap-3">
                   <span className="font-inconsolata text-xs text-cyan-300">+{s.xp.toLocaleString("pt-BR")} XP</span>
                   <span className="inline-flex items-center gap-1 font-inconsolata text-xs text-amber-300">
-                    <Coins size={11} />+{s.coins.toLocaleString("pt-BR")}
+                    <CoinIcon size={11} />+{s.coins.toLocaleString("pt-BR")}
                   </span>
                 </div>
               </div>

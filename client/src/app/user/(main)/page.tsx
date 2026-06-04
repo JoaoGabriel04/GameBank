@@ -13,8 +13,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Plus, LogIn, ChevronRight, Lock, TrendingUp,
-  Coins, Trophy, Gamepad2, Target,
+  Trophy, Gamepad2, Target,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -67,7 +68,7 @@ function ProfileHero() {
           {/* Coins */}
           <div className="text-right pt-8 shrink-0">
             <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-1.5">
-              <Coins size={14} className="text-amber-400" />
+              <CoinIcon size={14} className="text-amber-400" />
               <span className="font-jaro text-base text-amber-300">
                 {profile.coins.toLocaleString("pt-BR")}
               </span>

@@ -6,7 +6,8 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useToast } from "@/components/Toast";
-import { Eye, Coins, Handshake, Building2, ArrowRight, ArrowLeft, Plus, Minus, Check } from "lucide-react";
+import { Eye, Handshake, Building2, ArrowRight, ArrowLeft, Plus, Minus, Check } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import { PROPERTY_COLORS } from "@/types/game";
@@ -198,7 +199,7 @@ export default function Especiais() {
         >
           <div className="h-1.5 w-full bg-pink-500" />
           <div className="p-4 flex flex-col items-center gap-2">
-            <Coins className="w-8 h-8 text-pink-500" />
+            <CoinIcon size={32} className="text-pink-500" />
             <span className="text-zinc-100 font-jaro text-lg">Receber</span>
             <span className="text-zinc-500 text-xs font-inconsolata text-center">
               Receba R$ 500 de todos os jogadores
