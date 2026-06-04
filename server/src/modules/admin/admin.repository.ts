@@ -58,6 +58,27 @@ export const adminRepository = {
 
   // For each user that has the given banner item equipped, reset to Padrão
   // (id=0) and clear User.banner / User.spriteId. Returns number of users reset.
+  propagateBadgeImageToUsers: async (itemId: number, imageUrl: string | null): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET "items" = COALESCE((
+        SELECT jsonb_agg(
+          CASE
+            WHEN (item->>'id')::int = ${itemId}
+              THEN jsonb_set(item, '{imageUrl}', to_jsonb(${imageUrl}::text), true)
+            ELSE item
+          END
+        )
+        FROM jsonb_array_elements(u.items) item
+      ), '[]'::jsonb)
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'id')::int = ${itemId}
+      )
+    `;
+    return Number(result);
+  },
+
   resetEquippedBannerForUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
       UPDATE "users" u

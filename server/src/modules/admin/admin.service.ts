@@ -148,6 +148,9 @@ export class AdminService {
       imagePublicId: uploaded.publicId,
     });
 
+    // Propagate imageUrl to all users who already own this badge
+    await adminRepository.propagateBadgeImageToUsers(id, uploaded.url);
+
     await auditLog({
       userId: actor?.id ?? null,
       action: "admin.shopitem.badge_image",

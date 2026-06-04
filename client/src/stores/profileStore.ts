@@ -63,6 +63,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
           ...authUser,
           banner: profile.banner ?? null,
           spriteId: profile.spriteId ?? null,
+          badge: profile.badge ?? null,
+          badgeImageUrl: profile.badgeImageUrl ?? null,
         })
       }
     } catch (err: any) {
