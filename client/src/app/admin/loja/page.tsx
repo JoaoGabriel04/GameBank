@@ -190,7 +190,7 @@ function ItemPreview({ form, bannerCss, bannerSpriteId, uploadPreview }: { form:
 
 const EMPTY: ItemInput = {
   name: "", description: "", price: 0,
-  type: "title", value: null, icon: "sparkles", rarity: null, imageUrl: null, available: true, bannerId: null,
+  type: "title", value: null, icon: "sparkles", rarity: "comum", imageUrl: null, available: true, bannerId: null,
 };
 const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
 
@@ -351,11 +351,11 @@ function ItemModal({
             <Field label="Raridade">
               <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
                   <option value="">Sem raridade</option>
-                    <option value="common">Comum</option>
-                    <option value="rare">Raro</option>
-                    <option value="super_rare">Super Raro</option>
-                    <option value="epic">Epico</option>
-                    <option value="legendary">Lendario</option>
+                    <option value="comum">Comum</option>
+                    <option value="raro">Raro</option>
+                    <option value="super_raro">Super Raro</option>
+                    <option value="epico">Epico</option>
+                    <option value="lendario">Lendario</option>
               </AdminSelect>
             </Field>
 
