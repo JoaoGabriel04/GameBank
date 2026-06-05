@@ -48,6 +48,9 @@ export class AdminService {
       };
     } else {
       if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title/badge.");
+      if (data.type === "title" && data.name && !data.value) {
+        payload.value = JSON.stringify({ title: data.name });
+      }
     }
     return adminRepository.createItem(payload);
   }
@@ -89,6 +92,10 @@ export class AdminService {
       payload = { ...payload, bannerId: null };
       if (data.name !== undefined && !data.name) {
         throw new AppError(400, "name não pode ser vazio para itens do tipo title/badge.");
+      }
+      // Auto-generate value for titles when name changes
+      if (nextType === "title" && data.name && data.name !== exists.name && data.value === undefined) {
+        payload.value = JSON.stringify({ title: data.name });
       }
     }
 
