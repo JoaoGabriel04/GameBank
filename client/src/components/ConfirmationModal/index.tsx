@@ -1,5 +1,7 @@
 'use client'
 
+import { motion, AnimatePresence } from "framer-motion"
+import { backdrop, modalBox } from "@/lib/animations"
 import Button1 from "../Button01"
 
 type Props = {
@@ -25,16 +27,26 @@ export default function ConfirmationModal({
   color = "green",
   loading = false
 }: Props) {
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      <div className="relative w-full max-w-md mx-4 bg-zinc-900 border-2 border-zinc-700 rounded-xl p-6 shadow-2xl animate-fade-in">
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          <motion.div
+            variants={backdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          
+          <motion.div
+            variants={modalBox}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative w-full max-w-md mx-4 bg-zinc-900 border-2 border-zinc-700 rounded-xl p-6 shadow-2xl"
+          >
         <div className="flex items-center justify-center mb-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
             color === 'red' ? 'bg-red-500/20' : 
@@ -75,8 +87,10 @@ export default function ConfirmationModal({
           >
             {loading ? "Processando..." : confirmText}
           </Button1>
-        </div>
+          </div>
+        </motion.div>
       </div>
-    </div>
+      )}
+    </AnimatePresence>
   )
 }

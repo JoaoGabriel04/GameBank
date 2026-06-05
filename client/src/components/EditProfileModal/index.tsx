@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { backdrop, modalBox } from "@/lib/animations";
 import { X, Camera } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -99,14 +101,27 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+        >
+          <motion.div
+            variants={backdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute inset-0 bg-black/70"
+            onClick={onClose}
+          />
+          <motion.div
+            variants={modalBox}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 className="font-jaro text-zinc-100 text-lg">Editar Perfil</h2>
           <button
@@ -232,7 +247,9 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
             </button>
           </div>
         </form>
+        </motion.div>
       </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

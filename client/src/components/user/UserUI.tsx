@@ -9,6 +9,8 @@
  */
 
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { backdrop, modalBox } from "@/lib/animations";
 import { X } from "lucide-react";
 
 /* ─── Progress bar ─── */
@@ -215,17 +217,31 @@ export function UModal({
   children: React.ReactNode;
   width?: number;
 }) {
-  if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div
-        className="relative bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl w-full overflow-hidden max-h-[90vh] overflow-y-auto"
-        style={{ maxWidth: width }}
-      >
-        {children}
-      </div>
-    </div>
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[200] grid place-items-center p-4">
+          <motion.div
+            variants={backdrop}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <motion.div
+            variants={modalBox}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl w-full overflow-hidden max-h-[90vh] overflow-y-auto"
+            style={{ maxWidth: width }}
+          >
+            {children}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
 
