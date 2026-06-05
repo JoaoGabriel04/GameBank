@@ -256,10 +256,12 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {owned.map((item) => (
-              <button
+              <div
                 key={item.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => handleEquip(item)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleEquip(item); }}
                 className={`relative overflow-hidden rounded-xl border p-3 text-left transition-all cursor-pointer ${item.equipped
                   ? acc.ring
                   : "border-zinc-700 bg-zinc-800/60 hover:border-zinc-500"
@@ -310,7 +312,7 @@ function Inventory({ profile, onRefresh }: { profile: { items: UserItem[]; banne
                     <Loader2 size={16} className="animate-spin text-red-400" />
                   </div>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         )}

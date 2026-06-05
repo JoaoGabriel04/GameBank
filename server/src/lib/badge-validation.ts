@@ -2,7 +2,7 @@ import sharp from "sharp";
 import { AppError } from "../middleware/error-handler.middleware.js";
 
 const BADGE_MAX_BYTES = 2 * 1024 * 1024; // 2MB
-const BADGE_MAX_DIM = 128;
+const BADGE_TARGET_DIM = 128;
 const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function detectMime(buffer: Buffer): string | null {
@@ -56,16 +56,16 @@ export async function validateAndProcessBadge(
   const width = metadata.width ?? 0;
   const height = metadata.height ?? 0;
 
-  if (width > BADGE_MAX_DIM || height > BADGE_MAX_DIM) {
-    throw new AppError(400, `Dimensões máximas: ${BADGE_MAX_DIM}x${BADGE_MAX_DIM}px. Recebido: ${width}x${height}px.`);
-  }
-
   if (width === 0 || height === 0) {
     throw new AppError(400, "Não foi possível ler as dimensões da imagem.");
   }
 
+  if (width !== height) {
+    throw new AppError(400, `Imagem deve ser quadrada (1:1). Recebido: ${width}x${height}px.`);
+  }
+
   const processed = await sharp(buffer)
-    .resize(BADGE_MAX_DIM, BADGE_MAX_DIM, { fit: "inside", withoutEnlargement: true })
+    .resize(BADGE_TARGET_DIM, BADGE_TARGET_DIM, { fit: "cover" })
     .toBuffer();
 
   return { buffer: processed, mime: detected as "image/jpeg" | "image/png" | "image/webp", width, height };
