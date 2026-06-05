@@ -274,7 +274,10 @@ export class SessionService {
   async listSessions() {
     // Auto-limpeza de salas órfãs "Em Andamento" sem jogadores
     await this.cleanupOrphanedSessions();
-    return this.repo.findAll().then((sessions) => sessions.map(mapSessionWithAvatars));
+    return this.repo.findAll().then(async (sessions) => {
+      const mapped = await Promise.all(sessions.map(mapSessionWithAvatars));
+      return mapped;
+    });
   }
 
   private async cleanupOrphanedSessions() {
@@ -312,7 +315,7 @@ export class SessionService {
     const session = await this.repo.findByIdSimple(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
 
-    const enriched = mapSessionWithAvatars(session);
+    const enriched = await mapSessionWithAvatars(session);
 
     if (redis) {
       try {
@@ -501,7 +504,7 @@ export class SessionService {
       return [];
     }
 
-    const ranked = this.calculateRankings(session);
+    const ranked = await this.calculateRankings(session);
 
     await prisma.$transaction(async (tx) => {
       for (const entry of ranked) {
@@ -569,8 +572,8 @@ export class SessionService {
     return ranked;
   }
 
-  private calculateRankings(session: any) {
-    const players = mapSessionPlayers(session.jogadores ?? []);
+  private async calculateRankings(session: any) {
+    const players = await mapSessionPlayers(session.jogadores ?? []);
     const posses = session.sessionPosses ?? [];
 
     const withPatrimony = players.map((p: any) => {

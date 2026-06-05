@@ -25,24 +25,6 @@ export const RARITY_LABELS: Record<string, string> = {
   legendary:  "Lendário",
 };
 
-const RARITY_CLASSES: Record<string, string> = {
-  comum:      "bg-zinc-500 text-zinc-100",
-  raro:       "bg-green-600 text-green-100",
-  super_raro: "bg-blue-600 text-blue-100",
-  epico:      "bg-indigo-600 text-indigo-100",
-  lendario:   "bg-amber-600 text-amber-100",
-  common:     "bg-zinc-500 text-zinc-100",
-  rare:       "bg-green-600 text-green-100",
-  super_rare: "bg-blue-600 text-blue-100",
-  epic:       "bg-indigo-600 text-indigo-100",
-  legendary:  "bg-amber-600 text-amber-100",
-};
-
-export function getRarityChipClass(rarity: string | null | undefined): string {
-  if (!rarity) return "";
-  return RARITY_CLASSES[rarity] ?? "";
-}
-
 export function getGlowColor(rarity: string | null | undefined): string {
   if (!rarity) return "#d4d4d8";
   return RARITY_META[rarity]?.color ?? "#d4d4d8";

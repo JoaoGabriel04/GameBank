@@ -42,64 +42,42 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
-  // Removes every occurrence of the given shopItem.id from User.items[].jsonb
-  // for all users. Idempotent (running again is a no-op for already-removed items).
+  // Remove item_id from all users' user_items JSONB array
   removeItemFromAllUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
       UPDATE "users" u
-      SET "items" = COALESCE((
+      SET "user_items" = COALESCE((
         SELECT jsonb_agg(item)
-        FROM jsonb_array_elements(u.items) item
-        WHERE (item->>'id')::int != ${itemId}
+        FROM jsonb_array_elements(u.user_items) item
+        WHERE (item->>'item_id')::int != ${itemId}
       ), '[]'::jsonb)
     `;
     return Number(result);
   },
 
   // For each user that has the given banner item equipped, reset to Padrão
-  // (id=0) and clear User.banner / User.spriteId. Returns number of users reset.
-  propagateBadgeImageToUsers: async (itemId: number, imageUrl: string | null): Promise<number> => {
-    const result = await prisma.$executeRaw`
-      UPDATE "users" u
-      SET "items" = COALESCE((
-        SELECT jsonb_agg(
-          CASE
-            WHEN (item->>'id')::int = ${itemId}
-              THEN jsonb_set(item, '{imageUrl}', to_jsonb(${imageUrl}::text), true)
-            ELSE item
-          END
-        )
-        FROM jsonb_array_elements(u.items) item
-      ), '[]'::jsonb)
-      WHERE EXISTS (
-        SELECT 1 FROM jsonb_array_elements(u.items) item
-        WHERE (item->>'id')::int = ${itemId}
-      )
-    `;
-    return Number(result);
-  },
-
+  // and clear User.banner / User.spriteId.
   resetEquippedBannerForUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
       UPDATE "users" u
       SET
-        "items" = (
+        "user_items" = (
           SELECT COALESCE(jsonb_agg(
             CASE
-              WHEN (item->>'id')::int = ${itemId}
+              WHEN (item->>'item_id')::int = ${itemId}
                 THEN jsonb_set(item, '{equipped}', 'false'::jsonb, true)
-              WHEN (item->>'id')::int = 0
+              WHEN (item->>'item_id')::int = 0
                 THEN jsonb_set(item, '{equipped}', 'true'::jsonb, true)
               ELSE item
             END
           ), '[]'::jsonb)
-          FROM jsonb_array_elements(u.items) item
+          FROM jsonb_array_elements(u.user_items) item
         ),
         "banner" = NULL,
         "spriteId" = NULL
       WHERE EXISTS (
-        SELECT 1 FROM jsonb_array_elements(u.items) item
-        WHERE (item->>'id')::int = ${itemId}
+        SELECT 1 FROM jsonb_array_elements(u.user_items) item
+        WHERE (item->>'item_id')::int = ${itemId}
           AND (item->>'equipped')::boolean = true
       )
     `;

@@ -20,8 +20,9 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
-                items: true,
+                  avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                  id: true,
+                  user_items: true,
               },
             },
           },
@@ -63,8 +64,9 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
-                items: true,
+                  avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                  id: true,
+                  user_items: true,
               },
             },
           },
@@ -100,8 +102,9 @@ export class SessionRepository {
             team: true,
             user: {
               select: {
-                avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
-                items: true,
+                  avatarUrl: true, avatarUpdatedAt: true, banner: true, spriteId: true,
+                  id: true,
+                  user_items: true,
               },
             },
           },

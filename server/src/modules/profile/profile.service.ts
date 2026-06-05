@@ -9,7 +9,7 @@ import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants
 import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
 import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
-import { parseUserItems, type UserItemSnapshot } from "../shop/shop.repository.js";
+import { shopRepository } from "../shop/shop.repository.js";
 
 export class ProfileService {
   async getProfile(userId: number) {
@@ -21,7 +21,8 @@ export class ProfileService {
       await profileRepository.updateLevel(user.id, correctLevel);
     }
 
-    const items = parseUserItems(user.items);
+    const items = await shopRepository.resolveUserItems(userId);
+
     const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
     let parsedTitle = null;
     if (equippedTitle) {
@@ -58,17 +59,7 @@ export class ProfileService {
       title: parsedTitle?.title || null,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
-      items: items.map((i) => ({
-        id: i.id,
-        name: i.name,
-        description: i.description,
-        icon: i.icon,
-        value: i.value,
-        type: i.type,
-        spriteId: i.spriteId ?? null,
-        imageUrl: i.imageUrl ?? null,
-        equipped: i.equipped,
-      })),
+      items,
       missions: user.missions.map((m) => ({
         id: m.mission.id,
         name: m.mission.name,

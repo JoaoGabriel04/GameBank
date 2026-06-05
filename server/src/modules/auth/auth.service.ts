@@ -12,7 +12,7 @@ import {
 } from "../avatar/avatar.service.js";
 import { authRepository } from "./auth.repository.js";
 import { prisma } from "../../lib/prisma.js";
-import { type UserItemSnapshot } from "../shop/shop.repository.js";
+import { type UserItemRef } from "../shop/shop.repository.js";
 import { RankingService } from "../ranking/ranking.service.js";
 
 type OAuthProvider = "google" | "discord";
@@ -62,46 +62,28 @@ export class AuthService {
     return { token, user: toAuthUserPayload(user) };
   }
 
-  private async buildInitialItems(): Promise<UserItemSnapshot[]> {
-    // Padrão banner (id=0, always equipped for new users)
-    const padraoItem: UserItemSnapshot = {
-      id: 0,
-      name: "Padrão",
-      description: "Banner padrão do jogador",
-      type: "banner",
-      value: null,
-      icon: null,
-      spriteId: null,
+  private async grantFreeBanners(userId: number): Promise<void> {
+    const padrao: UserItemRef = {
+      item_id: 0,
       equipped: true,
       acquiredAt: new Date().toISOString(),
     };
 
-    // Free banners (price=0, available=false)
     const freeBanners = await prisma.shopItem.findMany({
-      where: { type: "banner", available: false, price: 0 },
-      include: { banner: true },
+      where: { type: "banner", available: false, price: 0, id: { not: 0 } },
     });
 
-    const freeItems: UserItemSnapshot[] = freeBanners.map((b) => ({
-      id: b.id,
-      name: b.name,
-      description: b.description,
-      type: "banner" as const,
-      value: b.value,
-      icon: b.icon,
-      spriteId: b.banner?.spriteId ?? null,
+    const freeItems: UserItemRef[] = freeBanners.map((b) => ({
+      item_id: b.id,
       equipped: false,
       acquiredAt: new Date().toISOString(),
     }));
 
-    return [padraoItem, ...freeItems];
-  }
+    const initialItems: UserItemRef[] = [padrao, ...freeItems];
 
-  private async grantFreeBanners(userId: number): Promise<void> {
-    const items = await this.buildInitialItems();
     await prisma.user.update({
       where: { id: userId },
-      data: { items: items as any },
+      data: { user_items: initialItems as any },
     });
   }
 

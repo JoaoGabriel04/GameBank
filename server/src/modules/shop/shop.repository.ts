@@ -1,30 +1,18 @@
 import { prisma } from "../../lib/prisma.js";
 
-export interface UserItemSnapshot {
-  id: number;
-  name: string;
-  description: string;
-  type: 'title' | 'badge' | 'banner';
-  value: string | null;
-  icon: string | null;
-  spriteId?: string | null;
-  rarity?: string | null;
-  imageUrl?: string | null;
+export interface UserItemRef {
+  item_id: number;
   equipped: boolean;
   acquiredAt: string;
 }
 
-/**
- * Reads `User.items` (Prisma Json column) and normalizes it to UserItemSnapshot[].
- * Defends against legacy double-stringified data and any non-array payload.
- */
-export function parseUserItems(raw: unknown): UserItemSnapshot[] {
+export function parseUserItems(raw: unknown): UserItemRef[] {
   if (raw == null) return [];
-  if (Array.isArray(raw)) return raw as UserItemSnapshot[];
+  if (Array.isArray(raw)) return raw as UserItemRef[];
   if (typeof raw === "string") {
     try {
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? (parsed as UserItemSnapshot[]) : [];
+      return Array.isArray(parsed) ? (parsed as UserItemRef[]) : [];
     } catch {
       return [];
     }
@@ -42,15 +30,46 @@ export const shopRepository = {
   findUser: (userId: number) =>
     prisma.user.findUnique({ where: { id: userId } }),
 
-  findUserItems: (userId: number): Promise<UserItemSnapshot[] | null> =>
-    prisma.user.findUnique({ where: { id: userId } }).then(u =>
-      u ? parseUserItems(u.items) : null
-    ),
+  /**
+   * Joins user_items refs with ShopItem data.
+   */
+  resolveUserItems: async (userId: number) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return [];
 
-  saveUserItems: (userId: number, items: UserItemSnapshot[]) =>
+    const refs = parseUserItems(user.user_items);
+    if (refs.length === 0) return [];
+
+    const shopItems = await prisma.shopItem.findMany({
+      where: { id: { in: refs.map((r) => r.item_id) } },
+      include: { banner: true },
+    });
+    const itemMap = new Map(shopItems.map((si) => [si.id, si]));
+
+    return refs
+      .map((ref) => {
+        const shopItem = itemMap.get(ref.item_id);
+        if (!shopItem) return null;
+        return {
+          id: shopItem.id,
+          name: shopItem.name,
+          description: shopItem.description,
+          icon: shopItem.icon,
+          value: shopItem.value,
+          type: shopItem.type,
+          spriteId: shopItem.banner?.spriteId ?? null,
+          imageUrl: shopItem.imageUrl ?? null,
+          rarity: shopItem.rarity ?? null,
+          equipped: ref.equipped,
+        };
+      })
+      .filter((i): i is NonNullable<typeof i> => i !== null);
+  },
+
+  saveUserItems: (userId: number, refs: UserItemRef[]) =>
     prisma.user.update({
       where: { id: userId },
-      data: { items: items as any }
+      data: { user_items: refs as any },
     }),
 
   setUserBannerAndSprite: (userId: number, banner: string | null, spriteId: string | null) =>
@@ -60,22 +79,27 @@ export const shopRepository = {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return null;
 
-    const items = parseUserItems(user.items);
-    const equippedBanner = items.find(i => i.equipped && i.type === 'banner');
+    const refs = parseUserItems(user.user_items);
+    const equippedBanner = refs.find((r) => r.equipped);
 
-    const banner = equippedBanner?.id === 0 ? null : (equippedBanner?.value ?? null);
-    const spriteId = equippedBanner?.spriteId ?? null;
+    if (!equippedBanner) {
+      return prisma.user.update({
+        where: { id: userId },
+        data: { banner: null, spriteId: null },
+      });
+    }
+
+    const shopItem = await prisma.shopItem.findUnique({
+      where: { id: equippedBanner.item_id },
+      include: { banner: true },
+    });
+
+    const banner = equippedBanner.item_id === 0 ? null : (shopItem?.value ?? null);
+    const spriteId = shopItem?.banner?.spriteId ?? null;
 
     return prisma.user.update({
       where: { id: userId },
-      data: { banner, spriteId }
+      data: { banner, spriteId },
     });
   },
-  // Legacy functions removed:
-  // - findUserItem (no longer needed, work with items array)
-  // - findUserItemWithType (no longer needed, work with items array)
-  // - purchaseItem (now handled in service with saveUserItems)
-  // - toggleEquip (now handled in service with saveUserItems)
-  // - setUserBanner (combined into setUserBannerAndSprite)
-  // - setUserSprite (combined into setUserBannerAndSprite)
 };

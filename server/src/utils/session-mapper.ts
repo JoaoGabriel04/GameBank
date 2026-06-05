@@ -1,23 +1,29 @@
+import { shopRepository } from "../modules/shop/shop.repository.js";
+
 /** Enriquece jogadores com avatar do User vinculado (sem expor relação aninhada). */
-export function mapSessionPlayers<T extends {
+export async function mapSessionPlayers<T extends {
   user?: {
+    id: number;
     avatarUrl: string | null;
     avatarUpdatedAt: Date | null;
     banner?: string | null;
-    items?: any;
+    user_items?: any;
   } | null;
-}>(players: T[]) {
+}>(players: T[]): Promise<any[]> {
+  // Batch resolve items for all users
+  const userItemsPromises = players
+    .filter((p) => p.user?.id)
+    .map(async (p) => {
+      const items = await shopRepository.resolveUserItems(p.user!.id);
+      return { userId: p.user!.id, items };
+    });
+  const resolved = await Promise.all(userItemsPromises);
+  const itemsByUserId = new Map(resolved.map((r) => [r.userId, r.items]));
+
   return players.map((player) => {
-    const { user, ...rest } = player as T & {
-      user?: {
-        avatarUrl: string | null;
-        avatarUpdatedAt: Date | null;
-        banner?: string | null;
-        items?: any;
-      } | null;
-    };
-    const items = (user?.items ?? []) as Array<{ equipped: boolean; type: string; value: string | null; imageUrl?: string | null }>;
-    const badgeItem = items.find((i) => i.equipped && i.type === "badge");
+    const { user, ...rest } = player as any;
+    const items = user ? itemsByUserId.get(user.id) ?? [] : [];
+    const badgeItem = items.find((i: any) => i.equipped && i.type === "badge");
     const badgeValue = badgeItem?.value;
     const badgeImageUrl = badgeItem?.imageUrl ?? null;
     let parsedBadge = null;
@@ -39,9 +45,9 @@ export function mapSessionPlayers<T extends {
   });
 }
 
-export function mapSessionWithAvatars<T extends { jogadores: Parameters<typeof mapSessionPlayers>[0] }>(session: T) {
+export async function mapSessionWithAvatars<T extends { jogadores: any[] }>(session: T) {
   return {
     ...session,
-    jogadores: mapSessionPlayers(session.jogadores),
+    jogadores: await mapSessionPlayers(session.jogadores),
   };
 }

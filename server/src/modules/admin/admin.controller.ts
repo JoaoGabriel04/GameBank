@@ -13,6 +13,7 @@ const ItemSchema = z.object({
   type: z.enum(["title", "badge", "banner"]),
   value: z.string().nullable().optional(),
   icon: z.string().nullable().optional(),
+  rarity: z.string().nullable().optional(),
   available: z.boolean(),
   bannerId: z.number().int().positive().nullable().optional(),
 });

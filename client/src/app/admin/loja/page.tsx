@@ -9,7 +9,7 @@ import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import { resolveSprite } from "@/constants/sprites";
 import { resolveBannerBackground } from "@/constants/banners";
-import { RARITY_LABELS, getRarityChipClass } from "@/constants/rarity";
+import { RARITY_META } from "@/constants/rarity";
 import CoinIcon from "@/components/CoinIcon";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
@@ -90,11 +90,23 @@ function ItemCard({
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            {item.rarity && (
-              <span className={`text-[10px] font-inconsolata font-semibold px-2 py-1 rounded capitalize ${getRarityChipClass(item.rarity)}`}>
-                {RARITY_LABELS[item.rarity] ?? item.rarity}
-              </span>
-            )}
+            {item.rarity && RARITY_META[item.rarity] && (() => {
+              const r = RARITY_META[item.rarity];
+              return (
+                <span
+                  className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+                  style={{
+                    color: r.color,
+                    background: `${r.color}18`,
+                    borderColor: `${r.color}40`,
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: r.color }} />
+                  {r.label}
+                </span>
+              );
+            })()}
             <Chip tone={meta.tone}>{meta.label}</Chip>
             <button
               type="button"

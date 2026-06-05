@@ -110,7 +110,7 @@ export class AdminService {
     if (exists.type === "banner") {
       resetCount = await adminRepository.resetEquippedBannerForUsers(id);
     }
-    // Remove the item from every user's items[] JSON
+    // Remove the item from every user's inventory
     const removedCount = await adminRepository.removeItemFromAllUsers(id);
 
     // Delete Cloudinary image if badge has one
@@ -147,9 +147,6 @@ export class AdminService {
       imageUrl: uploaded.url,
       imagePublicId: uploaded.publicId,
     });
-
-    // Propagate imageUrl to all users who already own this badge
-    await adminRepository.propagateBadgeImageToUsers(id, uploaded.url);
 
     await auditLog({
       userId: actor?.id ?? null,
@@ -549,7 +546,7 @@ export class AdminService {
       select: { id: true, type: true },
     });
 
-    // Cascade each linked shop item to users (same logic as deleteItem)
+    // Cascade each linked shop item to users — junction table cascades automatically
     let totalReset = 0;
     for (const item of linkedItems) {
       if (item.type === "banner") {
