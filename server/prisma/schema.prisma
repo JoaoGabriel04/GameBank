@@ -60,7 +60,7 @@ model User {
   bannedAt     DateTime?
   banReason    String?
 
-  user_items   Json      @default("[]")
+  user_items   Json      @default("[]") @map("items")
 
   sessions             Session[]
   players              SessionPlayer[]
