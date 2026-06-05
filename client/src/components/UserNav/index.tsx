@@ -17,7 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Store, Gift, User, Trophy,
+  LayoutDashboard, Store, Gift, Trophy,
   Bell, X,
   Layers,
 } from "lucide-react";
@@ -34,7 +34,6 @@ const NAV_TABS = [
   { label: "Loja",        icon: Store,           path: "/user/loja"        },
   { label: "Recompensas", icon: Gift,            path: "/user/recompensas" },
   { label: "Ranking",     icon: Trophy,          path: "/user/ranking"     },
-  { label: "Perfil",      icon: User,            path: "/user/perfil"      },
 ];
 
 function relativeTime(ts: string): string {
@@ -340,7 +339,7 @@ export default function UserNav() {
       {/* ── Mobile bottom nav ── */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
         {/* Mobile — 6 tabs */}
-        <ul className="grid grid-cols-6 w-full">
+        <ul className="grid grid-cols-5 w-full">
           {NAV_TABS.map((tab) => {
             const active = isActive(tab.path);
             const Icon   = tab.icon;
@@ -353,31 +352,14 @@ export default function UserNav() {
                     active ? "text-green-400" : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  {tab.path === "/user/perfil" && user ? (
-                    <div
-                      className={`rounded-full transition-all ${
-                        active
-                          ? "ring-2 ring-green-400/80 ring-offset-1 ring-offset-zinc-950"
-                          : "ring-1 ring-white/10"
-                      }`}
-                    >
-                      <UserAvatar
-                        avatarUrl={user.avatarUrl}
-                        avatarUpdatedAt={user.avatarUpdatedAt}
-                        nome={user.nome}
-                        size="xs"
-                      />
-                    </div>
-                  ) : (
-                    <Icon
-                      size={24}
-                      style={
-                        active
-                          ? { filter: "drop-shadow(0 0 6px rgba(74,222,128,0.5))" }
-                          : undefined
-                      }
-                    />
-                  )}
+                  <Icon
+                    size={24}
+                    style={
+                      active
+                        ? { filter: "drop-shadow(0 0 6px rgba(74,222,128,0.5))" }
+                        : undefined
+                    }
+                  />
                   <span className="font-inconsolata text-[10px] font-medium leading-none">
                     {tab.label}
                   </span>
