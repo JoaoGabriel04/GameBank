@@ -43,7 +43,7 @@ function ShopItemCard({
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? meta.color;
+  const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
 
   const topBg = isBanner && item.value
@@ -62,7 +62,7 @@ function ShopItemCard({
           : `1px solid ${glowColor}30`,
         boxShadow: isSelected
           ? "0 0 22px -6px rgba(74,222,128,0.5)"
-          : (rMeta && rMeta.color !== "#a1a1aa" ? `0 0 14px -9px ${glowColor}88` : "none"),
+          : (rMeta && rMeta.color !== "#d4d4d8" ? `0 0 14px -9px ${glowColor}88` : "none"),
       }}
     >
       <div
@@ -148,7 +148,7 @@ function DetailPanel({
 
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? meta.color;
+  const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
   const canAfford = userCoins >= item.price;
 

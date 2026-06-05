@@ -40,7 +40,7 @@ function VaultItemCard({
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? meta.color;
+  const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
   const topBg     = isBanner && item.value
     ? item.value
@@ -62,7 +62,7 @@ function VaultItemCard({
           ? "0 0 22px -6px rgba(74,222,128,0.45)"
           : isSelected
             ? "0 0 20px -8px rgba(74,222,128,0.3)"
-            : (rMeta && rMeta.color !== "#a1a1aa" ? `0 0 14px -9px ${glowColor}88` : "none"),
+            : (rMeta && rMeta.color !== "#d4d4d8" ? `0 0 14px -9px ${glowColor}88` : "none"),
       }}
     >
       <div
@@ -152,7 +152,7 @@ function DetailPanel({
 
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? meta.color;
+  const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
 
   return (
