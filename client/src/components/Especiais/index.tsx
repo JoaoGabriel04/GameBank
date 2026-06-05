@@ -219,7 +219,7 @@ export default function Especiais() {
       >
         <div className="relative overflow-hidden rounded-xl border border-zinc-700 mb-4">
           <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-black/50" />
           <div className="relative z-10 flex items-center gap-3 p-3">
             <UserAvatar
               avatarUrl={currentPlayer?.avatarUrl}
@@ -230,10 +230,10 @@ export default function Especiais() {
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-inconsolata text-zinc-400">Proponente</p>
-              <p className="text-sm font-inconsolata text-zinc-100 font-semibold truncate flex items-center gap-1.5">
+              <div className="text-sm font-inconsolata text-zinc-100 font-semibold truncate flex items-center gap-1.5">
                 {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
                 {currentPlayer?.nome ?? "—"}
-              </p>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
@@ -259,7 +259,7 @@ export default function Especiais() {
                       className="relative overflow-hidden rounded-xl border border-zinc-700 hover:border-purple-500 transition-all cursor-pointer text-left"
                     >
                       <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-                      <div className="absolute inset-0 bg-black/35" />
+                      <div className="absolute inset-0 bg-black/50" />
                       <div className="relative z-10 flex items-center gap-3 p-4">
                         <UserAvatar
                           avatarUrl={player.avatarUrl}
@@ -268,10 +268,10 @@ export default function Especiais() {
                           size="md"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-jaro text-zinc-100 truncate flex items-center gap-1.5">
+                          <div className="text-sm font-jaro text-zinc-100 truncate flex items-center gap-1.5">
                             <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="micro" />
                             {player.nome}
-                          </p>
+                          </div>
                           <p className="text-xs font-inconsolata text-zinc-400">
                             R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
                           </p>
@@ -290,15 +290,15 @@ export default function Especiais() {
               return target ? (
                 <div className="relative overflow-hidden rounded-xl border border-purple-500/40 mb-2">
                   <UserBanner banner={target.banner} spriteId={target.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/35" />
+                  <div className="absolute inset-0 bg-black/50" />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-inconsolata text-zinc-400">Negociando com</p>
-                      <p className="text-sm font-jaro text-purple-300 truncate flex items-center gap-1.5">
+                      <div className="text-sm font-jaro text-purple-300 truncate flex items-center gap-1.5">
                         <UserBadge badge={target.badge} imageUrl={target.badgeImageUrl} variant="micro" />
                         {target.nome}
-                      </p>
+                      </div>
                     </div>
                     <button
                       onClick={() => setTargetPlayer(null)}
@@ -533,9 +533,9 @@ export default function Especiais() {
         isOpen={modalReceber}
         onClose={() => setModalReceber(false)}
       >
-        <p className="mb-3 font-inconsolata text-zinc-300">
+        <div className="mb-3 font-inconsolata text-zinc-300">
           Jogador: <span className="inline-flex items-center gap-1"><UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} variant="micro" /><span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span></span>
-        </p>
+        </div>
         <p className="text-sm font-inconsolata text-zinc-400 mb-4">
           Este jogador receberá R$ 500 de cada um dos outros jogadores.
         </p>

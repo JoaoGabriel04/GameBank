@@ -118,7 +118,7 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
       }`}
     >
       <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-0 bg-black/35 z-1" />
+      <div className="absolute inset-0 bg-black/50 z-1" />
       <div className="relative z-20 flex items-center gap-3 p-3">
         <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
         <div className="min-w-0 flex-1">
@@ -470,7 +470,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       {/* ── Balance Widget ── */}
       <div className="relative overflow-hidden border border-zinc-800 rounded-xl">
         <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute inset-0 bg-black/50" />
         <div className="relative z-10 p-6">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
@@ -673,7 +673,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                     <Handshake className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-inconsolata text-zinc-200">
+                    <div className="text-sm font-inconsolata text-zinc-200">
                       Proposta enviada para{" "}
                       {(() => {
                         const p = currentSession?.jogadores.find((j) => j.id === minhaNegociacaoPendente.toPlayerId);
@@ -684,7 +684,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                           </span>
                         );
                       })()}
-                    </p>
+                    </div>
                     <p className="text-xs font-inconsolata text-zinc-500">
                       {minhaNegociacaoPendente.items.length} item(ns) · Aguardando resposta…
                     </p>
@@ -707,13 +707,13 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                     <Handshake className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-inconsolata text-zinc-200">
+                    <div className="text-sm font-inconsolata text-zinc-200">
                       Oferta de{" "}
                       <span className="inline-flex items-center gap-1">
                         {n.fromPlayer && <UserBadge badge={n.fromPlayer.badge} imageUrl={n.fromPlayer.badgeImageUrl} variant="micro" />}
                         <span className="text-purple-400 font-semibold">{n.fromPlayer?.nome ?? "—"}</span>
                       </span>
-                    </p>
+                    </div>
                     <p className="text-xs font-inconsolata text-zinc-500">
                       {n.items.length} item(ns) · {new Date(n.createdAt).toLocaleTimeString("pt-BR")}
                     </p>
