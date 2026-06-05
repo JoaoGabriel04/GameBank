@@ -65,8 +65,11 @@ function VaultItemCard({
     >
       <div
         className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 104, background: topBg }}
+        style={{ height: 104, background: isBanner ? undefined : topBg }}
       >
+        {isBanner && (
+          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
+        )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
           style={{
@@ -82,10 +85,14 @@ function VaultItemCard({
             <Check size={10} color="#09090b" strokeWidth={3} />
           </div>
         )}
-        {!isBanner && (
-          <div style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
+        {isBanner ? null : (
+          <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
             {item.type === "title"  && <Crown  size={44} />}
-            {item.type === "badge"  && <Shield size={44} />}
+            {item.type === "badge"  && (item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+            ) : (
+              <Shield size={44} />
+            ))}
           </div>
         )}
         <span
@@ -152,10 +159,20 @@ function DetailPanel({
         {isBanner && item.value ? (
           <UserBanner
             banner={item.value}
+            imageUrl={item.imageUrl}
             spriteId={item.spriteId ?? null}
             className="flex-1 rounded-2xl"
             style={{ height: 72 }}
           />
+        ) : item.type === "badge" && item.imageUrl ? (
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
+            style={{
+              background: glowColor + "22",
+              boxShadow: `0 0 36px -8px ${glowColor}`,
+            }}
+          >
+            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+          </div>
         ) : (
           <div
             className="w-16 h-16 rounded-2xl grid place-items-center shrink-0"
@@ -374,7 +391,6 @@ export default function CofrePage() {
                     background: active ? "rgba(74,222,128,0.06)" : "transparent",
                     borderLeft: `2px solid ${active ? "#4ade80" : "transparent"}`,
                     color: active ? "#f4f4f5" : "#71717a",
-                    border: "none",
                     outline: "none",
                   }}
                 >
