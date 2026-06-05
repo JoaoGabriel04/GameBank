@@ -511,7 +511,7 @@ export default function LojaCosmeticosPage() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto"
+              className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto pb-24"
             >
               <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3 mb-1" />
               <DetailPanel

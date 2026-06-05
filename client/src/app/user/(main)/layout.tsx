@@ -17,10 +17,9 @@ export default function UserMainLayout({ children }: { children: React.ReactNode
           <motion.div
             key={pathname}
             variants={fadeIn}
-            initial="hidden"
+            initial={false}
             animate="visible"
             exit="exit"
-            className="anti-flash"
           >
             {children}
           </motion.div>
