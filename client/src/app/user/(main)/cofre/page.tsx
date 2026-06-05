@@ -358,7 +358,7 @@ export default function CofrePage() {
     );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 pt-16 lg:pt-6 relative">
+    <div className="px-4 py-6 pt-16 lg:pt-6 relative">
 
       {/* ── Desktop: sidebar + grid + detail ── */}
       <div
