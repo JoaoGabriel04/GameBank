@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Plus, LogIn, ChevronRight, Lock,
-  Trophy, Gamepad2, Target, Clock,
+  Plus, LogIn, ChevronRight, Lock, Gamepad2,
+  Trophy, Target,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -94,29 +94,69 @@ function ProfileHero() {
   );
 }
 
+/* ─── Active game banner ────────────────────────────────────────────────── */
+function ActiveGameBanner({ session }: { session: GameSession }) {
+  const router = useRouter();
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-green-500/40 bg-green-500/5">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(74,222,128,0.08),transparent_70%)]" />
+      <div className="relative z-10 flex items-center gap-4 p-4">
+        <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0">
+          <Gamepad2 className="w-6 h-6 text-green-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-jaro text-sm text-zinc-100">Você está em uma partida!</p>
+          <p className="font-inconsolata text-xs text-zinc-400 mt-0.5 truncate">{session.nome}</p>
+        </div>
+        <button
+          onClick={() => router.push(`/user/game/${session.id}`)}
+          className="shrink-0 bg-green-600 hover:bg-green-500 text-white font-inconsolata text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
+        >
+          Continuar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Quick actions ─────────────────────────────────────────────────────── */
-function QuickActions() {
+function QuickActions({ activeSession }: { activeSession: GameSession | null }) {
   const router = useRouter();
   return (
     <div className="grid grid-cols-2 gap-3">
       <button
-        onClick={() => router.push("/user/new-session")}
-        className="flex items-center gap-3 bg-green-600 hover:bg-green-500 active:bg-green-700 text-white rounded-2xl p-4 transition-colors cursor-pointer shadow-[0_0_24px_-8px_rgba(74,222,128,0.5)]"
+        onClick={() => !activeSession && router.push("/user/new-session")}
+        disabled={!!activeSession}
+        className={`flex items-center gap-3 rounded-2xl p-4 transition-colors cursor-pointer text-left ${
+          activeSession
+            ? "bg-zinc-900 opacity-50 cursor-not-allowed border border-zinc-800"
+            : "bg-green-600 hover:bg-green-500 active:bg-green-700 text-white shadow-[0_0_24px_-8px_rgba(74,222,128,0.5)]"
+        }`}
       >
         <Plus size={22} className="shrink-0" />
         <div className="text-left">
           <p className="font-jaro text-base leading-none">Criar Sala</p>
-          <p className="font-inconsolata text-[11px] text-green-200 mt-0.5">Nova partida</p>
+          <p className="font-inconsolata text-[11px] text-green-200 mt-0.5">
+            {activeSession ? "Já está em uma partida" : "Nova partida"}
+          </p>
         </div>
       </button>
       <button
-        onClick={() => router.push("/user/sessions")}
-        className="flex items-center gap-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl p-4 transition-colors cursor-pointer border border-zinc-700 hover:border-zinc-600"
+        onClick={() => router.push(activeSession ? `/user/game/${activeSession.id}` : "/user/sessions")}
+        className={`flex items-center gap-3 rounded-2xl p-4 transition-colors cursor-pointer text-left border ${
+          activeSession
+            ? "bg-green-600 hover:bg-green-500 text-white border-green-500/40 shadow-[0_0_24px_-8px_rgba(74,222,128,0.5)]"
+            : "bg-zinc-900 hover:bg-zinc-800 text-white border-zinc-700 hover:border-zinc-600"
+        }`}
       >
         <LogIn size={20} className="shrink-0 text-green-400" />
         <div className="text-left">
-          <p className="font-jaro text-base leading-none">Entrar em Sala</p>
-          <p className="font-inconsolata text-[11px] text-zinc-400 mt-0.5">Ver salas abertas</p>
+          <p className="font-jaro text-base leading-none">
+            {activeSession ? "Continuar Partida" : "Entrar em Sala"}
+          </p>
+          <p className={`font-inconsolata text-[11px] mt-0.5 ${activeSession ? "text-green-200" : "text-zinc-400"}`}>
+            {activeSession ? activeSession.nome : "Ver salas abertas"}
+          </p>
         </div>
       </button>
     </div>
@@ -124,7 +164,7 @@ function QuickActions() {
 }
 
 /* ─── Live sessions ─────────────────────────────────────────────────────── */
-function LiveSessions({ sessions }: { sessions: GameSession[] }) {
+function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; activeSessionId?: number | null }) {
   const router = useRouter();
   const live = sessions.filter(s =>
     s.status === "Em Andamento" || s.status === "Esperando"
@@ -151,11 +191,17 @@ function LiveSessions({ sessions }: { sessions: GameSession[] }) {
       >
         {live.map(s => {
           const isLive = s.status === "Em Andamento";
+          const isBlocked = !!activeSessionId && s.id !== activeSessionId;
           return (
             <button
               key={s.id}
-              onClick={() => router.push("/user/sessions")}
-              className="shrink-0 bg-zinc-800/60 border border-zinc-700 rounded-xl p-3 cursor-pointer hover:border-green-500/40 transition-colors text-left"
+              onClick={() => !isBlocked && router.push(isLive ? `/user/game/${s.id}` : "/user/sessions")}
+              disabled={isBlocked}
+              className={`shrink-0 bg-zinc-800/60 border rounded-xl p-3 cursor-pointer transition-colors text-left ${
+                isBlocked
+                  ? "border-zinc-800 opacity-40 cursor-not-allowed"
+                  : "border-zinc-700 hover:border-green-500/40"
+              }`}
               style={{ width: 220, scrollSnapAlign: "start" }}
             >
               <div className="flex items-center gap-2 mb-2">
@@ -173,11 +219,13 @@ function LiveSessions({ sessions }: { sessions: GameSession[] }) {
                   ))}
                 </div>
                 <span className={`font-inconsolata text-[10px] px-1.5 py-0.5 rounded-lg ${
-                  isLive
-                    ? "text-green-400 bg-green-500/10"
-                    : "text-amber-400 bg-amber-500/10"
+                  isBlocked
+                    ? "text-zinc-600 bg-zinc-800"
+                    : isLive
+                      ? "text-green-400 bg-green-500/10"
+                      : "text-amber-400 bg-amber-500/10"
                 }`}>
-                  {isLive ? `${(s as any).duracaoMin ?? 0}min` : "Livre"}
+                  {isBlocked ? "Em jogo" : isLive ? `${(s as any).duracaoMin ?? 0}min` : "Livre"}
                 </span>
               </div>
             </button>
@@ -274,10 +322,18 @@ function RecentGames({ history }: { history: GameResult[] }) {
 
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 export default function DashboardPage() {
-  const { token, loadFromStorage } = useAuthStore();
+  const { user, token, loadFromStorage } = useAuthStore();
   const { profile, loading, loadProfile, loadMissions } = useProfileStore();
   const { sessions } = useSessions();
   const [history, setHistory] = useState<GameResult[]>([]);
+
+  const activeSession = useMemo(() => {
+    if (!user || !sessions?.length) return null;
+    return sessions.find(s =>
+      s.status === "Em Andamento" &&
+      s.jogadores?.some(j => j.userId === user.id)
+    ) ?? null;
+  }, [user, sessions]);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
@@ -302,8 +358,9 @@ export default function DashboardPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pt-16 lg:pt-6 space-y-4">
       <ProfileHero />
-      <QuickActions />
-      <LiveSessions sessions={sessions ?? []} />
+      {activeSession && <ActiveGameBanner session={activeSession} />}
+      <QuickActions activeSession={activeSession} />
+      <LiveSessions sessions={sessions ?? []} activeSessionId={activeSession?.id} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MissionsPreview />
         <RecentGames history={history} />
