@@ -70,7 +70,7 @@ function ItemCard({
       <div className="relative p-4">
         <div className="flex items-start justify-between mb-3">
           <div className={`w-11 h-11 rounded-xl grid place-items-center bg-zinc-900/70 backdrop-blur-sm text-zinc-200`}>
-            {isBanner ? <ImageIcon size={20} /> : <ItemIcon name={item.icon} size={20} />}
+            {isBanner ? <ImageIcon size={20} /> : item.type === "title" ? <Crown size={20} /> : <ItemIcon name={item.icon} size={20} />}
           </div>
           <Chip tone={meta.tone}>{meta.label}</Chip>
         </div>
@@ -160,6 +160,8 @@ function ItemPreview({ form, bannerCss, bannerSpriteId, uploadPreview }: { form:
               <SpriteIcon size={22} />
             ) : isBanner ? (
               <ImageIcon size={22} />
+            ) : form.type === "title" ? (
+              <Crown size={22} />
             ) : (
               <ItemIcon name={form.icon ?? "sparkles"} size={22} />
             )}
@@ -321,13 +323,7 @@ function ItemModal({
                   <Field label="Preço (coins)">
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
-                  {form.type !== "badge" ? (
-                    <Field label="Ícone">
-                      <AdminSelect value={form.icon ?? "sparkles"} onChange={(e) => set("icon", e.target.value)}>
-                        {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
-                      </AdminSelect>
-                    </Field>
-                  ) : (
+                  {form.type === "badge" ? (
                     <Field label="Imagem">
                       <label className="flex flex-col items-center justify-center w-full h-[38px] border border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-zinc-500 transition-colors bg-zinc-900/50">
                         <span className="text-[11px] text-zinc-400 font-inconsolata">
@@ -347,19 +343,20 @@ function ItemModal({
                         />
                       </label>
                     </Field>
-                  )}
+                  ) : null}
                 </div>
-                <Field label="Raridade">
-                  <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
-                    <option value="">Sem raridade</option>
-                    <option value="common">Comum</option>
-                    <option value="rare">Raro</option>
-                    <option value="epic">Epico</option>
-                    <option value="legendary">Lendario</option>
-                  </AdminSelect>
-                </Field>
               </>
             )}
+
+            <Field label="Raridade">
+              <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
+                <option value="">Sem raridade</option>
+                <option value="common">Comum</option>
+                <option value="rare">Raro</option>
+                <option value="epic">Epico</option>
+                <option value="legendary">Lendario</option>
+              </AdminSelect>
+            </Field>
 
             <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
               <div>
