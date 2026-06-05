@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 import { ChevronDown } from 'lucide-react';
 import { PlayerColor, PLAYER_COLORS } from '@/types/game';
 
@@ -58,8 +60,15 @@ export default function ColorDropdown({
         <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md bg-zinc-900 shadow-lg border border-zinc-700">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute z-50 mt-1 w-full rounded-md bg-zinc-900 shadow-lg border border-zinc-700"
+          >
           <div className="max-h-60 overflow-auto py-1">
             {filteredColors.map((color) => (
               <button
@@ -73,8 +82,9 @@ export default function ColorDropdown({
               </button>
             ))}
           </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

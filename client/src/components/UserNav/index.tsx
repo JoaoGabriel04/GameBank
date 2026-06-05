@@ -11,6 +11,8 @@
  */
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { slideUp } from "@/lib/animations";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -89,10 +91,17 @@ function NotifBell() {
         )}
       </button>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50">
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              variants={slideUp}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="absolute right-0 top-full mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden z-50"
+            >
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
               <h3 className="font-jaro text-sm text-white">Notificações</h3>
               <div className="flex items-center gap-2">
@@ -145,9 +154,10 @@ function NotifBell() {
                 ))}
               </div>
             )}
-          </div>
-        </>
-      )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
