@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { staggerItem } from "@/lib/animations"
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"
 import { registerToastFns } from "@/lib/toast"
 
@@ -87,17 +89,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {mounted && (
         <div className="fixed top-4 right-4 z-[100000] flex flex-col gap-2 max-w-sm">
-          {toasts.map((toast) => {
-            const style = typeStyles[toast.type]
-            return (
-              <div
-                key={toast.id}
-                className={`
-                  flex items-start gap-3 p-4 rounded-lg border border-zinc-700/80 border-l-4
-                  ${style.borderColor} bg-zinc-900/95 backdrop-blur-sm
-                  animate-slide-in shadow-lg
-                `}
-              >
+          <AnimatePresence mode="popLayout">
+            {toasts.map((toast) => {
+              const style = typeStyles[toast.type]
+              return (
+                <motion.div
+                  key={toast.id}
+                  layout
+                  variants={staggerItem}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, x: 80, transition: { duration: 0.2 } }}
+                  className={`
+                    flex items-start gap-3 p-4 rounded-lg border border-zinc-700/80 border-l-4
+                    ${style.borderColor} bg-zinc-900/95 backdrop-blur-sm
+                    shadow-lg
+                  `}
+                >
                 <span className={`mt-0.5 ${style.iconColor}`}>{style.icon}</span>
                 <p className="flex-1 text-sm font-inconsolata text-zinc-200 leading-relaxed">
                   {toast.message}
@@ -108,9 +116,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 >
                   <X className="w-4 h-4" />
                 </button>
-              </div>
-            )
-          })}
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
         </div>
       )}
     </ToastContext.Provider>
