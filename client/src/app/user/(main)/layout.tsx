@@ -14,7 +14,7 @@ export default function UserMainLayout({ children }: { children: React.ReactNode
       {/* pt-16 = altura do header desktop; pb-20 = altura do bottom nav mobile */}
       <div className="lg:pt-16 pb-20 lg:pb-0 min-h-screen bg-zinc-950">
         <AnimatePresence mode="wait">
-          <motion.div key={pathname} variants={fadeIn} initial="hidden" animate="visible" exit="exit">
+          <motion.div key={pathname} variants={fadeIn} initial={false} animate="visible" exit="exit" style={{ opacity: 0 }}>
             {children}
           </motion.div>
         </AnimatePresence>
