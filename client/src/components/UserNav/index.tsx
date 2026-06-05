@@ -15,7 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, Store, Gift, User, Trophy,
+  LayoutDashboard, Shield, Store, Gift, User, Trophy,
   Bell, X,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -27,7 +27,7 @@ import UserAvatar from "@/components/UserAvatar";
 /* ── Nav tab definitions ── */
 const NAV_TABS = [
   { label: "Dashboard",   icon: LayoutDashboard, path: "/user"             },
-  { label: "Salas",       icon: Users,           path: "/user/sessions"    },
+  { label: "Cofre",       icon: Shield,          path: "/user/cofre"     },
   { label: "Loja",        icon: Store,           path: "/user/loja"        },
   { label: "Recompensas", icon: Gift,            path: "/user/recompensas" },
   { label: "Ranking",     icon: Trophy,          path: "/user/ranking"     },
