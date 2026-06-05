@@ -216,7 +216,7 @@ export default function Game() {
       mutate();
       toastInfo("Jogo iniciado!");
     } catch (err: any) {
-      const msg = err?.response?.data?.error || "Erro ao iniciar jogo";
+      const msg = err?.response?.data?.message || err?.response?.data?.error || "Erro ao iniciar jogo";
       if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setStartLoading(false);
@@ -241,6 +241,7 @@ export default function Game() {
 
   // ── Player Card for Waiting Room ────────────────────────────────────────
   function WaitingPlayerCard({ player }: { player: Player }) {
+    const saldoInicial = currentSession?.saldoInicial ?? 0;
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-800">
         <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
@@ -253,7 +254,7 @@ export default function Game() {
               <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
             </div>
             <span className="text-zinc-300 text-sm font-inconsolata">
-              R$ {(player.saldo || 0).toLocaleString()}
+              R$ {saldoInicial.toLocaleString()}
             </span>
           </div>
         </div>
@@ -270,12 +271,14 @@ export default function Game() {
     const times = currentSession.times || [];
     const isDuplas = currentSession.modo === "duplas";
 
+    const MIN_PLAYERS = process.env.NODE_ENV === "development" ? 1 : 3;
     const teamsWithPlayers = isDuplas
       ? new Set(activePlayers.map((p) => p.teamId).filter(Boolean)).size
       : 0;
+    const allInTeam = isDuplas && activePlayers.every((p) => p.teamId);
     const canStart = isDuplas
-      ? activePlayers.length >= 2 && teamsWithPlayers >= 2
-      : activePlayers.length >= 2;
+      ? activePlayers.length >= MIN_PLAYERS && allInTeam && teamsWithPlayers >= 2
+      : activePlayers.length >= MIN_PLAYERS;
 
     return (
       <div className="max-w-3xl mx-auto">
@@ -326,10 +329,12 @@ export default function Game() {
               {!canStart && (
                 <p className="text-xs font-inconsolata text-zinc-500 text-center mt-1">
                   {isDuplas
-                    ? teamsWithPlayers < 2
-                      ? "Necessário pelo menos 2 times com jogadores"
-                      : "Necessário pelo menos 2 jogadores"
-                    : "Necessário pelo menos 2 jogadores"}
+                    ? activePlayers.length < MIN_PLAYERS
+                      ? `Aguardando mais ${MIN_PLAYERS - activePlayers.length} jogador${MIN_PLAYERS - activePlayers.length !== 1 ? "es" : ""}`
+                      : !allInTeam
+                        ? "Todos os jogadores precisam estar em um time"
+                        : "Necessário pelo menos 2 times com jogadores"
+                    : `Aguardando mais ${MIN_PLAYERS - activePlayers.length} jogador${MIN_PLAYERS - activePlayers.length !== 1 ? "es" : ""}`}
                 </p>
               )}
             </div>
