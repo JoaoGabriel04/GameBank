@@ -69,6 +69,45 @@ Se as variáveis não estiverem definidas, o seed é ignorado silenciosamente. O
 3. `lock` — mutex por chave (ex.: `session:{id}`) para evitar race conditions em operações críticas (banco, propriedades, dívidas).
 4. `validate(schema, "body" | "params" | "query")` — Zod.
 
+## Animações
+
+Stack: Framer Motion ^12 + CSS `@keyframes` (anti-flash) + GSAP (legado em `Modal` e `MobileMenu`).
+
+| Técnica | Uso | Local |
+|---|---|---|
+| `AnimatePresence` | Entrada/saída de modais, toasts, dropdowns | `ConfirmationModal`, `UModal`, `EditProfileModal`, `ToastProvider`, `UserNav`, `Chat`, `ColorDropdown` |
+| `variants` (stagger) | Listas com fade+slide em sequência | `Dashboard`, `Perfil`, `Sessions`, `Ranking`, `Loja`, `Cofre`, `Recompensas`, `New Session` |
+| `mode="wait"` + `fadeIn` | Transição entre abas e páginas | `game/[sessionId]` tabs, `(main)/layout.tsx` |
+| CSS `.anti-flash` | Previne flash de hidratação | `globals.css` — `@keyframes anti-flash` 0.01s `both` |
+| `initial={false}` | Pula animação de entrada no mount inicial | Page layout (primeiro load não anima) |
+| GSAP | Scale+fade legacy | `Modal`, `MobileMenu` (mantido) |
+
+Variants centralizadas em `client/src/lib/animations.ts`: `backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`.
+
+## Navegação
+
+O UserNav exibe 5 abas no bottom nav (grid-cols-5): Dashboard, Cofre, Loja, Recompensas, Ranking. Perfil foi removido da navbar — acessível apenas clicando no avatar do usuário (header desktop e mobile).
+
+## Arquivos mortos (não removidos)
+
+| Arquivo | Motivo |
+|---|---|
+| `client/src/components/BadgeCollection/index.tsx` | Substituído pelo Cofre (`/user/cofre`) |
+| `client/src/components/Header/index.tsx` | Substituído pelo `UserNav` + `LandingHeader` |
+| `client/src/components/MobileMenu/index.tsx` | Não utilizado |
+| `client/src/components/PlayerCard/index.tsx` | Substituído por versão local em `Inicio`/game page |
+| `client/src/components/Title1/index.tsx` | Não utilizado |
+| `client/src/components/ui/button.tsx` | shadcn/ui não utilizado |
+| `client/src/components/ui/dropdown-menu.tsx` | shadcn/ui não utilizado |
+| `client/src/components/ui/select.tsx` | shadcn/ui não utilizado |
+| `client/src/lib/asyncAction.ts` | Nunca importado |
+| `client/src/hooks/useBannerCatalog.ts` | Nunca importado (só usado por `services/api/banners.ts` que por sua vez só é importado por este hook) |
+| `client/src/constants/badges.ts` | Nunca importado |
+| `root/SESSION.md` | Log de terminal |
+| `root/INSTRUCOES.md` | Notas de design obsoletas |
+| `root/GameBank Design System/` | Mockups de design |
+| `root/screenshots/` | Screenshots não referenciados |
+
 ## WebSocket
 
 - `server/src/lib/socket.ts`: `initSocket(httpServer)` — namespace `/game`
