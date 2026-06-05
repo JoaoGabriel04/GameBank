@@ -19,7 +19,6 @@ export default function UserMainLayout({ children }: { children: React.ReactNode
             variants={fadeIn}
             initial={false}
             animate="visible"
-            exit="exit"
           >
             {children}
           </motion.div>
