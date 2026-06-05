@@ -45,7 +45,7 @@ export default function ConfirmationModal({
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="relative w-full max-w-md mx-4 bg-zinc-900 border-2 border-zinc-700 rounded-xl p-6 shadow-2xl"
+            className="relative w-full max-w-md mx-4 bg-zinc-900 border-2 border-zinc-700 rounded-xl p-6 shadow-2xl anti-flash"
           >
         <div className="flex items-center justify-center mb-4">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center ${

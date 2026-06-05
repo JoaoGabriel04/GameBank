@@ -625,7 +625,7 @@ export default function Game() {
         )}
 
         <AnimatePresence mode="wait">
-          <motion.div key={abaAtual} variants={fadeIn} initial={false} animate="visible" exit="exit" style={{ opacity: 0 }}>
+          <motion.div key={abaAtual} variants={fadeIn} initial="hidden" animate="visible" exit="exit" className="anti-flash">
             {renderConteudo()}
           </motion.div>
         </AnimatePresence>
