@@ -15,6 +15,7 @@ import {
   Check, X, ArrowLeftRight, Timer,
 } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
+import UserBadge from "@/components/UserBadge";
 import UserBanner from "@/components/UserBanner";
 import type { Negotiation } from "@/types/game";
 import { sortSessionPosses } from "@/utils/properties";
@@ -271,7 +272,10 @@ export default function NegotiationResponseModal() {
                 />
                 <div>
                   <p className="text-xs font-inconsolata text-zinc-400">Aguardando resposta de</p>
-                  <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{targetPlayer.nome}</p>
+                  <p className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
+                    <UserBadge badge={targetPlayer.badge} imageUrl={targetPlayer.badgeImageUrl} variant="micro" />
+                    {targetPlayer.nome}
+                  </p>
                 </div>
                 <div className="ml-auto">
                   <span className="text-xs font-inconsolata text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full">
@@ -363,7 +367,10 @@ export default function NegotiationResponseModal() {
                     />
                     <div>
                       <p className="text-xs font-inconsolata text-zinc-400">Oferta de</p>
-                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{fromPlayer.nome}</p>
+                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
+                        <UserBadge badge={fromPlayer.badge} imageUrl={fromPlayer.badgeImageUrl} variant="micro" />
+                        {fromPlayer.nome}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -434,7 +441,10 @@ export default function NegotiationResponseModal() {
                     />
                     <div>
                       <p className="text-xs font-inconsolata text-zinc-400">Contra-oferta para</p>
-                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold">{fromPlayer.nome}</p>
+                      <p className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
+                        <UserBadge badge={fromPlayer.badge} imageUrl={fromPlayer.badgeImageUrl} variant="micro" />
+                        {fromPlayer.nome}
+                      </p>
                     </div>
                   </div>
                 </div>

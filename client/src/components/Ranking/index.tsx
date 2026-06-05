@@ -103,13 +103,13 @@ export default function Ranking() {
                   ring={isMe}
                 />
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className={`text-sm font-inconsolata truncate ${isMe ? "text-green-400 font-bold" : "text-zinc-100"}`}>
-                      {entry.player.nome}
-                    </p>
-                    <UserBadge badge={entry.player.badge} imageUrl={entry.player.badgeImageUrl} variant="small" />
-                    {isMe && (
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <UserBadge badge={entry.player.badge} imageUrl={entry.player.badgeImageUrl} variant="small" />
+                      <p className={`text-sm font-inconsolata truncate ${isMe ? "text-green-400 font-bold" : "text-zinc-100"}`}>
+                        {entry.player.nome}
+                      </p>
+                      {isMe && (
                       <span className="text-[10px] font-inconsolata text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded">
                         VOCÊ
                       </span>

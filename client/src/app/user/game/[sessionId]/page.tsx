@@ -247,8 +247,8 @@ export default function Game() {
           <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
               <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
+              <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
             </div>
             <span className="text-zinc-400 text-sm font-inconsolata">
               R$ {(player.saldo || 0).toLocaleString()}
@@ -409,10 +409,11 @@ export default function Game() {
             <div className="space-y-3">
               {spectators.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
-                  <div className="w-10 h-10 rounded-full bg-zinc-600 flex items-center justify-center">
-                    <span className="text-zinc-300 text-sm font-bold">{p.nome.charAt(0).toUpperCase()}</span>
+                  <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" />
+                  <div className="flex items-center gap-1.5">
+                    <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
+                    <span className="text-zinc-400 font-inconsolata">{p.nome}</span>
                   </div>
-                  <span className="text-zinc-400 font-inconsolata">{p.nome}</span>
                 </div>
               ))}
             </div>
@@ -587,7 +588,8 @@ export default function Game() {
                       </span>
                     )}
                   </h1>
-                  <p className="text-sm font-inconsolata text-zinc-500">
+                  <p className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
+                    {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
                     {currentPlayer?.nome || "—"} · {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
                   </p>
                 </div>

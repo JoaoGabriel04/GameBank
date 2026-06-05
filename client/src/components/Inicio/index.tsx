@@ -123,8 +123,8 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
         <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-inconsolata text-zinc-100 truncate">{player.nome}</p>
             <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
+            <p className="text-sm font-inconsolata text-zinc-100 truncate">{player.nome}</p>
           </div>
           <p className="text-xs font-inconsolata text-zinc-400">R$ {formatCurrency(player.saldo)}</p>
         </div>
@@ -482,10 +482,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                 ring
               />
               <div className="flex items-center gap-1.5">
+                <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />
                 <p className="text-sm font-inconsolata text-zinc-300">
                   {currentPlayer?.nome || "Você"}
                 </p>
-                <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />
               </div>
             </div>
             <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer">
@@ -675,9 +675,15 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                   <div>
                     <p className="text-sm font-inconsolata text-zinc-200">
                       Proposta enviada para{" "}
-                      <span className="text-amber-400 font-semibold">
-                        {currentSession?.jogadores.find((p) => p.id === minhaNegociacaoPendente.toPlayerId)?.nome ?? "—"}
-                      </span>
+                      {(() => {
+                        const p = currentSession?.jogadores.find((j) => j.id === minhaNegociacaoPendente.toPlayerId);
+                        return (
+                          <span className="inline-flex items-center gap-1">
+                            {p && <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />}
+                            <span className="text-amber-400 font-semibold">{p?.nome ?? "—"}</span>
+                          </span>
+                        );
+                      })()}
                     </p>
                     <p className="text-xs font-inconsolata text-zinc-500">
                       {minhaNegociacaoPendente.items.length} item(ns) · Aguardando resposta…
@@ -702,7 +708,11 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
                   </div>
                   <div>
                     <p className="text-sm font-inconsolata text-zinc-200">
-                      Oferta de <span className="text-purple-400 font-semibold">{n.fromPlayer?.nome ?? "—"}</span>
+                      Oferta de{" "}
+                      <span className="inline-flex items-center gap-1">
+                        {n.fromPlayer && <UserBadge badge={n.fromPlayer.badge} imageUrl={n.fromPlayer.badgeImageUrl} variant="micro" />}
+                        <span className="text-purple-400 font-semibold">{n.fromPlayer?.nome ?? "—"}</span>
+                      </span>
                     </p>
                     <p className="text-xs font-inconsolata text-zinc-500">
                       {n.items.length} item(ns) · {new Date(n.createdAt).toLocaleTimeString("pt-BR")}
@@ -784,7 +794,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
             <span className="text-sm font-inconsolata text-zinc-400">Jogador</span>
-            <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+            <span className="inline-flex items-center gap-1.5">
+  {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
+  <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+</span>
           </div>
           <ValorInput value={valor} onChange={setValor} />
           <div className="flex justify-between items-center text-sm font-inconsolata text-zinc-500">
@@ -806,7 +819,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
             <span className="text-sm font-inconsolata text-zinc-400">Jogador</span>
-            <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+            <span className="inline-flex items-center gap-1.5">
+  {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
+  <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+</span>
           </div>
           <ValorInput value={valor} onChange={setValor} max={currentPlayer?.saldo} />
           <div className="flex justify-between items-center text-sm font-inconsolata text-zinc-500">
@@ -828,7 +844,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
             <span className="text-sm font-inconsolata text-zinc-400">Pagador</span>
-            <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+            <span className="inline-flex items-center gap-1.5">
+  {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
+  <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+</span>
           </div>
 
           <div>
@@ -872,7 +891,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
             <span className="text-sm font-inconsolata text-zinc-400">Pagador</span>
-            <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+            <span className="inline-flex items-center gap-1.5">
+  {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
+  <span className="text-sm font-inconsolata text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+</span>
           </div>
 
           <div>

@@ -20,6 +20,7 @@ import { useSessions } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import UserAvatar from "@/components/UserAvatar";
+import UserBadge from "@/components/UserBadge";
 import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 
@@ -103,7 +104,10 @@ function JoinModal({
           <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-xl border border-zinc-800">
             <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="md" />
             <div>
-              <p className="font-inconsolata text-sm text-zinc-100">{user.nome}</p>
+              <p className="font-inconsolata text-sm text-zinc-100 flex items-center gap-1.5">
+                <UserBadge badge={user.badge} imageUrl={user.badgeImageUrl} variant="micro" />
+                {user.nome}
+              </p>
               <p className="font-inconsolata text-xs text-zinc-500">Entrar com este perfil</p>
             </div>
           </div>

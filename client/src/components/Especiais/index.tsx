@@ -9,6 +9,7 @@ import { useToast } from "@/components/Toast";
 import { Eye, Handshake, Building2, ArrowRight, ArrowLeft, Plus, Minus, Check } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import UserAvatar from "@/components/UserAvatar";
+import UserBadge from "@/components/UserBadge";
 import UserBanner from "@/components/UserBanner";
 import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
@@ -229,7 +230,10 @@ export default function Especiais() {
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-inconsolata text-zinc-400">Proponente</p>
-              <p className="text-sm font-inconsolata text-zinc-100 font-semibold truncate">{currentPlayer?.nome ?? "—"}</p>
+              <p className="text-sm font-inconsolata text-zinc-100 font-semibold truncate flex items-center gap-1.5">
+                {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
+                {currentPlayer?.nome ?? "—"}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
@@ -264,7 +268,10 @@ export default function Especiais() {
                           size="md"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-jaro text-zinc-100 truncate">{player.nome}</p>
+                          <p className="text-sm font-jaro text-zinc-100 truncate flex items-center gap-1.5">
+                            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="micro" />
+                            {player.nome}
+                          </p>
                           <p className="text-xs font-inconsolata text-zinc-400">
                             R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
                           </p>
@@ -288,7 +295,10 @@ export default function Especiais() {
                     <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-inconsolata text-zinc-400">Negociando com</p>
-                      <p className="text-sm font-jaro text-purple-300 truncate">{target.nome}</p>
+                      <p className="text-sm font-jaro text-purple-300 truncate flex items-center gap-1.5">
+                        <UserBadge badge={target.badge} imageUrl={target.badgeImageUrl} variant="micro" />
+                        {target.nome}
+                      </p>
                     </div>
                     <button
                       onClick={() => setTargetPlayer(null)}
@@ -524,7 +534,7 @@ export default function Especiais() {
         onClose={() => setModalReceber(false)}
       >
         <p className="mb-3 font-inconsolata text-zinc-300">
-          Jogador: <span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span>
+          Jogador: <span className="inline-flex items-center gap-1"><UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} variant="micro" /><span className="text-zinc-100 font-semibold">{currentPlayer?.nome ?? "—"}</span></span>
         </p>
         <p className="text-sm font-inconsolata text-zinc-400 mb-4">
           Este jogador receberá R$ 500 de cada um dos outros jogadores.

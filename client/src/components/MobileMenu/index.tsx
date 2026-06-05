@@ -117,8 +117,8 @@ export function MobileMenu({ aba, isOpen, onClose, menuOptions }: MobileMenuProp
                 <div className="flex items-center gap-3 px-4 py-2 bg-zinc-800 -mt-5">
                   <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="sm" ring />
                   <div className="flex items-center gap-2">
-                    <span className="text-zinc-100 font-jaro text-sm truncate">{user.nome}</span>
                     <UserBadge badge={user.badge} imageUrl={user.badgeImageUrl} variant="small" />
+                    <span className="text-zinc-100 font-jaro text-sm truncate">{user.nome}</span>
                   </div>
                 </div>
               </div>

@@ -101,12 +101,12 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
             />
           </div>
           <div className="pt-9 flex items-center gap-1.5">
-            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
           </div>
         </div>
 
         {/* Name + title */}
         <div className="flex items-center gap-2 flex-wrap mt-1">
+          <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
           <h3 className="font-jaro text-xl text-white whitespace-nowrap">{player.nome}</h3>
           {player.title && <Chip tone="emerald">{player.title}</Chip>}
         </div>
@@ -202,7 +202,8 @@ function Podium({
                 </span>
               )}
             </div>
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center gap-1">
+              <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
               <p className="font-jaro text-sm text-zinc-100 truncate max-w-[80px] group-hover:text-green-300 transition-colors">
                 {p.nome.split(" ")[0]}
               </p>
@@ -340,6 +341,7 @@ export default function RankingPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
+                      <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
                       <span className={`font-inconsolata text-sm truncate ${isMe ? "text-green-300" : "text-zinc-200"}`}>
                         {p.nome}
                       </span>

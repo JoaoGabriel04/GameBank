@@ -108,9 +108,9 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-1 justify-center">
+                <div className="flex items-center gap-2 justify-center mt-2">
+                  <UserBadge badge={entry.player.badge} imageUrl={entry.player.badgeImageUrl} variant="small" />
                   <p className="text-sm font-bold text-white truncate max-w-24 text-center">{entry.player.nome}</p>
-                  <UserBadge badge={entry.player.badge} imageUrl={entry.player.badgeImageUrl} variant="large" />
                 </div>
 
                 <motion.div

@@ -71,13 +71,13 @@ export default function Chat() {
             {messages.map((msg) => (
               <div key={msg.id} className="text-sm">
                 <span className="inline-flex items-center gap-1">
+                  <UserBadge badge={playerBadges.get(msg.playerId)} imageUrl={playerBadgeImages.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
                   <span
                     className="font-bold text-xs"
                     style={{ color: getPlayerColor(msg.playerId, currentSession) }}
                   >
                     {playerNames.get(msg.playerId) || msg.playerNome}
                   </span>
-                  <UserBadge badge={playerBadges.get(msg.playerId)} imageUrl={playerBadgeImages.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
                   <span className="text-zinc-500 text-xs mr-1">:</span>
                 </span>
                 <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>
