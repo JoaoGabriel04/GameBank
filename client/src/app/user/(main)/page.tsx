@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainer, staggerItem, slideUp } from "@/lib/animations";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -374,7 +374,13 @@ export default function DashboardPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pt-16 lg:pt-6 space-y-4">
       <ProfileHero />
-      {activeSession && <ActiveGameBanner session={activeSession} />}
+      <AnimatePresence>
+        {activeSession && (
+          <motion.div variants={slideUp} initial="hidden" animate="visible" exit="exit">
+            <ActiveGameBanner session={activeSession} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <QuickActions activeSession={activeSession} />
       <LiveSessions sessions={sessions ?? []} activeSessionId={activeSession?.id} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

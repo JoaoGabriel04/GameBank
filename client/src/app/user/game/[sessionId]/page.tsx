@@ -17,6 +17,8 @@ import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 import { useToast } from "@/components/Toast";
 import Historico from "@/components/Historico";
 import Ranking from "@/components/Ranking";
@@ -622,7 +624,11 @@ export default function Game() {
           </div>
         )}
 
-        {renderConteudo()}
+        <AnimatePresence mode="wait">
+          <motion.div key={abaAtual} variants={fadeIn} initial="hidden" animate="visible" exit="exit">
+            {renderConteudo()}
+          </motion.div>
+        </AnimatePresence>
       </section>
 
       {endLoading && <Loading label="Finalizando..." />}

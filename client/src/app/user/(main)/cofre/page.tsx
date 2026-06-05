@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image, Sparkles, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -503,23 +503,35 @@ export default function CofrePage() {
       </div>
 
       {/* Mobile bottom sheet */}
-      {mobileSheet && selected && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setMobileSheet(false)}
-          />
-          <div className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto">
-            <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3 mb-1" />
-            <DetailPanel
-              item={selected}
-              onClose={() => { setMobileSheet(false); setSelected(null); }}
-              onEquip={handleEquip}
-              equipping={equipping}
+      <AnimatePresence>
+        {mobileSheet && selected && (
+          <div className="lg:hidden fixed inset-0 z-[200] flex flex-col justify-end">
+            <motion.div
+              variants={backdrop}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setMobileSheet(false)}
             />
+            <motion.div
+              variants={slideUp}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto"
+            >
+              <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3 mb-1" />
+              <DetailPanel
+                item={selected}
+                onClose={() => { setMobileSheet(false); setSelected(null); }}
+                onEquip={handleEquip}
+                equipping={equipping}
+              />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }
