@@ -350,11 +350,12 @@ function ItemModal({
 
             <Field label="Raridade">
               <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
-                <option value="">Sem raridade</option>
-                <option value="common">Comum</option>
-                <option value="rare">Raro</option>
-                <option value="epic">Epico</option>
-                <option value="legendary">Lendario</option>
+                  <option value="">Sem raridade</option>
+                    <option value="common">Comum</option>
+                    <option value="rare">Raro</option>
+                    <option value="super_rare">Super Raro</option>
+                    <option value="epic">Epico</option>
+                    <option value="legendary">Lendario</option>
               </AdminSelect>
             </Field>
 

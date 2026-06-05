@@ -1,25 +1,25 @@
 export const RARITY_META: Record<string, { label: string; color: string }> = {
-  comum:      { label: "Comum",      color: "#a1a1aa" },
-  raro:       { label: "Raro",       color: "#7dd3fc" },
-  super_raro: { label: "Super Raro", color: "#c4b5fd" },
-  epico:      { label: "Épico",      color: "#a78bfa" },
-  lendario:   { label: "Lendário",   color: "#fcd34d" },
+  common:     { label: "Comum",      color: "#22c55e" },
+  rare:       { label: "Raro",       color: "#3b82f6" },
+  super_rare: { label: "Super Raro", color: "#a78bfa" },
+  epic:       { label: "Épico",      color: "#d946ef" },
+  legendary:  { label: "Lendário",   color: "#f59e0b" },
 };
 
 export const RARITY_LABELS: Record<string, string> = {
-  comum:      "Comum",
-  raro:       "Raro",
-  super_raro: "Super Raro",
-  epico:      "Épico",
-  lendario:   "Lendário",
+  common:     "Comum",
+  rare:       "Raro",
+  super_rare: "Super Raro",
+  epic:       "Épico",
+  legendary:  "Lendário",
 };
 
 const RARITY_CLASSES: Record<string, string> = {
-  comum:      "bg-zinc-700 text-zinc-200",
-  raro:       "bg-blue-700 text-blue-200",
-  super_raro: "bg-violet-600 text-violet-200",
-  epico:      "bg-purple-700 text-purple-200",
-  lendario:   "bg-yellow-700 text-yellow-200",
+  common:     "bg-green-700 text-green-200",
+  rare:       "bg-blue-700 text-blue-200",
+  super_rare: "bg-violet-600 text-violet-200",
+  epic:       "bg-fuchsia-600 text-fuchsia-200",
+  legendary:  "bg-amber-600 text-amber-200",
 };
 
 export function getRarityChipClass(rarity: string | null | undefined): string {
