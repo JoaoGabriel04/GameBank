@@ -262,7 +262,7 @@ export default function NegotiationResponseModal() {
           {targetPlayer && (
             <div className="relative overflow-hidden rounded-xl border border-zinc-700">
               <UserBanner banner={targetPlayer.banner} spriteId={targetPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-              <div className="absolute inset-0 bg-black/50" />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
               <div className="relative z-10 flex items-center gap-3 p-3">
                 <UserAvatar
                   avatarUrl={targetPlayer.avatarUrl}
@@ -271,7 +271,7 @@ export default function NegotiationResponseModal() {
                   size="sm"
                 />
                 <div>
-                  <p className="text-xs font-inconsolata text-zinc-400">Aguardando resposta de</p>
+                  <p className="text-xs font-inconsolata text-zinc-300">Aguardando resposta de</p>
                   <div className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
                     <UserBadge badge={targetPlayer.badge} imageUrl={targetPlayer.badgeImageUrl} variant="micro" />
                     {targetPlayer.nome}
@@ -356,7 +356,7 @@ export default function NegotiationResponseModal() {
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
                   <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/50" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar
                       avatarUrl={fromPlayer.avatarUrl}
@@ -366,7 +366,7 @@ export default function NegotiationResponseModal() {
                       ring
                     />
                     <div>
-                      <p className="text-xs font-inconsolata text-zinc-400">Oferta de</p>
+                      <p className="text-xs font-inconsolata text-zinc-300">Oferta de</p>
                       <div className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
                         <UserBadge badge={fromPlayer.badge} imageUrl={fromPlayer.badgeImageUrl} variant="micro" />
                         {fromPlayer.nome}
@@ -431,7 +431,7 @@ export default function NegotiationResponseModal() {
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
                   <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/50" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar
                       avatarUrl={fromPlayer.avatarUrl}
@@ -440,7 +440,7 @@ export default function NegotiationResponseModal() {
                       size="sm"
                     />
                     <div>
-                      <p className="text-xs font-inconsolata text-zinc-400">Contra-oferta para</p>
+                      <p className="text-xs font-inconsolata text-zinc-300">Contra-oferta para</p>
                       <div className="text-sm font-inconsolata text-zinc-100 font-semibold flex items-center gap-1.5">
                         <UserBadge badge={fromPlayer.badge} imageUrl={fromPlayer.badgeImageUrl} variant="micro" />
                         {fromPlayer.nome}

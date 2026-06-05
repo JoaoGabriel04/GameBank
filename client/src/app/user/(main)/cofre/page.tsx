@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image, Sparkles, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -339,22 +341,26 @@ export default function CofrePage() {
         </p>
       </div>
     ) : (
-      <div
+      <motion.div
         className="grid gap-2.5"
         style={{
           gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
           alignItems: "start",
         }}
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
       >
         {list.map(item => (
-          <VaultItemCard
-            key={item.id}
-            item={item}
-            isSelected={selected?.id === item.id}
-            onSelect={handleSelect}
-          />
+          <motion.div key={item.id} variants={staggerItem}>
+            <VaultItemCard
+              item={item}
+              isSelected={selected?.id === item.id}
+              onSelect={handleSelect}
+            />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     );
 
   return (

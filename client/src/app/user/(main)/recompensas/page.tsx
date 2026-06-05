@@ -12,6 +12,8 @@
  */
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import {
   Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
@@ -216,18 +218,23 @@ export default function RecompensasPage() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <motion.div
+        className="grid grid-cols-3 gap-3"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
         {[
           { label: "Para resgatar", val: available,    tone: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
           { label: "Em andamento",  val: inProgress,   tone: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           { label: "Resgatadas",    val: claimedCount, tone: "text-zinc-400",  bg: "bg-zinc-800 border-zinc-700"         },
         ].map((s) => (
-          <div key={s.label} className={`border rounded-2xl p-3 text-center ${s.bg}`}>
+          <motion.div key={s.label} variants={staggerItem} className={`border rounded-2xl p-3 text-center ${s.bg}`}>
             <p className={`font-jaro text-2xl leading-none ${s.tone}`}>{s.val}</p>
             <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{s.label}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Filter */}
       <Segmented
@@ -246,11 +253,18 @@ export default function RecompensasPage() {
           Nenhuma missão nesta categoria.
         </p>
       ) : (
-        <div className="space-y-3">
+        <motion.div
+          className="space-y-3"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {list.map((m) => (
-            <MissionCard key={m.id} m={m} onClaim={handleClaim} claiming={claimingIds} />
+            <motion.div key={m.id} variants={staggerItem}>
+              <MissionCard m={m} onClaim={handleClaim} claiming={claimingIds} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

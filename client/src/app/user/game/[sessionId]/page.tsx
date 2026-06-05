@@ -242,7 +242,7 @@ export default function Game() {
     return (
       <div className="relative overflow-hidden rounded-xl border border-zinc-800">
         <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
         <div className="relative z-10 flex items-center gap-3 p-3">
           <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />
           <div className="min-w-0 flex-1">
@@ -250,7 +250,7 @@ export default function Game() {
               <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
               <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
             </div>
-            <span className="text-zinc-400 text-sm font-inconsolata">
+            <span className="text-zinc-300 text-sm font-inconsolata">
               R$ {(player.saldo || 0).toLocaleString()}
             </span>
           </div>

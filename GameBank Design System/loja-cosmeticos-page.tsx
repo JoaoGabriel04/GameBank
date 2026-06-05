@@ -1,8 +1,14 @@
 'use client';
+/**
+ * Loja de Cosméticos — Títulos, Emblemas, Banners
+ * Salve em: src/app/user/(main)/loja/page.tsx
+ *
+ * Layout: sidebar de categorias | grid de itens | painel de detalhes
+ * Itens já possuídos NÃO aparecem na loja.
+ * Compra via buyShopItemApi + reload do perfil.
+ */
 
 import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
 import {
   Loader2, Crown, Shield, Image, Sparkles, Check, X, Ban,
 } from "lucide-react";
@@ -13,9 +19,9 @@ import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import CoinIcon from "@/components/CoinIcon";
 import { Chip } from "@/components/user/UserUI";
-import { RARITY_META } from "@/constants/rarity";
 import type { ShopItem } from "@/types/shop";
 
+/* ─── Types ─────────────────────────────────────────────────────────────── */
 type ItemType    = "title" | "badge" | "banner";
 type CategoryKey = "todos" | ItemType;
 
@@ -25,6 +31,14 @@ const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" 
   banner: { label: "Banner",  color: "#38bdf8", tone: "sky"    },
 };
 
+const RARITY_META: Record<string, { label: string; color: string }> = {
+  comum:      { label: "Comum",      color: "#a1a1aa" },
+  raro:       { label: "Raro",       color: "#7dd3fc" },
+  super_raro: { label: "Super Raro", color: "#c4b5fd" },
+  epico:      { label: "Épico",      color: "#a78bfa" },
+  lendario:   { label: "Lendário",   color: "#fcd34d" },
+};
+
 const NAV_KEYS: { key: CategoryKey; label: string }[] = [
   { key: "todos",  label: "Todos"    },
   { key: "title",  label: "Títulos"  },
@@ -32,6 +46,7 @@ const NAV_KEYS: { key: CategoryKey; label: string }[] = [
   { key: "banner", label: "Banners"  },
 ];
 
+/* ─── Item card ─────────────────────────────────────────────────────────── */
 function ShopItemCard({
   item,
   isSelected,
@@ -65,13 +80,11 @@ function ShopItemCard({
           : (rMeta && rMeta.color !== "#a1a1aa" ? `0 0 14px -9px ${glowColor}88` : "none"),
       }}
     >
+      {/* Top area */}
       <div
         className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 104, background: isBanner ? undefined : topBg }}
+        style={{ height: 104, background: topBg }}
       >
-        {isBanner && (
-          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
-        )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
           style={{
@@ -87,14 +100,10 @@ function ShopItemCard({
             <Check size={10} color="#09090b" strokeWidth={3} />
           </div>
         )}
-        {isBanner ? null : (
-          <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
+        {!isBanner && (
+          <div style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
             {item.type === "title"  && <Crown  size={44} />}
-            {item.type === "badge"  && (item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
-            ) : (
-              <Shield size={44} />
-            ))}
+            {item.type === "badge"  && <Shield size={44} />}
           </div>
         )}
         <span
@@ -105,6 +114,7 @@ function ShopItemCard({
         </span>
       </div>
 
+      {/* Bottom info */}
       <div
         className="px-2.5 pt-2.5 pb-3"
         style={{
@@ -122,6 +132,7 @@ function ShopItemCard({
   );
 }
 
+/* ─── Detail panel ──────────────────────────────────────────────────────── */
 function DetailPanel({
   item,
   userCoins,
@@ -154,24 +165,15 @@ function DetailPanel({
 
   return (
     <div className="flex flex-col gap-4 p-5 overflow-y-auto h-full">
+      {/* Preview + close */}
       <div className="flex items-start justify-between gap-2.5">
         {isBanner && item.value ? (
           <UserBanner
             banner={item.value}
-            imageUrl={item.imageUrl}
             spriteId={null}
             className="flex-1 rounded-2xl"
             style={{ height: 72 }}
           />
-        ) : item.type === "badge" && item.imageUrl ? (
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
-            style={{
-              background: glowColor + "22",
-              boxShadow: `0 0 36px -8px ${glowColor}`,
-            }}
-          >
-            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
-          </div>
         ) : (
           <div
             className="w-16 h-16 rounded-2xl grid place-items-center shrink-0"
@@ -195,6 +197,7 @@ function DetailPanel({
         </button>
       </div>
 
+      {/* Name + chips */}
       <div>
         <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
         <div className="flex gap-1.5 flex-wrap">
@@ -223,6 +226,7 @@ function DetailPanel({
 
       <div className="border-t border-zinc-800" />
 
+      {/* Price */}
       <div className="flex items-center justify-between">
         <span className="font-inconsolata text-xs text-zinc-500">Preço</span>
         <span className="inline-flex items-center gap-1.5 font-jaro text-[22px] text-amber-300">
@@ -231,6 +235,7 @@ function DetailPanel({
         </span>
       </div>
 
+      {/* Insufficient warning */}
       {!canAfford && (
         <div className="bg-rose-500/8 border border-rose-500/20 rounded-xl px-3 py-2.5">
           <p className="font-inconsolata text-xs text-rose-400">
@@ -239,6 +244,7 @@ function DetailPanel({
         </div>
       )}
 
+      {/* Buy button */}
       <button
         type="button"
         disabled={buying || !canAfford}
@@ -267,6 +273,7 @@ function DetailPanel({
   );
 }
 
+/* ─── Page ──────────────────────────────────────────────────────────────── */
 export default function LojaCosmeticosPage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();
@@ -290,6 +297,7 @@ export default function LojaCosmeticosPage() {
     [profile?.items]
   );
 
+  /** Only show items the user does NOT own yet */
   const available = useMemo(
     () => shopItems.filter(i => i.available && !ownedIds.has(i.id)),
     [shopItems, ownedIds]
@@ -352,27 +360,23 @@ export default function LojaCosmeticosPage() {
         </p>
       </div>
     ) : (
-      <motion.div
+      <div
         className="grid gap-2.5"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", alignItems: "start" }}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
       >
         {list.map(item => (
-          <motion.div key={item.id} variants={staggerItem}>
-            <ShopItemCard
-              item={item}
-              isSelected={selected?.id === item.id}
-              onSelect={handleSelect}
-            />
-          </motion.div>
+          <ShopItemCard
+            key={item.id}
+            item={item}
+            isSelected={selected?.id === item.id}
+            onSelect={handleSelect}
+          />
         ))}
-      </motion.div>
+      </div>
     );
 
   return (
-    <div className="px-4 py-6 pt-16 lg:pt-6 relative">
+    <div className="max-w-4xl mx-auto px-4 py-6 pt-16 lg:pt-6 relative">
 
       {/* ── Desktop ── */}
       <div
@@ -404,6 +408,7 @@ export default function LojaCosmeticosPage() {
                   style={{
                     background: active ? "rgba(74,222,128,0.06)" : "transparent",
                     borderLeft: `2px solid ${active ? "#4ade80" : "transparent"}`,
+                    border: "none",
                     color: active ? "#f4f4f5" : "#71717a",
                   }}
                 >

@@ -219,7 +219,7 @@ export default function Especiais() {
       >
         <div className="relative overflow-hidden rounded-xl border border-zinc-700 mb-4">
           <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
           <div className="relative z-10 flex items-center gap-3 p-3">
             <UserAvatar
               avatarUrl={currentPlayer?.avatarUrl}
@@ -229,14 +229,14 @@ export default function Especiais() {
               ring
             />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-inconsolata text-zinc-400">Proponente</p>
+              <p className="text-xs font-inconsolata text-zinc-300">Proponente</p>
               <div className="text-sm font-inconsolata text-zinc-100 font-semibold truncate flex items-center gap-1.5">
                 {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
                 {currentPlayer?.nome ?? "—"}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-inconsolata text-zinc-500">Saldo</p>
+              <p className="text-xs font-inconsolata text-zinc-400">Saldo</p>
               <p className="text-sm font-inconsolata text-green-400">R$ {formatCurrency(currentPlayer?.saldo ?? 0)}</p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function Especiais() {
                       className="relative overflow-hidden rounded-xl border border-zinc-700 hover:border-purple-500 transition-all cursor-pointer text-left"
                     >
                       <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-                      <div className="absolute inset-0 bg-black/50" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                       <div className="relative z-10 flex items-center gap-3 p-4">
                         <UserAvatar
                           avatarUrl={player.avatarUrl}
@@ -272,7 +272,7 @@ export default function Especiais() {
                             <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="micro" />
                             {player.nome}
                           </div>
-                          <p className="text-xs font-inconsolata text-zinc-400">
+                          <p className="text-xs font-inconsolata text-zinc-300">
                             R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
                           </p>
                         </div>
@@ -290,11 +290,11 @@ export default function Especiais() {
               return target ? (
                 <div className="relative overflow-hidden rounded-xl border border-purple-500/40 mb-2">
                   <UserBanner banner={target.banner} spriteId={target.spriteId} className="absolute inset-0 w-full h-full" />
-                  <div className="absolute inset-0 bg-black/50" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-inconsolata text-zinc-400">Negociando com</p>
+                      <p className="text-xs font-inconsolata text-zinc-300">Negociando com</p>
                       <div className="text-sm font-jaro text-purple-300 truncate flex items-center gap-1.5">
                         <UserBadge badge={target.badge} imageUrl={target.badgeImageUrl} variant="micro" />
                         {target.nome}
@@ -302,7 +302,7 @@ export default function Especiais() {
                     </div>
                     <button
                       onClick={() => setTargetPlayer(null)}
-                      className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+                      className="text-xs font-inconsolata text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
                     >
                       Trocar
                     </button>

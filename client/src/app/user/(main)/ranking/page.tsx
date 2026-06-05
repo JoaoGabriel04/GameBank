@@ -11,6 +11,8 @@
  */
 
 import { useEffect, useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -177,14 +179,20 @@ function Podium({
   ];
 
   return (
-    <div className="flex items-end justify-center gap-4 py-6">
+    <motion.div
+      className="flex items-end justify-center gap-4 py-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {ordered.map((p, i) => {
-        if (!p) return <div key={`podium-empty-${i}`} className="w-28" />;
+        if (!p) return <motion.div key={`podium-empty-${i}`} variants={staggerItem} className="w-28" />;
         const isMe = user?.id === p.id;
         const value = meta.getValue(p);
         return (
-          <div
+          <motion.div
             key={`podium-${p.id}-${metric}`}
+            variants={staggerItem}
             onClick={() => onSelect(p)}
             className={`flex flex-col items-center gap-2 ${scales[i]} cursor-pointer group`}
           >
@@ -216,10 +224,10 @@ function Podium({
               <p className="font-jaro text-base mt-1 text-zinc-100">{meta.format(value)}</p>
               <p className="font-inconsolata text-[9px] text-zinc-500">{meta.unit}</p>
             </div>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -316,17 +324,23 @@ export default function RankingPage() {
               <Chip tone="zinc">{sorted.length} jogadores</Chip>
             </div>
 
-            {sorted.map((p, i) => {
-              const isMe  = p.id === user?.id;
-              const value = meta.format(meta.getValue(p));
-              return (
-                <div
-                  key={`rank-${metric}-${p.id}`}
-                  onClick={() => setSelected(p)}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 cursor-pointer transition-colors ${
-                    isMe ? "bg-green-500/5 hover:bg-green-500/10" : "hover:bg-zinc-800/50"
-                  }`}
-                >
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {sorted.map((p, i) => {
+                const isMe  = p.id === user?.id;
+                const value = meta.format(meta.getValue(p));
+                return (
+                  <motion.div
+                    key={`rank-${metric}-${p.id}`}
+                    variants={staggerItem}
+                    onClick={() => setSelected(p)}
+                    className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 cursor-pointer transition-colors ${
+                      isMe ? "bg-green-500/5 hover:bg-green-500/10" : "hover:bg-zinc-800/50"
+                    }`}
+                  >
                   <div className="w-7 text-center shrink-0">
                     <Medal rank={i + 1} />
                   </div>
@@ -359,9 +373,10 @@ export default function RankingPage() {
                   </div>
 
                   <ChevronRight size={14} className="text-zinc-700 shrink-0" />
-                </div>
+                </motion.div>
               );
             })}
+            </motion.div>
           </div>
         </>
       )}

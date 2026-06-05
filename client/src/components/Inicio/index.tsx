@@ -113,13 +113,15 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
     <button
       type="button"
       onClick={onClick}
-      className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer text-left ${
+      className={`overflow-hidden rounded-xl border transition-all cursor-pointer text-left bg-zinc-950 ${
         selected ? "border-green-500" : "border-zinc-700 hover:border-zinc-500"
       }`}
     >
-      <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
-      <div className="absolute inset-0 bg-black/50 z-1" />
-      <div className="relative z-20 flex items-center gap-3 p-3">
+      <div className="h-16 relative">
+        <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0 bg-black/30" />
+      </div>
+      <div className="flex items-center gap-3 p-3">
         <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -468,10 +470,12 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-10">
       {/* ── Balance Widget ── */}
-      <div className="relative overflow-hidden border border-zinc-800 rounded-xl">
-        <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 p-6">
+      <div className="overflow-hidden border border-zinc-800 rounded-xl bg-zinc-950">
+        <div className="h-24 relative">
+          <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
+          <div className="absolute inset-0 bg-black/30" />
+        </div>
+        <div className="p-6">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <UserAvatar
@@ -483,7 +487,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
               />
               <div className="flex items-center gap-1.5">
                 <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />
-                <p className="text-sm font-inconsolata text-zinc-300">
+                <p className="text-sm font-inconsolata text-zinc-100">
                   {currentPlayer?.nome || "Você"}
                 </p>
               </div>

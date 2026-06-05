@@ -1,8 +1,15 @@
 'use client';
+/**
+ * Perfil — sem inventário (movido para /cofre)
+ * Salve em: src/app/user/(main)/perfil/page.tsx
+ *
+ * O que mudou vs versão anterior:
+ * - Seção Inventário removida (agora em /cofre)
+ * - TYPE_META atualizado: "color" → "banner"
+ * - Layout limpo: Hero → Stats → Histórico
+ */
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
@@ -123,20 +130,15 @@ function StatsRow({
     { Icon: TrendingUp,value: `${winRate}%`,     label: "Win Rate",  color: "text-green-400"  },
   ];
   return (
-    <motion.div
-      className="grid grid-cols-4 gap-3"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="grid grid-cols-4 gap-3">
       {stats.map(({ Icon, value, label, color }) => (
-        <motion.div key={label} variants={staggerItem} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+        <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
           <Icon size={16} className={`mx-auto mb-1 ${color}`} />
           <p className="font-jaro text-xl text-white leading-none">{value}</p>
           <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{label}</p>
-        </motion.div>
+        </div>
       ))}
-    </motion.div>
+    </div>
   );
 }
 
@@ -158,14 +160,9 @@ function MatchHistory({ history }: { history: GameResult[] }) {
           Nenhuma partida disputada ainda.
         </p>
       ) : (
-        <motion.div
-          className="divide-y divide-zinc-800/60"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
+        <div className="divide-y divide-zinc-800/60">
           {history.map(r => (
-            <motion.div key={r.id} variants={staggerItem} className="flex items-center gap-3 px-4 py-3">
+            <div key={r.id} className="flex items-center gap-3 px-4 py-3">
               <span
                 className={`font-jaro text-xl w-7 text-center shrink-0 ${
                   POS_COLOR[r.position] ?? "text-zinc-500"
@@ -187,9 +184,9 @@ function MatchHistory({ history }: { history: GameResult[] }) {
                   +{r.coinsEarned} coins
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
     </Panel>
   );

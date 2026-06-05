@@ -10,6 +10,8 @@
  */
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import {
   Plus, Search, Lock, Users, Clock, ChevronRight, Eye, LogIn,
@@ -384,11 +386,18 @@ export default function SessionsPage() {
           </UBtn>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {list.map((s) => (
-            <SessionCard key={s.id} session={s} onJoin={setJoining} />
+            <motion.div key={s.id} variants={staggerItem}>
+              <SessionCard session={s} onJoin={setJoining} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
       <JoinModal
