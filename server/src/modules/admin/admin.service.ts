@@ -301,7 +301,18 @@ export class AdminService {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de coins deve ser um inteiro não-zero.");
     }
-    const result = await adminRepository.updateUserCoins(userId, delta);
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { coins: true } });
+      if (!user) throw new AppError(404, "Usuário não encontrado.");
+      if (user.coins + delta < 0) {
+        throw new AppError(400, `Operação resultaria em saldo negativo (atual: ${user.coins}, delta: ${delta}).`);
+      }
+      return tx.user.update({
+        where: { id: userId },
+        data: { coins: { increment: delta } },
+        select: { id: true, nome: true, coins: true },
+      });
+    });
     await auditLog({
       userId: actor.id ?? null,
       action: "user.adjust_coins",

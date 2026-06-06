@@ -1,4 +1,4 @@
-# Plano de Animações e Transições — sgpController
+# Plano de Animações e Transições — GameBank
 
 ## Stack de Animação
 

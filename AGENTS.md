@@ -1,4 +1,4 @@
-# sgpController
+# GameBank
 
 Gerenciador multiplayer de Banco Imobiliário (Super Máquina).
 
@@ -186,7 +186,7 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 
 ## CSP (helmet)
 
-`server/src/index.ts` configura `connect-src` com `http://localhost:7000` e `https://sgpcontroller.onrender.com`. **Não remover** — browser bloqueia chamadas API com "Network Error".
+`server/src/index.ts` configura `connect-src` com `http://localhost:7000` e `https://gamebank-vtsb.onrender.com`. **Não remover** — browser bloqueia chamadas API com "Network Error".
 
 ## Convenções
 

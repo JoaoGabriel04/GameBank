@@ -181,6 +181,8 @@ export interface RankedPlayer {
   patrimony: number
   xpEarned: number
   coinsEarned: number
+  penaltyReason?: string | null
+  breakdown?: string[]
 }
 
 // ========================

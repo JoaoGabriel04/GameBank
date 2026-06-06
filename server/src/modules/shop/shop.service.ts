@@ -20,33 +20,35 @@ export class ShopService {
       throw new AppError(404, "Item não encontrado");
     }
 
-    const user = await shopRepository.findUser(userId);
-    if (!user) throw new AppError(404, "Usuário não encontrado");
-
-    const refs = parseUserItems(user.user_items);
-    if (refs.some((r) => r.item_id === itemId)) {
-      throw new AppError(400, "Você já possui este item");
-    }
-
-    if (user.coins < shopItem.price) {
-      throw new AppError(400, "Coins insuficientes");
-    }
-
-    const newRef: UserItemRef = {
-      item_id: shopItem.id,
-      equipped: false,
-      acquiredAt: new Date().toISOString(),
-    };
-
     await prisma.$transaction(
       async (tx) => {
-        await tx.user.update({
+        const user = await tx.user.findUnique({
           where: { id: userId },
-          data: { coins: { decrement: shopItem.price } },
+          select: { coins: true, user_items: true },
         });
+        if (!user) throw new AppError(404, "Usuário não encontrado");
+
+        const refs = parseUserItems(user.user_items);
+        if (refs.some((r) => r.item_id === itemId)) {
+          throw new AppError(400, "Você já possui este item");
+        }
+
+        if (user.coins < shopItem.price) {
+          throw new AppError(400, "Coins insuficientes");
+        }
+
+        const newRef: UserItemRef = {
+          item_id: shopItem.id,
+          equipped: false,
+          acquiredAt: new Date().toISOString(),
+        };
+
         await tx.user.update({
           where: { id: userId },
-          data: { user_items: [...refs, newRef] as any },
+          data: {
+            coins: { decrement: shopItem.price },
+            user_items: [...refs, newRef] as any,
+          },
         });
       },
       { timeout: 15000, maxWait: 10000 }
@@ -61,72 +63,55 @@ export class ShopService {
       return this.equipDefaultBanner(userId);
     }
 
-    const user = await shopRepository.findUser(userId);
-    if (!user) throw new AppError(404, "Usuário não encontrado");
-
-    const refs = parseUserItems(user.user_items);
-    const target = refs.find((r) => r.item_id === itemId);
-    if (!target) throw new AppError(404, "Item não encontrado");
-
-    const nextEquipped = !target.equipped;
-
-    // Fetch item type
     const shopItem = await shopRepository.findShopItem(itemId);
     if (!shopItem) throw new AppError(404, "Item não encontrado na loja.");
 
-    const updateData: any = {};
-    const updatedRefs = refs.map((r) => {
-      // Deequip all items of same type
-      if (r.equipped && r.item_id !== itemId) {
-        // We need to check type — fetch shop item for comparison
-        // For banners, deequip all; for others, we need to know type
-        // Store type in the ref? No, fetch.
+    let nextEquipped = false;
+
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { user_items: true },
+      });
+      if (!user) throw new AppError(404, "Usuário não encontrado");
+
+      const refs = parseUserItems(user.user_items);
+      const target = refs.find((r) => r.item_id === itemId);
+      if (!target) throw new AppError(404, "Item não encontrado");
+
+      nextEquipped = !target.equipped;
+
+      const allShopItems = await tx.shopItem.findMany({
+        where: { id: { in: refs.map((r) => r.item_id) } },
+        select: { id: true, type: true },
+      });
+      const typeMap = new Map(allShopItems.map((si) => [si.id, si.type]));
+
+      const finalRefs = refs.map((r) => {
+        if (r.item_id === itemId) return { ...r, equipped: nextEquipped };
+        if (r.equipped && typeMap.get(r.item_id) === shopItem.type) return { ...r, equipped: false };
         return r;
-      }
-      if (r.item_id === itemId) {
-        return { ...r, equipped: nextEquipped };
-      }
-      return r;
-    });
+      });
 
-    // Proper handling: deequip all of same type
-    const allShopItems = await prisma.shopItem.findMany({
-      where: { id: { in: refs.map((r) => r.item_id) } },
-    });
-    const typeMap = new Map(allShopItems.map((si) => [si.id, si.type]));
+      const updateData: any = { user_items: finalRefs };
 
-    const finalRefs = refs.map((r) => {
-      if (r.item_id === itemId) {
-        return { ...r, equipped: nextEquipped };
-      }
-      if (r.equipped && typeMap.get(r.item_id) === shopItem.type) {
-        return { ...r, equipped: false };
-      }
-      return r;
-    });
-
-    // Auto-equip default when deequipping a banner
-    if (shopItem.type === "banner") {
-      if (nextEquipped) {
-        updateData.banner = shopItem.value;
-        updateData.spriteId = shopItem.banner?.spriteId ?? null;
-      } else {
-        const hasDefault = finalRefs.some((r) => r.item_id === 0);
-        if (hasDefault) {
-          finalRefs.forEach((r) => {
-            if (r.item_id === 0) r.equipped = true;
-          });
+      if (shopItem.type === "banner") {
+        if (nextEquipped) {
+          updateData.banner = shopItem.value;
+          updateData.spriteId = shopItem.banner?.spriteId ?? null;
+        } else {
+          const hasDefault = finalRefs.some((r) => r.item_id === 0);
+          if (hasDefault) finalRefs.forEach((r) => { if (r.item_id === 0) r.equipped = true; });
+          updateData.user_items = finalRefs;
+          updateData.banner = null;
+          updateData.spriteId = null;
         }
-        updateData.banner = null;
-        updateData.spriteId = null;
       }
-    }
 
-    updateData.user_items = finalRefs;
+      await tx.user.update({ where: { id: userId }, data: updateData });
+    });
 
-    await prisma.user.update({ where: { id: userId }, data: updateData });
     await this.rankingService.invalidateCache();
-
     return { message: "Item atualizado", equipped: nextEquipped };
   }
 
@@ -164,34 +149,39 @@ export class ShopService {
       throw new AppError(400, "Não é possível vender o banner padrão.");
     }
 
-    const user = await shopRepository.findUser(userId);
-    if (!user) throw new AppError(404, "Usuário não encontrado");
-
-    const refs = parseUserItems(user.user_items);
-    const target = refs.find((r) => r.item_id === itemId);
-    if (!target) throw new AppError(404, "Item não encontrado no seu inventário.");
-
     const shopItem = await shopRepository.findShopItem(itemId);
     if (!shopItem) throw new AppError(404, "Item não encontrado na loja.");
 
     const refund = Math.floor(shopItem.price / 2);
-    const filtered = refs.filter((r) => r.item_id !== itemId);
-    const updateData: any = { user_items: filtered as any, coins: { increment: refund } };
 
-    if (shopItem.type === "banner" && target.equipped) {
-      // Auto-equip default if it exists
-      const hasDefault = filtered.some((r) => r.item_id === 0);
-      if (hasDefault) {
-        filtered.forEach((r) => { if (r.item_id === 0) r.equipped = true; });
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { user_items: true },
+      });
+      if (!user) throw new AppError(404, "Usuário não encontrado");
+
+      const refs = parseUserItems(user.user_items);
+      const target = refs.find((r) => r.item_id === itemId);
+      if (!target) throw new AppError(404, "Item não encontrado no seu inventário.");
+
+      const filtered = refs.filter((r) => r.item_id !== itemId);
+      const updateData: any = { user_items: filtered as any, coins: { increment: refund } };
+
+      if (shopItem.type === "banner" && target.equipped) {
+        const hasDefault = filtered.some((r) => r.item_id === 0);
+        if (hasDefault) {
+          filtered.forEach((r) => { if (r.item_id === 0) r.equipped = true; });
+        }
+        updateData.user_items = filtered;
+        updateData.banner = null;
+        updateData.spriteId = null;
       }
-      updateData.user_items = filtered;
-      updateData.banner = null;
-      updateData.spriteId = null;
-    }
 
-    await prisma.user.update({ where: { id: userId }, data: updateData });
+      await tx.user.update({ where: { id: userId }, data: updateData });
+    });
+
     await this.rankingService.invalidateCache();
-
     return { message: `"${shopItem.name}" vendido por ${refund} coins.`, refund };
   }
 

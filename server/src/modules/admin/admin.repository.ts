@@ -46,9 +46,9 @@ export const adminRepository = {
   removeItemFromAllUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
       UPDATE "users" u
-      SET "user_items" = COALESCE((
+      SET "items" = COALESCE((
         SELECT jsonb_agg(item)
-        FROM jsonb_array_elements(u.user_items) item
+        FROM jsonb_array_elements(u.items) item
         WHERE (item->>'item_id')::int != ${itemId}
       ), '[]'::jsonb)
     `;
@@ -61,7 +61,7 @@ export const adminRepository = {
     const result = await prisma.$executeRaw`
       UPDATE "users" u
       SET
-        "user_items" = (
+        "items" = (
           SELECT COALESCE(jsonb_agg(
             CASE
               WHEN (item->>'item_id')::int = ${itemId}
@@ -71,12 +71,12 @@ export const adminRepository = {
               ELSE item
             END
           ), '[]'::jsonb)
-          FROM jsonb_array_elements(u.user_items) item
+          FROM jsonb_array_elements(u.items) item
         ),
         "banner" = NULL,
         "spriteId" = NULL
       WHERE EXISTS (
-        SELECT 1 FROM jsonb_array_elements(u.user_items) item
+        SELECT 1 FROM jsonb_array_elements(u.items) item
         WHERE (item->>'item_id')::int = ${itemId}
           AND (item->>'equipped')::boolean = true
       )

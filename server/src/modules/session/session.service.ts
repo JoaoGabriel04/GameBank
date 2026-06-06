@@ -10,6 +10,7 @@ import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-ma
 import { getLevelFromXp } from "../../utils/level.js";
 import { clearSessionDeck } from "../carta/carta.repository.js";
 import { getMinPlayersToStart } from "../../shared/constants/session.js";
+import { calcularRecompensa, type RewardResult } from "./reward.service.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
@@ -504,12 +505,44 @@ export class SessionService {
       return [];
     }
 
+    // Proteção contra duplo crédito de recompensa
+    if (session.rewardGranted) {
+      throw new AppError(400, "Recompensas já foram distribuídas para esta partida.");
+    }
+
     const ranked = await this.calculateRankings(session);
 
+    // Início real da partida — fallback para dataInicio em sessões antigas sem startedAt
+    const sessionStartedAt: Date = session.startedAt ?? session.dataInicio;
+
+    // Calcula as recompensas ANTES da transação: o cálculo lê posses, negociações
+    // e dívidas que serão deletadas junto com a sessão na finalização.
+    const rewardByPlayer = new Map<number, RewardResult>();
+    for (const entry of ranked) {
+      const p = entry.player;
+      if (!p.userId) continue;
+      const reward = await calcularRecompensa({
+        userId: p.userId,
+        playerId: p.id,
+        sessionId,
+        position: entry.position,
+        patrimony: entry.patrimony,
+        sessionStartedAt,
+      });
+      rewardByPlayer.set(p.id, reward);
+    }
+
     await prisma.$transaction(async (tx) => {
+      // Marca rewardGranted antes de creditar (lock contra race condition)
+      await tx.session.update({ where: { id: sessionId }, data: { rewardGranted: true } });
+
       for (const entry of ranked) {
         const p = entry.player;
         if (!p.userId) continue;
+
+        const reward = rewardByPlayer.get(p.id);
+        const coins = reward?.coins ?? 0;
+        const xp = reward?.xp ?? 0;
 
         await tx.gameResult.create({
           data: {
@@ -517,28 +550,38 @@ export class SessionService {
             userId: p.userId,
             position: entry.position,
             patrimony: entry.patrimony,
-            xpEarned: entry.xpEarned,
-            coinsEarned: entry.coinsEarned,
+            xpEarned: xp,
+            coinsEarned: coins,
+            activityScore: reward?.activityScore ?? 0,
+            rewardMultiplier: reward?.multiplier ?? 0,
+            penaltyReason: reward?.penaltyReason ?? null,
           },
         });
 
         const user = await tx.user.findUnique({ where: { id: p.userId } });
         if (!user) continue;
 
-        const newXp = user.xp + entry.xpEarned;
+        const newXp = user.xp + xp;
         const newLevel = getLevelFromXp(newXp);
 
         await tx.user.update({
           where: { id: p.userId },
           data: {
-            xp: { increment: entry.xpEarned },
-            coins: { increment: entry.coinsEarned },
+            xp: { increment: xp },
+            coins: { increment: coins },
             totalGames: { increment: 1 },
             ...(entry.position === 1 ? { totalWins: { increment: 1 } } : {}),
             ...(entry.position <= 3 ? { totalTop3: { increment: 1 } } : {}),
             ...(newLevel > user.level ? { level: newLevel } : {}),
           },
         });
+
+        // Auditoria imutável — registra apenas crédito de partida
+        if (coins > 0) {
+          await tx.coinTransaction.create({
+            data: { userId: p.userId, amount: coins, tipo: "PARTIDA", sessionId },
+          });
+        }
       }
 
       await tx.negotiationItem.deleteMany({ where: { negotiation: { sessionId } } });
@@ -569,7 +612,17 @@ export class SessionService {
       }
     }
 
-    return ranked;
+    // Enriquece o retorno com as recompensas calculadas + motivo de penalidade
+    return ranked.map((entry: any) => {
+      const reward = entry.player.userId ? rewardByPlayer.get(entry.player.id) : null;
+      return {
+        ...entry,
+        xpEarned: reward?.xp ?? 0,
+        coinsEarned: reward?.coins ?? 0,
+        penaltyReason: reward?.penaltyReason ?? null,
+        breakdown: reward?.breakdown ?? [],
+      };
+    });
   }
 
   private async calculateRankings(session: any) {
@@ -593,19 +646,12 @@ export class SessionService {
 
     withPatrimony.sort((a: any, b: any) => b.patrimony - a.patrimony);
 
-    return withPatrimony.map((entry: any, index: number) => {
-      const position = index + 1;
-      const total = withPatrimony.length;
-      let xpEarned = 0;
-      let coinsEarned = 0;
-
-      xpEarned = 50 + (total - position) * 10;
-      if (position === 1) coinsEarned = 100;
-      else if (position === 2) coinsEarned = 50;
-      else if (position === 3) coinsEarned = 25;
-
-      return { ...entry, position, xpEarned, coinsEarned };
-    });
+    // Atribui apenas posição e patrimônio. As recompensas (coins/xp) são
+    // calculadas pelo reward.service (sistema anti-farm) na finalização.
+    return withPatrimony.map((entry: any, index: number) => ({
+      ...entry,
+      position: index + 1,
+    }));
   }
 
 }

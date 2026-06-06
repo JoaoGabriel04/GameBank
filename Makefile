@@ -1,7 +1,7 @@
 .PHONY: dev dev-up dev-down dev-down-v dev-build dev-rebuild dev-logs dev-shell dev-restart
 .PHONY: prod prod-up prod-down prod-down-v prod-build prod-rebuild prod-logs prod-shell
 .PHONY: db-reset db-migrate db-studio db-backup db-purge-users
-.PHONY: test test-ci status clean prune setup help
+.PHONY: test test-ci validate check safe-push status clean prune setup help
 .PHONY: up down build logs shell restart
 
 SVC ?= server
@@ -109,9 +109,19 @@ test:
 	@curl -s --max-time 5 http://localhost:3000 > nul 2>&1 && (echo "  OK") || (echo "  FALHOU")
 
 test-ci:
-	@echo "Nenhum framework de testes configurado."
-	@echo "Para adicionar: make dev-shell SVC=server"
-	@echo "  npm install --save-dev jest ts-jest @types/jest @jest/globals"
+	docker compose -f docker-compose.dev.yml exec -T server env DOTENV_CONFIG_QUIET=true npm test -- --passWithNoTests
+
+# ─── Validação pré-deploy ────────────────────────────────────
+## Validação completa antes de push/deploy (TS, Prisma, migrations, build, testes)
+validate:
+	@bash scripts/validate.sh
+
+## Alias curto
+check: validate
+
+## Push seguro — valida antes de fazer git push
+safe-push:
+	@bash scripts/validate.sh && git push
 
 # ─── Utilitários ─────────────────────────────────────────────
 status:
@@ -154,6 +164,9 @@ help:
 	@echo "║                                                          ║"
 	@echo "║  🔍 TESTES                                              ║"
 	@echo "║    make test            Health check HTTP                ║"
+	@echo "║    make test-ci         Roda testes Jest no container    ║"
+	@echo "║    make validate        Validação pré-deploy completa    ║"
+	@echo "║    make safe-push       Valida e faz git push            ║"
 	@echo "║                                                          ║"
 	@echo "║  ⚙️  UTILITRIOS                                         ║"
 	@echo "║    make setup           Cria .env a partir do exemplo    ║"

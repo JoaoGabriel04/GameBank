@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-sgpController is a multiplayer manager for Super Banco Imobiliário (Brazilian Monopoly). It replaces the physical banker role with a full web app handling balances, properties, debts, and trades.
+GameBank is a multiplayer manager for Super Banco Imobiliário (Brazilian Monopoly). It replaces the physical banker role with a full web app handling balances, properties, debts, and trades.
 
 | Layer | Stack |
 |---|---|
@@ -38,6 +38,9 @@ make db-purge-users  # Run purge-users script
 # Manual builds (inside container or locally)
 cd server && npm run build        # prisma generate + tsc
 cd client && npx next build --turbopack
+
+# Health check / integration test
+make test
 
 # Lint (client)
 cd client && npm run lint
@@ -95,11 +98,15 @@ Routes always in `server/src/api/routes/<module>.route.ts` — never inside the 
 | `emitToPlayer` | `(sessionId, playerId, event, data)` | Send to one `SessionPlayer` by ID (negotiations) |
 | `emitChatMessage` | `(sessionId, message)` | Broadcast chat message to room |
 
-Redis adapter for multi-instance support. Falls back to in-memory if Redis unavailable. One socket per user — joining disconnects any previous socket for the same `User.id`.
+Redis adapter for multi-instance support (`@socket.io/redis-adapter`). Falls back to in-memory if Redis unavailable. Active socket tracking per user is maintained in Redis (`user:socket:{userId}`) with a local Map fallback — config in `server/src/lib/redis.ts` and `server/src/lib/socket.ts`.
+
+One socket per user — on join, the server disconnects any prior socket for the same `User.id` and emits `force_disconnect` to the old client.
 
 ### Zod schemas
 
 Shared schemas in `server/src/shared/schemas/`: `auth.schema.ts`, `banco.schema.ts`, `player.schema.ts`, `propriedade.schema.ts`, `session.schema.ts`.
+
+Avatar/banner constants (preset IDs, etc.) live in `server/src/shared/constants/`.
 
 Client-only schemas live inside `client/src/` and are not shared.
 
@@ -129,6 +136,22 @@ SWR hooks in `client/src/hooks/useApi/` are used for fetching; Zustand is author
 
 API calls centralized in `client/src/services/api/` (one file per domain).
 
+### Navigation
+
+UserNav bottom nav has 5 tabs (grid-cols-5): Dashboard, Cofre, Loja, Recompensas, Ranking. Perfil was removed from the navbar — it's only accessible by clicking the user avatar in the header (desktop and mobile).
+
+### Animation stack
+
+| Library | Usage |
+|---|---|
+| Framer Motion `^12` | New animations — modals, toasts, lists, tabs, page transitions |
+| GSAP `^3` | Legacy — `Modal` and `MobileMenu` only (keep as-is) |
+| CSS / Tailwind | `animate-spin`, `hover:scale-*`, `transition-colors` |
+| `canvas-confetti` | Celebration effects |
+| `lenis` | Smooth scroll |
+
+Reusable Framer Motion variants (`backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`) are centralized in `client/src/lib/animations.ts`. Import from there instead of defining inline.
+
 ### Next.js App Router rules
 
 - **Every component using hooks (`useState`, `useEffect`, `useRouter`, Zustand stores) needs `'use client'` at the top.** Without it, Zustand subscriptions are not set up — component renders once with initial state and never updates.
@@ -144,6 +167,22 @@ API calls centralized in `client/src/services/api/` (one file per domain).
 | Toast | `z-[100000]` | `ToastProvider` |
 
 New full-screen overlays must use `z-[200]`. Using `z-50` will place them behind the Header.
+
+## Dead files (do not delete — kept for reference)
+
+| File | Reason kept |
+|---|---|
+| `client/src/components/BadgeCollection/index.tsx` | Replaced by Cofre (`/user/cofre`) |
+| `client/src/components/Header/index.tsx` | Replaced by `UserNav` + `LandingHeader` |
+| `client/src/components/MobileMenu/index.tsx` | Unused |
+| `client/src/components/PlayerCard/index.tsx` | Replaced by local version in game page |
+| `client/src/components/Title1/index.tsx` | Unused |
+| `client/src/components/ui/button.tsx` | shadcn/ui — unused |
+| `client/src/components/ui/dropdown-menu.tsx` | shadcn/ui — unused |
+| `client/src/components/ui/select.tsx` | shadcn/ui — unused |
+| `client/src/lib/asyncAction.ts` | Never imported |
+| `client/src/hooks/useBannerCatalog.ts` | Never imported |
+| `client/src/constants/badges.ts` | Never imported |
 
 ## Conventions
 
@@ -170,7 +209,7 @@ New full-screen overlays must use `z-[200]`. Using `z-50` will place them behind
 
 ## CSP (helmet)
 
-`server/src/index.ts` configures `connect-src` with `http://localhost:7000` and `https://sgpcontroller.onrender.com`. **Do not remove** — browsers block API calls with "Network Error" if this is missing.
+`server/src/index.ts` configures `connect-src` with `http://localhost:7000` and `https://gamebank-vtsb.onrender.com`. **Do not remove** — browsers block API calls with "Network Error" if this is missing.
 
 ## Cloudinary avatar upload flow
 

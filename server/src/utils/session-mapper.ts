@@ -7,6 +7,7 @@ export async function mapSessionPlayers<T extends {
     avatarUrl: string | null;
     avatarUpdatedAt: Date | null;
     banner?: string | null;
+    spriteId?: string | null;
     user_items?: any;
   } | null;
 }>(players: T[]): Promise<any[]> {
@@ -39,6 +40,7 @@ export async function mapSessionPlayers<T extends {
       avatarUrl: user?.avatarUrl ?? null,
       avatarUpdatedAt: user?.avatarUpdatedAt?.toISOString?.() ?? null,
       banner: user?.banner ?? null,
+      spriteId: user?.spriteId ?? null,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
     };

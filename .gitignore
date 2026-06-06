@@ -4,6 +4,14 @@
 .env.*.local
 OPENCODE.md
 
+# Backups de banco (contêm dados — nunca versionar)
+backups/
+
+# Scratch / notas de trabalho
+updates/
+INSTRUCOES.md
+INSTRUCOES_RESET.md
+
 # OS
 Thumbs.db
 .DS_Store

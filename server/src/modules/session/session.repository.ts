@@ -96,6 +96,8 @@ export class SessionRepository {
         maxJogadores: true,
         saldoInicial: true,
         dataInicio: true,
+        startedAt: true,
+        rewardGranted: true,
         ownerId: true,
         jogadores: {
           include: {
@@ -163,7 +165,8 @@ export class SessionRepository {
   async updateStatus(id: number, status: string) {
     return prisma.session.update({
       where: { id },
-      data: { status },
+      // Registra o início real da partida quando entra em "Em Andamento"
+      data: { status, ...(status === "Em Andamento" ? { startedAt: new Date() } : {}) },
     });
   }
 

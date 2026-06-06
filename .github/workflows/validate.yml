@@ -1,0 +1,108 @@
+name: Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: gamebank_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gamebank_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/gamebank_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      # ─── Servidor ──────────────────────────────────────────────
+      - name: Install server dependencies
+        run: cd server && npm ci
+
+      - name: Gerar Prisma Client
+        run: cd server && npx prisma generate
+
+      - name: TypeScript — servidor
+        run: cd server && npx tsc --noEmit
+
+      - name: Validar schema Prisma
+        run: cd server && npx prisma validate
+
+      - name: Verificar migrations com falha (P3009)
+        run: |
+          cd server
+          STATUS=$(npx prisma migrate status 2>&1) || true
+          echo "$STATUS"
+          if echo "$STATUS" | grep -qi "failed\|P3009"; then
+            echo "::error::Migration com status FAILED detectada — corrija antes de fazer push"
+            exit 1
+          fi
+
+      - name: Aplicar migrations no banco de teste
+        run: cd server && npx prisma migrate deploy
+
+      - name: Rodar testes
+        run: cd server && npm test -- --passWithNoTests
+        env:
+          JWT_SECRET: test-secret-ci
+          REDIS_URL: redis://localhost:6379/1
+          NODE_ENV: test
+
+      # ─── Cliente ───────────────────────────────────────────────
+      - name: Install client dependencies
+        run: cd client && npm ci
+
+      - name: TypeScript — cliente
+        run: cd client && npx tsc --noEmit
+
+      - name: Build cliente
+        run: cd client && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:7000
+          NEXT_PUBLIC_GAME_VERSION: ci
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger deploy no Render
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -d '{}'

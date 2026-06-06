@@ -96,10 +96,10 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                 </motion.div>
 
                 <div className="flex flex-col items-center mb-1">
-                  <div className="overflow-hidden rounded-t-xl">
-                    <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="h-8 w-20" />
+                  <div className="w-20 h-8 rounded-t-xl overflow-hidden">
+                    <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="w-full h-full" />
                   </div>
-                  <div className="flex justify-center -mt-5">
+                  <div className="flex justify-center -mt-5 z-10">
                     <UserAvatar
                       avatarUrl={entry.player.avatarUrl}
                       avatarUpdatedAt={entry.player.avatarUpdatedAt}
@@ -131,6 +131,9 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                     <p className="text-xs text-yellow-400 flex items-center justify-center gap-1">
                       <CoinIcon size={12} className="inline" /> {entry.coinsEarned} coins
                     </p>
+                  )}
+                  {entry.penaltyReason && (
+                    <p className="text-[10px] text-zinc-500 mt-1 max-w-28 mx-auto">⚠ {entry.penaltyReason}</p>
                   )}
                 </motion.div>
 

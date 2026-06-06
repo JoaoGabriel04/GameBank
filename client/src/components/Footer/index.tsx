@@ -32,7 +32,7 @@ export default function Footer() {
           </a>
         </div>
 
-        <p className="font-inconsolata text-zinc-500 text-sm text-center">© 2026 GameBank. Todos os direitos reservados - v1.3.0</p>
+        <p className="font-inconsolata text-zinc-500 text-sm text-center">© 2026 GameBank. Todos os direitos reservados - v{process.env.NEXT_PUBLIC_GAME_VERSION ?? "1.0.0"}</p>
       </div>
     </footer>
   )

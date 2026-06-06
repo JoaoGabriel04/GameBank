@@ -52,6 +52,7 @@ model User {
   level        Int       @default(1)
   xp           Int       @default(0)
   coins        Int       @default(0)
+  diamonds     Int       @default(0)
   totalGames   Int       @default(0)
   totalWins    Int       @default(0)
   totalTop3    Int       @default(0)
@@ -66,6 +67,8 @@ model User {
   players              SessionPlayer[]
   missions             UserMission[]
   gameResults          GameResult[]
+  diamondTransactions  DiamondTransaction[]
+  coinTransactions     CoinTransaction[]
   auditLogs            AuditLog[]
   userNotifications    UserNotification[]
 
@@ -81,6 +84,8 @@ model Session {
   maxJogadores Int     @default(6)
   saldoInicial Float   @default(25000)
   dataInicio   DateTime @default(now())
+  startedAt    DateTime?            // momento em que a partida começou de fato (status -> Em Andamento)
+  rewardGranted Boolean @default(false) // proteção contra duplo crédito de recompensa
   ownerId      Int?
   owner        User?    @relation(fields: [ownerId], references: [id])
 
@@ -338,13 +343,51 @@ model GameResult {
   patrimony   Float
   xpEarned    Int      @default(0)
   coinsEarned Int      @default(0)
+
+  // Auditoria do sistema anti-farm
+  activityScore    Int     @default(0)   // score de participação na partida
+  rewardMultiplier Float   @default(1.0) // multiplicador aplicado
+  penaltyReason    String?               // motivo se recompensa foi reduzida
+
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 
+  @@unique([userId, sessionId]) // um resultado por jogador por partida
   @@index([userId])
   @@index([sessionId])
   @@map("resultados_partidas")
+}
+
+// Auditoria imutável de toda movimentação de coins
+model CoinTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Int      // positivo = crédito, negativo = débito
+  tipo      String   // "PARTIDA" | "MISSAO" | "LOJA_COMPRA" | "LOJA_VENDA" | "ADMIN"
+  sessionId Int?     // referência à partida se tipo = PARTIDA
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("coin_transactions")
+}
+
+model DiamondTransaction {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  quantidade      Int
+  tipo            String   // "COMPRA" | "GASTO_LOJA" | "ESTORNO"
+  paymentIntentId String?  @unique
+  itemId          Int?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("diamond_transactions")
 }
 
 model Card {

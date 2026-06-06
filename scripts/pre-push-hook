@@ -1,0 +1,41 @@
+#!/bin/bash
+# Hook pre-push do GameBank — validações rápidas antes de cada push.
+# Roda via Docker (banco local). Os testes completos ficam no CI.
+# Instale com: bash scripts/install-hooks.sh
+
+echo ""
+echo "→ Validações pré-push..."
+
+COMPOSE="docker compose -f docker-compose.dev.yml"
+DC_SERVER="$COMPOSE exec -T server"
+
+# Se os containers não estiverem rodando, não bloqueia o push (o CI valida).
+if ! $COMPOSE ps --services --filter "status=running" 2>/dev/null | grep -q "^server$"; then
+  echo "⚠ Containers de dev não estão rodando — pulando validação local (o CI fará a checagem)."
+  exit 0
+fi
+
+# TypeScript — servidor
+if ! $DC_SERVER npx tsc --noEmit; then
+  echo "✗ Erros de TypeScript no servidor — push bloqueado"
+  exit 1
+fi
+
+# Schema Prisma
+if ! $DC_SERVER npx prisma validate; then
+  echo "✗ Schema Prisma inválido — push bloqueado"
+  exit 1
+fi
+
+# Migrations com falha
+FAILED=$($DC_SERVER npx prisma migrate status 2>&1 | grep -i "failed\|P3009" || true)
+if [ -n "$FAILED" ]; then
+  echo "✗ Migration com status FAILED — push bloqueado"
+  echo "$FAILED"
+  echo ""
+  echo "Rode: cd server && npx prisma migrate resolve --rolled-back \"NOME_DA_MIGRATION\""
+  exit 1
+fi
+
+echo "✓ Validações OK — prosseguindo"
+exit 0
