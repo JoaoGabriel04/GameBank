@@ -53,6 +53,7 @@ export class ProfileService {
       level: correctLevel,
       xp: user.xp,
       coins: user.coins,
+      diamonds: user.diamonds,
       totalGames: user.totalGames,
       totalWins: user.totalWins,
       totalTop3: user.totalTop3,

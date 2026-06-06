@@ -23,4 +23,4 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./
 COPY --from=build /app/data ./data
 EXPOSE 7000
-CMD ["sh", "-c", "echo \"[startup] DATABASE_URL host=$(echo $DATABASE_URL | sed -E 's|.*@([^/]+)/.*|\\1|')\" && echo \"[startup] DIRECT_URL  host=$(echo $DIRECT_URL  | sed -E 's|.*@([^/]+)/.*|\\1|')\" && echo \"[startup] DIRECT_URL set: $([ -n \"$DIRECT_URL\" ] && echo YES || echo NO)\" && npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "echo \"[startup] DATABASE_URL host=$(echo $DATABASE_URL | sed -E 's|.*@([^/]+)/.*|\\1|')\" && echo \"[startup] DIRECT_URL  host=$(echo $DIRECT_URL  | sed -E 's|.*@([^/]+)/.*|\\1|')\" && echo \"[startup] DIRECT_URL set: $([ -n \"$DIRECT_URL\" ] && echo YES || echo NO)\" && (npx prisma migrate deploy || npx prisma db push) && node dist/index.js"]

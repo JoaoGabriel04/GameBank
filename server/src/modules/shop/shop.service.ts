@@ -189,4 +189,90 @@ export class ShopService {
     await shopRepository.syncUserBanner(userId);
     await this.rankingService.invalidateCache();
   }
+
+  // ── Diamond/Coin pack purchases ──────────────────────────────────────────
+
+  private readonly COIN_PACKS: Record<string, { coins: number; price: number }> = {
+    c1: { coins: 1000, price: 20 },
+    c2: { coins: 3000, price: 55 },
+    c3: { coins: 7500, price: 120 },
+    c4: { coins: 18000, price: 275 },
+    c5: { coins: 40000, price: 580 },
+    c6: { coins: 100000, price: 1350 },
+  };
+
+  private readonly DIAMOND_PACKS: Record<string, { diamonds: number }> = {
+    d1: { diamonds: 80 },
+    d2: { diamonds: 200 },
+    d3: { diamonds: 500 },
+    d4: { diamonds: 1200 },
+    d5: { diamonds: 3000 },
+    d6: { diamonds: 8000 },
+  };
+
+  async buyCoinsWithDiamonds(userId: number, packId: string) {
+    const pack = this.COIN_PACKS[packId];
+    if (!pack) throw new AppError(400, "Pacote de coins inválido.");
+
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { diamonds: true },
+      });
+      if (!user) throw new AppError(404, "Usuário não encontrado");
+      if (user.diamonds < pack.price) {
+        throw new AppError(400, "Diamantes insuficientes.");
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          diamonds: { decrement: pack.price },
+          coins: { increment: pack.coins },
+        },
+      });
+
+      await tx.diamondTransaction.create({
+        data: {
+          userId,
+          quantidade: -pack.price,
+          tipo: "GASTO_LOJA",
+        },
+      });
+
+      await tx.coinTransaction.create({
+        data: {
+          userId,
+          amount: pack.coins,
+          tipo: "LOJA_COMPRA",
+        },
+      });
+    }, { timeout: 15000, maxWait: 10000 });
+
+    return { message: `${pack.coins.toLocaleString("pt-BR")} coins comprados.` };
+  }
+
+  async buyDiamonds(userId: number, packId: string) {
+    const pack = this.DIAMOND_PACKS[packId];
+    if (!pack) throw new AppError(400, "Pacote de diamantes inválido.");
+
+    // Placeholder: in production, integrate Stripe/Pix here.
+    // For now, grant diamonds directly (dev/mock mode).
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { diamonds: { increment: pack.diamonds } },
+      });
+
+      await tx.diamondTransaction.create({
+        data: {
+          userId,
+          quantidade: pack.diamonds,
+          tipo: "COMPRA",
+        },
+      });
+    }, { timeout: 15000, maxWait: 10000 });
+
+    return { message: `${pack.diamonds} 💎 adicionados.` };
+  }
 }

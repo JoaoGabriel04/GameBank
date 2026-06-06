@@ -1,23 +1,35 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
-import {
-  Loader2, Crown, Shield, Image, Sparkles, Check, X, Ban,
-} from "lucide-react";
+import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi } from "@/services/api/shop";
+import { buyShopItemApi, buyDiamondsApi, buyCoinsWithDiamondsApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import CoinIcon from "@/components/CoinIcon";
+import DiamondIcon from "@/components/DiamondIcon";
 import { Chip } from "@/components/user/UserUI";
-import { RARITY_META } from "@/constants/rarity";
 import type { ShopItem } from "@/types/shop";
 
-type ItemType    = "title" | "badge" | "banner";
-type CategoryKey = "todos" | ItemType;
+/* ─── Types ─────────────────────────────────────────────────────────────── */
+type ItemType = "title" | "badge" | "banner";
+
+interface CoinPack {
+  id: string;
+  name: string;
+  coins: number;
+  price: number;
+  emoji: string;
+}
+
+interface DiamondPack {
+  id: string;
+  name: string;
+  diamonds: number;
+  brl: string;
+  highlight?: boolean;
+}
 
 const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" | "violet" | "sky" }> = {
   title:  { label: "Título",  color: "#f59e0b", tone: "amber"  },
@@ -25,81 +37,124 @@ const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" 
   banner: { label: "Banner",  color: "#38bdf8", tone: "sky"    },
 };
 
-const NAV_KEYS: { key: CategoryKey; label: string }[] = [
-  { key: "todos",  label: "Todos"    },
-  { key: "title",  label: "Títulos"  },
-  { key: "badge",  label: "Emblemas" },
-  { key: "banner", label: "Banners"  },
+const RARITY_META: Record<string, { label: string; color: string }> = {
+  comum:      { label: "Comum",      color: "#a1a1aa" },
+  raro:       { label: "Raro",       color: "#7dd3fc" },
+  super_raro: { label: "Super Raro", color: "#c4b5fd" },
+  epico:      { label: "Épico",      color: "#a78bfa" },
+  lendario:   { label: "Lendário",   color: "#fcd34d" },
+};
+
+const COIN_PACKS: CoinPack[] = [
+  { id: "c1", name: "Bolsinha",  coins: 1000,   price: 20,   emoji: "💰" },
+  { id: "c2", name: "Sacola",    coins: 3000,   price: 55,   emoji: "👜" },
+  { id: "c3", name: "Baú",       coins: 7500,   price: 120,  emoji: "📦" },
+  { id: "c4", name: "Tonel",     coins: 18000,  price: 275,  emoji: "🛢️"  },
+  { id: "c5", name: "Carroça",   coins: 40000,  price: 580,  emoji: "🪙"  },
+  { id: "c6", name: "Tesouro",   coins: 100000, price: 1350, emoji: "💎"  },
 ];
 
-function ShopItemCard({
+const DIAMOND_PACKS: DiamondPack[] = [
+  { id: "d1", name: "Punhado",   diamonds: 80,   brl: "R$ 9,90"   },
+  { id: "d2", name: "Bolsa",     diamonds: 200,  brl: "R$ 24,90"  },
+  { id: "d3", name: "Saco",      diamonds: 500,  brl: "R$ 59,90",  highlight: true },
+  { id: "d4", name: "Mochila",   diamonds: 1200, brl: "R$ 139,90" },
+  { id: "d5", name: "Baú Real",  diamonds: 3000, brl: "R$ 329,90" },
+  { id: "d6", name: "Tesouro",   diamonds: 8000, brl: "R$ 849,90" },
+];
+
+/* ─── Section header ────────────────────────────────────────────────────── */
+function SectionHeader({
+  label,
+  icon: Icon,
+  color,
+  sub,
+}: {
+  label: string;
+  icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
+  color: string;
+  sub?: string;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2 my-6 first:mt-0 px-3 py-2 rounded-r-xl"
+      style={{
+        background: `linear-gradient(90deg, ${color}28 0%, transparent 100%)`,
+        borderLeft: `3px solid ${color}`,
+      }}
+    >
+      <Icon size={16} style={{ color, flexShrink: 0 }} />
+      <span className="font-jaro text-[18px] text-zinc-100">{label}</span>
+      {sub && (
+        <span className="font-inconsolata text-[10px] text-zinc-600 ml-1">{sub}</span>
+      )}
+    </div>
+  );
+}
+
+/* ─── Cosmetic card ─────────────────────────────────────────────────────── */
+function CosmeticCard({
   item,
-  isSelected,
   onSelect,
 }: {
   item: ShopItem;
-  isSelected: boolean;
   onSelect: (item: ShopItem) => void;
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? "#d4d4d8";
+  const glowColor = rMeta?.color ?? meta.color;
   const isBanner  = item.type === "banner";
-
-  const topBg = isBanner && item.value
+  const topBg     = isBanner && item.value
     ? item.value
-    : `radial-gradient(ellipse at 50% 55%, ${glowColor}2e 0%, #0d0d10 68%)`;
+    : `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(item)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all"
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
       style={{
         borderRadius: 14,
-        border: isSelected
-          ? "1px solid rgba(74,222,128,0.5)"
-          : `1px solid ${glowColor}30`,
-        boxShadow: isSelected
-          ? "0 0 22px -6px rgba(74,222,128,0.5)"
-          : (rMeta && rMeta.color !== "#d4d4d8" ? `0 0 14px -9px ${glowColor}88` : "none"),
+        border: `1px solid ${glowColor}30`,
+        boxShadow: rMeta && rMeta.color !== "#a1a1aa"
+          ? `0 0 16px -8px ${glowColor}77`
+          : "none",
       }}
     >
       <div
         className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 104, background: isBanner ? undefined : topBg }}
+        style={{ height: 96, background: topBg }}
       >
-        {isBanner && (
-          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
-        )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
           style={{
             background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
-            opacity: 0.9,
+            opacity: 0.85,
           }}
         />
-        {isSelected && (
-          <div
-            className="absolute top-1.5 right-1.5 rounded-full grid place-items-center"
-            style={{ width: 18, height: 18, background: "rgba(74,222,128,0.9)" }}
+        {rMeta && (
+          <span
+            className="absolute top-1.5 right-1.5 font-inconsolata uppercase"
+            style={{
+              fontSize: 8, letterSpacing: "0.06em",
+              color: glowColor,
+              background: glowColor + "22",
+              border: `1px solid ${glowColor}44`,
+              borderRadius: 4, padding: "1px 4px", lineHeight: "13px",
+            }}
           >
-            <Check size={10} color="#09090b" strokeWidth={3} />
-          </div>
+            {rMeta.label}
+          </span>
         )}
-        {isBanner ? null : (
-          <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
-            {item.type === "title"  && <Crown  size={44} />}
-            {item.type === "badge"  && (item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
-            ) : (
-              <Shield size={44} />
-            ))}
+        {!isBanner && (
+          <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
+            {item.type === "title"  && <Crown  size={40} />}
+            {item.type === "badge"  && <Shield size={40} />}
           </div>
         )}
         <span
           className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
-          style={{ fontSize: 9, letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)" }}
+          style={{ fontSize: 8, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}
         >
           {meta.label}
         </span>
@@ -107,10 +162,7 @@ function ShopItemCard({
 
       <div
         className="px-2.5 pt-2.5 pb-3"
-        style={{
-          background: "#111113",
-          borderTop: `1px solid ${glowColor}28`,
-        }}
+        style={{ background: "#111113", borderTop: `1px solid ${glowColor}22` }}
       >
         <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{item.name}</p>
         <span className="inline-flex items-center gap-1 font-jaro text-[13px] text-amber-300">
@@ -122,7 +174,123 @@ function ShopItemCard({
   );
 }
 
-function DetailPanel({
+/* ─── Coin pack card ────────────────────────────────────────────────────── */
+function CoinPackCard({
+  pack,
+  userDiamonds,
+  onBuy,
+}: {
+  pack: CoinPack;
+  userDiamonds: number;
+  onBuy: (pack: CoinPack) => void;
+}) {
+  const canAfford = userDiamonds >= pack.price;
+  return (
+    <button
+      type="button"
+      disabled={!canAfford}
+      onClick={() => onBuy(pack)}
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 disabled:opacity-55 disabled:cursor-not-allowed"
+      style={{
+        borderRadius: 14,
+        border: "1px solid rgba(251,191,36,0.25)",
+        boxShadow: "0 0 16px -8px rgba(251,191,36,0.35)",
+      }}
+    >
+      <div
+        className="relative overflow-hidden flex flex-col items-center justify-center gap-1"
+        style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(251,191,36,0.2) 0%, #0d0d10 70%)" }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
+        <span className="text-[28px] leading-none">{pack.emoji}</span>
+        <span className="font-jaro text-[18px] text-amber-300">
+          {pack.coins >= 1000 ? `${(pack.coins / 1000).toFixed(0)}K` : pack.coins}
+        </span>
+      </div>
+      <div
+        className="px-2.5 pt-2.5 pb-3"
+        style={{ background: "#111113", borderTop: "1px solid rgba(251,191,36,0.15)" }}
+      >
+        <p className="font-jaro text-[12px] text-zinc-200 leading-tight mb-1.5">{pack.name}</p>
+        <span className="inline-flex items-center gap-1 font-jaro text-[14px] text-cyan-300">
+          <DiamondIcon size={13} /> {pack.price}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/* ─── Diamond pack card ─────────────────────────────────────────────────── */
+function DiamondPackCard({
+  pack,
+  onBuy,
+}: {
+  pack: DiamondPack;
+  onBuy: (pack: DiamondPack) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onBuy(pack)}
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 relative"
+      style={{
+        borderRadius: 14,
+        border: pack.highlight
+          ? "1.5px solid rgba(34,211,238,0.65)"
+          : "1px solid rgba(34,211,238,0.2)",
+        boxShadow: pack.highlight
+          ? "0 0 24px -6px rgba(34,211,238,0.5)"
+          : "0 0 16px -10px rgba(34,211,238,0.3)",
+      }}
+    >
+      {pack.highlight && (
+        <div className="absolute top-0 left-0 right-0 z-10 flex justify-center">
+          <span
+            className="font-inconsolata font-bold uppercase"
+            style={{
+              fontSize: 8, letterSpacing: "0.08em",
+              background: "#22d3ee", color: "#09090b",
+              padding: "2px 8px", borderRadius: "0 0 6px 6px",
+            }}
+          >
+            MAIS POPULAR
+          </span>
+        </div>
+      )}
+
+      <div
+        className="relative overflow-hidden flex flex-col items-center justify-center gap-1"
+        style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(34,211,238,0.18) 0%, #0d0d10 70%)" }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg,transparent,#22d3ee,transparent)", opacity: 0.85 }} />
+        <span
+          className="text-[26px] leading-none"
+          style={{ filter: "drop-shadow(0 0 8px rgba(34,211,238,0.8))" }}
+        >
+          💎
+        </span>
+        <span className="font-jaro text-[18px] text-cyan-300">
+          {pack.diamonds.toLocaleString("pt-BR")}
+        </span>
+      </div>
+
+      <div
+        className="px-2.5 pt-2.5 pb-3"
+        style={{ background: "#111113", borderTop: "1px solid rgba(34,211,238,0.15)" }}
+      >
+        <p className="font-jaro text-[12px] text-zinc-200 leading-tight mb-1.5">{pack.name}</p>
+        <span className="font-inconsolata text-[12px] font-semibold text-green-400">
+          {pack.brl}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/* ─── Detail bottom sheet ─────────────────────────────────────────────────── */
+function DetailSheet({
   item,
   userCoins,
   onClose,
@@ -135,147 +303,126 @@ function DetailPanel({
   onBuy: (item: ShopItem) => void;
   buying: boolean;
 }) {
-  if (!item) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 p-7 opacity-40">
-        <Sparkles size={40} color="#27272a" />
-        <p className="font-inconsolata text-[11px] text-zinc-700 text-center leading-relaxed">
-          Selecione um item<br />para ver os detalhes
-        </p>
-      </div>
-    );
-  }
+  if (!item) return null;
 
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? "#d4d4d8";
+  const accent    = rMeta?.color ?? meta.color;
   const isBanner  = item.type === "banner";
   const canAfford = userCoins >= item.price;
 
   return (
-    <div className="flex flex-col gap-4 p-5 overflow-y-auto h-full">
-      <div className="flex items-start justify-between gap-2.5">
-        {isBanner && item.value ? (
-          <UserBanner
-            banner={item.value}
-            imageUrl={item.imageUrl}
-            spriteId={null}
-            className="flex-1 rounded-2xl"
-            style={{ height: 72 }}
-          />
-        ) : item.type === "badge" && item.imageUrl ? (
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
-            style={{
-              background: glowColor + "22",
-              boxShadow: `0 0 36px -8px ${glowColor}`,
-            }}
-          >
-            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
-          </div>
-        ) : (
-          <div
-            className="w-16 h-16 rounded-2xl grid place-items-center shrink-0"
-            style={{
-              background: glowColor + "22",
-              color: glowColor,
-              boxShadow: `0 0 36px -8px ${glowColor}`,
-            }}
-          >
-            {item.type === "title"  && <Crown  size={28} />}
-            {item.type === "badge"  && <Shield size={28} />}
-            {item.type === "banner" && <Image  size={28} />}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0"
-        >
-          <X size={16} />
-        </button>
-      </div>
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl overflow-y-auto"
+        style={{ maxHeight: "72vh" }}
+      >
+        <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
+        <div className="flex flex-col gap-4 p-5 pb-8">
 
-      <div>
-        <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
-        <div className="flex gap-1.5 flex-wrap">
-          <Chip tone={meta.tone}>{meta.label}</Chip>
-          {rMeta && (
-            <span
-              className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
-              style={{
-                color: rMeta.color,
-                background: rMeta.color + "18",
-                borderColor: rMeta.color + "40",
-                letterSpacing: "0.08em",
-              }}
-            >
-              <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: rMeta.color }} />
-              {rMeta.label}
+          <div className="flex items-start justify-between gap-3">
+            {isBanner && item.value ? (
+              <UserBanner banner={item.value} spriteId={null} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+            ) : (
+              <div
+                className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
+                style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}
+              >
+                {item.type === "title"  && <Crown  size={26} />}
+                {item.type === "badge"  && <Shield size={26} />}
+                {item.type === "banner" && <Image  size={26} />}
+              </div>
+            )}
+            <button type="button" onClick={onClose}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div>
+            <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
+            <div className="flex gap-1.5 flex-wrap">
+              <Chip tone={meta.tone}>{meta.label}</Chip>
+              {rMeta && (
+                <span
+                  className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+                  style={{ color: accent, background: accent + "18", borderColor: accent + "40", letterSpacing: "0.08em" }}
+                >
+                  <span className="w-[5px] h-[5px] rounded-full inline-block" style={{ background: accent }} />
+                  {rMeta.label}
+                </span>
+              )}
+            </div>
+            {item.description && (
+              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">
+                {item.description}
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-zinc-800" />
+
+          <div className="flex items-center justify-between">
+            <span className="font-inconsolata text-xs text-zinc-500">Preço</span>
+            <span className="inline-flex items-center gap-1.5 font-jaro text-[22px] text-amber-300">
+              <CoinIcon size={18} className="text-amber-400" />
+              {item.price.toLocaleString("pt-BR")}
             </span>
+          </div>
+
+          {!canAfford && (
+            <div className="bg-rose-500/8 border border-rose-500/20 rounded-xl px-3 py-2.5">
+              <p className="font-inconsolata text-xs text-rose-400">
+                Faltam <strong>{(item.price - userCoins).toLocaleString("pt-BR")}</strong> coins para comprar.
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={buying || !canAfford}
+            onClick={() => onBuy(item)}
+            className={`w-full flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+              canAfford
+                ? "bg-green-500 text-zinc-950 hover:bg-green-400 shadow-[0_0_20px_-6px_rgba(74,222,128,0.55)]"
+                : "border border-zinc-700 text-zinc-500"
+            }`}
+          >
+            {buying ? <Loader2 size={16} className="animate-spin" />
+              : canAfford ? <><CoinIcon size={16} />Comprar agora</>
+              : <><Ban size={16} />Coins insuficientes</>
+            }
+          </button>
+
+          {canAfford && (
+            <p className="font-inconsolata text-[10px] text-zinc-600 text-center">
+              Saldo após: <span className="text-zinc-500">{(userCoins - item.price).toLocaleString("pt-BR")} coins</span>
+            </p>
           )}
         </div>
-        {item.description && (
-          <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">
-            {item.description}
-          </p>
-        )}
       </div>
-
-      <div className="border-t border-zinc-800" />
-
-      <div className="flex items-center justify-between">
-        <span className="font-inconsolata text-xs text-zinc-500">Preço</span>
-        <span className="inline-flex items-center gap-1.5 font-jaro text-[22px] text-amber-300">
-          <CoinIcon size={18} className="text-amber-400" />
-          {item.price.toLocaleString("pt-BR")}
-        </span>
-      </div>
-
-      {!canAfford && (
-        <div className="bg-rose-500/8 border border-rose-500/20 rounded-xl px-3 py-2.5">
-          <p className="font-inconsolata text-xs text-rose-400">
-            Faltam <strong>{(item.price - userCoins).toLocaleString("pt-BR")}</strong> coins.
-          </p>
-        </div>
-      )}
-
-      <button
-        type="button"
-        disabled={buying || !canAfford}
-        onClick={() => onBuy(item)}
-        className={`w-full flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-          canAfford
-            ? "bg-green-500 text-zinc-950 hover:bg-green-400 shadow-[0_0_20px_-6px_rgba(74,222,128,0.6)]"
-            : "border border-zinc-700 text-zinc-500"
-        }`}
-      >
-        {buying ? (
-          <Loader2 size={16} className="animate-spin" />
-        ) : canAfford ? (
-          <><CoinIcon size={16} />Comprar agora</>
-        ) : (
-          <><Ban size={16} />Coins insuficientes</>
-        )}
-      </button>
-
-      {canAfford && (
-        <p className="font-inconsolata text-[10px] text-zinc-600 text-center">
-          Saldo após: <span className="text-zinc-500">{(userCoins - item.price).toLocaleString("pt-BR")} coins</span>
-        </p>
-      )}
     </div>
   );
 }
 
-export default function LojaCosmeticosPage() {
+/* ─── 3-column grid ─────────────────────────────────────────────────────── */
+function Grid3({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
+export default function LojaPage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();
   const { success, error } = useToast();
 
-  const [cat, setCat]             = useState<CategoryKey>("todos");
-  const [selected, setSelected]   = useState<ShopItem | null>(null);
-  const [buying, setBuying]       = useState(false);
-  const [mobileSheet, setMobileSheet] = useState(false);
+  const [selected, setSelected] = useState<ShopItem | null>(null);
+  const [buying, setBuying]     = useState(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -284,6 +431,18 @@ export default function LojaCosmeticosPage() {
       if (!shopItems.length) loadShopItems();
     }
   }, [token, profile, shopItems.length, loadProfile, loadShopItems]);
+
+  const [coins, setCoins]       = useState<number | null>(null);
+  const [diamonds, setDiamonds] = useState<number | null>(null);
+  const userCoins    = coins    ?? profile?.coins    ?? 0;
+  const userDiamonds = diamonds ?? profile?.diamonds ?? 0;
+
+  useEffect(() => {
+    if (profile) {
+      setCoins(profile.coins);
+      setDiamonds(profile.diamonds ?? 0);
+    }
+  }, [profile]);
 
   const ownedIds = useMemo(
     () => new Set((profile?.items ?? []).map(i => i.id)),
@@ -295,35 +454,43 @@ export default function LojaCosmeticosPage() {
     [shopItems, ownedIds]
   );
 
-  const counts = useMemo(() => ({
-    todos:  available.length,
-    title:  available.filter(i => i.type === "title").length,
-    badge:  available.filter(i => i.type === "badge").length,
-    banner: available.filter(i => i.type === "banner").length,
-  }), [available]);
+  const titles  = available.filter(i => i.type === "title");
+  const badges  = available.filter(i => i.type === "badge");
+  const banners = available.filter(i => i.type === "banner");
 
-  const list = useMemo(
-    () => cat === "todos" ? available : available.filter(i => i.type === cat),
-    [cat, available]
-  );
-
-  const userCoins = profile?.coins ?? 0;
-
-  function handleSelect(item: ShopItem) { setSelected(item); setMobileSheet(true); }
-  function handleCatChange(key: CategoryKey) { setCat(key); setSelected(null); }
-
-  async function handleBuy(item: ShopItem) {
+  async function handleBuyCosmetic(item: ShopItem) {
     setBuying(true);
     try {
       await buyShopItemApi(item.id);
+      setCoins(c => (c ?? 0) - item.price);
       success(`"${item.name}" comprado!`);
       await loadProfile();
       setSelected(null);
-      setMobileSheet(false);
     } catch (e: any) {
-      error(e?.response?.data?.message ?? "Erro ao comprar item.");
+      error(e?.response?.data?.message ?? "Erro ao comprar.");
     } finally {
       setBuying(false);
+    }
+  }
+
+  async function handleBuyCoinPack(pack: CoinPack) {
+    try {
+      await buyCoinsWithDiamondsApi(pack.id);
+      setDiamonds(d => (d ?? 0) - pack.price);
+      setCoins(c => (c ?? 0) + pack.coins);
+      success(`+${pack.coins.toLocaleString("pt-BR")} coins adicionados!`);
+    } catch (e: any) {
+      error(e?.response?.data?.message ?? "Erro ao comprar coins.");
+    }
+  }
+
+  async function handleBuyDiamondPack(pack: DiamondPack) {
+    try {
+      await buyDiamondsApi(pack.id);
+      setDiamonds(d => (d ?? 0) + pack.diamonds);
+      success(`+${pack.diamonds} 💎 adicionados!`);
+    } catch (e: any) {
+      error(e?.response?.data?.message ?? "Erro ao comprar diamantes.");
     }
   }
 
@@ -335,7 +502,7 @@ export default function LojaCosmeticosPage() {
     );
   }
 
-  if (loading.shop || loading.profile) {
+  if ((loading.shop || loading.profile) && !shopItems.length) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
@@ -343,188 +510,90 @@ export default function LojaCosmeticosPage() {
     );
   }
 
-  const ItemGrid = () =>
-    list.length === 0 ? (
-      <div className="flex flex-col items-center justify-center h-[200px] gap-2.5">
-        <Sparkles size={32} color="#3f3f46" />
-        <p className="font-inconsolata text-sm text-zinc-600">
-          Nenhum item disponível nessa categoria.
-        </p>
-      </div>
-    ) : (
-      <motion.div
-        className="grid gap-2.5"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))", alignItems: "start" }}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {list.map(item => (
-          <motion.div key={item.id} variants={staggerItem}>
-            <ShopItemCard
-              item={item}
-              isSelected={selected?.id === item.id}
-              onSelect={handleSelect}
-            />
-          </motion.div>
-        ))}
-      </motion.div>
-    );
-
   return (
-    <div className="px-4 py-6 pt-16 lg:pt-6 relative">
+    <div className="max-w-lg mx-auto px-4 py-6 pt-16 lg:pt-6 relative">
 
-      {/* ── Desktop ── */}
+      {/* Balance bar */}
       <div
-        className="hidden lg:grid"
-        style={{
-          gridTemplateColumns: "168px 1fr 264px",
-          background: "#111113",
-          border: "1px solid #27272a",
-          borderRadius: 16,
-          overflow: "hidden",
-          minHeight: 530,
-        }}
+        className="flex items-center gap-2 mb-2 px-4 py-2.5 rounded-2xl border border-zinc-800"
+        style={{ background: "#111113" }}
       >
-        {/* Sidebar */}
-        <div className="border-r border-zinc-800 flex flex-col">
-          <div className="pt-5 pb-2">
-            <p className="font-inconsolata text-zinc-600 uppercase px-4 mb-2.5"
-               style={{ fontSize: 10, letterSpacing: "0.15em" }}>
-              Categorias
-            </p>
-            {NAV_KEYS.map(({ key, label }) => {
-              const active = cat === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleCatChange(key)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 gap-2 cursor-pointer transition-all outline-none"
-                  style={{
-                    background: active ? "rgba(74,222,128,0.06)" : "transparent",
-                    borderLeft: `2px solid ${active ? "#4ade80" : "transparent"}`,
-                    color: active ? "#f4f4f5" : "#71717a",
-                  }}
-                >
-                  <span className="font-inconsolata text-[13px]">{label}</span>
-                  <span
-                    className="font-inconsolata rounded-md"
-                    style={{
-                      fontSize: 10, padding: "1px 6px",
-                      background: active ? "rgba(74,222,128,0.15)" : "#27272a",
-                      color: active ? "#4ade80" : "#52525b",
-                    }}
-                  >
-                    {counts[key]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Balance */}
-          <div className="border-t border-zinc-800 p-4">
-            <p className="font-inconsolata text-zinc-600 uppercase mb-1"
-               style={{ fontSize: 10, letterSpacing: "0.1em" }}>
-              Seu saldo
-            </p>
-            <div className="flex items-center gap-1.5">
-              <CoinIcon size={16} className="text-amber-400" />
-              <span className="font-jaro text-xl text-amber-300">
-                {userCoins.toLocaleString("pt-BR")}
-              </span>
-            </div>
-          </div>
+        <span className="font-inconsolata text-[11px] text-zinc-600 mr-auto">Saldo</span>
+        <div
+          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
+          style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}
+        >
+          <CoinIcon size={14} className="text-amber-400" />
+          <span className="font-jaro text-[17px] text-amber-300">{userCoins.toLocaleString("pt-BR")}</span>
         </div>
-
-        {/* Grid */}
-        <div className="p-5 overflow-y-auto" style={{ maxHeight: 530 }}>
-          <ItemGrid />
-        </div>
-
-        {/* Detail */}
-        <div className="border-l border-zinc-800">
-          <DetailPanel
-            item={selected}
-            userCoins={userCoins}
-            onClose={() => setSelected(null)}
-            onBuy={handleBuy}
-            buying={buying}
-          />
+        <div
+          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
+          style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.2)" }}
+        >
+          <DiamondIcon size={14} />
+          <span className="font-jaro text-[17px] text-cyan-300">{userDiamonds}</span>
         </div>
       </div>
 
-      {/* ── Mobile ── */}
-      <div className="lg:hidden flex flex-col gap-3.5">
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
-          {NAV_KEYS.map(({ key, label }) => {
-            const active = cat === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => handleCatChange(key)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 shrink-0 cursor-pointer font-inconsolata text-xs whitespace-nowrap rounded-[10px]"
-                style={{
-                  background: active ? "rgba(74,222,128,0.1)" : "#18181b",
-                  border: `1px solid ${active ? "rgba(74,222,128,0.35)" : "#27272a"}`,
-                  color: active ? "#4ade80" : "#71717a",
-                }}
-              >
-                {label}
-                <span style={{ background: active ? "rgba(74,222,128,0.2)" : "#27272a", color: active ? "#4ade80" : "#52525b", borderRadius: 5, padding: "0 5px", fontSize: 10 }}>
-                  {counts[key]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Títulos */}
+      {titles.length > 0 && (
+        <section>
+          <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${titles.length} disponíveis`} />
+          <Grid3>{titles.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
+        </section>
+      )}
 
-        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5">
-          <span className="font-inconsolata text-xs text-zinc-500">Saldo disponível</span>
-          <span className="inline-flex items-center gap-1.5 font-jaro text-lg text-amber-300">
-            <CoinIcon size={15} className="text-amber-400" />
-            {userCoins.toLocaleString("pt-BR")}
-          </span>
-        </div>
+      {/* Emblemas */}
+      {badges.length > 0 && (
+        <section>
+          <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${badges.length} disponíveis`} />
+          <Grid3>{badges.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
+        </section>
+      )}
 
-        <ItemGrid />
-      </div>
+      {/* Banners */}
+      {banners.length > 0 && (
+        <section>
+          <SectionHeader label="Banners" icon={Image} color="#38bdf8" sub={`${banners.length} disponíveis`} />
+          <Grid3>{banners.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
+        </section>
+      )}
 
-      {/* Mobile bottom sheet */}
-      <AnimatePresence>
-        {mobileSheet && selected && (
-          <div className="lg:hidden fixed inset-0 z-[200] flex flex-col justify-end">
-            <motion.div
-              variants={backdrop}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setMobileSheet(false)}
-            />
-            <motion.div
-              variants={slideUp}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto pb-24"
-            >
-              <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3 mb-1" />
-              <DetailPanel
-                item={selected}
-                userCoins={userCoins}
-                onClose={() => { setMobileSheet(false); setSelected(null); }}
-                onBuy={handleBuy}
-                buying={buying}
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Coins */}
+      <section>
+        <SectionHeader label="Coins" icon={Coins} color="#fbbf24" sub={`seu saldo: ${userCoins.toLocaleString("pt-BR")}`} />
+        <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
+          Compre coins com seus 💎 Diamantes.
+        </p>
+        <Grid3>
+          {COIN_PACKS.map(p => (
+            <CoinPackCard key={p.id} pack={p} userDiamonds={userDiamonds} onBuy={handleBuyCoinPack} />
+          ))}
+        </Grid3>
+      </section>
+
+      {/* Diamantes */}
+      <section className="mb-10">
+        <SectionHeader label="Diamantes" icon={Sparkles} color="#22d3ee" sub={`seu saldo: ${userDiamonds} 💎`} />
+        <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
+          Diamantes são a moeda premium do GameBank. Compra 100% segura.
+        </p>
+        <Grid3>
+          {DIAMOND_PACKS.map(p => (
+            <DiamondPackCard key={p.id} pack={p} onBuy={handleBuyDiamondPack} />
+          ))}
+        </Grid3>
+      </section>
+
+      {selected && (
+        <DetailSheet
+          item={selected}
+          userCoins={userCoins}
+          onClose={() => setSelected(null)}
+          onBuy={handleBuyCosmetic}
+          buying={buying}
+        />
+      )}
     </div>
   );
 }

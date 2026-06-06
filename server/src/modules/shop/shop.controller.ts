@@ -71,6 +71,32 @@ export const shopController = {
       res.status(500).json({ message: "Erro ao sincronizar banner" });
     }
   },
+
+  buyCoinsWithDiamonds: async (req: Request, res: Response) => {
+    try {
+      const { packId } = req.body;
+      if (!packId) return res.status(400).json({ message: "packId é obrigatório." });
+      const result = await shopService.buyCoinsWithDiamonds(req.user!.userId, packId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao comprar coins com diamantes:", err);
+      res.status(500).json({ message: "Erro ao comprar coins." });
+    }
+  },
+
+  buyDiamonds: async (req: Request, res: Response) => {
+    try {
+      const { packId } = req.body;
+      if (!packId) return res.status(400).json({ message: "packId é obrigatório." });
+      const result = await shopService.buyDiamonds(req.user!.userId, packId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao comprar diamantes:", err);
+      res.status(500).json({ message: "Erro ao comprar diamantes." });
+    }
+  },
 };
 
 export default shopController;

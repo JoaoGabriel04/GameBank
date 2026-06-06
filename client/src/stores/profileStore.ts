@@ -16,6 +16,7 @@ interface ProfileData {
   level: number
   xp: number
   coins: number
+  diamonds: number
   totalGames: number
   totalWins: number
   totalTop3: number
