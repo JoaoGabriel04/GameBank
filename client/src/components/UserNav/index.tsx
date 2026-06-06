@@ -22,6 +22,7 @@ import {
   Layers,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import DiamondIcon from "@/components/DiamondIcon";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
@@ -232,7 +233,7 @@ export default function UserNav() {
 
         <div className="flex-1" />
 
-        {/* Coins + Level pill */}
+        {/* Coins + Diamonds + Level pill */}
         {user && (
           <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
             <CoinIcon size={14} className="text-yellow-400" />
@@ -244,6 +245,11 @@ export default function UserNav() {
               ) : (
                 "—"
               )}
+            </span>
+            <span className="w-px h-4 bg-zinc-700 mx-1" />
+            <DiamondIcon size={14} />
+            <span className="font-jaro text-sm text-cyan-300">
+              {profile?.diamonds ?? 0}
             </span>
             <span className="w-px h-4 bg-zinc-700 mx-1" />
             <span className="font-jaro text-sm text-green-300">
@@ -292,7 +298,7 @@ export default function UserNav() {
 
           {/* Right side: coins, clock, notif, avatar */}
           <div className="flex items-center gap-2">
-            {/* Coins + Level (compact) */}
+            {/* Coins + Diamonds (compact) */}
             {user && (
               <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1">
                 <CoinIcon size={12} className="text-yellow-400 shrink-0" />
@@ -304,6 +310,11 @@ export default function UserNav() {
                   ) : (
                     "—"
                   )}
+                </span>
+                <span className="w-px h-3 bg-zinc-700 mx-0.5" />
+                <DiamondIcon size={11} />
+                <span className="font-jaro text-xs text-cyan-300">
+                  {profile?.diamonds ?? 0}
                 </span>
               </div>
             )}
