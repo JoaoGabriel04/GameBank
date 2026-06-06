@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -108,6 +110,7 @@ function CosmeticCard({
     : `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`;
 
   return (
+    <motion.div variants={staggerItem}>
     <button
       type="button"
       onClick={() => onSelect(item)}
@@ -174,6 +177,7 @@ function CosmeticCard({
         </span>
       </div>
     </button>
+    </motion.div>
   );
 }
 
@@ -199,6 +203,7 @@ function CoinPackCard({
   const canAfford = userDiamonds >= pack.price;
   const imgSrc = COIN_IMGS[pack.id];
   return (
+    <motion.div variants={staggerItem}>
     <button
       type="button"
       disabled={!canAfford}
@@ -233,6 +238,7 @@ function CoinPackCard({
         </span>
       </div>
     </button>
+    </motion.div>
   );
 }
 
@@ -245,6 +251,7 @@ function DiamondPackCard({
   onBuy: (pack: DiamondPack) => void;
 }) {
   return (
+    <motion.div variants={staggerItem}>
     <button
       type="button"
       onClick={() => onBuy(pack)}
@@ -301,6 +308,7 @@ function DiamondPackCard({
         </span>
       </div>
     </button>
+    </motion.div>
   );
 }
 
@@ -328,10 +336,21 @@ function DetailSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
         className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl overflow-y-auto"
         style={{ maxHeight: "72vh" }}
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
       >
         <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
         <div className="flex flex-col gap-4 p-5 pb-8">
@@ -416,17 +435,23 @@ function DetailSheet({
             </p>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-/* ─── 3-column grid ─────────────────────────────────────────────────────── */
+/* ─── 3-column animated grid ────────────────────────────────────────────── */
 function Grid3({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+    <motion.div
+      className="grid gap-2.5"
+      style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
@@ -600,15 +625,17 @@ export default function LojaPage() {
         </Grid3>
       </section>
 
-      {selected && (
-        <DetailSheet
-          item={selected}
-          userCoins={userCoins}
-          onClose={() => setSelected(null)}
-          onBuy={handleBuyCosmetic}
-          buying={buying}
-        />
-      )}
+      <AnimatePresence>
+        {selected && (
+          <DetailSheet
+            item={selected}
+            userCoins={userCoins}
+            onClose={() => setSelected(null)}
+            onBuy={handleBuyCosmetic}
+            buying={buying}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
