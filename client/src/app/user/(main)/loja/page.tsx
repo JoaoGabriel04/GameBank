@@ -221,7 +221,7 @@ function CoinPackCard({
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
         {imgSrc && (
-          <img src={imgSrc} alt="" className="w-4/5 h-full object-cover" />
+          <img src={imgSrc} alt="" className="w-3/4 h-3/4 object-cover" />
         )}
       </div>
       <div
@@ -553,27 +553,7 @@ export default function LojaPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 pt-16 lg:pt-6 relative">
 
-      {/* Balance bar */}
-      <div
-        className="flex items-center gap-2 mb-2 px-4 py-2.5 rounded-2xl border border-zinc-800"
-        style={{ background: "#111113" }}
-      >
-        <span className="font-inconsolata text-[11px] text-zinc-600 mr-auto">Saldo</span>
-        <div
-          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
-          style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)" }}
-        >
-          <CoinIcon size={14} className="text-amber-400" />
-          <span className="font-jaro text-[17px] text-amber-300">{userCoins.toLocaleString("pt-BR")}</span>
-        </div>
-        <div
-          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5"
-          style={{ background: "rgba(34,211,238,0.08)", border: "1px solid rgba(34,211,238,0.2)" }}
-        >
-          <DiamondIcon size={14} />
-          <span className="font-jaro text-[17px] text-cyan-300">{userDiamonds}</span>
-        </div>
-      </div>
+
 
       {/* Títulos */}
       {titles.length > 0 && (

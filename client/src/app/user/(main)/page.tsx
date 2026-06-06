@@ -18,7 +18,6 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
 import CoinIcon from "@/components/CoinIcon";
-import DiamondIcon from "@/components/DiamondIcon";
 import {
   Progress, Chip, Panel, PanelHead, LiveDot,
   xpForLevel, totalXpForLevels,
@@ -62,22 +61,7 @@ function ProfileHero() {
               ring
             />
           </div>
-          <div className="text-right pt-8 shrink-0">
-            <div className="flex items-center gap-1.5">
-              <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-1.5">
-                <CoinIcon size={14} className="text-amber-400" />
-                <span className="font-jaro text-base text-amber-300">
-                  {profile.coins.toLocaleString("pt-BR")}
-                </span>
-              </div>
-              <div className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-3 py-1.5">
-                <DiamondIcon size={14} />
-                <span className="font-jaro text-base text-cyan-300">
-                  {(profile.diamonds ?? 0).toLocaleString("pt-BR")}
-                </span>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">

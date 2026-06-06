@@ -15,7 +15,6 @@ import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
-import CoinIcon from "@/components/CoinIcon";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { getRankingApi } from "@/services/api/ranking";
@@ -141,16 +140,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
           ))}
         </div>
 
-        {/* Coins */}
-        <div className="flex items-center justify-center gap-2 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-2.5">
-          <CoinIcon size={15} className="text-yellow-400" />
-          <span className="font-jaro text-xl text-yellow-300">
-            {(player.coins ?? player.xp ?? 0).toLocaleString("pt-BR")}
-          </span>
-          <span className="font-inconsolata text-xs text-zinc-500">
-            {player.coins !== undefined ? "coins totais" : "XP total"}
-          </span>
-        </div>
+
       </div>
     </UModal>
   );
