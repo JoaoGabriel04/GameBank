@@ -13,6 +13,7 @@ import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
 import EditProfileModal from "@/components/EditProfileModal";
 import CoinIcon from "@/components/CoinIcon";
+import DiamondIcon from "@/components/DiamondIcon";
 import { Progress, Chip, Panel, PanelHead, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
 import type { GameResult } from "@/types/shop";
 
@@ -67,6 +68,13 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
                 {profile.coins.toLocaleString("pt-BR")}
               </span>
               <span className="font-inconsolata text-[10px] text-amber-500">coins</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-xl">
+              <DiamondIcon size={14} />
+              <span className="font-jaro text-base text-cyan-300">
+                {(profile.diamonds ?? 0).toLocaleString("pt-BR")}
+              </span>
+              <span className="font-inconsolata text-[10px] text-cyan-500">💎</span>
             </div>
             <Link
               href="/user/configuracoes"
