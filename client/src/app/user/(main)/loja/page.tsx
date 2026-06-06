@@ -193,22 +193,21 @@ const COIN_IMGS: Record<string, string> = {
 
 function CoinPackCard({
   pack,
-  userDiamonds,
   onBuy,
 }: {
   pack: CoinPack;
-  userDiamonds: number;
   onBuy: (pack: CoinPack) => void;
 }) {
-  const canAfford = userDiamonds >= pack.price;
   const imgSrc = COIN_IMGS[pack.id];
+  const coinLabel = pack.coins >= 1000
+    ? `${(pack.coins / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}K`
+    : pack.coins.toLocaleString("pt-BR");
   return (
     <motion.div variants={staggerItem}>
     <button
       type="button"
-      disabled={!canAfford}
       onClick={() => onBuy(pack)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 disabled:opacity-55 disabled:cursor-not-allowed"
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
       style={{
         borderRadius: 14,
         border: "1px solid rgba(251,191,36,0.25)",
@@ -222,17 +221,14 @@ function CoinPackCard({
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
         {imgSrc && (
-          <img src={imgSrc} alt="" className="absolute w-3/5 h-3/5 object-contain opacity-55" />
+          <img src={imgSrc} alt="" className="w-4/5 h-full object-cover" />
         )}
-        <span className="relative font-jaro text-[18px] text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-          {pack.coins >= 1000 ? `${(pack.coins / 1000).toFixed(0)}K` : pack.coins}
-        </span>
       </div>
       <div
         className="px-2.5 pt-2.5 pb-3"
         style={{ background: "#111113", borderTop: "1px solid rgba(251,191,36,0.15)" }}
       >
-        <p className="font-jaro text-[12px] text-zinc-200 leading-tight mb-1.5">{pack.name}</p>
+        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{coinLabel} Coins</p>
         <span className="inline-flex items-center gap-1 font-jaro text-[14px] text-cyan-300">
           <DiamondIcon size={13} /> {pack.price}
         </span>
@@ -514,6 +510,10 @@ export default function LojaPage() {
   }
 
   async function handleBuyCoinPack(pack: CoinPack) {
+    if (userDiamonds < pack.price) {
+      error(`Você precisa de ${pack.price} 💎 para comprar este pacote.`);
+      return;
+    }
     try {
       await buyCoinsWithDiamondsApi(pack.id);
       setDiamonds(d => (d ?? 0) - pack.price);
@@ -607,7 +607,7 @@ export default function LojaPage() {
         </p>
         <Grid3>
           {COIN_PACKS.map(p => (
-            <CoinPackCard key={p.id} pack={p} userDiamonds={userDiamonds} onBuy={handleBuyCoinPack} />
+            <CoinPackCard key={p.id} pack={p} onBuy={handleBuyCoinPack} />
           ))}
         </Grid3>
       </section>
