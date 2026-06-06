@@ -20,7 +20,6 @@ interface CoinPack {
   name: string;
   coins: number;
   price: number;
-  emoji: string;
 }
 
 interface DiamondPack {
@@ -46,12 +45,12 @@ const RARITY_META: Record<string, { label: string; color: string }> = {
 };
 
 const COIN_PACKS: CoinPack[] = [
-  { id: "c1", name: "Bolsinha",  coins: 1000,   price: 20,   emoji: "💰" },
-  { id: "c2", name: "Sacola",    coins: 3000,   price: 55,   emoji: "👜" },
-  { id: "c3", name: "Baú",       coins: 7500,   price: 120,  emoji: "📦" },
-  { id: "c4", name: "Tonel",     coins: 18000,  price: 275,  emoji: "🛢️"  },
-  { id: "c5", name: "Carroça",   coins: 40000,  price: 580,  emoji: "🪙"  },
-  { id: "c6", name: "Tesouro",   coins: 100000, price: 1350, emoji: "💎"  },
+  { id: "c1", name: "Bolsinha",  coins: 1000,   price: 20   },
+  { id: "c2", name: "Sacola",    coins: 3000,   price: 55   },
+  { id: "c3", name: "Baú",       coins: 7500,   price: 120  },
+  { id: "c4", name: "Tonel",     coins: 18000,  price: 275  },
+  { id: "c5", name: "Carroça",   coins: 40000,  price: 580  },
+  { id: "c6", name: "Tesouro",   coins: 100000, price: 1350 },
 ];
 
 const DIAMOND_PACKS: DiamondPack[] = [
@@ -149,7 +148,11 @@ function CosmeticCard({
         {!isBanner && (
           <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
             {item.type === "title"  && <Crown  size={40} />}
-            {item.type === "badge"  && <Shield size={40} />}
+            {item.type === "badge" && item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+            ) : item.type === "badge" ? (
+              <Shield size={40} />
+            ) : null}
           </div>
         )}
         <span
@@ -175,6 +178,15 @@ function CosmeticCard({
 }
 
 /* ─── Coin pack card ────────────────────────────────────────────────────── */
+const COIN_IMGS: Record<string, string> = {
+  c1: "/images/coin-shop-1.png",
+  c2: "/images/coin-shop-2.png",
+  c3: "/images/coin-shop-3.png",
+  c4: "/images/coin-shop-4.png",
+  c5: "/images/coin-shop-5.png",
+  c6: "/images/coin-shop-6.png",
+};
+
 function CoinPackCard({
   pack,
   userDiamonds,
@@ -185,6 +197,7 @@ function CoinPackCard({
   onBuy: (pack: CoinPack) => void;
 }) {
   const canAfford = userDiamonds >= pack.price;
+  const imgSrc = COIN_IMGS[pack.id];
   return (
     <button
       type="button"
@@ -198,13 +211,15 @@ function CoinPackCard({
       }}
     >
       <div
-        className="relative overflow-hidden flex flex-col items-center justify-center gap-1"
+        className="relative overflow-hidden flex items-center justify-center"
         style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(251,191,36,0.2) 0%, #0d0d10 70%)" }}
       >
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
-        <span className="text-[28px] leading-none">{pack.emoji}</span>
-        <span className="font-jaro text-[18px] text-amber-300">
+        {imgSrc && (
+          <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+        )}
+        <span className="relative font-jaro text-[18px] text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
           {pack.coins >= 1000 ? `${(pack.coins / 1000).toFixed(0)}K` : pack.coins}
         </span>
       </div>
@@ -537,7 +552,7 @@ export default function LojaPage() {
 
       {/* Títulos */}
       {titles.length > 0 && (
-        <section>
+        <section className="mb-10">
           <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${titles.length} disponíveis`} />
           <Grid3>{titles.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
         </section>
@@ -545,7 +560,7 @@ export default function LojaPage() {
 
       {/* Emblemas */}
       {badges.length > 0 && (
-        <section>
+        <section className="mb-10">
           <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${badges.length} disponíveis`} />
           <Grid3>{badges.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
         </section>
@@ -553,14 +568,14 @@ export default function LojaPage() {
 
       {/* Banners */}
       {banners.length > 0 && (
-        <section>
+        <section className="mb-10">
           <SectionHeader label="Banners" icon={Image} color="#38bdf8" sub={`${banners.length} disponíveis`} />
           <Grid3>{banners.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
         </section>
       )}
 
       {/* Coins */}
-      <section>
+      <section className="mb-10">
         <SectionHeader label="Coins" icon={Coins} color="#fbbf24" sub={`seu saldo: ${userCoins.toLocaleString("pt-BR")}`} />
         <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
           Compre coins com seus 💎 Diamantes.
