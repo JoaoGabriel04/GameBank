@@ -222,7 +222,7 @@ function CoinPackCard({
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
         {imgSrc && (
-          <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+          <img src={imgSrc} alt="" className="absolute w-3/5 h-3/5 object-contain opacity-55" />
         )}
         <span className="relative font-jaro text-[18px] text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
           {pack.coins >= 1000 ? `${(pack.coins / 1000).toFixed(0)}K` : pack.coins}
