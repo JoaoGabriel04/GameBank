@@ -36,9 +36,9 @@ export async function criarCheckout(userId: number, packageId: number) {
         idempotency_key: idempotencyKey,
       },
       back_urls: {
-        success: `${clientUrl}/user/loja?diamonds=success`,
-        failure: `${clientUrl}/user/loja?diamonds=failed`,
-        pending: `${clientUrl}/user/loja?diamonds=pending`,
+        success: `${clientUrl}/user/loja`,
+        failure: `${clientUrl}/user/loja`,
+        pending: `${clientUrl}/user/loja`,
       },
       auto_return: "approved",
       payment_methods: {

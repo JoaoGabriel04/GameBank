@@ -1,8 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, backdrop, slideUp, modalBox } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
@@ -621,15 +620,12 @@ export default function LojaPage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();
   const { success, error } = useToast();
-  const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [selected, setSelected]             = useState<ShopItem | null>(null);
   const [buying, setBuying]                 = useState(false);
   const [mpModal, setMpModal]               = useState<"success" | "failed" | "pending" | "expired" | null>(null);
   const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
   const [countdown, setCountdown]           = useState<string>("");
-  const paramProcessado                     = useRef(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -652,19 +648,15 @@ export default function LojaPage() {
   }, [profile]);
 
   useEffect(() => {
-    if (paramProcessado.current) return;
-    paramProcessado.current = true;
+    const status = sessionStorage.getItem("mp_payment_status");
+    if (!status) return;
+    sessionStorage.removeItem("mp_payment_status");
 
-    const param = searchParams.get("diamonds");
-    if (param === "success" || param === "failed" || param === "pending") {
-      router.replace("/user/loja", { scroll: false });
-      if (param === "pending") {
-        const stored = sessionStorage.getItem("diamonds_before_purchase");
-        setDiamondsBefore(stored !== null ? parseInt(stored, 10) : 0);
-      }
-      setMpModal(param);
+    if (status === "pending") {
+      const stored = sessionStorage.getItem("mp_diamonds_before");
+      setDiamondsBefore(stored !== null ? parseInt(stored, 10) : 0);
+      setMpModal("pending");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Contador regressivo do Pix (30 min a partir do checkout)
@@ -695,7 +687,7 @@ export default function LojaPage() {
     const stopPolling = () => {
       clearInterval(interval);
       clearTimeout(expireTimeout);
-      sessionStorage.removeItem("diamonds_before_purchase");
+      sessionStorage.removeItem("mp_diamonds_before");
       sessionStorage.removeItem("gbCheckoutAt");
     };
 
@@ -727,7 +719,7 @@ export default function LojaPage() {
   }, [mpModal]);
 
   function handleCancelPending() {
-    sessionStorage.removeItem("diamonds_before_purchase");
+    sessionStorage.removeItem("mp_diamonds_before");
     sessionStorage.removeItem("gbCheckoutAt");
     setMpModal(null);
   }
@@ -797,7 +789,8 @@ export default function LojaPage() {
       ]);
       const url = process.env.NODE_ENV === "production" ? checkoutUrl : sandboxUrl;
       if (!url) throw new Error("URL de checkout não disponível");
-      sessionStorage.setItem("diamonds_before_purchase", String(freshBalance));
+      sessionStorage.setItem("mp_payment_status", "pending");
+      sessionStorage.setItem("mp_diamonds_before", String(freshBalance));
       sessionStorage.setItem("gbCheckoutAt", String(Date.now()));
       window.location.href = url;
     } catch (e) {
