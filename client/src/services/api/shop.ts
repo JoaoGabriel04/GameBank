@@ -42,3 +42,6 @@ export const startDiamondCheckoutApi = (packageId: number) =>
 
 export const getDiamondHistoryApi = () =>
   api.get<DiamondPurchaseHistory[]>('/diamonds/history').then(res => res.data)
+
+export const getDiamondBalanceApi = () =>
+  api.get<{ diamonds: number }>('/diamonds/balance').then(res => res.data)

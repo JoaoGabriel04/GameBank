@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
-import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban } from "lucide-react";
+import { staggerContainer, staggerItem, backdrop, slideUp, modalBox } from "@/lib/animations";
+import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi } from "@/services/api/shop";
+import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import CoinIcon from "@/components/CoinIcon";
@@ -457,14 +458,172 @@ function Grid3({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ─── MP return modals ──────────────────────────────────────────────────── */
+function MPSuccessModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(34,211,238,0.25)" }}
+        variants={modalBox}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #22d3ee, transparent)" }}
+        />
+        <div className="flex flex-col items-center gap-4 px-6 py-8">
+          <div
+            className="w-16 h-16 rounded-full grid place-items-center"
+            style={{ background: "rgba(34,211,238,0.12)", boxShadow: "0 0 32px -8px rgba(34,211,238,0.6)" }}
+          >
+            <Check size={32} style={{ color: "#22d3ee" }} />
+          </div>
+          <div className="text-center">
+            <p className="font-jaro text-[22px] text-white leading-tight">Pagamento aprovado!</p>
+            <p className="font-inconsolata text-[12px] text-zinc-400 mt-2 leading-relaxed">
+              Seus diamantes serão creditados em instantes.<br />
+              Obrigado pela compra!
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer"
+            style={{ background: "#22d3ee", color: "#09090b" }}
+          >
+            Ótimo!
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function MPFailedModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(239,68,68,0.25)" }}
+        variants={modalBox}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #ef4444, transparent)" }}
+        />
+        <div className="flex flex-col items-center gap-4 px-6 py-8">
+          <div
+            className="w-16 h-16 rounded-full grid place-items-center"
+            style={{ background: "rgba(239,68,68,0.1)", boxShadow: "0 0 32px -8px rgba(239,68,68,0.5)" }}
+          >
+            <AlertTriangle size={32} style={{ color: "#ef4444" }} />
+          </div>
+          <div className="text-center">
+            <p className="font-jaro text-[22px] text-white leading-tight">Pagamento recusado</p>
+            <p className="font-inconsolata text-[12px] text-zinc-400 mt-2 leading-relaxed">
+              Não foi possível processar o pagamento.<br />
+              Verifique seus dados e tente novamente.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer"
+            style={{ background: "#18181b", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function MPPendingModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(234,179,8,0.25)" }}
+        variants={modalBox}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #eab308, transparent)" }}
+        />
+        <div className="flex flex-col items-center gap-4 px-6 py-8">
+          <div
+            className="w-16 h-16 rounded-full grid place-items-center"
+            style={{ background: "rgba(234,179,8,0.1)", boxShadow: "0 0 32px -8px rgba(234,179,8,0.5)" }}
+          >
+            <Clock size={32} style={{ color: "#eab308" }} />
+          </div>
+          <div className="text-center">
+            <p className="font-jaro text-[22px] text-white leading-tight">Pagamento pendente</p>
+            <p className="font-inconsolata text-[12px] text-zinc-400 mt-2 leading-relaxed">
+              O Pix foi gerado com sucesso!<br />
+              Abra o app do seu banco e pague o Pix para concluir a compra.<br />
+              <span className="text-zinc-500 text-[11px]">Seus diamantes serão creditados automaticamente após a confirmação.</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer"
+            style={{ background: "#18181b", border: "1px solid rgba(234,179,8,0.3)", color: "#eab308" }}
+          >
+            Entendido
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 export default function LojaPage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();
   const { success, error } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [selected, setSelected] = useState<ShopItem | null>(null);
   const [buying, setBuying]     = useState(false);
+  const [mpModal, setMpModal]   = useState<"success" | "failed" | "pending" | null>(null);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -485,6 +644,26 @@ export default function LojaPage() {
       setDiamonds(profile.diamonds ?? 0);
     }
   }, [profile]);
+
+  useEffect(() => {
+    const param = searchParams.get("diamonds");
+    if (param === "success" || param === "failed" || param === "pending") {
+      setMpModal(param);
+      router.replace("/user/loja");
+    }
+  }, [searchParams, router]);
+
+  async function handleCloseMpModal() {
+    if (mpModal === "success") {
+      try {
+        const { diamonds: newBalance } = await getDiamondBalanceApi();
+        setDiamonds(newBalance);
+      } catch {
+        // saldo será atualizado no próximo loadProfile
+      }
+    }
+    setMpModal(null);
+  }
 
   const ownedIds = useMemo(
     () => new Set((profile?.items ?? []).map(i => i.id)),
@@ -624,6 +803,12 @@ export default function LojaPage() {
             buying={buying}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {mpModal === "success" && <MPSuccessModal onClose={handleCloseMpModal} />}
+        {mpModal === "failed"  && <MPFailedModal  onClose={handleCloseMpModal} />}
+        {mpModal === "pending" && <MPPendingModal onClose={handleCloseMpModal} />}
       </AnimatePresence>
     </div>
   );
