@@ -38,6 +38,8 @@ export const authRepository = {
         avatarUpdatedAt: true,
         profileComplete: true,
         isAdmin: true,
+        coins: true,
+        diamonds: true,
       },
     }),
 

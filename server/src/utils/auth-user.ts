@@ -8,6 +8,8 @@ export type AuthUserPayload = {
   spriteId: string | null;
   profileComplete: boolean;
   isAdmin: boolean;
+  coins: number;
+  diamonds: number;
 };
 
 export function toAuthUserPayload(user: {
@@ -20,6 +22,8 @@ export function toAuthUserPayload(user: {
   spriteId?: string | null;
   profileComplete: boolean;
   isAdmin?: boolean;
+  coins?: number;
+  diamonds?: number;
 }): AuthUserPayload {
   return {
     id: user.id,
@@ -31,5 +35,7 @@ export function toAuthUserPayload(user: {
     spriteId: user.spriteId ?? null,
     profileComplete: user.profileComplete,
     isAdmin: user.isAdmin ?? false,
+    coins: user.coins ?? 0,
+    diamonds: user.diamonds ?? 0,
   };
 }

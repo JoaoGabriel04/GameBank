@@ -57,6 +57,8 @@ export class AuthService {
     avatarUpdatedAt: Date | null;
     profileComplete: boolean;
     isAdmin?: boolean;
+    coins?: number;
+    diamonds?: number;
   }) {
     const token = signToken({ userId: user.id, email: user.email, isAdmin: user.isAdmin ?? false });
     return { token, user: toAuthUserPayload(user) };

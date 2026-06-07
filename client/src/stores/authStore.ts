@@ -12,6 +12,8 @@ export interface AuthUser {
   badgeImageUrl?: string | null;
   profileComplete: boolean;
   isAdmin?: boolean;
+  coins?: number;
+  diamonds?: number;
 }
 
 interface AuthStore {

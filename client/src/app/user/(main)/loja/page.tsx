@@ -6,7 +6,7 @@ import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animatio
 import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi, buyDiamondsApi, buyCoinsWithDiamondsApi } from "@/services/api/shop";
+import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import CoinIcon from "@/components/CoinIcon";
@@ -47,21 +47,21 @@ const RARITY_META: Record<string, { label: string; color: string }> = {
 };
 
 const COIN_PACKS: CoinPack[] = [
-  { id: "c1", name: "Bolsinha",  coins: 1000,   price: 20   },
-  { id: "c2", name: "Sacola",    coins: 3000,   price: 55   },
-  { id: "c3", name: "Baú",       coins: 7500,   price: 120  },
-  { id: "c4", name: "Tonel",     coins: 18000,  price: 275  },
-  { id: "c5", name: "Carroça",   coins: 40000,  price: 580  },
-  { id: "c6", name: "Tesouro",   coins: 100000, price: 1350 },
+  { id: "c1", name: "Punhado de Coins", coins: 300,   price: 50   },
+  { id: "c2", name: "Saco de Coins",    coins: 800,   price: 120  },
+  { id: "c3", name: "Baú de Coins",     coins: 1800,  price: 240  },
+  { id: "c4", name: "Cofre de Coins",   coins: 4000,  price: 480  },
+  { id: "c5", name: "Tesouro de Coins", coins: 9000,  price: 950  },
+  { id: "c6", name: "Fortuna de Coins", coins: 20000, price: 1800 },
 ];
 
 const DIAMOND_PACKS: DiamondPack[] = [
-  { id: "d1", name: "Punhado",   diamonds: 80,   brl: "R$ 9,90"   },
-  { id: "d2", name: "Bolsa",     diamonds: 200,  brl: "R$ 24,90"  },
-  { id: "d3", name: "Saco",      diamonds: 500,  brl: "R$ 59,90",  highlight: true },
-  { id: "d4", name: "Mochila",   diamonds: 1200, brl: "R$ 139,90" },
-  { id: "d5", name: "Baú Real",  diamonds: 3000, brl: "R$ 329,90" },
-  { id: "d6", name: "Tesouro",   diamonds: 8000, brl: "R$ 849,90" },
+  { id: "d1", name: "Faísca",           diamonds: 100,  brl: "R$ 2,99"   },
+  { id: "d2", name: "Cristal",          diamonds: 250,  brl: "R$ 6,99"   },
+  { id: "d3", name: "Gema",             diamonds: 605,  brl: "R$ 14,99",  highlight: true },
+  { id: "d4", name: "Rubi",             diamonds: 1440, brl: "R$ 29,99"  },
+  { id: "d5", name: "Safira",           diamonds: 3375, brl: "R$ 59,99"  },
+  { id: "d6", name: "Diamante Supremo", diamonds: 8250, brl: "R$ 119,99" },
 ];
 
 /* ─── Section header ────────────────────────────────────────────────────── */
@@ -221,7 +221,7 @@ function CoinPackCard({
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
         {imgSrc && (
-          <img src={imgSrc} alt="" className="w-3/4 h-3/4 object-cover" />
+          <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
         )}
       </div>
       <div
@@ -239,6 +239,15 @@ function CoinPackCard({
 }
 
 /* ─── Diamond pack card ─────────────────────────────────────────────────── */
+const DIAMOND_IMGS: Record<string, string> = {
+  d1: "/images/diamond-shop-1.png",
+  d2: "/images/diamond-shop-2.png",
+  d3: "/images/diamond-shop-3.png",
+  d4: "/images/diamond-shop-4.png",
+  d5: "/images/diamond-shop-5.png",
+  d6: "/images/diamond-shop-6.png",
+};
+
 function DiamondPackCard({
   pack,
   onBuy,
@@ -246,6 +255,7 @@ function DiamondPackCard({
   pack: DiamondPack;
   onBuy: (pack: DiamondPack) => void;
 }) {
+  const imgSrc = DIAMOND_IMGS[pack.id];
   return (
     <motion.div variants={staggerItem}>
     <button
@@ -278,27 +288,23 @@ function DiamondPackCard({
       )}
 
       <div
-        className="relative overflow-hidden flex flex-col items-center justify-center gap-1"
+        className="relative overflow-hidden flex items-center justify-center"
         style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(34,211,238,0.18) 0%, #0d0d10 70%)" }}
       >
         <div className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: "linear-gradient(90deg,transparent,#22d3ee,transparent)", opacity: 0.85 }} />
-        <span
-          className="text-[26px] leading-none"
-          style={{ filter: "drop-shadow(0 0 8px rgba(34,211,238,0.8))" }}
-        >
-          💎
-        </span>
-        <span className="font-jaro text-[18px] text-cyan-300">
-          {pack.diamonds.toLocaleString("pt-BR")}
-        </span>
+        {imgSrc && (
+          <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
+        )}
       </div>
 
       <div
         className="px-2.5 pt-2.5 pb-3"
         style={{ background: "#111113", borderTop: "1px solid rgba(34,211,238,0.15)" }}
       >
-        <p className="font-jaro text-[12px] text-zinc-200 leading-tight mb-1.5">{pack.name}</p>
+        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">
+          {pack.diamonds.toLocaleString("pt-BR")} Diamantes
+        </p>
         <span className="font-inconsolata text-[12px] font-semibold text-green-400">
           {pack.brl}
         </span>
@@ -526,11 +532,14 @@ export default function LojaPage() {
 
   async function handleBuyDiamondPack(pack: DiamondPack) {
     try {
-      await buyDiamondsApi(pack.id);
-      setDiamonds(d => (d ?? 0) + pack.diamonds);
-      success(`+${pack.diamonds} 💎 adicionados!`);
+      // Extrai o ID numérico do DB a partir do id string "d1"→1, "d2"→2, etc.
+      const packageId = parseInt(pack.id.replace("d", ""), 10);
+      const { checkoutUrl, sandboxUrl } = await startDiamondCheckoutApi(packageId);
+      const url = process.env.NODE_ENV === "production" ? checkoutUrl : sandboxUrl;
+      if (!url) throw new Error("URL de checkout não disponível");
+      window.location.href = url;
     } catch (e: any) {
-      error(e?.response?.data?.message ?? "Erro ao comprar diamantes.");
+      error(e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao iniciar compra.");
     }
   }
 

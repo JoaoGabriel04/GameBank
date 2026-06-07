@@ -68,6 +68,7 @@ model User {
   missions             UserMission[]
   gameResults          GameResult[]
   diamondTransactions  DiamondTransaction[]
+  diamondPurchases     DiamondPurchase[]
   coinTransactions     CoinTransaction[]
   auditLogs            AuditLog[]
   userNotifications    UserNotification[]
@@ -321,6 +322,7 @@ model ShopItem {
   name          String
   description   String
   price         Int
+  diamondPrice  Int?
   icon          String?
   type          String   // title | badge | banner
   value         String?
@@ -379,15 +381,59 @@ model DiamondTransaction {
   id              Int      @id @default(autoincrement())
   userId          Int
   quantidade      Int
-  tipo            String   // "COMPRA" | "GASTO_LOJA" | "ESTORNO"
+  tipo            String   // "COMPRA" | "GASTO_LOJA" | "ESTORNO" | "ADMIN"
   paymentIntentId String?  @unique
+  purchaseId      String?
   itemId          Int?
+  note            String?
   createdAt       DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user     User             @relation(fields: [userId], references: [id])
+  purchase DiamondPurchase? @relation(fields: [purchaseId], references: [id])
 
   @@index([userId])
   @@map("diamond_transactions")
+}
+
+// Pacotes de diamantes disponíveis para compra
+model DiamondPackage {
+  id           Int      @id @default(autoincrement())
+  name         String
+  description  String   @default("")
+  diamonds     Int
+  bonusPct     Int      @default(0)
+  priceInCents Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  purchases DiamondPurchase[]
+
+  @@map("diamond_packages")
+}
+
+// Registro de cada compra de diamantes — imutável após COMPLETED
+model DiamondPurchase {
+  id                 String   @id @default(cuid())
+  userId             Int
+  packageId          Int
+  diamondsGranted    Int
+  amountPaidCents    Int
+  currency           String   @default("BRL")
+  mpPaymentId        String?  @unique
+  mpPreferenceId     String?
+  mpIdempotencyKey   String   @unique
+  paymentMethod      String?
+  status             String   // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED"
+  createdAt          DateTime @default(now())
+  completedAt        DateTime?
+
+  user                 User                 @relation(fields: [userId], references: [id])
+  package              DiamondPackage       @relation(fields: [packageId], references: [id])
+  diamondTransactions  DiamondTransaction[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("diamond_purchases")
 }
 
 model Card {

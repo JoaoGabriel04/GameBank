@@ -14,6 +14,7 @@ import missionsRouter from "./missions.route.js"
 import shopRouter from "./shop.route.js"
 import rankingRouter from "./ranking.route.js"
 import bannerRouter from "./banner.route.js"
+import { diamondsRouter } from "./diamonds.routes.js"
 
 const apiRouter = Router()
 
@@ -32,5 +33,6 @@ apiRouter.use("/shop", shopRouter)
 apiRouter.use("/ranking", rankingRouter)
 apiRouter.use("/banners", bannerRouter)
 apiRouter.use("/admin", adminRouter)
+apiRouter.use("/diamonds", diamondsRouter)
 
 export default apiRouter

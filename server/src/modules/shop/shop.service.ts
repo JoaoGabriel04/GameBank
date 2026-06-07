@@ -193,12 +193,12 @@ export class ShopService {
   // ── Diamond/Coin pack purchases ──────────────────────────────────────────
 
   private readonly COIN_PACKS: Record<string, { coins: number; price: number }> = {
-    c1: { coins: 1000, price: 20 },
-    c2: { coins: 3000, price: 55 },
-    c3: { coins: 7500, price: 120 },
-    c4: { coins: 18000, price: 275 },
-    c5: { coins: 40000, price: 580 },
-    c6: { coins: 100000, price: 1350 },
+    c1: { coins: 300,   price: 50   },
+    c2: { coins: 800,   price: 120  },
+    c3: { coins: 1800,  price: 240  },
+    c4: { coins: 4000,  price: 480  },
+    c5: { coins: 9000,  price: 950  },
+    c6: { coins: 20000, price: 1800 },
   };
 
   private readonly DIAMOND_PACKS: Record<string, { diamonds: number }> = {
@@ -274,5 +274,54 @@ export class ShopService {
     }, { timeout: 15000, maxWait: 10000 });
 
     return { message: `${pack.diamonds} 💎 adicionados.` };
+  }
+
+  async comprarItemComDiamantes(userId: number, itemId: number) {
+    const item = await prisma.shopItem.findUnique({ where: { id: itemId } });
+
+    if (!item) throw new AppError(404, "Item não encontrado");
+    if (!item.diamondPrice) throw new AppError(400, "Item não disponível por diamantes");
+
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { diamonds: true, user_items: true },
+      });
+
+      if (!user || user.diamonds < item.diamondPrice!) {
+        throw new AppError(400, "Diamantes insuficientes");
+      }
+
+      const refs = parseUserItems(user.user_items);
+      if (refs.some((r) => r.item_id === itemId)) {
+        throw new AppError(400, "Item já possuído");
+      }
+
+      const newRef: UserItemRef = {
+        item_id: item.id,
+        equipped: false,
+        acquiredAt: new Date().toISOString(),
+      };
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          diamonds: { decrement: item.diamondPrice! },
+          user_items: [...refs, newRef] as any,
+        },
+      });
+
+      await tx.diamondTransaction.create({
+        data: {
+          userId,
+          quantidade: -item.diamondPrice!,
+          tipo: "GASTO_LOJA",
+          itemId,
+        },
+      });
+    }, { timeout: 15000, maxWait: 10000 });
+
+    await this.rankingService.invalidateCache();
+    return { message: "Item comprado com sucesso", item };
   }
 }

@@ -5,6 +5,7 @@ import { requireAdmin } from "../../middleware/admin.middleware.js";
 import { bannerUpload } from "../../middleware/upload.middleware.js";
 import { badgeUpload } from "../../middleware/upload.middleware.js";
 import { bannerAdminLimiter } from "../../modules/auth/auth.controller.js";
+import { diamondAdminController } from "../../modules/diamonds/diamond-admin.controller.js";
 
 const adminRouter = Router();
 
@@ -80,5 +81,11 @@ adminRouter.post(
 
 // Audit
 adminRouter.get("/audit", adminController.listAudit);
+
+// Diamond packages
+adminRouter.get("/diamond-packages", diamondAdminController.listPackages);
+adminRouter.post("/diamond-packages", diamondAdminController.createPackage);
+adminRouter.patch("/diamond-packages/:id", diamondAdminController.updatePackage);
+adminRouter.get("/diamond-purchases", diamondAdminController.listPurchases);
 
 export default adminRouter;

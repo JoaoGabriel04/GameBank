@@ -11,5 +11,6 @@ shopRouter.post("/equip/:itemId", authenticate, shopController.equipItem);
 shopRouter.post("/sync-banner", authenticate, shopController.syncBanner);
 shopRouter.post("/coins-buy", authenticate, shopController.buyCoinsWithDiamonds);
 shopRouter.post("/diamonds-buy", authenticate, shopController.buyDiamonds);
+shopRouter.post("/buy-diamonds/:itemId", authenticate, shopController.buyItemWithDiamonds);
 
 export default shopRouter;

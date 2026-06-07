@@ -131,6 +131,7 @@ Zustand stores in `client/src/stores/` are the single source of truth:
 - `profileStore.ts` — user profile
 - `roomTokenStore.ts` — room tokens per session
 - `adminStore.ts` / `musicStore.ts`
+- `userNotificationStore.ts` — in-app notification state
 
 SWR hooks in `client/src/hooks/useApi/` are used for fetching; Zustand is authoritative.
 
@@ -147,6 +148,7 @@ UserNav bottom nav has 5 tabs (grid-cols-5): Dashboard, Cofre, Loja, Recompensas
 | Framer Motion `^12` | New animations — modals, toasts, lists, tabs, page transitions |
 | GSAP `^3` | Legacy — `Modal` and `MobileMenu` only (keep as-is) |
 | CSS / Tailwind | `animate-spin`, `hover:scale-*`, `transition-colors` |
+| `tw-animate-css` | `animate-in/out`, `fade-in-0`, `zoom-in-95` (Radix UI patterns) |
 | `canvas-confetti` | Celebration effects |
 | `lenis` | Smooth scroll |
 
@@ -163,7 +165,7 @@ Reusable Framer Motion variants (`backdrop`, `modalBox`, `slideUp`, `fadeIn`, `s
 |---|---|---|
 | Fixed navbars | `z-40` | `SiteBottomNav`, `GameBottomNav` |
 | Header | `z-100` | `Header` |
-| Modals / full-screen overlays | `z-[200]` | `EditProfileModal`, `Modal`, `ConfirmationModal`, `PodiumModal` |
+| Modals / full-screen overlays | `z-[200]` | `EditProfileModal`, `Modal`, `ConfirmationModal`, `PodiumModal`, `MobileMenu`, `Loading` |
 | Toast | `z-[100000]` | `ToastProvider` |
 
 New full-screen overlays must use `z-[200]`. Using `z-50` will place them behind the Header.
@@ -183,6 +185,10 @@ New full-screen overlays must use `z-[200]`. Using `z-50` will place them behind
 | `client/src/lib/asyncAction.ts` | Never imported |
 | `client/src/hooks/useBannerCatalog.ts` | Never imported |
 | `client/src/constants/badges.ts` | Never imported |
+| `INSTRUCOES.md` (root) | Obsolete design notes / terminal log |
+| `ANIMACOES.md` (root) | Animation implementation plan — already executed |
+| `GameBank Design System/` (root) | Design mockups |
+| `screenshots/` (root) | Unreferenced screenshots |
 
 ## Conventions
 

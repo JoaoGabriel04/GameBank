@@ -97,6 +97,21 @@ export const shopController = {
       res.status(500).json({ message: "Erro ao comprar diamantes." });
     }
   },
+
+  buyItemWithDiamonds: async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      if (!Number.isFinite(itemId)) {
+        return res.status(400).json({ message: "ID de item inválido" });
+      }
+      const result = await shopService.comprarItemComDiamantes(req.user!.userId, itemId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao comprar item com diamantes:", err);
+      res.status(500).json({ message: "Erro ao comprar item com diamantes." });
+    }
+  },
 };
 
 export default shopController;
