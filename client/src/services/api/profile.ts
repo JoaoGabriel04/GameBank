@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from './index'
 
 export const profileApi = {
-  me: () => api.get<unknown>('/profile/me'),
-  history: () => api.get<unknown[]>('/profile/history'),
+  me: () => api.get<any>('/profile/me'),
+  history: () => api.get<any[]>('/profile/history'),
 }
 
 export const getProfileApi = () => profileApi.me().then(res => res.data)

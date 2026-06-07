@@ -764,7 +764,7 @@ export default function LojaPage() {
       {/* Banners */}
       {banners.length > 0 && (
         <section className="mb-10">
-          <SectionHeader label="Banners" icon={Image} color="#38bdf8" sub={`${banners.length} disponíveis`} />
+          <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${banners.length} disponíveis`} />
           <Grid3>{banners.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
         </section>
       )}

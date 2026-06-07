@@ -126,5 +126,5 @@ function getPlayerColor(playerId: number, session: { jogadores?: { id: number; c
     yellow: "#eab308", purple: "#a855f7", black: "#a1a1aa",
     orange: "#f97316", pink: "#ec4899", emerald: "#10b981",
   };
-  return colorMap[player.cor] || "#a1a1aa";
+  return (player.cor ? colorMap[player.cor] : undefined) || "#a1a1aa";
 }

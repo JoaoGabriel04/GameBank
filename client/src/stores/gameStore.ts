@@ -4,6 +4,7 @@ import {
   PLAYER_COLORS,
   PlayerColor,
   Propriedade,
+  SorteRevesCard,
 } from "@/types/game";
 import { create } from "zustand";
 import { AxiosError } from "axios";
@@ -84,7 +85,7 @@ interface GameStore {
   receberDeTodos: (params: { sessionId: number; userId: number }) => Promise<void>;
   comprarHipotecada: (sessionPossesId: number, sessionId: number, compradorId: number) => Promise<void>;
   responderNotificacao: (notificationId: number, aceitar: boolean, respondedorId: number, sessionId: number) => Promise<void>;
-  sortearCarta: (sessionId: number, playerId: number) => Promise<unknown>;
+  sortearCarta: (sessionId: number, playerId: number) => Promise<{ tipoBaralho: "sorte" | "reves"; carta: SorteRevesCard; effectDescription: string } | null>;
   usarCartaPrisao: (sessionId: number, playerId: number) => Promise<void>;
   pagarDivida: (debtId: number, playerId: number, sessionId: number) => Promise<void>;
 
