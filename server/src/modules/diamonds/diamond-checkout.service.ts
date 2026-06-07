@@ -14,8 +14,11 @@ export async function criarCheckout(userId: number, packageId: number) {
   const clientUrl = process.env.CLIENT_URL
   if (!clientUrl) throw new Error("CLIENT_URL não configurada")
 
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+
   const response = await preference.create({
     body: {
+      date_of_expiration: expiresAt,
       items: [
         {
           id: `pkg_${pkg.id}`,
