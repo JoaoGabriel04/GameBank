@@ -594,11 +594,10 @@ function MPPendingModal({ onClose }: { onClose: () => void }) {
             <Clock size={32} style={{ color: "#eab308" }} />
           </div>
           <div className="text-center">
-            <p className="font-jaro text-[22px] text-white leading-tight">Pagamento pendente</p>
+            <p className="font-jaro text-[22px] text-white leading-tight">Pix gerado!</p>
             <p className="font-inconsolata text-[12px] text-zinc-400 mt-2 leading-relaxed">
-              O Pix foi gerado com sucesso!<br />
-              Abra o app do seu banco e pague o Pix para concluir a compra.<br />
-              <span className="text-zinc-500 text-[11px]">Seus diamantes serão creditados automaticamente após a confirmação.</span>
+              Pague no app do seu banco e seus diamantes serão creditados
+              automaticamente em alguns instantes após a confirmação.
             </p>
           </div>
           <button
@@ -623,9 +622,10 @@ export default function LojaPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [selected, setSelected] = useState<ShopItem | null>(null);
-  const [buying, setBuying]     = useState(false);
-  const [mpModal, setMpModal]   = useState<"success" | "failed" | "pending" | null>(null);
+  const [selected, setSelected]       = useState<ShopItem | null>(null);
+  const [buying, setBuying]           = useState(false);
+  const [mpModal, setMpModal]         = useState<"success" | "failed" | "pending" | null>(null);
+  const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -650,10 +650,44 @@ export default function LojaPage() {
   useEffect(() => {
     const param = searchParams.get("diamonds");
     if (param === "success" || param === "failed" || param === "pending") {
+      if (param === "pending") {
+        const stored = sessionStorage.getItem("gbDiamondsBefore");
+        setDiamondsBefore(stored !== null ? parseInt(stored, 10) : 0);
+      }
       setMpModal(param);
       router.replace("/user/loja");
     }
   }, [searchParams, router]);
+
+  // Polling de saldo após retorno de Pix pendente
+  useEffect(() => {
+    if (mpModal !== "pending") return;
+
+    const before = diamondsBefore;
+
+    const interval = setInterval(async () => {
+      try {
+        const { diamonds: current } = await getDiamondBalanceApi();
+        if (current > before) {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          sessionStorage.removeItem("gbDiamondsBefore");
+          setDiamonds(current);
+          setMpModal("success");
+        }
+      } catch {
+        // ignora erros transientes
+      }
+    }, 5000);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      sessionStorage.removeItem("gbDiamondsBefore");
+    }, 120000);
+
+    return () => { clearInterval(interval); clearTimeout(timeout); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mpModal]);
 
   async function handleCloseMpModal() {
     if (mpModal === "success") {
@@ -713,11 +747,12 @@ export default function LojaPage() {
 
   async function handleBuyDiamondPack(pack: DiamondPack) {
     try {
-      // Extrai o ID numérico do DB a partir do id string "d1"→1, "d2"→2, etc.
       const packageId = parseInt(pack.id.replace("d", ""), 10);
       const { checkoutUrl, sandboxUrl } = await startDiamondCheckoutApi(packageId);
       const url = process.env.NODE_ENV === "production" ? checkoutUrl : sandboxUrl;
       if (!url) throw new Error("URL de checkout não disponível");
+      // Persiste saldo antes do redirect para comparação no polling ao retornar
+      sessionStorage.setItem("gbDiamondsBefore", String(userDiamonds));
       window.location.href = url;
     } catch (e) {
       error(apiErrMsg(e, "Erro ao iniciar compra."));
