@@ -20,6 +20,11 @@ function verificarAssinatura(req: Request): boolean {
     const xSignature = req.headers["x-signature"] as string | undefined
     const xRequestId = req.headers["x-request-id"] as string | undefined
 
+    console.log("[webhook-mp] x-signature header:", xSignature)
+    console.log("[webhook-mp] x-request-id header:", xRequestId)
+    console.log("[webhook-mp] data.id (body):", req.body?.data?.id)
+    console.log("[webhook-mp] data.id (query):", req.query["data.id"])
+
     if (!xSignature) {
       console.error("[webhook-mp] Header x-signature ausente")
       return false
@@ -51,12 +56,18 @@ function verificarAssinatura(req: Request): boolean {
       if (xRequestId) {
         const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
         const expected = crypto.createHmac("sha256", secret).update(manifest).digest("hex")
+        console.log("[webhook-mp] manifest (com request-id):", manifest)
+        console.log("[webhook-mp] expected:", expected)
+        console.log("[webhook-mp] received v1:", v1)
         if (safeEqual(v1, expected)) return true
       }
 
       // Formato 2: sem x-request-id (notificação via notification_url da preferência)
       const manifestAlt = `id:${dataId};ts:${ts};`
       const expectedAlt = crypto.createHmac("sha256", secret).update(manifestAlt).digest("hex")
+      console.log("[webhook-mp] manifest (sem request-id):", manifestAlt)
+      console.log("[webhook-mp] expected:", expectedAlt)
+      console.log("[webhook-mp] received v1:", v1)
       if (safeEqual(v1, expectedAlt)) return true
     }
 
