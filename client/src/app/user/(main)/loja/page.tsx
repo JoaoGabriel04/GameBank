@@ -467,6 +467,209 @@ function Grid3({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ─── Coin confirm modal ────────────────────────────────────────────────── */
+function CoinConfirmModal({
+  pack,
+  userDiamonds,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  pack: CoinPack;
+  userDiamonds: number;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading: boolean;
+}) {
+  const canAfford = userDiamonds >= pack.price;
+  const coinLabel = pack.coins >= 1000
+    ? `${(pack.coins / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}K`
+    : pack.coins.toLocaleString("pt-BR");
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        variants={backdrop} initial="hidden" animate="visible" exit="exit"
+        onClick={loading ? undefined : onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(251,191,36,0.25)" }}
+        variants={modalBox} initial="hidden" animate="visible" exit="exit"
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #fbbf24, transparent)" }} />
+        <div className="flex flex-col gap-4 px-6 py-7">
+          <div className="flex items-center justify-between">
+            <p className="font-jaro text-[18px] text-white">Confirmar compra</p>
+            <button type="button" onClick={onClose} disabled={loading}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 disabled:opacity-40">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-900/60 rounded-xl p-4 flex items-center gap-3"
+            style={{ border: "1px solid rgba(251,191,36,0.15)" }}>
+            <CoinIcon size={32} className="text-amber-400 shrink-0" />
+            <div>
+              <p className="font-jaro text-[15px] text-white">{coinLabel} Coins</p>
+              <p className="font-inconsolata text-[11px] text-zinc-500">{pack.name}</p>
+            </div>
+            <div className="ml-auto text-right shrink-0">
+              <span className="inline-flex items-center gap-1 font-jaro text-[16px] text-cyan-300">
+                <DiamondIcon size={13} /> {pack.price}
+              </span>
+              <p className="font-inconsolata text-[10px] text-zinc-600">diamantes</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between font-inconsolata text-xs px-0.5">
+            <span className="text-zinc-500">Seu saldo</span>
+            <span className={canAfford ? "text-zinc-400" : "text-rose-400"}>
+              {userDiamonds.toLocaleString("pt-BR")} 💎
+            </span>
+          </div>
+
+          {!canAfford && (
+            <div className="bg-rose-500/8 border border-rose-500/20 rounded-xl px-3 py-2.5">
+              <p className="font-inconsolata text-xs text-rose-400">
+                Diamantes insuficientes para esta compra.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-1">
+            <button type="button" onClick={onClose} disabled={loading}
+              className="flex-1 font-inconsolata font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer disabled:opacity-40"
+              style={{ background: "#18181b", border: "1px solid rgba(113,113,122,0.3)", color: "#a1a1aa" }}>
+              Cancelar
+            </button>
+            <button type="button" onClick={onConfirm} disabled={loading || !canAfford}
+              className="flex-1 flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: canAfford ? "#fbbf24" : "#18181b", color: canAfford ? "#09090b" : "#a1a1aa" }}>
+              {loading ? <Loader2 size={14} className="animate-spin" /> : "Comprar"}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Diamond confirm modal ─────────────────────────────────────────────── */
+function DiamondConfirmModal({
+  pack,
+  onClose,
+  onConfirm,
+}: {
+  pack: DiamondPack;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        variants={backdrop} initial="hidden" animate="visible" exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(34,211,238,0.25)" }}
+        variants={modalBox} initial="hidden" animate="visible" exit="exit"
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #22d3ee, transparent)" }} />
+        {pack.highlight && (
+          <div className="absolute top-0 right-0 m-3">
+            <span className="font-inconsolata font-bold uppercase"
+              style={{
+                fontSize: 8, letterSpacing: "0.08em",
+                background: "#22d3ee", color: "#09090b",
+                padding: "2px 8px", borderRadius: 4,
+              }}>
+              MAIS POPULAR
+            </span>
+          </div>
+        )}
+        <div className="flex flex-col gap-4 px-6 py-7">
+          <div className="flex items-center justify-between">
+            <p className="font-jaro text-[18px] text-white">Confirmar compra</p>
+            <button type="button" onClick={onClose}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="bg-zinc-900/60 rounded-xl p-4 flex items-center gap-3"
+            style={{ border: "1px solid rgba(34,211,238,0.15)" }}>
+            <DiamondIcon size={32} className="shrink-0" />
+            <div>
+              <p className="font-jaro text-[15px] text-white">
+                {pack.diamonds.toLocaleString("pt-BR")} Diamantes
+              </p>
+              <p className="font-inconsolata text-[11px] text-zinc-500">{pack.name}</p>
+            </div>
+            <div className="ml-auto text-right shrink-0">
+              <span className="font-inconsolata font-semibold text-[16px] text-green-400">{pack.brl}</span>
+            </div>
+          </div>
+
+          <p className="font-inconsolata text-[11px] text-zinc-500 text-center leading-relaxed">
+            Você será redirecionado para o Mercado Pago para concluir o pagamento com segurança.
+          </p>
+
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 font-inconsolata font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer"
+              style={{ background: "#18181b", border: "1px solid rgba(113,113,122,0.3)", color: "#a1a1aa" }}>
+              Cancelar
+            </button>
+            <button type="button" onClick={onConfirm}
+              className="flex-1 font-inconsolata font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer"
+              style={{ background: "#22d3ee", color: "#09090b" }}>
+              Ir para pagamento
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─── Checkout redirect overlay ─────────────────────────────────────────── */
+function CheckoutRedirectOverlay() {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <motion.div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        variants={backdrop} initial="hidden" animate="visible" exit="exit"
+      />
+      <motion.div
+        className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d0d10", border: "1px solid rgba(34,211,238,0.2)" }}
+        variants={modalBox} initial="hidden" animate="visible" exit="exit"
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: "linear-gradient(90deg, transparent, #22d3ee, transparent)" }} />
+        <div className="flex flex-col items-center gap-4 px-6 py-8">
+          <div className="w-16 h-16 rounded-full grid place-items-center"
+            style={{ background: "rgba(34,211,238,0.1)", boxShadow: "0 0 32px -8px rgba(34,211,238,0.4)" }}>
+            <Loader2 size={28} className="animate-spin" style={{ color: "#22d3ee" }} />
+          </div>
+          <div className="text-center">
+            <p className="font-jaro text-[20px] text-white">Redirecionando...</p>
+            <p className="font-inconsolata text-[12px] text-zinc-400 mt-1 leading-relaxed">
+              Aguarde enquanto abrimos a página de pagamento segura.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── MP return modals ──────────────────────────────────────────────────── */
 function MPSuccessModal({ onClose }: { onClose: () => void }) {
   return (
@@ -631,6 +834,10 @@ export default function LojaPage() {
 
   const [selected, setSelected]             = useState<ShopItem | null>(null);
   const [buying, setBuying]                 = useState(false);
+  const [buyingCoin, setBuyingCoin]         = useState(false);
+  const [coinConfirm, setCoinConfirm]       = useState<CoinPack | null>(null);
+  const [diamondConfirm, setDiamondConfirm] = useState<DiamondPack | null>(null);
+  const [checkingOut, setCheckingOut]       = useState(false);
   const [mpModal, setMpModal]               = useState<"success" | "failed" | "pending" | "expired" | null>(null);
   const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
   const [countdown, setCountdown]           = useState<string>("");
@@ -776,19 +983,26 @@ export default function LojaPage() {
   async function handleBuyCoinPack(pack: CoinPack) {
     if (userDiamonds < pack.price) {
       error(`Você precisa de ${pack.price} 💎 para comprar este pacote.`);
+      setCoinConfirm(null);
       return;
     }
+    setBuyingCoin(true);
     try {
       await buyCoinsWithDiamondsApi(pack.id);
       setDiamonds(d => (d ?? 0) - pack.price);
       setCoins(c => (c ?? 0) + pack.coins);
       success(`+${pack.coins.toLocaleString("pt-BR")} coins adicionados!`);
+      setCoinConfirm(null);
     } catch (e) {
       error(apiErrMsg(e, "Erro ao comprar coins."));
+    } finally {
+      setBuyingCoin(false);
     }
   }
 
   async function handleBuyDiamondPack(pack: DiamondPack) {
+    setDiamondConfirm(null);
+    setCheckingOut(true);
     try {
       const packageId = parseInt(pack.id.replace("d", ""), 10);
       const [{ checkoutUrl, sandboxUrl }, { diamonds: freshBalance }] = await Promise.all([
@@ -802,6 +1016,7 @@ export default function LojaPage() {
       sessionStorage.setItem("gbCheckoutAt", String(Date.now()));
       window.location.href = url;
     } catch (e) {
+      setCheckingOut(false);
       error(apiErrMsg(e, "Erro ao iniciar compra."));
     }
   }
@@ -859,7 +1074,7 @@ export default function LojaPage() {
         </p>
         <Grid3>
           {COIN_PACKS.map(p => (
-            <CoinPackCard key={p.id} pack={p} onBuy={handleBuyCoinPack} />
+            <CoinPackCard key={p.id} pack={p} onBuy={setCoinConfirm} />
           ))}
         </Grid3>
       </section>
@@ -872,7 +1087,7 @@ export default function LojaPage() {
         </p>
         <Grid3>
           {DIAMOND_PACKS.map(p => (
-            <DiamondPackCard key={p.id} pack={p} onBuy={handleBuyDiamondPack} />
+            <DiamondPackCard key={p.id} pack={p} onBuy={setDiamondConfirm} />
           ))}
         </Grid3>
       </section>
@@ -887,6 +1102,32 @@ export default function LojaPage() {
             buying={buying}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {coinConfirm && (
+          <CoinConfirmModal
+            pack={coinConfirm}
+            userDiamonds={userDiamonds}
+            onClose={() => setCoinConfirm(null)}
+            onConfirm={() => handleBuyCoinPack(coinConfirm)}
+            loading={buyingCoin}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {diamondConfirm && (
+          <DiamondConfirmModal
+            pack={diamondConfirm}
+            onClose={() => setDiamondConfirm(null)}
+            onConfirm={() => handleBuyDiamondPack(diamondConfirm)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {checkingOut && <CheckoutRedirectOverlay />}
       </AnimatePresence>
 
       <AnimatePresence>

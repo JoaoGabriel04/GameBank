@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { staggerContainer, staggerItem } from "@/lib/animations"
-import { Loader2, ShoppingCart, CheckCircle, History } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { staggerContainer, staggerItem, backdrop, modalBox } from "@/lib/animations"
+import { Loader2, ShoppingCart, CheckCircle, History, X } from "lucide-react"
 import { useAuthStore } from "@/stores/authStore"
 import { useToast } from "@/components/Toast"
 import DiamondIcon from "@/components/DiamondIcon"
@@ -30,6 +30,8 @@ export default function DiamantesPag() {
   const [history, setHistory] = useState<DiamondPurchaseHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [buying, setBuying] = useState<number | null>(null)
+  const [confirmPkg, setConfirmPkg] = useState<DiamondPackage | null>(null)
+  const [checkingOut, setCheckingOut] = useState(false)
   const [tab, setTab] = useState<"buy" | "history">("buy")
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export default function DiamantesPag() {
 
   async function iniciarCompra(packageId: number) {
     if (buying) return
+    setConfirmPkg(null)
+    setCheckingOut(true)
     setBuying(packageId)
     try {
       const { checkoutUrl, sandboxUrl } = await startDiamondCheckoutApi(packageId)
@@ -62,6 +66,7 @@ export default function DiamantesPag() {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Erro ao iniciar compra"
       toastError(message)
       setBuying(null)
+      setCheckingOut(false)
     }
   }
 
@@ -163,7 +168,7 @@ export default function DiamantesPag() {
                         )}
                       </div>
                       <button
-                        onClick={() => iniciarCompra(pkg.id)}
+                        onClick={() => setConfirmPkg(pkg)}
                         disabled={!!buying}
                         className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors"
                       >
@@ -222,6 +227,105 @@ export default function DiamantesPag() {
           </div>
         )}
       </div>
+
+      {/* Confirmação de compra */}
+      <AnimatePresence>
+        {confirmPkg && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+            <motion.div
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+              variants={backdrop} initial="hidden" animate="visible" exit="exit"
+              onClick={() => setConfirmPkg(null)}
+            />
+            <motion.div
+              className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: "#0d0d10", border: "1px solid rgba(34,211,238,0.25)" }}
+              variants={modalBox} initial="hidden" animate="visible" exit="exit"
+            >
+              <div className="absolute top-0 left-0 right-0 h-0.5"
+                style={{ background: "linear-gradient(90deg, transparent, #22d3ee, transparent)" }} />
+              <div className="flex flex-col gap-4 px-6 py-7">
+                <div className="flex items-center justify-between">
+                  <p className="text-[18px] font-bold text-white">Confirmar compra</p>
+                  <button type="button" onClick={() => setConfirmPkg(null)}
+                    className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="bg-zinc-900/60 rounded-xl p-4 flex items-center gap-3"
+                  style={{ border: "1px solid rgba(34,211,238,0.15)" }}>
+                  <DiamondIcon size={32} className="shrink-0" />
+                  <div>
+                    <p className="font-bold text-[15px] text-white">
+                      {Math.floor(confirmPkg.diamonds * (1 + confirmPkg.bonusPct / 100)).toLocaleString("pt-BR")} Diamantes
+                    </p>
+                    <p className="text-xs text-zinc-500">{confirmPkg.name}</p>
+                    {confirmPkg.bonusPct > 0 && (
+                      <p className="text-xs text-cyan-500 mt-0.5">+{confirmPkg.bonusPct}% bônus incluído</p>
+                    )}
+                  </div>
+                  <div className="ml-auto text-right shrink-0">
+                    <span className="font-semibold text-[16px] text-green-400">
+                      {formatBRL(confirmPkg.priceInCents)}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-500 text-center leading-relaxed">
+                  Você será redirecionado para o Mercado Pago para concluir o pagamento com segurança.
+                </p>
+
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setConfirmPkg(null)}
+                    className="flex-1 font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer"
+                    style={{ background: "#18181b", border: "1px solid rgba(113,113,122,0.3)", color: "#a1a1aa" }}>
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={() => iniciarCompra(confirmPkg.id)}
+                    className="flex-1 flex items-center justify-center gap-2 font-semibold text-sm rounded-xl px-4 py-2.5 transition-all cursor-pointer"
+                    style={{ background: "#22d3ee", color: "#09090b" }}>
+                    <ShoppingCart size={14} />
+                    Ir para pagamento
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Overlay de redirecionamento */}
+      <AnimatePresence>
+        {checkingOut && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+            <motion.div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              variants={backdrop} initial="hidden" animate="visible" exit="exit"
+            />
+            <motion.div
+              className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: "#0d0d10", border: "1px solid rgba(34,211,238,0.2)" }}
+              variants={modalBox} initial="hidden" animate="visible" exit="exit"
+            >
+              <div className="absolute top-0 left-0 right-0 h-0.5"
+                style={{ background: "linear-gradient(90deg, transparent, #22d3ee, transparent)" }} />
+              <div className="flex flex-col items-center gap-4 px-6 py-8">
+                <div className="w-16 h-16 rounded-full grid place-items-center"
+                  style={{ background: "rgba(34,211,238,0.1)", boxShadow: "0 0 32px -8px rgba(34,211,238,0.4)" }}>
+                  <Loader2 size={28} className="animate-spin" style={{ color: "#22d3ee" }} />
+                </div>
+                <div className="text-center">
+                  <p className="text-[20px] font-bold text-white">Redirecionando...</p>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Aguarde enquanto abrimos a página de pagamento segura.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
