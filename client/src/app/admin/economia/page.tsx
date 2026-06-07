@@ -146,7 +146,7 @@ export default function AdminEconomiaPage() {
   async function handleApply() {
     setSaving(true);
     try {
-      await saveSettings(form as Record<string, unknown>);
+      await saveSettings(form as unknown as Record<string, unknown>);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       ok("Configurações salvas!");
