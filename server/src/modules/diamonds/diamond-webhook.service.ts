@@ -3,31 +3,69 @@ import { getMPPayment, getWebhookSecret } from "../../lib/mercadopago.js"
 import { prisma } from "../../lib/prisma.js"
 import type { Request, Response } from "express"
 
+// Comparação segura que não lança mesmo com buffers de tamanhos diferentes
+function safeEqual(a: string, b: string): boolean {
+  try {
+    const ba = Buffer.from(a)
+    const bb = Buffer.from(b)
+    if (ba.length !== bb.length) return false
+    return crypto.timingSafeEqual(ba, bb)
+  } catch {
+    return false
+  }
+}
+
 function verificarAssinatura(req: Request): boolean {
   try {
-    const xSignature = req.headers["x-signature"] as string
-    const xRequestId = req.headers["x-request-id"] as string
-    const dataId = (req.query["data.id"] ?? req.body?.data?.id) as string
+    const xSignature = req.headers["x-signature"] as string | undefined
+    const xRequestId = req.headers["x-request-id"] as string | undefined
 
-    if (!xSignature || !xRequestId || !dataId) return false
+    if (!xSignature) {
+      console.error("[webhook-mp] Header x-signature ausente")
+      return false
+    }
 
     const parts = xSignature.split(",")
     const ts = parts.find(p => p.startsWith("ts="))?.split("=")[1]
     const v1 = parts.find(p => p.startsWith("v1="))?.split("=")[1]
 
-    if (!ts || !v1) return false
+    if (!ts || !v1) {
+      console.error("[webhook-mp] x-signature malformado:", xSignature)
+      return false
+    }
 
-    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+    // data.id pode vir como query param (notification_url) ou no body (webhook do painel)
+    const dataIdQuery = req.query["data.id"] as string | undefined
+    const dataIdBody  = req.body?.data?.id  as string | undefined
+    const dataIds     = [...new Set([dataIdQuery, dataIdBody].filter(Boolean))] as string[]
 
-    const expectedSignature = crypto
-      .createHmac("sha256", getWebhookSecret())
-      .update(manifest)
-      .digest("hex")
+    if (dataIds.length === 0) {
+      console.error("[webhook-mp] data.id ausente — query:", req.query, "body.data:", req.body?.data)
+      return false
+    }
 
-    return crypto.timingSafeEqual(
-      Buffer.from(v1),
-      Buffer.from(expectedSignature)
+    const secret = getWebhookSecret()
+
+    for (const dataId of dataIds) {
+      // Formato 1: com x-request-id (webhook configurado no painel MP)
+      if (xRequestId) {
+        const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+        const expected = crypto.createHmac("sha256", secret).update(manifest).digest("hex")
+        if (safeEqual(v1, expected)) return true
+      }
+
+      // Formato 2: sem x-request-id (notificação via notification_url da preferência)
+      const manifestAlt = `id:${dataId};ts:${ts};`
+      const expectedAlt = crypto.createHmac("sha256", secret).update(manifestAlt).digest("hex")
+      if (safeEqual(v1, expectedAlt)) return true
+    }
+
+    console.error(
+      "[webhook-mp] Assinatura inválida — x-signature:", xSignature,
+      "| x-request-id:", xRequestId ?? "(ausente)",
+      "| query:", req.query,
     )
+    return false
   } catch {
     return false
   }
