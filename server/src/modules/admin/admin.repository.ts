@@ -146,6 +146,7 @@ export const adminRepository = {
         level: true,
         xp: true,
         coins: true,
+        diamonds: true,
         isAdmin: true,
         avatarUrl: true,
         avatarUpdatedAt: true,
@@ -160,6 +161,13 @@ export const adminRepository = {
       where: { id },
       data: { coins: { increment: delta } },
       select: { id: true, nome: true, coins: true },
+    }),
+
+  updateUserDiamonds: (id: number, delta: number) =>
+    prisma.user.update({
+      where: { id },
+      data: { diamonds: { increment: delta } },
+      select: { id: true, nome: true, diamonds: true },
     }),
 
   updateUserXp: (id: number, delta: number) =>

@@ -24,6 +24,7 @@ export interface AdminUser {
   level: number;
   xp: number;
   coins: number;
+  diamonds: number;
   isAdmin: boolean;
   avatarUrl: string | null;
   avatarUpdatedAt: string | null;
@@ -179,6 +180,8 @@ export const adminApi = {
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; coins: number }>(`/admin/users/${userId}/coins`, { delta }).then((r) => r.data),
+  adjustDiamonds: (userId: number, delta: number) =>
+    api.patch<{ id: number; nome: string; diamonds: number }>(`/admin/users/${userId}/diamonds`, { delta }).then((r) => r.data),
   adjustXp: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; xp: number; level: number }>(`/admin/users/${userId}/xp`, { delta }).then((r) => r.data),
   setLevel: (userId: number, level: number) =>

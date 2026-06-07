@@ -124,14 +124,23 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
 
   claimMission: async (missionId: number) => {
     const result = await claimMissionApi(missionId)
-    set((state) => ({
-      missions: state.missions.map((m) =>
-        m.id === missionId ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
-      ),
-      profile: state.profile
-        ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
-        : null,
-    }))
+    if (result.tipo === "daily" || result.tipo === "weekly") {
+      set((state) => ({
+        missions: state.missions.filter((m) => m.id !== missionId),
+        profile: state.profile
+          ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
+          : null,
+      }))
+    } else {
+      set((state) => ({
+        missions: state.missions.map((m) =>
+          m.id === missionId ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
+        ),
+        profile: state.profile
+          ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
+          : null,
+      }))
+    }
     return result
   },
 

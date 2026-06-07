@@ -301,6 +301,9 @@ export class AdminService {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de coins deve ser um inteiro não-zero.");
     }
+    if (delta > 0) {
+      throw new AppError(403, "Admin não pode adicionar saldo — apenas subtrair.");
+    }
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { id: userId }, select: { coins: true } });
       if (!user) throw new AppError(404, "Usuário não encontrado.");
@@ -318,6 +321,35 @@ export class AdminService {
       action: "user.adjust_coins",
       target: `user:${userId}`,
       metadata: { delta, resultingCoins: result.coins },
+      severity: "info",
+    });
+    return result;
+  }
+
+  async adjustDiamonds(userId: number, delta: number, actor: Actor) {
+    if (!Number.isInteger(delta) || delta === 0) {
+      throw new AppError(400, "Delta de diamantes deve ser um inteiro não-zero.");
+    }
+    if (delta > 0) {
+      throw new AppError(403, "Admin não pode adicionar diamantes — apenas subtrair.");
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { diamonds: true } });
+      if (!user) throw new AppError(404, "Usuário não encontrado.");
+      if (user.diamonds + delta < 0) {
+        throw new AppError(400, `Operação resultaria em saldo negativo (atual: ${user.diamonds}, delta: ${delta}).`);
+      }
+      return tx.user.update({
+        where: { id: userId },
+        data: { diamonds: { increment: delta } },
+        select: { id: true, nome: true, diamonds: true },
+      });
+    });
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "user.adjust_diamonds",
+      target: `user:${userId}`,
+      metadata: { delta, resultingDiamonds: result.diamonds },
       severity: "info",
     });
     return result;

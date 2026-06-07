@@ -42,7 +42,7 @@ const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" 
 
 const RARITY_META: Record<string, { label: string; color: string }> = {
   comum:      { label: "Comum",      color: "#a1a1aa" },
-  raro:       { label: "Raro",       color: "#7dd3fc" },
+  raro:       { label: "Raro",       color: "#00ba03" },
   super_raro: { label: "Super Raro", color: "#c4b5fd" },
   epico:      { label: "Épico",      color: "#a78bfa" },
   lendario:   { label: "Lendário",   color: "#fcd34d" },
@@ -107,9 +107,9 @@ function CosmeticCard({
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
   const glowColor = rMeta?.color ?? meta.color;
   const isBanner  = item.type === "banner";
-  const topBg     = isBanner && item.value
-    ? item.value
-    : `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`;
+  const topBg     = !isBanner
+    ? `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`
+    : undefined;
 
   return (
     <motion.div variants={staggerItem}>
@@ -129,6 +129,14 @@ function CosmeticCard({
         className="relative overflow-hidden flex items-center justify-center"
         style={{ height: 96, background: topBg }}
       >
+        {isBanner && (
+          <UserBanner
+            banner={item.value}
+            imageUrl={item.imageUrl}
+            spriteId={null}
+            className="absolute inset-0 w-full h-full"
+          />
+        )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
           style={{

@@ -294,6 +294,8 @@ model Mission {
   coinReward  Int
   perGame     Boolean  @default(false)
   active      Boolean  @default(true)
+  tipo        String   @default("permanent")
+  isTemplate  Boolean  @default(false)
 
   userMissions UserMission[]
 
@@ -309,6 +311,8 @@ model UserMission {
   completedAt DateTime?
   claimed     Boolean   @default(false)
   claimedAt   DateTime?
+  expiresAt   DateTime?
+  generatedAt DateTime  @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
   mission Mission @relation(fields: [missionId], references: [id])

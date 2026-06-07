@@ -13,6 +13,7 @@ import { seedDiamondPackages } from "./utils/seed-diamond-packages.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket } from "./lib/socket.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
+import { startCronJobs } from "./lib/cron.js";
 
 process.on("unhandledRejection", (reason) => {
   console.error("[UNHANDLED_REJECTION]", reason);
@@ -109,6 +110,7 @@ async function start() {
   await seedAdmin();
   await seedDiamondPackages();
   startNegotiationCleanup();
+  startCronJobs();
 
   httpServer.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}!`)

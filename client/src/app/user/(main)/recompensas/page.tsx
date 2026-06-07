@@ -11,7 +11,7 @@
  *    Quando criado, substitua o TODO abaixo por: await claimMissionApi(m.id)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
@@ -66,6 +66,33 @@ function getMetaMeta(metric: string): MetricMeta {
   return METRIC_META[metric] ?? { icon: Trophy, tone: "emerald", label: metric };
 }
 
+/* ── Countdown badge ── */
+function CountdownBadge({ expiresAt }: { expiresAt: string }) {
+  const calc = useCallback(() => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    if (diff <= 0) return "Expirada";
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}min`;
+  }, [expiresAt]);
+
+  const [remaining, setRemaining] = useState(calc);
+
+  useEffect(() => {
+    setRemaining(calc());
+    const iv = setInterval(() => setRemaining(calc()), 60000);
+    return () => clearInterval(iv);
+  }, [calc]);
+
+  const isUrgent = new Date(expiresAt).getTime() - Date.now() < 2 * 3600000;
+
+  return (
+    <span className={`font-inconsolata text-[10px] ${isUrgent ? "text-red-400" : "text-zinc-500"}`}>
+      ⏱ {remaining}
+    </span>
+  );
+}
+
 /* ── Mission card ── */
 function MissionCard({
   m,
@@ -116,6 +143,9 @@ function MissionCard({
             <h3 className="font-jaro text-base text-zinc-100">{m.name}</h3>
             {isClaimed && <Chip tone="zinc">Resgatada</Chip>}
             {isDone    && <Chip tone="green" dot>Concluída!</Chip>}
+            {m.tipo === "daily"  && <Chip tone="cyan">Diária</Chip>}
+            {m.tipo === "weekly" && <Chip tone="violet">Semanal</Chip>}
+            {m.expiresAt && !m.claimed && <CountdownBadge expiresAt={m.expiresAt} />}
           </div>
           <p className="font-inconsolata text-[11px] text-zinc-500 mt-0.5">{m.description}</p>
         </div>
@@ -176,6 +206,7 @@ export default function RecompensasPage() {
   const { missions, loading, loadMissions, claimMission } = useProfileStore();
   const { success: toastSuccess, error: toastError } = useToast();
   const [filter, setFilter] = useState("Todas");
+  const [tipoFilter, setTipoFilter] = useState("Todas");
   const [claimingIds, setClaimingIds] = useState<Set<number>>(new Set());
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
@@ -208,6 +239,11 @@ export default function RecompensasPage() {
   const claimedCount = missions.filter((m) => m.claimed).length;
 
   const list = missions.filter((m) => {
+    if (tipoFilter === "Diárias")    return m.tipo === "daily";
+    if (tipoFilter === "Semanais")   return m.tipo === "weekly";
+    if (tipoFilter === "Permanentes") return m.tipo === "permanent" || !m.tipo;
+    return true;
+  }).filter((m) => {
     if (filter === "Disponíveis")   return m.completed && !m.claimed;
     if (filter === "Em andamento")  return !m.completed;
     if (filter === "Resgatadas")    return m.claimed;
@@ -236,7 +272,14 @@ export default function RecompensasPage() {
         ))}
       </motion.div>
 
-      {/* Filter */}
+      {/* Tipo filter */}
+      <Segmented
+        value={tipoFilter}
+        onChange={setTipoFilter}
+        options={["Todas", "Diárias", "Semanais", "Permanentes"]}
+      />
+
+      {/* Status filter */}
       <Segmented
         value={filter}
         onChange={setFilter}

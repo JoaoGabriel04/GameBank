@@ -60,6 +60,7 @@ interface AdminStore {
   toggleItem: (id: number) => Promise<void>;
   deleteItem: (id: number) => Promise<void>;
   adjustCoins: (userId: number, delta: number) => Promise<void>;
+  adjustDiamonds: (userId: number, delta: number) => Promise<void>;
   adjustXp: (userId: number, delta: number) => Promise<void>;
   setLevel: (userId: number, level: number) => Promise<void>;
   banUser: (userId: number, reason?: string) => Promise<void>;
@@ -250,6 +251,11 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   adjustCoins: async (userId, delta) => {
     const result = await adminApi.adjustCoins(userId, delta);
     set({ users: get().users.map((u) => (u.id === userId ? { ...u, coins: result.coins } : u)) });
+  },
+
+  adjustDiamonds: async (userId, delta) => {
+    const result = await adminApi.adjustDiamonds(userId, delta);
+    set({ users: get().users.map((u) => (u.id === userId ? { ...u, diamonds: result.diamonds } : u)) });
   },
 
   adjustXp: async (userId, delta) => {

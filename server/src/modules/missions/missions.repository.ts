@@ -37,7 +37,7 @@ export const missionsRepository = {
     prisma.userMission.findUnique({
       where: { userId_missionId: { userId, missionId } },
       include: {
-        mission: { select: { xpReward: true, coinReward: true } },
+        mission: { select: { xpReward: true, coinReward: true, tipo: true } },
       },
     }),
 

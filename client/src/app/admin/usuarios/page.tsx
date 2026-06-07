@@ -20,6 +20,7 @@ import {
   Btn, Field, AdminInput, AdminAvatar,
   Drawer, AdminModal,
 } from "@/components/admin/AdminUI";
+import DiamondIcon from "@/components/DiamondIcon";
 
 function exportCsvUsers(rows: AdminUser[]) {
   const header = "id,nome,email,nivel,xp,coins,partidas,vitorias,admin,banido,criado\n";
@@ -165,10 +166,11 @@ function UserEditDrawer({
   onClose: () => void;
   onRequestDelete: (u: AdminUser) => void;
 }) {
-  const { adjustCoins, adjustXp, setLevel, setUserAdmin, banUser, unbanUser } = useAdminStore();
+  const { adjustCoins, adjustDiamonds, adjustXp, setLevel, setUserAdmin, banUser, unbanUser } = useAdminStore();
   const { success: ok, error: err } = useToast();
 
   const [coins, setCoins] = useState(0);
+  const [diamonds, setDiamonds] = useState(0);
   const [xp, setXp] = useState(0);
   const [level, setLevelState] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -178,6 +180,7 @@ function UserEditDrawer({
   useEffect(() => {
     if (user) {
       setCoins(user.coins);
+      setDiamonds(user.diamonds);
       setXp(user.xp);
       setLevelState(user.level);
       setIsAdmin(user.isAdmin);
@@ -197,6 +200,8 @@ function UserEditDrawer({
     try {
       const coinsDelta = coins - user.coins;
       if (coinsDelta !== 0) await adjustCoins(user.id, coinsDelta);
+      const diamondsDelta = diamonds - user.diamonds;
+      if (diamondsDelta !== 0) await adjustDiamonds(user.id, diamondsDelta);
       const xpDelta = xp - user.xp;
       if (xpDelta !== 0) await adjustXp(user.id, xpDelta);
       if (level !== user.level) await setLevel(user.id, level);
@@ -246,16 +251,39 @@ function UserEditDrawer({
           ))}
         </div>
 
-        {/* Coins slider */}
-        <Field label={`Coins — ${coins.toLocaleString("pt-BR")}`}>
+        {/* Coins slider — somente redução */}
+        <Field label={`Subtrair coins — atual: ${user.coins.toLocaleString("pt-BR")}`}>
+          <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
+            Somente reduções de saldo são permitidas.
+          </p>
           <div className="flex items-center gap-2 mt-1">
             <input
-              type="range" min={0} max={100000} step={100} value={coins}
+              type="range" min={0} max={user.coins} step={100} value={coins}
               onChange={(e) => setCoins(+e.target.value)}
               className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
             />
             <AdminInput
-              type="number" value={coins} onChange={(e) => setCoins(+e.target.value)}
+              type="number" value={coins} min={0} max={user.coins}
+              onChange={(e) => setCoins(Math.min(+e.target.value, user.coins))}
+              className="!w-24 !py-1.5 text-right"
+            />
+          </div>
+        </Field>
+
+        {/* Diamonds slider — somente redução */}
+        <Field label={`Subtrair diamantes — atual: ${user.diamonds.toLocaleString("pt-BR")}`}>
+          <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
+            Somente reduções de saldo são permitidas.
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min={0} max={user.diamonds} step={1} value={diamonds}
+              onChange={(e) => setDiamonds(+e.target.value)}
+              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-sky-400"
+            />
+            <AdminInput
+              type="number" value={diamonds} min={0} max={user.diamonds}
+              onChange={(e) => setDiamonds(Math.min(+e.target.value, user.diamonds))}
               className="!w-24 !py-1.5 text-right"
             />
           </div>
@@ -457,7 +485,6 @@ export default function AdminUsuariosPage() {
             {selected.length} selecionado(s)
           </span>
           <div className="flex items-center gap-2 ml-auto">
-            <Btn variant="subtle" icon={Coins} size="sm">Dar coins</Btn>
             <Btn variant="subtle" icon={MessageSquare} size="sm" onClick={() => setNotifOpen(true)}>Notificar</Btn>
             <Btn variant="danger" icon={Ban} size="sm" onClick={handleBatchBan} disabled={banning}>
               {banning ? "Banindo…" : "Banir"}
@@ -478,7 +505,7 @@ export default function AdminUsuariosPage() {
               <thead>
                 <tr className="border-b border-zinc-800 text-left">
                   <th className="pl-4 py-2.5 w-8" />
-                  {["Usuário", "Nível", "Coins", "Vitórias", "Win %", "Status", ""].map((h, i) => (
+                  {["Usuário", "Nível", "Coins", "Diamantes", "Vitórias", "Win %", "Status", ""].map((h, i) => (
                     <th
                       key={i}
                       className={`px-4 py-2.5 font-inconsolata text-[10px] uppercase tracking-wider text-zinc-500
@@ -547,6 +574,14 @@ export default function AdminUsuariosPage() {
                       {/* Coins */}
                       <td className="px-4 py-3 text-right font-inconsolata text-sm text-amber-300">
                         {u.coins.toLocaleString("pt-BR")}
+                      </td>
+
+                      {/* Diamonds */}
+                      <td className="px-4 py-3 text-right font-inconsolata text-sm text-sky-300">
+                        <span className="inline-flex items-center justify-end gap-1">
+                          <DiamondIcon size={11} />
+                          {u.diamonds.toLocaleString("pt-BR")}
+                        </span>
                       </td>
 
                       {/* Wins */}

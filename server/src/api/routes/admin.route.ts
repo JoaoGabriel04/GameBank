@@ -39,6 +39,7 @@ adminRouter.delete("/missions/:id", adminController.deleteMission);
 adminRouter.post("/users/notify", adminController.notifyUsers);
 adminRouter.get("/users", adminController.listUsers);
 adminRouter.patch("/users/:id/coins", adminController.adjustCoins);
+adminRouter.patch("/users/:id/diamonds", adminController.adjustDiamonds);
 adminRouter.patch("/users/:id/xp", adminController.adjustXp);
 adminRouter.patch("/users/:id/level", adminController.setLevel);
 adminRouter.post("/users/:id/ban", adminController.banUser);
