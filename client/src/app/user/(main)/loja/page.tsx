@@ -659,7 +659,7 @@ export default function LojaPage() {
     if (param === "success" || param === "failed" || param === "pending") {
       router.replace("/user/loja", { scroll: false });
       if (param === "pending") {
-        const stored = sessionStorage.getItem("gbDiamondsBefore");
+        const stored = sessionStorage.getItem("diamonds_before_purchase");
         setDiamondsBefore(stored !== null ? parseInt(stored, 10) : 0);
       }
       setMpModal(param);
@@ -695,7 +695,7 @@ export default function LojaPage() {
     const stopPolling = () => {
       clearInterval(interval);
       clearTimeout(expireTimeout);
-      sessionStorage.removeItem("gbDiamondsBefore");
+      sessionStorage.removeItem("diamonds_before_purchase");
       sessionStorage.removeItem("gbCheckoutAt");
     };
 
@@ -727,7 +727,7 @@ export default function LojaPage() {
   }, [mpModal]);
 
   function handleCancelPending() {
-    sessionStorage.removeItem("gbDiamondsBefore");
+    sessionStorage.removeItem("diamonds_before_purchase");
     sessionStorage.removeItem("gbCheckoutAt");
     setMpModal(null);
   }
@@ -791,11 +791,13 @@ export default function LojaPage() {
   async function handleBuyDiamondPack(pack: DiamondPack) {
     try {
       const packageId = parseInt(pack.id.replace("d", ""), 10);
-      const { checkoutUrl, sandboxUrl } = await startDiamondCheckoutApi(packageId);
+      const [{ checkoutUrl, sandboxUrl }, { diamonds: freshBalance }] = await Promise.all([
+        startDiamondCheckoutApi(packageId),
+        getDiamondBalanceApi(),
+      ]);
       const url = process.env.NODE_ENV === "production" ? checkoutUrl : sandboxUrl;
       if (!url) throw new Error("URL de checkout não disponível");
-      // Persiste saldo e timestamp antes do redirect para polling e countdown ao retornar
-      sessionStorage.setItem("gbDiamondsBefore", String(userDiamonds));
+      sessionStorage.setItem("diamonds_before_purchase", String(freshBalance));
       sessionStorage.setItem("gbCheckoutAt", String(Date.now()));
       window.location.href = url;
     } catch (e) {
