@@ -28,7 +28,7 @@ interface AdminStore {
   cards: Card[];
   banners: Banner[];
   audit: AuditEntry[];
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
   dashboard: AdminDashboard | null;
 
   loadingItems: boolean;
@@ -53,7 +53,7 @@ interface AdminStore {
   loadBanners: () => Promise<void>;
   loadAudit: (opts?: AuditListOpts) => Promise<void>;
   loadSettings: () => Promise<void>;
-  saveSettings: (data: Record<string, any>) => Promise<void>;
+  saveSettings: (data: Record<string, unknown>) => Promise<void>;
 
   createItem: (data: ItemInput) => Promise<AdminShopItem>;
   updateItem: (id: number, data: Partial<ItemInput>) => Promise<AdminShopItem>;

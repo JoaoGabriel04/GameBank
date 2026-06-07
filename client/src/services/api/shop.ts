@@ -1,10 +1,11 @@
 import api from './index'
+import type { ShopItem } from '@/types/shop'
 
 export const shopApi = {
-  items: () => api.get<any[]>('/shop/items'),
-  buy: (itemId: number) => api.post<any>(`/shop/buy/${itemId}`),
-  sell: (itemId: number) => api.post<any>(`/shop/sell/${itemId}`),
-  equip: (itemId: number) => api.post<any>(`/shop/equip/${itemId}`),
+  items: () => api.get<ShopItem[]>('/shop/items'),
+  buy: (itemId: number) => api.post<{ message: string }>(`/shop/buy/${itemId}`),
+  sell: (itemId: number) => api.post<{ message: string }>(`/shop/sell/${itemId}`),
+  equip: (itemId: number) => api.post<{ message: string }>(`/shop/equip/${itemId}`),
 }
 
 export const getShopItemsApi = () => shopApi.items().then(res => res.data)

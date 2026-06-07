@@ -12,6 +12,7 @@ import {
   presetAvatarValue,
 } from "@/constants/avatars";
 import { getPostAuthPath } from "@/utils/authRedirect";
+import { apiErrMsg } from "@/lib/api-error";
 
 const MAX_NICK = 30;
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -112,8 +113,8 @@ export default function OnboardingPage() {
       });
       updateUser(res.data.user);
       router.replace(getPostAuthPath(res.data.user));
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Não foi possível salvar o perfil");
+    } catch (err) {
+      setError(apiErrMsg(err, "Não foi possível salvar o perfil"));
     } finally {
       setSubmitting(false);
     }

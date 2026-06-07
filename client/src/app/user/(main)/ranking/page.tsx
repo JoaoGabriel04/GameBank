@@ -13,10 +13,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-import { useRouter } from "next/navigation";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
-import { useProfileStore } from "@/stores/profileStore";
 import { getRankingApi } from "@/services/api/ranking";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
@@ -223,9 +221,7 @@ function Podium({
 
 /* ── Main page ── */
 export default function RankingPage() {
-  const router   = useRouter();
   const { user } = useAuthStore();
-  const { profile } = useProfileStore();
   const [raw, setRaw]           = useState<RankingUser[]>([]);
   const [loading, setLoading]   = useState(true);
   const [metric, setMetric]     = useState<Metric>("xp");
@@ -259,7 +255,6 @@ export default function RankingPage() {
   }, [raw, metric]);
 
   const top3  = sorted.slice(0, 3);
-  const rest  = sorted.slice(3);
   const myPos = sorted.find((p) => p.id === user?.id);
   const meta  = METRIC_META[metric];
 

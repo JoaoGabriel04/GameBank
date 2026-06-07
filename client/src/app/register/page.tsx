@@ -7,6 +7,7 @@ import api from "@/services/api";
 import Link from "next/link";
 import { getPostAuthPath } from "@/utils/authRedirect";
 import Button1 from "@/components/Button01";
+import { apiErrMsg } from "@/lib/api-error";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,8 +25,8 @@ export default function RegisterPage() {
       const res = await api.post("/auth/register", { email, senha });
       setAuth(res.data.token, res.data.user);
       router.push(getPostAuthPath(res.data.user));
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Erro ao cadastrar");
+    } catch (err) {
+      setError(apiErrMsg(err, "Erro ao cadastrar"));
     }
   };
 

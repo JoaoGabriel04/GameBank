@@ -1,9 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
-import { Loader2, Crown, Shield, Image, Sparkles, Check, X } from "lucide-react";
+import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { equipShopItemApi } from "@/services/api/shop";
@@ -186,7 +187,7 @@ function DetailPanel({
           >
             {item.type === "title"  && <Crown  size={28} />}
             {item.type === "badge"  && <Shield size={28} />}
-            {item.type === "banner" && <Image  size={28} />}
+            {item.type === "banner" && <ImageIcon size={28} />}
           </div>
         )}
         <button

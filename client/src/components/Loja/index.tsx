@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast"
 import { PROPERTY_COLORS, Propriedade } from "@/types/game"
 import { getPropData, groupByColor } from "@/utils/properties"
 import { formatCurrency } from "@/utils/format"
+import { toApiErr } from "@/lib/api-error"
 
 const COLOR_HEX: Record<string, string> = {
   lime:    "#84cc16",
@@ -74,9 +75,10 @@ export default function Loja() {
       await buyProperty(sessionPossesId, currentSession.id, currentPlayer.id)
       await loadSession(currentSession.id)
       toastSuccess("Propriedade comprada com sucesso!")
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao comprar propriedade"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao comprar propriedade"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setBuyingLock(false)
     }
@@ -88,15 +90,16 @@ export default function Loja() {
     try {
       const result = await comprarHipotecada(sessionPossesId, currentSession.id, currentPlayer.id)
       await loadSession(currentSession.id)
-      const r = result as any
+      const r = result as unknown as { direto?: boolean }
       if (r?.direto) {
         toastSuccess("Hipoteca quitada com sucesso!")
       } else {
         toastInfo("Notificação enviada ao dono original!")
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Erro ao comprar hipoteca"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao comprar hipoteca"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setBuyingLock(false)
     }
@@ -113,9 +116,10 @@ export default function Loja() {
         toastInfo("Compra recusada.")
       }
       useNotificationStore.getState().removeNotification(notificationId)
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Erro ao responder"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao responder"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     }
   }
 

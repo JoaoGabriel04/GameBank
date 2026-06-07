@@ -15,6 +15,7 @@ import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
 import { sortSessionPosses } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
+import { toApiErr } from "@/lib/api-error";
 
 const COLOR_HEX: Record<string, string> = {
   lime:    "#84cc16",
@@ -82,7 +83,7 @@ export default function Especiais() {
       currentSession.sessionPosses
         .filter((p) => p.playerId === targetPlayer && !p.hipotecada && !p.negociando)
     );
-  }, [targetPlayer, currentSession?.sessionPosses])
+  }, [targetPlayer, currentSession])
 
   function resetCreate() {
     setTargetPlayer(null);
@@ -130,9 +131,10 @@ export default function Especiais() {
       await loadSession(currentSession.id);
       setModalNegociar(false);
       resetCreate();
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao criar negociação";
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? "Erro ao criar negociação";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -157,9 +159,10 @@ export default function Especiais() {
       await loadSession(currentSession.id);
       toastSuccess("Pagamentos recebidos com sucesso!");
       setModalReceber(false);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao receber de todos!";
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? "Erro ao receber de todos!";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
       setModalReceber(false);
     } finally {
       setReqLoading(false);

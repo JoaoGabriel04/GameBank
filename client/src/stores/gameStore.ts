@@ -84,7 +84,7 @@ interface GameStore {
   receberDeTodos: (params: { sessionId: number; userId: number }) => Promise<void>;
   comprarHipotecada: (sessionPossesId: number, sessionId: number, compradorId: number) => Promise<void>;
   responderNotificacao: (notificationId: number, aceitar: boolean, respondedorId: number, sessionId: number) => Promise<void>;
-  sortearCarta: (sessionId: number, playerId: number) => Promise<any>;
+  sortearCarta: (sessionId: number, playerId: number) => Promise<unknown>;
   usarCartaPrisao: (sessionId: number, playerId: number) => Promise<void>;
   pagarDivida: (debtId: number, playerId: number, sessionId: number) => Promise<void>;
 

@@ -19,6 +19,7 @@ let socket: Socket | null = null;
 let currentSessionId: number | null = null;
 let sessionEnded = false;
 let reconnectCallbacks: (() => void)[] = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sessionClosedCallbacks: ((ranking?: any[]) => void)[] = [];
 
 function getToken(): string {
@@ -35,6 +36,7 @@ export function clearReconnectCallbacks() {
   reconnectCallbacks = [];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function onSessionClosed(cb: (ranking?: any[]) => void) {
   sessionClosedCallbacks.push(cb);
 }
@@ -76,6 +78,7 @@ export function connectSocket(sessionId: number) {
     useGameStore.setState({ currentSession: data });
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   socket.on("session:closed", (data: { sessionId: number; ranking?: any[] }) => {
     if (data.sessionId !== sessionId) return;
     sessionClosedCallbacks.forEach((cb) => cb(data.ranking));

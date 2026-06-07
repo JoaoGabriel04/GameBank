@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Server, RefreshCw, Lock, Users, Clock,
+  Server, RefreshCw, Lock, Clock,
   Square, MessageSquare, ChevronRight, Search, Plus, Minus,
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";

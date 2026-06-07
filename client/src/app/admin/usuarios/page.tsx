@@ -9,16 +9,16 @@
 import { useEffect, useState } from "react";
 import {
   Users, Pencil, Download, Search, Shield, Ban, Trash2,
-  Check, Coins, MessageSquare, ChevronRight, X, AlertTriangle,
+  Check, Coins, MessageSquare, X, AlertTriangle,
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import { adminApi } from "@/services/api/admin";
 import { useToast } from "@/components/Toast";
 import type { AdminUser } from "@/services/api/admin";
 import {
-  Panel, PanelHead, Chip, Toggle, Progress, Segmented,
-  Btn, Field, AdminInput, AdminSelect, AdminAvatar,
-  Drawer, LiveDot, AdminModal,
+  Panel, Chip, Toggle, Progress, Segmented,
+  Btn, Field, AdminInput, AdminAvatar,
+  Drawer, AdminModal,
 } from "@/components/admin/AdminUI";
 
 function exportCsvUsers(rows: AdminUser[]) {
@@ -48,11 +48,6 @@ function exportCsvUsers(rows: AdminUser[]) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
-/* ── Status helpers ── */
-const STATUS_TONE: Record<string, "emerald" | "rose" | "zinc"> = {
-  ativo: "emerald", banido: "rose", inativo: "zinc",
-};
 
 /* ── User Edit Drawer ── */
 function DeleteUserDialog({

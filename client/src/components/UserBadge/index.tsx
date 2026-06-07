@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 type BadgeVariant = "micro" | "small" | "medium" | "large" | "showcase";

@@ -13,7 +13,6 @@ import {
   faHandshake,
   faGamepad,
   faPlus,
-  faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";

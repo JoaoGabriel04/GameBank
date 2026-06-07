@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { adminApi, type AuditEntry } from "@/services/api/admin";
 import { useAdminStore } from "@/stores/adminStore";
 import { Panel, PanelHead, Chip, LiveDot, Delta } from "@/components/admin/AdminUI";
-import { AreaChart, MultiLine, Donut, Sparkline, BarChart } from "@/components/admin/AdminCharts";
-import { Users, UserCheck, Coins, Store, Server, Activity, TrendingUp, Check, Bell, Ban, RefreshCw } from "lucide-react";
+import { MultiLine, Donut, Sparkline, BarChart } from "@/components/admin/AdminCharts";
+import { Users, UserCheck, Store, Server, Activity, TrendingUp, Check, Bell, Ban, RefreshCw } from "lucide-react";
 
 function relativeTime(ts: string) {
   const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
@@ -58,7 +58,7 @@ function fmtDateLabel(daysAgo: number): string {
 }
 
 export default function AdminDashboardPage() {
-  const { dashboard, loadingDashboard, loadDashboard, items, loadItems } = useAdminStore();
+  const { dashboard, loadingDashboard, items, loadItems } = useAdminStore();
   const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
 
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function AdminDashboardPage() {
     if (items.length === 0) loadItems();
     // recent audit activity
     adminApi.listAudit({ limit: 5 }).then(setRecentActivity).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loadingDashboard && !dashboard) {
@@ -395,7 +396,7 @@ function KpiCard({
       </p>
       {spark && (
         <div className="mt-2 -mb-1">
-          <Sparkline data={spark} tone={(sparkTone || tone) as any} w={140} h={32} />
+          <Sparkline data={spark} tone={(sparkTone || tone) as "cyan" | "emerald" | "amber" | "rose" | "violet"} w={140} h={32} />
         </div>
       )}
     </Panel>

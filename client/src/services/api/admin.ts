@@ -199,9 +199,9 @@ export const adminApi = {
   deleteCard: (id: number) => api.delete(`/admin/cards/${id}`),
 
   // GameSettings
-  getSettings: () => api.get<Record<string, any>>("/admin/settings").then((r) => r.data),
-  updateSettings: (data: Record<string, any>) =>
-    api.patch<Record<string, any>>("/admin/settings", data).then((r) => r.data),
+  getSettings: () => api.get<Record<string, unknown>>("/admin/settings").then((r) => r.data),
+  updateSettings: (data: Record<string, unknown>) =>
+    api.patch<Record<string, unknown>>("/admin/settings", data).then((r) => r.data),
 
   // Banners
   listBanners: () => api.get<Banner[]>("/admin/banners").then((r) => r.data),

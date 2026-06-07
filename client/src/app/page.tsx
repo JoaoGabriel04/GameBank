@@ -9,15 +9,16 @@ import {
   faBolt, faArrowRight,
   faUserPlus, faPalette, faStore, faStar, faTrophy,
 } from "@fortawesome/free-solid-svg-icons"
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import Footer from "@/components/Footer";
 import LandingHeader from "@/components/LandingHeader";
 
 function CardFeatures({ color, icon, title, description }: {
   color: string;
-  icon: any;
+  icon: IconDefinition;
   title: string;
   description: string;
 }) {

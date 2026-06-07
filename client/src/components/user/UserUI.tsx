@@ -8,10 +8,9 @@
  * Acento verde (--green-400/#4ade80) consistente com o design do site.
  */
 
-import React, { useState } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { backdrop, modalBox } from "@/lib/animations";
-import { X } from "lucide-react";
 
 /* ─── Progress bar ─── */
 export function Progress({

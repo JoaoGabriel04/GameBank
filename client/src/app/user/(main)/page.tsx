@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Plus, LogIn, ChevronRight, Lock, Gamepad2,
-  Trophy, Target,
+  Target,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -17,7 +17,6 @@ import { getProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
-import CoinIcon from "@/components/CoinIcon";
 import {
   Progress, Chip, Panel, PanelHead, LiveDot,
   xpForLevel, totalXpForLevels,
@@ -205,14 +204,14 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
                 <div className="flex items-center gap-2 mb-2">
                   {isLive ? <LiveDot /> : <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />}
                   <span className="font-jaro text-sm text-zinc-100 truncate flex-1">{s.nome}</span>
-                  {(s as any).protegida && <Lock size={11} className="text-zinc-500 shrink-0" />}
+                  {s.protegida && <Lock size={11} className="text-zinc-500 shrink-0" />}
                 </div>
                 <p className="font-inconsolata text-[10px] text-zinc-500 mb-3 capitalize">
-                  {(s as any).modo ?? "individual"} · {s.jogadores?.length ?? 0}/{(s as any).maxJogadores ?? "?"}
+                  {s.modo ?? "individual"} · {s.jogadores?.length ?? 0}/{s.maxJogadores ?? "?"}
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="flex -space-x-1.5">
-                    {(s.jogadores ?? []).slice(0, 4).map((j: any, i: number) => (
+                    {(s.jogadores ?? []).slice(0, 4).map((j, i) => (
                       <UserAvatar key={i} avatarUrl={j.avatarUrl} avatarUpdatedAt={j.avatarUpdatedAt} nome={j.nome} size="xs" />
                     ))}
                   </div>
@@ -223,7 +222,7 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
                         ? "text-green-400 bg-green-500/10"
                         : "text-amber-400 bg-amber-500/10"
                   }`}>
-                    {isBlocked ? "Em jogo" : isLive ? `${(s as any).duracaoMin ?? 0}min` : "Livre"}
+                    {isBlocked ? "Em jogo" : isLive ? `${(s as unknown as { duracaoMin?: number }).duracaoMin ?? 0}min` : "Livre"}
                   </span>
                 </div>
               </button>
@@ -263,7 +262,6 @@ function MissionsPreview() {
         animate="visible"
       >
         {active.map(m => {
-          const pct = Math.min(100, Math.round((m.progress / m.target) * 100));
           return (
             <motion.div key={m.id} variants={staggerItem} className="px-4 py-3">
               <div className="flex items-center justify-between mb-1.5">

@@ -34,6 +34,7 @@ import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPowerOff, faPlay, faUsers, faClock, faGamepad } from "@fortawesome/free-solid-svg-icons";
 import type { RankedPlayer, Player } from "@/types/game";
+import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
 const linksNav = ["Loja", "Especiais", "Início", "Ranking", "Histórico"];
@@ -161,9 +162,10 @@ export default function Game() {
       disconnectSocket();
       toastInfo("Você saiu da sala.");
       router.push("/user/sessions");
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || "Erro ao sair da sala";
-      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao sair da sala";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setQuitLoading(false);
     }
@@ -182,9 +184,10 @@ export default function Game() {
       await sessionsApi.desistir(currentSession.id);
       await loadSession(currentSession.id);
       toastInfo("Você desistiu da partida. Agora você é um espectador.");
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || "Erro ao desistir da partida";
-      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao desistir da partida";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setDesistirLoading(false);
     }
@@ -200,9 +203,8 @@ export default function Game() {
       disconnectSocket();
       toastInfo("Você saiu da sala.");
       router.push("/user/sessions");
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || "Erro ao sair da sala";
-      toastError(msg);
+    } catch (err) {
+      toastError(apiErrMsg(err, "Erro ao sair da sala"));
     } finally {
       setQuitLoading(false);
     }
@@ -215,9 +217,10 @@ export default function Game() {
       await startSession(currentSession.id);
       mutate();
       toastInfo("Jogo iniciado!");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.response?.data?.error || "Erro ao iniciar jogo";
-      if (err?.response?.status >= 500) { toastError(msg); } else { toastWarning(msg); }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? e?.response?.data?.error ?? "Erro ao iniciar jogo";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setStartLoading(false);
     }

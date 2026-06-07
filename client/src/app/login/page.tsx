@@ -7,6 +7,7 @@ import api from "@/services/api";
 import Link from "next/link";
 import { getPostAuthPath } from "@/utils/authRedirect";
 import Button1 from "@/components/Button01";
+import { apiErrMsg } from "@/lib/api-error";
 
 function LoginForm() {
   const router = useRouter();
@@ -24,8 +25,8 @@ function LoginForm() {
       setAuth(res.data.token, res.data.user);
       const redirect = searchParams.get("redirect");
       router.push(getPostAuthPath(res.data.user, redirect));
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Erro ao entrar");
+    } catch (err) {
+      setError(apiErrMsg(err, "Erro ao entrar"));
     }
   };
 

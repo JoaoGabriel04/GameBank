@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import { RARITY_META } from "@/constants/rarity";
 import CoinIcon from "@/components/CoinIcon";
 import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
 import {
-  Panel, Chip, Toggle, Segmented, Btn, Field,
+  Chip, Toggle, Segmented, Btn, Field,
   AdminInput, AdminTextarea, AdminSelect, AdminModal,
 } from "@/components/admin/AdminUI";
 
@@ -241,6 +242,7 @@ function ItemModal({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setForm(initial ?? EMPTY); setUploadFile(null); setUploadPreview(null); }, [item]);
 
   if (!item) return null;

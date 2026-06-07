@@ -7,6 +7,7 @@ import { Propriedade, SessionPropriedade, PROPERTY_COLORS } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
 import Button1 from "../Button01"
+import { toApiErr } from "@/lib/api-error"
 
 const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16",
@@ -81,12 +82,13 @@ export default function PropertyDetailModal({
       } else {
         toastWarning(msg)
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ??
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ??
         (confirmAction.type === 'sellHouse' ? 'Erro ao vender casa' :
         confirmAction.type === 'hipotecar' ? 'Erro ao hipotecar' :
         'Erro ao vender propriedade')
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setActionLoading(false)
     }

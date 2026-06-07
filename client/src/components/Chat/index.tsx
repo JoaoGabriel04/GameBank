@@ -118,8 +118,8 @@ export default function Chat() {
   );
 }
 
-function getPlayerColor(playerId: number, session: any) {
-  const player = session?.jogadores?.find((j: any) => j.id === playerId);
+function getPlayerColor(playerId: number, session: { jogadores?: { id: number; cor?: string }[] } | null) {
+  const player = session?.jogadores?.find((j) => j.id === playerId);
   if (!player) return "#a1a1aa";
   const colorMap: Record<string, string> = {
     red: "#ef4444", blue: "#3b82f6", green: "#22c55e",

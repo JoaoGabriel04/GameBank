@@ -5,6 +5,7 @@ import { getShopItemsApi } from "@/services/api/shop"
 import { getRankingApi } from "@/services/api/ranking"
 import { useAuthStore } from "@/stores/authStore"
 import type { ShopItem, UserItem, UserMission, RankingUser, ClaimResult } from "@/types/shop"
+import { apiErrMsg } from "@/lib/api-error"
 
 interface ProfileData {
   id: number
@@ -68,8 +69,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
           badgeImageUrl: profile.badgeImageUrl ?? null,
         })
       }
-    } catch (err: any) {
-      set({ error: err?.response?.data?.message || "Erro ao carregar perfil", loading: { ...get().loading, profile: false } })
+    } catch (err) {
+      set({ error: apiErrMsg(err, "Erro ao carregar perfil"), loading: { ...get().loading, profile: false } })
     }
   },
 
@@ -78,8 +79,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     try {
       const missions = await getMissionsApi()
       set({ missions, loading: { ...get().loading, missions: false } })
-    } catch (err: any) {
-      set({ error: err?.response?.data?.message || "Erro ao carregar missões", loading: { ...get().loading, missions: false } })
+    } catch (err) {
+      set({ error: apiErrMsg(err, "Erro ao carregar missões"), loading: { ...get().loading, missions: false } })
     }
   },
 
@@ -88,8 +89,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     try {
       const shopItems = await getShopItemsApi()
       set({ shopItems, loading: { ...get().loading, shop: false } })
-    } catch (err: any) {
-      set({ error: err?.response?.data?.message || "Erro ao carregar loja", loading: { ...get().loading, shop: false } })
+    } catch (err) {
+      set({ error: apiErrMsg(err, "Erro ao carregar loja"), loading: { ...get().loading, shop: false } })
     }
   },
 
@@ -98,8 +99,8 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
     try {
       const ranking = await getRankingApi()
       set({ ranking, loading: { ...get().loading, ranking: false } })
-    } catch (err: any) {
-      set({ error: err?.response?.data?.message || "Erro ao carregar ranking", loading: { ...get().loading, ranking: false } })
+    } catch (err) {
+      set({ error: apiErrMsg(err, "Erro ao carregar ranking"), loading: { ...get().loading, ranking: false } })
     }
   },
 

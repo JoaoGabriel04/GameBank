@@ -221,7 +221,7 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
 
           {/* Footer */}
           <div className="border-t border-zinc-800 p-2.5 space-y-1">
-            <a
+            <Link
               href="/"
               className={`flex items-center gap-2 px-2.5 py-2 rounded-lg font-mono text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60 ${
                 collapsed ? "justify-center" : ""
@@ -229,7 +229,7 @@ export default function AdminNav({ open, onClose }: AdminNavProps) {
             >
               <ArrowRight size={15} />
               {!collapsed && "Voltar ao site"}
-            </a>
+            </Link>
             <div className={`flex items-center gap-2.5 px-2.5 py-2 ${collapsed ? "justify-center" : ""}`}>
               <div className="w-9 h-9 rounded-full bg-violet-500/15 border border-violet-500/30 grid place-items-center shrink-0">
                 <ShieldCheck size={17} className="text-violet-400" />

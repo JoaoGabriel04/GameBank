@@ -11,7 +11,7 @@ interface UserNotificationStore {
   markAllRead: () => Promise<void>;
 }
 
-export const useUserNotificationStore = create<UserNotificationStore>((set, get) => ({
+export const useUserNotificationStore = create<UserNotificationStore>((set) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,

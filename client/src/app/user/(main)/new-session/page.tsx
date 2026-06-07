@@ -9,8 +9,9 @@ import { useAuthStore } from "@/stores/authStore";
 
 import Lenis from "lenis";
 import { INITIAL_BALANCE } from "@/types/game";
+import type { PlayerColor } from "@/types/game";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faUsers, faPencil, faPlus, faMinus, faLock, faDollarSign, faFlag } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faUsers, faPlus, faMinus, faLock, faDollarSign, faFlag } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -378,9 +379,9 @@ export default function NewSession() {
                         <div>
                           <label className="block text-sm font-medium text-zinc-400 mb-1 font-inconsolata">Cor</label>
                           <ColorDropdown
-                            value={team.cor as any}
+                            value={team.cor as PlayerColor}
                             onChange={(color) => handleTeamChange(index, "cor", color)}
-                            availableColors={['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'emerald'] as any}
+                            availableColors={['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'pink', 'black', 'emerald'] as PlayerColor[]}
                             placeholder="Cor"
                           />
                         </div>

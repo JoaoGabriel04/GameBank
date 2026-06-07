@@ -15,8 +15,8 @@ import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import type { AdminMission, MissionInput } from "@/services/api/admin";
 import {
-  Panel, Chip, Toggle, Segmented, Btn, Field,
-  AdminInput, AdminTextarea, AdminSelect, AdminModal, Progress,
+  Chip, Toggle, Btn, Field,
+  AdminInput, AdminTextarea, AdminSelect, AdminModal,
 } from "@/components/admin/AdminUI";
 import type { LucideIcon } from "lucide-react";
 

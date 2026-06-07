@@ -1,10 +1,11 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, backdrop, slideUp, modalBox } from "@/lib/animations";
-import { Loader2, Crown, Shield, Image, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi } from "@/services/api/shop";
@@ -14,6 +15,7 @@ import CoinIcon from "@/components/CoinIcon";
 import DiamondIcon from "@/components/DiamondIcon";
 import { Chip } from "@/components/user/UserUI";
 import type { ShopItem } from "@/types/shop";
+import { apiErrMsg } from "@/lib/api-error";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 type ItemType = "title" | "badge" | "banner";
@@ -368,7 +370,7 @@ function DetailSheet({
               >
                 {item.type === "title"  && <Crown  size={26} />}
                 {item.type === "badge"  && <Shield size={26} />}
-                {item.type === "banner" && <Image  size={26} />}
+                {item.type === "banner" && <ImageIcon size={26} />}
               </div>
             )}
             <button type="button" onClick={onClose}
@@ -687,8 +689,8 @@ export default function LojaPage() {
       success(`"${item.name}" comprado!`);
       await loadProfile();
       setSelected(null);
-    } catch (e: any) {
-      error(e?.response?.data?.message ?? "Erro ao comprar.");
+    } catch (e) {
+      error(apiErrMsg(e, "Erro ao comprar."));
     } finally {
       setBuying(false);
     }
@@ -704,8 +706,8 @@ export default function LojaPage() {
       setDiamonds(d => (d ?? 0) - pack.price);
       setCoins(c => (c ?? 0) + pack.coins);
       success(`+${pack.coins.toLocaleString("pt-BR")} coins adicionados!`);
-    } catch (e: any) {
-      error(e?.response?.data?.message ?? "Erro ao comprar coins.");
+    } catch (e) {
+      error(apiErrMsg(e, "Erro ao comprar coins."));
     }
   }
 
@@ -717,8 +719,8 @@ export default function LojaPage() {
       const url = process.env.NODE_ENV === "production" ? checkoutUrl : sandboxUrl;
       if (!url) throw new Error("URL de checkout não disponível");
       window.location.href = url;
-    } catch (e: any) {
-      error(e?.response?.data?.error ?? e?.response?.data?.message ?? "Erro ao iniciar compra.");
+    } catch (e) {
+      error(apiErrMsg(e, "Erro ao iniciar compra."));
     }
   }
 

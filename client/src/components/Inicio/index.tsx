@@ -6,7 +6,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import {
   PROPERTY_COLORS,
-  PLAYER_COLORS,
 } from "@/types/game";
 import type { SorteRevesCard, Player, SessionPropriedade, Propriedade } from "@/types/game";
 import { getPropData, groupByColor, sortPropItems } from "@/utils/properties";
@@ -16,6 +15,7 @@ import ConfirmationModal from "../ConfirmationModal";
 import Modal from "../Modal";
 import { useToast } from "@/components/Toast";
 import { formatCurrency } from "@/utils/format";
+import { toApiErr } from "@/lib/api-error";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
@@ -176,7 +176,7 @@ function PropertyCard({ item, selected, onClick, getAluguel }: { item: { session
   )
 }
 
-export default function Inicio({ isOwner, onNavigate }: InicioProps) {
+export default function Inicio({ onNavigate }: InicioProps) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
   const { currentSession, loadSession, getAluguel, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore();
   const { user: authUser } = useAuthStore();
@@ -221,7 +221,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
     const prop = getPropData(sessionProp);
     if (!prop) return null;
     return { prop, sessionProp };
-  }, [selectedSessionPropId, currentSession?.sessionPosses]);
+  }, [selectedSessionPropId, currentSession]);
 
   const patrimonio = useMemo(() => {
     if (!currentPlayer) return 0;
@@ -256,7 +256,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
     const prop = getPropData(sp)
     if (!prop) return null
     return { sessionProp: sp, prop }
-  }, [selectedRentProp, currentSession?.sessionPosses])
+  }, [selectedRentProp, currentSession])
 
   const myDebts = useMemo(
     () => (currentSession?.debts ?? []).filter((d) => d.playerId === currentPlayer?.id && !d.pago),
@@ -308,9 +308,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       setSelectedBatchProps([])
       closeModal()
       toastSuccess(`${selectedBatchProps.length} casa(s) comprada(s) com sucesso!`)
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao comprar casas"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao comprar casas"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false)
     }
@@ -329,9 +330,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       setSellQuantities({})
       closeModal()
       toastSuccess(`${items.length} propriedade(s) atualizada(s) com sucesso!`)
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao vender casas"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao vender casas"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false)
     }
@@ -347,9 +349,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await loadSession(currentSession.id)
       toastSuccess("Depósito realizado!")
       closeModal()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro no depósito"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro no depósito"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
       closeModal()
     } finally {
       setReqLoading(false)
@@ -366,9 +369,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await loadSession(currentSession.id)
       toastSuccess("Saque realizado!")
       closeModal()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro no saque"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro no saque"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
       closeModal()
     } finally {
       setReqLoading(false)
@@ -386,9 +390,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await loadSession(currentSession.id)
       toastInfo("Transferência realizada!")
       closeModal()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro na transferência"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro na transferência"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
       closeModal()
     } finally {
       setReqLoading(false)
@@ -408,9 +413,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await loadSession(currentSession.id)
       toastError("Aluguel pago!")
       closeModal()
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao pagar aluguel"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao pagar aluguel"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
       closeModal()
     } finally {
       setReqLoading(false)
@@ -428,9 +434,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
         await loadSession(currentSession.id)
         toastInfo("Carta sorteada!")
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao sortear carta"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao sortear carta"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setDrawingCard(false)
     }
@@ -443,9 +450,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await usarCartaPrisao(currentSession.id, currentPlayer.id)
       await loadSession(currentSession.id)
       toastSuccess("Carta 'Saia da Prisão' usada!")
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao usar carta prisão"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao usar carta prisão"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false)
     }
@@ -459,9 +467,10 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
       await pagarDivida(debtId, currentPlayer.id, currentSession.id)
       await loadSession(currentSession.id)
       toastInfo(`Dívida de R$ ${formatCurrency(valor)} paga!`)
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao pagar dívida"
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err)
+      const msg = e?.response?.data?.message ?? "Erro ao pagar dívida"
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false)
     }
@@ -599,7 +608,7 @@ export default function Inicio({ isOwner, onNavigate }: InicioProps) {
               </div>
               <div>
                 <p className="text-sm font-inconsolata text-zinc-200">Saia da Prisão</p>
-                <p className="text-xs font-inconsolata text-zinc-500">Clique em "Usar" para consumir</p>
+                <p className="text-xs font-inconsolata text-zinc-500">Clique em &quot;Usar&quot; para consumir</p>
               </div>
             </div>
             <button

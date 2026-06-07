@@ -1,8 +1,8 @@
 import api from './index'
 
 export const profileApi = {
-  me: () => api.get<any>('/profile/me'),
-  history: () => api.get<any[]>('/profile/history'),
+  me: () => api.get<unknown>('/profile/me'),
+  history: () => api.get<unknown[]>('/profile/history'),
 }
 
 export const getProfileApi = () => profileApi.me().then(res => res.data)

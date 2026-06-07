@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import UserAvatar from "@/components/UserAvatar";
 import { PROFILE_AVATAR_PRESETS, presetAvatarValue } from "@/constants/avatars";
+import { apiErrMsg } from "@/lib/api-error";
 import { toast } from "@/lib/toast";
 
 const MAX_NICK = 30;
@@ -93,8 +94,8 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
       await updateProfile(formData);
       toast.success("Perfil atualizado!");
       onClose();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Erro ao salvar perfil");
+    } catch (err) {
+      toast.error(apiErrMsg(err, "Erro ao salvar perfil"));
     } finally {
       setSubmitting(false);
     }

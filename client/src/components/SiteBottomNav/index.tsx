@@ -12,10 +12,6 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import UserAvatar from "@/components/UserAvatar";
 
-interface SiteBottomNavProps {
-  aba?: string;
-}
-
 const siteTabs = [
   { label: "Loja", icon: faStore, path: "/loja" },
   { label: "Recompensas", icon: faGift, path: "/recompensas" },
@@ -23,7 +19,7 @@ const siteTabs = [
   { label: "Saiba Mais", icon: faCircleInfo, path: "/saibamais" },
 ];
 
-export default function SiteBottomNav({ aba }: SiteBottomNavProps) {
+export default function SiteBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuthStore();

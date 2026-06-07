@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import {
-  Plus, Search, Lock, Users, Clock, ChevronRight, Eye, LogIn,
+  Plus, Search, Lock, Users, ChevronRight, Eye, LogIn,
 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -25,15 +25,7 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBadge from "@/components/UserBadge";
 import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
-
-/* ── Format helpers ── */
-function timeAgo(ts: number | string): string {
-  const ms = Date.now() - new Date(ts).getTime();
-  const min = Math.floor(ms / 60000);
-  if (min < 1) return "agora";
-  if (min < 60) return `${min} min`;
-  return `${Math.floor(min / 60)}h`;
-}
+import { apiErrMsg } from "@/lib/api-error";
 
 /* ── Join modal (mantém lógica existente, visual redesenhado) ── */
 function JoinModal({
@@ -77,8 +69,8 @@ function JoinModal({
       onClose();
       mutate();
       router.push(`/user/game/${session.id}`);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Erro ao entrar na sala.");
+    } catch (err) {
+      setError(apiErrMsg(err, "Erro ao entrar na sala."));
     } finally {
       setLoading(false);
     }
@@ -130,7 +122,12 @@ function JoinModal({
           </div>
         )}
 
-        {session.modo === "duplas" && (session as any).times?.length > 0 && !isLive && (
+        {(() => {
+          type SessionWithTimes = { times?: { id: number; nome: string }[] };
+          type PlayerWithTeam = { teamId?: number };
+          const ext = session as unknown as SessionWithTimes;
+          if (session.modo !== "duplas" || !ext.times?.length || isLive) return null;
+          return (
           <div>
             <label className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 block mb-1.5">
               Escolha o time
@@ -141,8 +138,8 @@ function JoinModal({
               className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-4 py-2.5 font-inconsolata text-sm text-zinc-100 focus:border-green-500 focus:outline-none cursor-pointer"
             >
               <option value="">Selecione um time</option>
-              {((session as any).times as any[]).map((t: any) => {
-                const count = session.jogadores.filter((j: any) => j.teamId === t.id).length;
+              {(ext.times ?? []).map((t) => {
+                const count = session.jogadores.filter((j) => (j as unknown as PlayerWithTeam).teamId === t.id).length;
                 return (
                   <option key={t.id} value={t.id}>
                     {t.nome} ({count} jogador{count !== 1 ? "es" : ""})
@@ -151,7 +148,8 @@ function JoinModal({
               })}
             </select>
           </div>
-        )}
+          );
+        })()}
 
         {!isLive && (
           <label className="flex items-center gap-3 cursor-pointer">
@@ -250,7 +248,7 @@ function SessionCard({
         <div className="flex items-center justify-between">
           <div>
             <div className="flex -space-x-1.5 mb-1">
-              {(session.jogadores ?? []).slice(0, 5).map((j: any, i: number) => (
+              {(session.jogadores ?? []).slice(0, 5).map((j, i) => (
                 <UserAvatar
                   key={i}
                   avatarUrl={j.avatarUrl}
@@ -291,7 +289,7 @@ function SessionCard({
 export default function SessionsPage() {
   const router      = useRouter();
   const { user }    = useAuthStore();
-  const { sessions, isLoading, mutate } = useSessions();
+  const { sessions, isLoading } = useSessions();
   const [filter, setFilter]   = useState("Todas");
   const [q, setQ]             = useState("");
   const [joining, setJoining] = useState<GameSession | null>(null);

@@ -14,6 +14,7 @@ import {
   LucideIcon,
   ArrowUp,
   ArrowDown,
+  Check,
   X as XIcon,
 } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
@@ -465,10 +466,6 @@ export function ConfirmDelete({
   icon: LucideIcon;
 }) {
   const [confirming, setConfirming] = useState(false);
-  const { Check, X } = require("lucide-react") as {
-    Check: LucideIcon;
-    X: LucideIcon;
-  };
   if (!confirming)
     return (
       <button

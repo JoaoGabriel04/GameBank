@@ -5,6 +5,7 @@ import { useMusicStore } from "@/stores/musicStore";
 
 export default function MusicProvider() {
   const { volume, isPlaying } = useMusicStore();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const howlRef = useRef<any>(null);
   const readyRef = useRef(false);
 
@@ -27,7 +28,7 @@ export default function MusicProvider() {
     return () => {
       howlRef.current?.unload();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!readyRef.current) return;

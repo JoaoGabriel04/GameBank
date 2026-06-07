@@ -20,6 +20,7 @@ import UserBanner from "@/components/UserBanner";
 import type { Negotiation } from "@/types/game";
 import { sortSessionPosses } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
+import { toApiErr } from "@/lib/api-error";
 
 export default function NegotiationResponseModal() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
@@ -136,9 +137,10 @@ export default function NegotiationResponseModal() {
       setActive(null);
       if (negotiation.sessionId) await loadSession(negotiation.sessionId);
       toastSuccess("Negociação aceita!");
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao aceitar negociação";
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? "Erro ao aceitar negociação";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -152,9 +154,10 @@ export default function NegotiationResponseModal() {
       toastInfo("Negociação recusada.");
       removePendente(negotiation.id);
       setActive(null);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao recusar negociação";
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? "Erro ao recusar negociação";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -180,8 +183,8 @@ export default function NegotiationResponseModal() {
       const newNegotiation: Negotiation = await contraOfertarNegociacaoApi(
         negotiation.id,
         currentPlayer.id,
-        offerItems as any,
-        wantItems as any
+        offerItems,
+        wantItems
       );
       toastSuccess("Contra-oferta enviada!");
       removePendente(negotiation.id);
@@ -192,9 +195,10 @@ export default function NegotiationResponseModal() {
         setMinhaNegociacao(newNegotiation);
         setMinhaNegociacaoAberto(true);
       }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao enviar contra-oferta";
-      if (err?.response?.status >= 500) { toastError(msg) } else { toastWarning(msg) }
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? "Erro ao enviar contra-oferta";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg) } else { toastWarning(msg) }
     } finally {
       setReqLoading(false);
     }
@@ -219,7 +223,7 @@ export default function NegotiationResponseModal() {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [activeNegotiation?.id, activeNegotiation?.expiresAt, activeNegotiation?.status]);
+  }, [activeNegotiation, activeNegotiation?.id, activeNegotiation?.expiresAt, activeNegotiation?.status, removePendente, setActive, loadSession]);
 
   // Timer countdown — negociação pendente (minhaNegociacaoPendente)
   const [pendingTimeLeft, setPendingTimeLeft] = useState<number | null>(null);
@@ -236,7 +240,7 @@ export default function NegotiationResponseModal() {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [minhaNegociacaoPendente?.id, minhaNegociacaoPendente?.expiresAt]);
+  }, [minhaNegociacaoPendente, minhaNegociacaoPendente?.id, minhaNegociacaoPendente?.expiresAt, setMinhaNegociacao, setMinhaNegociacaoAberto]);
 
   const modalTitle = showPendingView
     ? "Negociação Enviada"

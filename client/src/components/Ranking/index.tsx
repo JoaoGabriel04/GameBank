@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
-import { PLAYER_COLORS } from "@/types/game";
 import { getPropData } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
 import type { Player, SessionPropriedade } from "@/types/game";
@@ -74,7 +73,6 @@ export default function Ranking() {
 
       <div className="space-y-2">
         {rankedPlayers.map((entry) => {
-          const pColor = PLAYER_COLORS.find((c) => c.value === entry.player.cor);
           const isMe = entry.player.id === currentPlayer?.id;
 
           return (

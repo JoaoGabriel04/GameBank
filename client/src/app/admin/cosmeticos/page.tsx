@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ import { useToast } from "@/components/Toast";
 import { SPRITE_CATALOG, resolveSprite } from "@/constants/sprites";
 import UserBanner from "@/components/UserBanner";
 import type { Banner as ApiBanner, BannerInput } from "@/services/api/admin";
+import { apiErrMsg } from "@/lib/api-error";
 
 const SWATCHES = [
   "#0e7490","#22d3ee","#5eead4","#10b981",
@@ -399,8 +401,8 @@ export default function AdminCosmeticosPage() {
       const updated = await uploadBannerImage(id, file);
       ok(`Imagem do banner #${id} atualizada!`);
       return updated;
-    } catch (e: any) {
-      err(e?.response?.data?.error || "Erro ao enviar imagem.");
+    } catch (e) {
+      err(apiErrMsg(e, "Erro ao enviar imagem."));
       throw e;
     }
   }

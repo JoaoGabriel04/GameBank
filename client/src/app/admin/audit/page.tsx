@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  ScrollText, Search, Download, Activity, Check,
+  Search, Download, Activity, Check,
   Bell, Ban,
 } from "lucide-react";
 import {

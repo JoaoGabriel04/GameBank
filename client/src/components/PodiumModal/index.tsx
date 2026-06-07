@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCrown, faBolt, faXmark } from "@fortawesome/free-solid-svg-icons"
+import { faBolt, faXmark } from "@fortawesome/free-solid-svg-icons"
 import CoinIcon from "@/components/CoinIcon"
 import type { RankedPlayer } from "@/types/game"
 import UserBanner from "@/components/UserBanner"
@@ -16,21 +16,10 @@ interface PodiumModalProps {
   onClose: () => void
 }
 
-function getColorClass(cor?: string) {
-  const map: Record<string, string> = {
-    red: "bg-red-500", blue: "bg-blue-500", green: "bg-green-500",
-    yellow: "bg-yellow-400", purple: "bg-purple-500", black: "bg-zinc-900",
-    orange: "bg-orange-500", pink: "bg-pink-500", emerald: "bg-emerald-500", zinc: "bg-zinc-500",
-  }
-  return map[cor || ""] || "bg-zinc-500"
-}
-
 const medals = ["🥇", "🥈", "🥉"]
 const podiumHeight = ["h-40", "h-28", "h-20"]
 
 export default function PodiumModal({ ranking, userId, onClose }: PodiumModalProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
   const top3 = ranking.filter((r) => r.position <= 3)
   const meInRanking = ranking.find((r) => r.player.userId === userId)
 

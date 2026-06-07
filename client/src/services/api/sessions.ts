@@ -1,6 +1,5 @@
 import api from './index'
 import { GameSession } from '@/types/game'
-import { PlayerColor } from '@/types/game'
 
 export interface TeamInput {
   nome: string;
