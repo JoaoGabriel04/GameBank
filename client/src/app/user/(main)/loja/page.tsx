@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, backdrop, slideUp, modalBox } from "@/lib/animations";
@@ -629,6 +629,7 @@ export default function LojaPage() {
   const [mpModal, setMpModal]               = useState<"success" | "failed" | "pending" | "expired" | null>(null);
   const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
   const [countdown, setCountdown]           = useState<string>("");
+  const paramProcessado                     = useRef(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -651,9 +652,11 @@ export default function LojaPage() {
   }, [profile]);
 
   useEffect(() => {
+    if (paramProcessado.current) return;
+    paramProcessado.current = true;
+
     const param = searchParams.get("diamonds");
     if (param === "success" || param === "failed" || param === "pending") {
-      // Limpa URL imediatamente — recarregar não reabre o modal
       router.replace("/user/loja", { scroll: false });
       if (param === "pending") {
         const stored = sessionStorage.getItem("gbDiamondsBefore");
@@ -661,7 +664,8 @@ export default function LojaPage() {
       }
       setMpModal(param);
     }
-  }, [searchParams, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Contador regressivo do Pix (30 min a partir do checkout)
   useEffect(() => {
