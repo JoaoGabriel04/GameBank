@@ -19,6 +19,7 @@ import { toApiErr } from "@/lib/api-error";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
+import PlayerCard from "@/components/PlayerCard";
 import {
   Eye,
   EyeOff,
@@ -108,37 +109,6 @@ function ValorInput({ value, onChange, max }: { value: number; onChange: (v: num
   )
 }
 
-function PlayerCard({ player, selected, onClick }: { player: Player; selected: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`overflow-hidden rounded-xl border transition-all cursor-pointer text-left bg-zinc-950 ${
-        selected ? "border-green-500" : "border-zinc-700 hover:border-zinc-500"
-      }`}
-    >
-      <div className="h-16 relative">
-        <UserBanner banner={player.banner} animated={player.bannerAnimated} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0 bg-black/30" />
-      </div>
-      <div className="flex items-center gap-3 p-3">
-        <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="sm" ring={selected} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
-            <p className="text-sm font-inconsolata text-zinc-100 truncate">{player.nome}</p>
-          </div>
-          <p className="text-xs font-inconsolata text-zinc-400">R$ {formatCurrency(player.saldo)}</p>
-        </div>
-        {selected && (
-          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold">✓</span>
-          </div>
-        )}
-      </div>
-    </button>
-  )
-}
 
 function PropertyCard({ item, selected, onClick, getAluguel }: { item: { sessionProp: SessionPropriedade; prop: Propriedade }; selected: boolean; onClick: () => void; getAluguel: (prop: Propriedade, casas: number) => number }) {
   const accent = getAccentHex(item.prop.grupo_cor)

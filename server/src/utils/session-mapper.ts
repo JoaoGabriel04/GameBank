@@ -36,6 +36,16 @@ export async function mapSessionPlayers<T extends {
         // Invalid JSON in badge value, skip parsing
       }
     }
+    const titleItem = items.find((i: any) => i.equipped && i.type === "title");
+    const titleAnimated = titleItem?.animated ?? false;
+    let title: string | null = null;
+    if (titleItem?.value) {
+      try {
+        title = JSON.parse(titleItem.value)?.title ?? null;
+      } catch {
+        title = titleItem.value;
+      }
+    }
     return {
       ...rest,
       avatarUrl: user?.avatarUrl ?? null,
@@ -44,6 +54,9 @@ export async function mapSessionPlayers<T extends {
       bannerAnimated,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
+      title,
+      titleAnimated,
+      level: user?.level ?? null,
     };
   });
 }

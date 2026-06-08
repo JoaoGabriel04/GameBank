@@ -14,6 +14,7 @@ import { sessionsApi } from "@/services/api/sessions";
 import { Eye, EyeOff } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
+import PlayerCard from "@/components/PlayerCard";
 import UserBadge from "@/components/UserBadge";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -242,28 +243,6 @@ export default function Game() {
     "Finalizada": "text-red-400 bg-red-500/10 border-red-500/30",
   };
 
-  // ── Player Card for Waiting Room ────────────────────────────────────────
-  function WaitingPlayerCard({ player }: { player: Player }) {
-    const saldoInicial = currentSession?.saldoInicial ?? 0;
-    return (
-      <div className="relative overflow-hidden rounded-xl border border-zinc-800">
-        <UserBanner banner={player.banner} animated={player.bannerAnimated} className="absolute inset-0 w-full h-full" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
-        <div className="relative z-10 flex items-center gap-3 p-3">
-          <UserAvatar avatarUrl={player.avatarUrl} avatarUpdatedAt={player.avatarUpdatedAt} nome={player.nome} size="md" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
-              <span className="text-zinc-100 font-inconsolata font-medium truncate">{player.nome}</span>
-            </div>
-            <span className="text-zinc-300 text-sm font-inconsolata">
-              R$ {saldoInicial.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // ── Waiting Room ────────────────────────────────────────────────────────
   function renderWaitingRoom() {
@@ -394,7 +373,7 @@ export default function Game() {
                       </div>
                       {teamPlayers.map((p) => (
                         <div key={p.id} className="px-4 py-3 border-t border-zinc-800">
-                          <WaitingPlayerCard player={p} />
+                          <PlayerCard player={p} patrimonio={currentSession?.saldoInicial ?? 0} />
                         </div>
                       ))}
                     </div>
@@ -402,7 +381,7 @@ export default function Game() {
                 })
               ) : (
                 activePlayers.map((p) => (
-                  <WaitingPlayerCard key={p.id} player={p} />
+                  <PlayerCard key={p.id} player={p} patrimonio={currentSession?.saldoInicial ?? 0} />
                 ))
               )}
             </div>

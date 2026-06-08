@@ -21,7 +21,7 @@ export class SessionRepository {
             user: {
               select: {
                   avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                  id: true,
+                  id: true, level: true,
                   user_items: true,
               },
             },
@@ -65,7 +65,7 @@ export class SessionRepository {
             user: {
               select: {
                   avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                  id: true,
+                  id: true, level: true,
                   user_items: true,
               },
             },
@@ -105,7 +105,7 @@ export class SessionRepository {
             user: {
               select: {
                   avatarUrl: true, avatarUpdatedAt: true, banner: true,
-                  id: true,
+                  id: true, level: true,
                   user_items: true,
               },
             },

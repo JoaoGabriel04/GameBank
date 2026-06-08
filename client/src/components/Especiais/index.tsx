@@ -11,6 +11,7 @@ import CoinIcon from "@/components/CoinIcon";
 import UserAvatar from "@/components/UserAvatar";
 import UserBadge from "@/components/UserBadge";
 import UserBanner from "@/components/UserBanner";
+import PlayerCard from "@/components/PlayerCard";
 import { PROPERTY_COLORS } from "@/types/game";
 import { criarNegociacaoApi } from "@/services/api/negotiations";
 import { sortSessionPosses } from "@/utils/properties";
@@ -256,32 +257,12 @@ export default function Especiais() {
                     (sp) => sp.playerId === player.id && !sp.hipotecada && !sp.negociando
                   ).length ?? 0;
                   return (
-                    <button
+                    <PlayerCard
                       key={player.id}
+                      player={player}
+                      propCount={propCount}
                       onClick={() => setTargetPlayer(player.id)}
-                      className="relative overflow-hidden rounded-xl border border-zinc-700 hover:border-purple-500 transition-all cursor-pointer text-left"
-                    >
-                      <UserBanner banner={player.banner} animated={player.bannerAnimated} className="absolute inset-0 w-full h-full" />
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
-                      <div className="relative z-10 flex items-center gap-3 p-4">
-                        <UserAvatar
-                          avatarUrl={player.avatarUrl}
-                          avatarUpdatedAt={player.avatarUpdatedAt}
-                          nome={player.nome}
-                          size="md"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-jaro text-zinc-100 truncate flex items-center gap-1.5">
-                            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="micro" />
-                            {player.nome}
-                          </div>
-                          <p className="text-xs font-inconsolata text-zinc-300">
-                            R$ {formatCurrency(player.saldo)} · {propCount} propriedade{propCount !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-                      </div>
-                    </button>
+                    />
                   );
                 })}
             </div>

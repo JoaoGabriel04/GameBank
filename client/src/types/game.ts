@@ -63,6 +63,9 @@ export interface Player {
   bannerAnimated?: boolean;
   badge?: string | null;
   badgeImageUrl?: string | null;
+  title?: string | null;
+  titleAnimated?: boolean;
+  level?: number | null;
   posses: SessionPropriedade[];
   teamId?: number;
   team?: Team;

@@ -4,11 +4,8 @@ import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { getPropData } from "@/utils/properties";
-import { formatCurrency } from "@/utils/format";
 import type { Player, SessionPropriedade } from "@/types/game";
-import UserBanner from "../UserBanner";
-import UserAvatar from "../UserAvatar";
-import UserBadge from "../UserBadge";
+import PlayerCard from "../PlayerCard";
 
 function calculatePatrimonio(player: Player, allPosses: SessionPropriedade[]): number {
   if (player.desistiu && player.patrimonyAtDesistir != null) {
@@ -60,7 +57,6 @@ export default function Ranking() {
 
   if (!currentSession) return null;
 
-  const medals = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="space-y-4 px-4 sm:px-6 lg:px-10">
@@ -71,66 +67,18 @@ export default function Ranking() {
         </span>
       </div>
 
-      <div className="space-y-2">
-        {rankedPlayers.map((entry) => {
-          const isMe = entry.player.id === currentPlayer?.id;
-
-          return (
-            <div
-              key={entry.player.id}
-              className={`relative overflow-hidden rounded-xl border transition-colors ${
-                isMe ? "border-green-500/60" : "border-zinc-800 hover:border-zinc-600"
-              }`}
-            >
-              <UserBanner banner={entry.player.banner} animated={entry.player.bannerAnimated} className="absolute inset-0 w-full h-full" />
-              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
-              <div className="relative z-10 flex items-center gap-4 p-4">
-                <div className="w-8 text-center shrink-0">
-                  {entry.pos <= 3 ? (
-                    <span className="text-lg">{medals[entry.pos - 1]}</span>
-                  ) : (
-                    <span className="text-sm font-inconsolata text-zinc-300">#{entry.pos}</span>
-                  )}
-                </div>
-
-                <UserAvatar
-                  avatarUrl={entry.player.avatarUrl}
-                  avatarUpdatedAt={entry.player.avatarUpdatedAt}
-                  nome={entry.player.nome}
-                  size="md"
-                  ring={isMe}
-                />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <UserBadge badge={entry.player.badge} imageUrl={entry.player.badgeImageUrl} variant="small" />
-                      <p className={`text-sm font-inconsolata truncate ${isMe ? "text-green-400 font-bold" : "text-zinc-100"}`}>
-                        {entry.player.nome}
-                      </p>
-                      {isMe && (
-                      <span className="text-[10px] font-inconsolata text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded">
-                        VOCÊ
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 text-xs font-inconsolata text-zinc-300 mt-0.5">
-                    <span>R$ {formatCurrency(entry.player.saldo)}</span>
-                    <span className="text-zinc-600">·</span>
-                    <span>{entry.propCount} propriedade{entry.propCount !== 1 ? "s" : ""}</span>
-                    {entry.player.desistiu && (
-                      <span className="text-zinc-500 bg-zinc-800/80 px-1.5 py-0.5 rounded text-[10px]">Desistiu</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[11px] font-inconsolata text-zinc-300 uppercase tracking-wider">Patrimônio</p>
-                  <p className="text-base font-jaro text-zinc-100">R$ {formatCurrency(entry.patrimonio)}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {rankedPlayers.map((entry) => (
+          <PlayerCard
+            key={entry.player.id}
+            player={entry.player}
+            patrimonio={entry.patrimonio}
+            rankPosition={entry.pos}
+            isMe={entry.player.id === currentPlayer?.id}
+            propCount={entry.propCount}
+            desistiu={entry.player.desistiu}
+          />
+        ))}
       </div>
 
       {rankedPlayers.length === 0 && (
