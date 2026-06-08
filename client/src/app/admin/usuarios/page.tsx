@@ -212,8 +212,13 @@ function UserEditDrawer({
       else if (!banned && wasBanned) await unbanUser(user.id);
       ok("Usuário atualizado!");
       onClose();
-    } catch {
-      err("Erro ao salvar.");
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        (e as Error)?.message ??
+        "Erro ao salvar.";
+      console.error("[handleSave]", e);
+      err(msg);
     } finally {
       setSaving(false);
     }
@@ -331,7 +336,7 @@ function UserEditDrawer({
               className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
             />
             <AdminInput
-              type="number" value={xp} onChange={(e) => setXp(+e.target.value)}
+              type="number" step={1} value={xp} onChange={(e) => setXp(Math.round(+e.target.value))}
               className="!w-32 !py-1.5 text-right"
             />
           </div>

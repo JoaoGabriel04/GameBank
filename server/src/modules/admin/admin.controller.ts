@@ -20,9 +20,16 @@ const ItemSchema = z.object({
 });
 
 function parseError(res: Response, err: unknown) {
-  if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
-  if (err instanceof z.ZodError) return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });
-  console.error(err);
+  if (err instanceof AppError) {
+    if (err.statusCode >= 500) console.error("[admin]", err);
+    else console.warn("[admin]", err.statusCode, err.message);
+    return res.status(err.statusCode).json({ error: err.message });
+  }
+  if (err instanceof z.ZodError) {
+    console.warn("[admin] ZodError", err.flatten().fieldErrors);
+    return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });
+  }
+  console.error("[admin]", err);
   return res.status(500).json({ error: "Erro interno." });
 }
 
