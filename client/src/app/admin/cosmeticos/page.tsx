@@ -22,13 +22,13 @@ const SWATCHES = [
 ];
 
 function BannerPreview({
-  css, name,
+  css, name, animated,
 }: {
-  css: string; name: string;
+  css: string; name: string; animated?: boolean;
 }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
-      <UserBanner banner={css} className="h-28 w-full" />
+      <UserBanner banner={css} animated={animated} className="h-28 w-full" />
       <div className="bg-zinc-900 px-4 pb-4 -mt-7 relative">
         <div className="w-14 h-14 rounded-full ring-4 ring-zinc-900 grid place-items-center font-jaro text-xl text-white"
           style={{ background: "linear-gradient(135deg,hsl(150 65% 45%),hsl(190 70% 35%))" }}>
@@ -46,7 +46,7 @@ function BannerPreview({
 
 const DEFAULT_BANNER: {
   c1: string; c2: string; c3: string;
-  angle: number; nome: string; disponibilidade: boolean;
+  angle: number; nome: string; disponibilidade: boolean; animated: boolean;
 } = {
   c1: "#0e7490",
   c2: "#22d3ee",
@@ -54,6 +54,7 @@ const DEFAULT_BANNER: {
   angle: 120,
   nome: "Novo banner",
   disponibilidade: true,
+  animated: false,
 };
 
 function parseBannerCss(css: string): { angle: number; c1: string; c2: string; c3: string } {
@@ -86,6 +87,7 @@ function BannerBuilder({
   const [angle, setAngle] = useState(DEFAULT_BANNER.angle);
   const [nome, setNome] = useState(DEFAULT_BANNER.nome);
   const [disponibilidade, setDisponibilidade] = useState(DEFAULT_BANNER.disponibilidade);
+  const [animated, setAnimated] = useState(DEFAULT_BANNER.animated);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [mode, setMode] = useState<"gradient" | "image">("gradient");
@@ -102,6 +104,7 @@ function BannerBuilder({
       setAngle(DEFAULT_BANNER.angle);
       setNome(DEFAULT_BANNER.nome);
       setDisponibilidade(DEFAULT_BANNER.disponibilidade);
+      setAnimated(DEFAULT_BANNER.animated);
       setImageUrl(null);
       setMode("gradient");
       return;
@@ -120,6 +123,7 @@ function BannerBuilder({
     }
     setNome(editing.nome);
     setDisponibilidade(editing.disponibilidade);
+    setAnimated(editing.animated ?? false);
     setSaved(false);
   }, [editing]);
 
@@ -147,9 +151,9 @@ function BannerBuilder({
     try {
       const finalCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
       if (editing && onUpdate) {
-        await onUpdate(editing.id, { nome, css: finalCss, disponibilidade });
+        await onUpdate(editing.id, { nome, css: finalCss, disponibilidade, animated });
       } else {
-        await onSave({ nome, css: finalCss, disponibilidade });
+        await onSave({ nome, css: finalCss, disponibilidade, animated });
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -181,7 +185,7 @@ function BannerBuilder({
             <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
               Pré-visualização do perfil
             </p>
-            <BannerPreview css={previewCss} name={nome} />
+            <BannerPreview css={previewCss} name={nome} animated={animated} />
           </div>
 
           {mode === "gradient" && (
@@ -255,6 +259,14 @@ function BannerBuilder({
             <Segmented
               value={disponibilidade ? "sim" : "nao"} onChange={(v) => setDisponibilidade(v === "sim")}
               options={[{ value: "sim", label: "Disponível" }, { value: "nao", label: "Oculto" }]}
+              size="sm"
+            />
+          </Field>
+
+          <Field label="Animação">
+            <Segmented
+              value={animated ? "sim" : "nao"} onChange={(v) => setAnimated(v === "sim")}
+              options={[{ value: "sim", label: "✨ Animado" }, { value: "nao", label: "Estático" }]}
               size="sm"
             />
           </Field>
@@ -418,8 +430,13 @@ export default function AdminCosmeticosPage() {
                 </div>
               </div>
               <div className="px-3 py-2 bg-zinc-900 flex items-center justify-between">
-                <span className="font-inconsolata text-xs text-zinc-300">{b.nome}</span>
-                <span className="font-inconsolata text-[9px] text-zinc-600">#{b.id}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-inconsolata text-xs text-zinc-300 truncate">{b.nome}</span>
+                  {b.animated && (
+                    <span className="shrink-0 font-inconsolata text-[9px] uppercase px-1 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300">✨</span>
+                  )}
+                </div>
+                <span className="font-inconsolata text-[9px] text-zinc-600 shrink-0">#{b.id}</span>
               </div>
             </div>
           ))}

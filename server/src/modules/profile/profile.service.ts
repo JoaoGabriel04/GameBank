@@ -23,7 +23,8 @@ export class ProfileService {
 
     const items = await shopRepository.resolveUserItems(userId);
 
-    const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
+    const equippedTitleItem = items.find((i) => i.equipped && i.type === "title");
+    const equippedTitle = equippedTitleItem?.value;
     let parsedTitle = null;
     if (equippedTitle) {
       try {
@@ -32,6 +33,9 @@ export class ProfileService {
         // Invalid JSON in title value, skip parsing
       }
     }
+    const titleAnimated = equippedTitleItem?.animated ?? false;
+    const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
+    const bannerAnimated = equippedBannerItem?.animated ?? false;
     const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
     const badgeImageUrl = equippedBadgeItem?.imageUrl ?? null;
     let parsedBadge = null;
@@ -49,6 +53,7 @@ export class ProfileService {
       avatarUrl: user.avatarUrl,
       avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
       banner: user.banner ?? null,
+      bannerAnimated,
       level: correctLevel,
       xp: user.xp,
       coins: user.coins,
@@ -57,6 +62,7 @@ export class ProfileService {
       totalWins: user.totalWins,
       totalTop3: user.totalTop3,
       title: parsedTitle?.title || null,
+      titleAnimated,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
       items,

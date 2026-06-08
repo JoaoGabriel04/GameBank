@@ -66,6 +66,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
       <div className="relative h-28 rounded-t-2xl overflow-hidden">
         <UserBanner
           banner={player.banner}
+          animated={player.bannerAnimated}
           className="absolute inset-0 w-full h-full"
         />
         <div
@@ -106,7 +107,11 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
         <div className="flex items-center gap-2 flex-wrap mt-1">
           <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
           <h3 className="font-jaro text-xl text-white whitespace-nowrap">{player.nome}</h3>
-          {player.title && <Chip tone="emerald">{player.title}</Chip>}
+          {player.title && (
+            player.titleAnimated
+              ? <span className="gb-title-shimmer font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{player.title}</span>
+              : <Chip tone="emerald">{player.title}</Chip>
+          )}
         </div>
         <p className="font-inconsolata text-xs text-zinc-500 mt-0.5">
           Nível {player.level} · #{player.position ?? "—"} no ranking
@@ -203,7 +208,9 @@ function Podium({
                 {p.nome.split(" ")[0]}
               </p>
               {p.title && (
-                <p className="font-inconsolata text-[9px] text-zinc-500">{p.title}</p>
+                p.titleAnimated
+                  ? <span className="gb-title-shimmer font-inconsolata text-[9px]">{p.title}</span>
+                  : <p className="font-inconsolata text-[9px] text-zinc-500">{p.title}</p>
               )}
             </div>
             <div className={`${heights[i]} w-24 rounded-t-xl flex flex-col items-center justify-end pb-3 ${podiumStyles[i]} hover:brightness-110 transition-all`}>
@@ -345,7 +352,9 @@ export default function RankingPage() {
                       </span>
                       {isMe && <Chip tone="green">você</Chip>}
                       {p.title && (
-                        <Chip tone="zinc" className="hidden sm:inline-flex">{p.title}</Chip>
+                        p.titleAnimated
+                          ? <span className="gb-title-shimmer font-inconsolata text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 hidden sm:inline">{p.title}</span>
+                          : <Chip tone="zinc" className="hidden sm:inline-flex">{p.title}</Chip>
                       )}
                     </div>
                     <p className="font-inconsolata text-[10px] text-zinc-500">Nível {p.level}</p>

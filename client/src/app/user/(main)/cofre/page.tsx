@@ -163,6 +163,7 @@ function DetailPanel({
           <UserBanner
             banner={item.value}
             imageUrl={item.imageUrl}
+            animated={item.animated}
             className="flex-1 rounded-2xl"
             style={{ height: 72 }}
           />

@@ -23,6 +23,8 @@ export async function mapSessionPlayers<T extends {
   return players.map((player) => {
     const { user, ...rest } = player as any;
     const items = user ? itemsByUserId.get(user.id) ?? [] : [];
+    const bannerItem = items.find((i: any) => i.equipped && i.type === "banner");
+    const bannerAnimated = bannerItem?.animated ?? false;
     const badgeItem = items.find((i: any) => i.equipped && i.type === "badge");
     const badgeValue = badgeItem?.value;
     const badgeImageUrl = badgeItem?.imageUrl ?? null;
@@ -39,6 +41,7 @@ export async function mapSessionPlayers<T extends {
       avatarUrl: user?.avatarUrl ?? null,
       avatarUpdatedAt: user?.avatarUpdatedAt?.toISOString?.() ?? null,
       banner: user?.banner ?? null,
+      bannerAnimated,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
     };

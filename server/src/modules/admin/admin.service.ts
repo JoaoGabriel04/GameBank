@@ -33,6 +33,7 @@ export class AdminService {
     imageUrl?: string | null;
     imagePublicId?: string | null;
     available: boolean;
+    animated?: boolean;
     bannerId?: number | null;
   }) {
     let payload = { ...data };
@@ -66,6 +67,7 @@ export class AdminService {
     imageUrl: string | null;
     imagePublicId: string | null;
     available: boolean;
+    animated: boolean;
     bannerId: number | null;
   }>) {
     const exists = await adminRepository.findItemById(id);
@@ -540,6 +542,7 @@ export class AdminService {
   async createBanner(data: {
     nome: string;
     css: string;
+    animated: boolean;
     disponibilidade: boolean;
   }) {
     return adminRepository.createBanner(data);
@@ -548,6 +551,7 @@ export class AdminService {
   async updateBanner(id: number, data: Partial<{
     nome: string;
     css: string;
+    animated: boolean;
     disponibilidade: boolean;
   }>, actor?: Actor) {
     const exists = await adminRepository.findBannerById(id);
@@ -639,7 +643,7 @@ export class AdminService {
           imagePublicId: uploaded.publicId,
           imageUpdatedAt: new Date(),
         },
-        select: { id: true, nome: true, css: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
+        select: { id: true, nome: true, css: true, animated: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
       });
 
       // Delete the old image (fire-and-forget)

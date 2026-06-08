@@ -133,8 +133,14 @@ function CosmeticCard({
           <UserBanner
             banner={item.value}
             imageUrl={item.imageUrl}
+            animated={item.animated}
             className="absolute inset-0 w-full h-full"
           />
+        )}
+        {item.animated && (
+          <span className="absolute top-1.5 left-1.5 z-10 font-inconsolata uppercase text-[8px] px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-300" style={{ letterSpacing: "0.06em" }}>
+            ✨ Animado
+          </span>
         )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
@@ -368,7 +374,7 @@ function DetailSheet({
 
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
-              <UserBanner banner={item.value} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
             ) : (
               <div
                 className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"

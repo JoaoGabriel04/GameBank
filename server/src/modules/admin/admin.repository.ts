@@ -22,6 +22,7 @@ export const adminRepository = {
     imageUrl?: string | null;
     imagePublicId?: string | null;
     available: boolean;
+    animated?: boolean;
     bannerId?: number | null;
   }) => prisma.shopItem.create({ data: { name: data.name ?? "", ...data } }),
 
@@ -36,6 +37,7 @@ export const adminRepository = {
     imageUrl: string | null;
     imagePublicId: string | null;
     available: boolean;
+    animated: boolean;
     bannerId: number | null;
   }>) => prisma.shopItem.update({ where: { id }, data }),
 
@@ -235,12 +237,14 @@ export const adminRepository = {
   createBanner: (data: {
     nome: string;
     css: string;
+    animated: boolean;
     disponibilidade: boolean;
   }) => prisma.banner.create({ data }),
 
   updateBanner: (id: number, data: Partial<{
     nome: string;
     css: string;
+    animated: boolean;
     disponibilidade: boolean;
   }>) => prisma.banner.update({ where: { id }, data }),
 

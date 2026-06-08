@@ -15,6 +15,7 @@ const ItemSchema = z.object({
   icon: z.string().nullable().optional(),
   rarity: z.string().nullable().optional(),
   available: z.boolean(),
+  animated: z.boolean().default(false),
   bannerId: z.number().int().positive().nullable().optional(),
 });
 
@@ -298,6 +299,7 @@ export const adminController = {
       const data = z.object({
         nome: z.string().min(1),
         css: z.string().min(1),
+        animated: z.boolean().default(false),
         disponibilidade: z.boolean().default(true),
       }).parse(req.body);
       res.status(201).json(await adminService.createBanner(data));
@@ -310,6 +312,7 @@ export const adminController = {
       const data = z.object({
         nome: z.string().min(1).optional(),
         css: z.string().min(1).optional(),
+        animated: z.boolean().optional(),
         disponibilidade: z.boolean().optional(),
       }).parse(req.body);
       const user = (req as any).user;

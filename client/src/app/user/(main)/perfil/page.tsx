@@ -31,6 +31,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
       <div className="h-32 rounded-t-2xl relative overflow-hidden">
         <UserBanner
           banner={profile.banner ?? user.banner}
+          animated={profile.bannerAnimated}
           className="absolute inset-0 w-full h-full"
         />
         <div
@@ -76,7 +77,11 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
           <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
         </div>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {profile.title && <Chip tone="emerald">{profile.title}</Chip>}
+          {profile.title && (
+            profile.titleAnimated
+              ? <span className="gb-title-shimmer font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
+              : <Chip tone="emerald">{profile.title}</Chip>
+          )}
           <span className="font-inconsolata text-xs text-zinc-500">
             Nível {profile.level} · #{profile.id}
           </span>

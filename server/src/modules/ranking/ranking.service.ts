@@ -30,7 +30,8 @@ export class RankingService {
 
     const result = users.map((user, index) => {
       const items = itemsByUser.get(user.id) ?? [];
-      const equippedTitle = items.find((i) => i.equipped && i.type === "title")?.value;
+      const equippedTitleItem = items.find((i) => i.equipped && i.type === "title");
+      const equippedTitle = equippedTitleItem?.value;
       let parsedTitle = null;
       if (equippedTitle) {
         try {
@@ -39,6 +40,9 @@ export class RankingService {
           // Invalid JSON in title value, skip parsing
         }
       }
+      const titleAnimated = equippedTitleItem?.animated ?? false;
+      const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
+      const bannerAnimated = equippedBannerItem?.animated ?? false;
       const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
       const badgeImageUrl = equippedBadgeItem?.imageUrl ?? null;
       let parsedBadge = null;
@@ -61,7 +65,9 @@ export class RankingService {
         totalWins: user.totalWins,
         totalTop3: user.totalTop3,
         banner: user.banner,
+        bannerAnimated,
         title: parsedTitle?.title || null,
+        titleAnimated,
         badge: parsedBadge?.badge || null,
         badgeImageUrl,
       };

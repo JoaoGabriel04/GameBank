@@ -59,6 +59,7 @@ export const shopRepository = {
           type: shopItem.type,
           imageUrl: shopItem.imageUrl ?? null,
           rarity: shopItem.rarity ?? null,
+          animated: shopItem.animated,
           equipped: ref.equipped,
         };
       })

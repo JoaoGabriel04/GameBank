@@ -13,6 +13,7 @@ interface ProfileData {
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null
+  bannerAnimated?: boolean
   level: number
   xp: number
   coins: number
@@ -21,6 +22,7 @@ interface ProfileData {
   totalWins: number
   totalTop3: number
   title?: string | null
+  titleAnimated?: boolean
   badge?: string | null
   badgeImageUrl?: string | null
   items: UserItem[]

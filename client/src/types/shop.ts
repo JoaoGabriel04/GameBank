@@ -9,6 +9,7 @@ export interface ShopItem {
   rarity?: string | null
   imageUrl?: string | null
   available: boolean
+  animated?: boolean
   bannerId?: number | null
 }
 
@@ -21,6 +22,7 @@ export interface UserItem {
   icon?: string | null
   rarity?: string | null
   imageUrl?: string | null
+  animated?: boolean
   equipped: boolean
 }
 
@@ -77,4 +79,6 @@ export interface RankingUser {
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null
+  bannerAnimated?: boolean
+  titleAnimated?: boolean
 }

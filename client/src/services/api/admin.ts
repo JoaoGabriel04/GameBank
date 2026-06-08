@@ -13,6 +13,7 @@ export interface AdminShopItem {
   rarity: string | null;
   imageUrl: string | null;
   available: boolean;
+  animated: boolean;
   ownerCount: number;
   bannerId?: number | null;
 }
@@ -108,6 +109,7 @@ export interface Banner {
   id: number;
   nome: string;
   css: string;
+  animated: boolean;
   imagePublicId?: string | null;
   imageUpdatedAt?: string | null;
   disponibilidade: boolean;

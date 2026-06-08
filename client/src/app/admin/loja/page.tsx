@@ -75,9 +75,12 @@ function ItemCard({
           <Chip tone={meta.tone}>{meta.label}</Chip>
         </div>
 
-        <h3 className="font-jaro text-base text-zinc-100">
-          {item.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-jaro text-base text-zinc-100">{item.name}</h3>
+          {item.animated && (
+            <span className="font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300 shrink-0">✨ anim</span>
+          )}
+        </div>
         <p className="font-inconsolata text-[11px] text-zinc-400 mt-0.5 leading-snug line-clamp-2 h-8">
           {item.description}
         </p>
@@ -199,7 +202,7 @@ function ItemPreview({ form, bannerCss, uploadPreview }: { form: Partial<ItemInp
 
 const EMPTY: ItemInput = {
   name: "", description: "", price: 0,
-  type: "title", value: null, icon: "sparkles", rarity: "comum", imageUrl: null, available: true, bannerId: null,
+  type: "title", value: null, icon: "sparkles", rarity: "comum", imageUrl: null, available: true, bannerId: null, animated: false,
 };
 const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
 
@@ -231,6 +234,7 @@ function ItemModal({
           imageUrl: item.imageUrl,
           available: item.available,
           bannerId: item.bannerId ?? null,
+          animated: item.animated ?? false,
         }
       : null;
   const [form, setForm] = useState<ItemInput>(initial ?? EMPTY);
@@ -374,6 +378,14 @@ function ItemModal({
                 <p className="font-inconsolata text-[10px] text-zinc-500">Visível para os jogadores</p>
               </div>
               <Toggle on={form.available} onChange={(v) => set("available", v)} />
+            </div>
+
+            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+              <div>
+                <p className="font-inconsolata text-sm text-zinc-200">✨ Animado</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">Aplica animação aurora ao banner / shimmer ao título</p>
+              </div>
+              <Toggle on={form.animated ?? false} onChange={(v) => set("animated", v)} />
             </div>
           </div>
 
