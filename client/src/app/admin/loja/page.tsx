@@ -11,7 +11,7 @@ import { useToast } from "@/components/Toast";
 import { resolveBannerBackground } from "@/constants/banners";
 import { RARITY_META } from "@/constants/rarity";
 import CoinIcon from "@/components/CoinIcon";
-import type { AdminShopItem, Banner as ApiBanner, ItemInput } from "@/services/api/admin";
+import type { AdminShopItem, Banner as ApiBanner, Frame as ApiFrame, ItemInput } from "@/services/api/admin";
 import {
   Chip, Toggle, Segmented, Btn, Field,
   AdminInput, AdminTextarea, AdminSelect, AdminModal,
@@ -28,12 +28,13 @@ function ItemIcon({ name, size = 20 }: { name: string | null; size?: number }) {
   return <I size={size} />;
 }
 
-type ItemType = "title" | "badge" | "banner";
+type ItemType = "title" | "badge" | "banner" | "frame";
 
-const TYPE_META: Record<ItemType, { label: string; tone: "amber" | "violet" | "emerald" }> = {
+const TYPE_META: Record<ItemType, { label: string; tone: "amber" | "violet" | "emerald" | "cyan" }> = {
   title:  { label: "Título",  tone: "amber"   },
   badge:  { label: "Emblema", tone: "violet"  },
   banner: { label: "Banner",  tone: "emerald" },
+  frame:  { label: "Moldura", tone: "cyan"    },
 };
 
 function getTypeMeta(type: string) {
@@ -209,12 +210,14 @@ const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","s
 function ItemModal({
   item,
   banners,
+  frames,
   onClose,
   onSave,
   onUploadImage,
 }: {
   item: AdminShopItem | "new" | null;
   banners: ApiBanner[];
+  frames?: ApiFrame[];
   onClose: () => void;
   onSave: (data: ItemInput, id?: number) => Promise<number | undefined>;
   onUploadImage: (id: number, file: File) => Promise<void>;
@@ -249,6 +252,7 @@ function ItemModal({
 
   const set = (k: keyof ItemInput, v: unknown) => setForm((p) => ({ ...p, [k]: v }));
   const isBanner = form.type === "banner";
+  const isFrame = form.type === "frame";
   const selectedBanner = banners.find((b) => b.id === form.bannerId);
   const bannerCss = isBanner ? selectedBanner?.css ?? null : null;
 
@@ -287,6 +291,7 @@ function ItemModal({
                 <option value="title">Título</option>
                 <option value="badge">Emblema</option>
                 <option value="banner">Banner de perfil</option>
+                <option value="frame">Moldura de avatar</option>
               </AdminSelect>
             </Field>
 
@@ -313,6 +318,43 @@ function ItemModal({
                     value={form.description}
                     onChange={(e) => set("description", e.target.value)}
                     placeholder="Descrição do banner na vitrine da loja"
+                    required
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Preço (coins)">
+                    <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
+                  </Field>
+                  <Field label="Ícone">
+                    <AdminSelect value={form.icon ?? "image"} onChange={(e) => set("icon", e.target.value)}>
+                      <option value="image">image</option>
+                      {ICON_OPTIONS.map((ic) => <option key={ic} value={ic}>{ic}</option>)}
+                    </AdminSelect>
+                  </Field>
+                </div>
+              </>
+            ) : isFrame ? (
+              <>
+                <Field label="Moldura existente" hint="Crie molduras em /admin/molduras">
+                  <AdminSelect
+                    value={form.frameId ?? ""}
+                    onChange={(e) => {
+                      const id = e.target.value ? +e.target.value : null;
+                      setForm((p) => ({ ...p, frameId: id }));
+                    }}
+                  >
+                    <option value="">— selecione —</option>
+                    {frames?.filter((f) => f.disponibilidade).map((f) => (
+                      <option key={f.id} value={f.id}>#{f.id} · {f.nome}</option>
+                    ))}
+                  </AdminSelect>
+                </Field>
+                <Field label="Descrição (para a loja)">
+                  <AdminTextarea
+                    rows={2}
+                    value={form.description}
+                    onChange={(e) => set("description", e.target.value)}
+                    placeholder="Descrição da moldura na vitrine da loja"
                     required
                   />
                 </Field>
@@ -415,7 +457,7 @@ function ItemModal({
 
 export default function AdminLojaPage() {
   const { items, loadingItems, loadItems, createItem, updateItem, toggleItem, deleteItem, uploadBadgeImage } = useAdminStore();
-  const { banners, loadBanners } = useAdminStore();
+  const { banners, loadBanners, frames, loadFrames } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [filter, setFilter] = useState("Todos");
   const [editing, setEditing] = useState<AdminShopItem | "new" | null>(null);
@@ -423,7 +465,8 @@ export default function AdminLojaPage() {
   useEffect(() => {
     loadItems().catch(() => err("Erro ao carregar itens."));
     loadBanners().catch(() => err("Erro ao carregar banners."));
-  }, [loadItems, loadBanners, err]);
+    loadFrames().catch(() => err("Erro ao carregar molduras."));
+  }, [loadItems, loadBanners, loadFrames, err]);
 
   const list = items.filter((i) => {
     if (filter === "Títulos")  return i.type === "title";
@@ -492,7 +535,7 @@ export default function AdminLojaPage() {
         </div>
       )}
 
-      <ItemModal item={editing} banners={banners} onClose={() => setEditing(null)} onSave={handleSave} onUploadImage={handleUploadBadgeImage} />
+      <ItemModal item={editing} banners={banners} frames={frames} onClose={() => setEditing(null)} onSave={handleSave} onUploadImage={handleUploadBadgeImage} />
     </div>
   );
 }

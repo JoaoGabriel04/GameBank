@@ -39,3 +39,7 @@ export function getBannerFolder() {
 export function getBadgeFolder() {
   return process.env.CLOUDINARY_BADGE_FOLDER || "gamebank/badges";
 }
+
+export function getFrameFolder() {
+  return process.env.CLOUDINARY_FRAME_FOLDER || "gamebank/frames";
+}

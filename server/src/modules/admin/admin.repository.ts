@@ -5,7 +5,7 @@ export const adminRepository = {
   findAllItems: () =>
     prisma.shopItem.findMany({
       orderBy: { id: "asc" },
-      include: { banner: true },
+      include: { banner: true, frame: true },
     }),
 
   findItemById: (id: number) =>
@@ -132,7 +132,10 @@ export const adminRepository = {
   }>) => prisma.mission.update({ where: { id }, data }),
 
   deleteMission: (id: number) =>
-    prisma.mission.delete({ where: { id } }),
+    prisma.$transaction(async (tx) => {
+      await tx.userMission.deleteMany({ where: { missionId: id } });
+      await tx.mission.delete({ where: { id } });
+    }),
 
   // Users
   findAllUsers: () =>
@@ -250,6 +253,60 @@ export const adminRepository = {
 
   deleteBanner: (id: number) =>
     prisma.banner.delete({ where: { id } }),
+
+  // Frames
+  findAllFrames: () =>
+    prisma.frame.findMany({ orderBy: { id: "asc" } }),
+
+  findFrameById: (id: number) =>
+    prisma.frame.findUnique({ where: { id } }),
+
+  createFrame: (data: {
+    nome: string;
+    css: string;
+    animated: boolean;
+    disponibilidade: boolean;
+    tipo?: string;
+    scale?: number;
+  }) => prisma.frame.create({ data }),
+
+  updateFrame: (id: number, data: Partial<{
+    nome: string;
+    css: string;
+    animated: boolean;
+    disponibilidade: boolean;
+    imagePublicId: string | null;
+    scale: number;
+  }>) => prisma.frame.update({ where: { id }, data }),
+
+  deleteFrame: (id: number) =>
+    prisma.frame.delete({ where: { id } }),
+
+  resetEquippedFrameForUsers: async (itemId: number): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET
+        "items" = (
+          SELECT COALESCE(jsonb_agg(
+            CASE
+              WHEN (item->>'item_id')::int = ${itemId}
+                THEN jsonb_set(item, '{equipped}', 'false'::jsonb, true)
+              ELSE item
+            END
+          ), '[]'::jsonb)
+          FROM jsonb_array_elements(u.items) item
+        ),
+        "frame" = NULL,
+        "frameType" = NULL,
+        "frameAnimated" = false
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'item_id')::int = ${itemId}
+          AND (item->>'equipped')::boolean = true
+      )
+    `;
+    return Number(result);
+  },
 
   // AuditLog
   createAuditLog: (data: {

@@ -2,8 +2,7 @@ import { Router } from "express";
 import { adminController } from "../../modules/admin/admin.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { requireAdmin } from "../../middleware/admin.middleware.js";
-import { bannerUpload } from "../../middleware/upload.middleware.js";
-import { badgeUpload } from "../../middleware/upload.middleware.js";
+import { bannerUpload, badgeUpload, frameUpload } from "../../middleware/upload.middleware.js";
 import { bannerAdminLimiter } from "../../modules/auth/auth.controller.js";
 import { diamondAdminController } from "../../modules/diamonds/diamond-admin.controller.js";
 
@@ -71,6 +70,17 @@ adminRouter.post(
 
 // User banner sync (re-sync User.banner from equipped item JSON)
 adminRouter.post("/users/:id/sync-banner", adminController.syncUserBanner);
+
+// Frames
+adminRouter.get("/frames", adminController.listFrames);
+adminRouter.post("/frames", adminController.createFrame);
+adminRouter.patch("/frames/:id", adminController.updateFrame);
+adminRouter.delete("/frames/:id", adminController.deleteFrame);
+adminRouter.post(
+  "/frames/:id/image",
+  frameUpload.single("image"),
+  adminController.uploadFrameImage
+);
 
 // Badges
 adminRouter.post(

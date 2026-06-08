@@ -41,3 +41,17 @@ export const badgeUpload = multer({
     cb(null, true);
   },
 });
+
+const FRAME_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+export const frameUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: FRAME_MAX_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!["image/png", "image/webp"].includes(file.mimetype)) {
+      cb(new Error("Formato não permitido. Use PNG ou WebP (fundo transparente)."));
+      return;
+    }
+    cb(null, true);
+  },
+});

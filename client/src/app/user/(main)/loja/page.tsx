@@ -17,7 +17,7 @@ import type { ShopItem } from "@/types/shop";
 import { apiErrMsg } from "@/lib/api-error";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
-type ItemType = "title" | "badge" | "banner";
+type ItemType = "title" | "badge" | "banner" | "frame";
 
 interface CoinPack {
   id: string;
@@ -34,10 +34,11 @@ interface DiamondPack {
   highlight?: boolean;
 }
 
-const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" | "violet" | "sky" }> = {
+const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" | "violet" | "sky" | "cyan" }> = {
   title:  { label: "Título",  color: "#f59e0b", tone: "amber"  },
   badge:  { label: "Emblema", color: "#a78bfa", tone: "violet" },
   banner: { label: "Banner",  color: "#38bdf8", tone: "sky"    },
+  frame:  { label: "Moldura", color: "#22d3ee", tone: "cyan"   },
 };
 
 const RARITY_META: Record<string, { label: string; color: string }> = {
@@ -107,6 +108,7 @@ function CosmeticCard({
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
   const glowColor = rMeta?.color ?? meta.color;
   const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
   const topBg     = !isBanner
     ? `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`
     : undefined;
@@ -164,14 +166,27 @@ function CosmeticCard({
           </span>
         )}
         {!isBanner && (
-          <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
-            {item.type === "title"  && <Crown  size={40} />}
-            {item.type === "badge" && item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
-            ) : item.type === "badge" ? (
-              <Shield size={40} />
-            ) : null}
-          </div>
+          isFrame ? (
+            <div className="relative" style={{ width: 56, height: 56 }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#71717a" }}>
+                👤
+              </div>
+              {item.value?.startsWith("http") ? (
+                <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
+              ) : item.value ? (
+                <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+              ) : null}
+            </div>
+          ) : (
+            <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
+              {item.type === "title"  && <Crown  size={40} />}
+              {item.type === "badge" && item.imageUrl ? (
+                <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+              ) : item.type === "badge" ? (
+                <Shield size={40} />
+              ) : null}
+            </div>
+          )
         )}
         <span
           className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
@@ -349,6 +364,7 @@ function DetailSheet({
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
   const accent    = rMeta?.color ?? meta.color;
   const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
   const canAfford = userCoins >= item.price;
 
   return (
@@ -375,6 +391,17 @@ function DetailSheet({
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
               <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+            ) : isFrame ? (
+              <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#71717a" }}>
+                  👤
+                </div>
+                {item.value?.startsWith("http") ? (
+                  <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
+                ) : item.value ? (
+                  <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+                ) : null}
+              </div>
             ) : (
               <div
                 className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
@@ -969,6 +996,7 @@ export default function LojaPage() {
   const titles  = available.filter(i => i.type === "title");
   const badges  = available.filter(i => i.type === "badge");
   const banners = available.filter(i => i.type === "banner");
+  const frames  = available.filter(i => i.type === "frame");
 
   async function handleBuyCosmetic(item: ShopItem) {
     setBuying(true);
@@ -1068,6 +1096,14 @@ export default function LojaPage() {
         <section className="mb-10">
           <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${banners.length} disponíveis`} />
           <Grid3>{banners.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
+        </section>
+      )}
+
+      {/* Molduras */}
+      {frames.length > 0 && (
+        <section className="mb-10">
+          <SectionHeader label="Molduras" icon={ImageIcon} color="#22d3ee" sub={`${frames.length} disponíveis`} />
+          <Grid3>{frames.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
         </section>
       )}
 

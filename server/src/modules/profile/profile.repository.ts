@@ -19,6 +19,9 @@ export const profileRepository = {
       take: limit,
     }),
 
+  clearHistory: (userId: number) =>
+    prisma.gameResult.deleteMany({ where: { userId } }),
+
   findUser: (userId: number) =>
     prisma.user.findUnique({ where: { id: userId } }),
 

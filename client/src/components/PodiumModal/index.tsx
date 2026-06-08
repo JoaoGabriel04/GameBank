@@ -95,6 +95,10 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                       nome={entry.player.nome}
                       size="lg"
                       ring={isMe}
+                      frame={entry.player.frame}
+                      frameType={entry.player.frameType}
+                      frameAnimated={entry.player.frameAnimated}
+                      frameScale={entry.player.frameScale ?? 136}
                     />
                   </div>
                 </div>

@@ -276,6 +276,10 @@ export default function UserNav() {
                 avatarUpdatedAt={user.avatarUpdatedAt}
                 nome={user.nome}
                 size="sm"
+                frame={user.frame}
+                frameType={user.frameType}
+                frameAnimated={user.frameAnimated}
+                frameScale={user.frameScale ?? 136}
               />
             </div>
           </Link>
@@ -339,6 +343,10 @@ export default function UserNav() {
                     avatarUpdatedAt={user.avatarUpdatedAt}
                     nome={user.nome}
                     size="xs"
+                    frame={user.frame}
+                    frameType={user.frameType}
+                    frameAnimated={user.frameAnimated}
+                    frameScale={user.frameScale ?? 136}
                   />
                 </div>
               </Link>

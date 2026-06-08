@@ -236,7 +236,7 @@ export default function NewSession() {
               </p>
               {authUser && (
                 <div className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800 mb-3">
-                  <UserAvatar avatarUrl={authUser.avatarUrl} avatarUpdatedAt={authUser.avatarUpdatedAt} nome={authUser.nome} size="md" />
+                  <UserAvatar avatarUrl={authUser.avatarUrl} avatarUpdatedAt={authUser.avatarUpdatedAt} nome={authUser.nome} size="md" frame={authUser.frame} frameType={authUser.frameType} frameAnimated={authUser.frameAnimated} frameScale={authUser.frameScale ?? 136} />
                   <div>
                     <p className="text-zinc-100 font-inconsolata font-medium">{authUser.nome}</p>
                     <p className="text-zinc-500 text-xs font-inconsolata">Seu perfil na partida</p>

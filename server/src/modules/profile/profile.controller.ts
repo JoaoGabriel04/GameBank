@@ -51,6 +51,16 @@ export const profileController = {
     }
   },
 
+  clearHistory: async (req: Request, res: Response) => {
+    try {
+      const result = await profileService.clearHistory(req.user!.userId);
+      res.json(result);
+    } catch (err) {
+      console.error("Erro ao limpar histórico:", err);
+      res.status(500).json({ message: "Erro ao limpar histórico" });
+    }
+  },
+
   getNotifications: async (req: Request, res: Response) => {
     try {
       const userId = req.user!.userId;

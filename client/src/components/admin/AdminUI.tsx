@@ -326,7 +326,7 @@ export function AdminAvatar({
   user,
   size = "md",
 }: {
-  user: Pick<AdminUser, "avatarUrl" | "avatarUpdatedAt" | "nome">;
+  user: Pick<AdminUser, "avatarUrl" | "avatarUpdatedAt" | "nome"> & { frame?: string | null; frameType?: string | null; frameAnimated?: boolean; frameScale?: number };
   size?: "sm" | "md" | "lg";
 }) {
   return (
@@ -335,6 +335,10 @@ export function AdminAvatar({
       avatarUpdatedAt={user.avatarUpdatedAt}
       nome={user.nome}
       size={size}
+      frame={user.frame}
+      frameType={user.frameType as "image" | "gradient" | null | undefined}
+      frameAnimated={user.frameAnimated}
+      frameScale={user.frameScale ?? 136}
     />
   );
 }

@@ -58,6 +58,10 @@ function ProfileHero() {
               nome={profile.nome}
               size="lg"
               ring
+              frame={profile.frame}
+              frameType={profile.frameType}
+              frameAnimated={profile.frameAnimated}
+              frameScale={profile.frameScale ?? 136}
             />
           </div>
 
@@ -216,7 +220,7 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
                 <div className="flex items-center justify-between">
                   <div className="flex -space-x-1.5">
                     {(s.jogadores ?? []).slice(0, 4).map((j, i) => (
-                      <UserAvatar key={i} avatarUrl={j.avatarUrl} avatarUpdatedAt={j.avatarUpdatedAt} nome={j.nome} size="xs" />
+                      <UserAvatar key={i} avatarUrl={j.avatarUrl} avatarUpdatedAt={j.avatarUpdatedAt} nome={j.nome} size="xs" frame={j.frame} frameType={j.frameType} frameAnimated={j.frameAnimated} frameScale={j.frameScale ?? 136} />
                     ))}
                   </div>
                   <span className={`font-inconsolata text-[10px] px-1.5 py-0.5 rounded-lg ${

@@ -1,6 +1,6 @@
 import api from "./index";
 
-export type ShopItemType = "title" | "badge" | "banner";
+export type ShopItemType = "title" | "badge" | "banner" | "frame";
 
 export interface AdminShopItem {
   id: number;
@@ -16,6 +16,7 @@ export interface AdminShopItem {
   animated: boolean;
   ownerCount: number;
   bannerId?: number | null;
+  frameId?: number | null;
 }
 
 export interface AdminUser {
@@ -115,8 +116,21 @@ export interface Banner {
   disponibilidade: boolean;
 }
 
+export interface Frame {
+  id: number;
+  nome: string;
+  tipo: string;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
+  css?: string | null;
+  animated: boolean;
+  disponibilidade: boolean;
+  frameScale?: number;
+}
+
 export type CardInput = Omit<Card, "id">;
 export type BannerInput = Omit<Banner, "id" | "imagePublicId" | "imageUpdatedAt">;
+export type FrameInput = Omit<Frame, "id" | "imageUrl" | "imagePublicId">;
 
 export interface AuditEntry {
   id: number;
@@ -217,6 +231,20 @@ export const adminApi = {
     const form = new FormData();
     form.append("image", file);
     return api.post<Banner>(`/admin/banners/${id}/image`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => r.data);
+  },
+
+  // Frames
+  listFrames: () => api.get<Frame[]>("/admin/frames").then((r) => r.data),
+  createFrame: (data: FrameInput) => api.post<Frame>("/admin/frames", data).then((r) => r.data),
+  updateFrame: (id: number, data: Partial<FrameInput>) =>
+    api.patch<Frame>(`/admin/frames/${id}`, data).then((r) => r.data),
+  deleteFrame: (id: number) => api.delete(`/admin/frames/${id}`),
+  uploadFrameImage: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return api.post<Frame>(`/admin/frames/${id}/image`, form, {
       headers: { "Content-Type": "multipart/form-data" },
     }).then((r) => r.data);
   },

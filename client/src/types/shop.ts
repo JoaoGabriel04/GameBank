@@ -3,27 +3,31 @@ export interface ShopItem {
   name: string
   description: string
   price: number
+  /** Generic icon field. For banners, use bannerId+banner.spriteId instead. */
   icon?: string | null
-  type: 'title' | 'badge' | 'banner'
+  type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
   rarity?: string | null
   imageUrl?: string | null
   available: boolean
   animated?: boolean
   bannerId?: number | null
+  frameId?: number | null
 }
 
 export interface UserItem {
   id: number
   name: string
   description: string
-  type: 'title' | 'badge' | 'banner'
+  type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
-  icon?: string | null
+  icon?: string | null 
+  spriteId?: string | null
   rarity?: string | null
   imageUrl?: string | null
   animated?: boolean
   equipped: boolean
+  frameId?: number | null
 }
 
 export interface GameResult {
@@ -74,11 +78,16 @@ export interface RankingUser {
   totalWins: number
   totalTop3: number
   title?: string | null
+  titleAnimated?: boolean
   badge?: string | null
   badgeImageUrl?: string | null
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null
   bannerAnimated?: boolean
-  titleAnimated?: boolean
+  spriteId?: string | null
+  frame?: string | null
+  frameType?: "image" | "gradient" | null
+  frameAnimated?: boolean
+  frameScale?: number
 }

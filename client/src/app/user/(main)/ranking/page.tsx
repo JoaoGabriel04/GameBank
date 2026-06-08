@@ -97,6 +97,10 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
               nome={player.nome}
               size="lg"
               ring={isMe}
+              frame={player.frame}
+              frameType={player.frameType}
+              frameAnimated={player.frameAnimated}
+              frameScale={player.frameScale ?? 136}
             />
           </div>
           <div className="pt-9 flex items-center gap-1.5">
@@ -195,6 +199,10 @@ function Podium({
                 nome={p.nome}
                 size={i === 1 ? "lg" : "md"}
                 ring={isMe}
+                frame={p.frame}
+                frameType={p.frameType}
+                frameAnimated={p.frameAnimated}
+                frameScale={p.frameScale ?? 136}
               />
               {isMe && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-zinc-950 grid place-items-center">
@@ -342,6 +350,10 @@ export default function RankingPage() {
                     nome={p.nome}
                     size="sm"
                     ring={isMe}
+                    frame={p.frame}
+                    frameType={p.frameType}
+                    frameAnimated={p.frameAnimated}
+                    frameScale={p.frameScale ?? 136}
                   />
 
                   <div className="flex-1 min-w-0">

@@ -15,6 +15,8 @@ import {
   type CardInput,
   type Banner,
   type BannerInput,
+  type Frame,
+  type FrameInput,
   type AuditEntry,
   type AuditListOpts,
 } from "@/services/api/admin";
@@ -37,6 +39,8 @@ interface AdminStore {
   loadingMissions: boolean;
   loadingCards: boolean;
   loadingBanners: boolean;
+  frames: Frame[];
+  loadingFrames: boolean;
   loadingAudit: boolean;
   loadingSettings: boolean;
   loadingDashboard: boolean;
@@ -52,6 +56,11 @@ interface AdminStore {
   loadCards: () => Promise<void>;
   loadBanners: () => Promise<void>;
   loadAudit: (opts?: AuditListOpts) => Promise<void>;
+  loadFrames: () => Promise<void>;
+  createFrame: (data: FrameInput) => Promise<Frame>;
+  updateFrame: (id: number, data: Partial<FrameInput>) => Promise<Frame>;
+  deleteFrame: (id: number) => Promise<void>;
+  uploadFrameImage: (id: number, file: File) => Promise<Frame>;
   loadSettings: () => Promise<void>;
   saveSettings: (data: Record<string, unknown>) => Promise<void>;
 
@@ -94,6 +103,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   audit: [],
   settings: {},
   dashboard: null,
+  frames: [],
 
   loadingItems: false,
   loadingUsers: false,
@@ -101,6 +111,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   loadingMissions: false,
   loadingCards: false,
   loadingBanners: false,
+  loadingFrames: false,
   loadingAudit: false,
   loadingSettings: false,
   loadingDashboard: false,
@@ -194,6 +205,38 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
     } finally {
       set({ loadingBanners: false });
     }
+  },
+
+  loadFrames: async () => {
+    set({ loadingFrames: true });
+    try {
+      set({ frames: await adminApi.listFrames() });
+    } finally {
+      set({ loadingFrames: false });
+    }
+  },
+
+  createFrame: async (data) => {
+    const frame = await adminApi.createFrame(data);
+    set((s) => ({ frames: [...s.frames, frame] }));
+    return frame;
+  },
+
+  updateFrame: async (id, data) => {
+    const updated = await adminApi.updateFrame(id, data);
+    set((s) => ({ frames: s.frames.map((f) => (f.id === id ? updated : f)) }));
+    return updated;
+  },
+
+  deleteFrame: async (id) => {
+    await adminApi.deleteFrame(id);
+    set((s) => ({ frames: s.frames.filter((f) => f.id !== id) }));
+  },
+
+  uploadFrameImage: async (id, file) => {
+    const updated = await adminApi.uploadFrameImage(id, file);
+    set((s) => ({ frames: s.frames.map((f) => (f.id === id ? updated : f)) }));
+    return updated;
   },
 
   loadAudit: async (opts) => {

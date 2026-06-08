@@ -22,10 +22,16 @@ export function parseUserItems(raw: unknown): UserItemRef[] {
 
 export const shopRepository = {
   findAvailableItems: () =>
-    prisma.shopItem.findMany({ where: { available: true } }),
+    prisma.shopItem.findMany({
+      where: { available: true },
+      include: { banner: true, frame: true },
+    }),
 
   findShopItem: (itemId: number) =>
-    prisma.shopItem.findUnique({ where: { id: itemId }, include: { banner: true } }),
+    prisma.shopItem.findUnique({
+      where: { id: itemId },
+      include: { banner: true, frame: true },
+    }),
 
   findUser: (userId: number) =>
     prisma.user.findUnique({ where: { id: userId } }),
@@ -42,7 +48,7 @@ export const shopRepository = {
 
     const shopItems = await prisma.shopItem.findMany({
       where: { id: { in: refs.map((r) => r.item_id) } },
-      include: { banner: true },
+      include: { banner: true, frame: true },
     });
     const itemMap = new Map(shopItems.map((si) => [si.id, si]));
 
@@ -61,6 +67,7 @@ export const shopRepository = {
           rarity: shopItem.rarity ?? null,
           animated: shopItem.animated,
           equipped: ref.equipped,
+          frameId: shopItem.frameId ?? null,
         };
       })
       .filter((i): i is NonNullable<typeof i> => i !== null);

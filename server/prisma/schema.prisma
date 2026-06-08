@@ -44,9 +44,13 @@ model User {
   avatarPublicId   String?
   avatarUpdatedAt  DateTime?
   banner           String?
+  frame            String?
+  frameType        String?   @map("frametype")
+  frameAnimated    Boolean   @default(false) @map("frameanimated")
+  frameScale       Int       @default(136)
   profileComplete  Boolean   @default(false)
   isAdmin          Boolean   @default(false)
-  createdAt        DateTime  @default(now())
+  createdAt       DateTime  @default(now())
 
   level        Int       @default(1)
   xp           Int       @default(0)
@@ -338,6 +342,9 @@ model ShopItem {
   bannerId Int?
   banner   Banner? @relation(fields: [bannerId], references: [id], onDelete: SetNull)
 
+  frameId Int?
+  frame   Frame?  @relation(fields: [frameId], references: [id], onDelete: SetNull)
+
   @@map("loja_itens")
 }
 
@@ -473,6 +480,28 @@ model Banner {
   shopItems ShopItem[]
 
   @@map("banners")
+}
+
+model Frame {
+  id              Int      @id @default(autoincrement())
+  nome            String
+  tipo            String   @default("gradient") // "image" | "gradient"
+
+  // Para tipo "image":
+  imageUrl        String?  @map("imageurl") // URL do PNG no Cloudinary
+  imagePublicId   String?  @map("imagepublicid") // public_id para deleção futura
+
+  // Para tipo "gradient":
+  css             String?  // ex: "linear-gradient(-45deg, #ee7752, #e73c7e)"
+  animated        Boolean  @default(false)
+  scale           Int      @default(136)
+
+  disponibilidade Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("createdat")
+
+  shopItems ShopItem[]
+
+  @@map("frames")
 }
 
 model UserNotification {

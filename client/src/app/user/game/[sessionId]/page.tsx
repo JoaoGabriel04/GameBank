@@ -335,15 +335,17 @@ export default function Game() {
             </Button1>
           )}
 
-          <Button1
-            size="lg"
-            color="red"
-            handle={quitLoading ? undefined : handleQuit}
-            disabled={quitLoading}
-            className="w-full max-w-xs mx-auto"
-          >
-            Sair da Sala
-          </Button1>
+          {!isOwner && (
+            <Button1
+              size="lg"
+              color="red"
+              handle={quitLoading ? undefined : handleQuit}
+              disabled={quitLoading}
+              className="w-full max-w-xs mx-auto"
+            >
+              Sair da Sala
+            </Button1>
+          )}
         </div>
 
         {/* Active Players list */}
@@ -398,7 +400,7 @@ export default function Game() {
             <div className="space-y-3">
               {spectators.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
-                  <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" />
+                  <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" frame={p.frame} frameType={p.frameType} frameAnimated={p.frameAnimated} frameScale={p.frameScale ?? 136} />
                   <div className="flex items-center gap-1.5">
                     <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
                     <span className="text-zinc-400 font-inconsolata">{p.nome}</span>
@@ -510,14 +512,16 @@ export default function Game() {
         <div className="w-full flex lg:flex-col justify-between items-center mt-4 lg:mt-1">
           {!isWaiting && (
             <div className="w-full flex lg:justify-end items-center space-x-3">
-              <Button1
-                size="md"
-                color="red"
-                handle={quitLoading ? undefined : handleQuit}
-                disabled={quitLoading}
-              >
-                Sair
-              </Button1>
+              {!isOwner && (
+                <Button1
+                  size="md"
+                  color="red"
+                  handle={quitLoading ? undefined : handleQuit}
+                  disabled={quitLoading}
+                >
+                  Sair
+                </Button1>
+              )}
               {isOwner && (
                 <Button1
                   size="md"
@@ -566,7 +570,7 @@ export default function Game() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 {currentPlayer && (
-                  <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" />
+                  <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 136} />
                 )}
                 <div>
                   <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">

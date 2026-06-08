@@ -14,13 +14,14 @@ import { Chip } from "@/components/user/UserUI";
 import { RARITY_META } from "@/constants/rarity";
 import type { UserItem } from "@/types/shop";
 
-type ItemType     = "title" | "badge" | "banner";
+type ItemType     = "title" | "badge" | "banner" | "frame";
 type CategoryKey  = "todos" | ItemType;
 
-const TYPE_META: Record<ItemType, { label: string; navLabel: string; color: string; tone: "amber" | "violet" | "sky" }> = {
+const TYPE_META: Record<ItemType, { label: string; navLabel: string; color: string; tone: "amber" | "violet" | "sky" | "cyan" }> = {
   title:  { label: "Título",  navLabel: "Títulos",  color: "#f59e0b", tone: "amber"  },
   badge:  { label: "Emblema", navLabel: "Emblemas", color: "#a78bfa", tone: "violet" },
   banner: { label: "Banner",  navLabel: "Banners",  color: "#38bdf8", tone: "sky"    },
+  frame:  { label: "Moldura", navLabel: "Molduras", color: "#22d3ee", tone: "cyan"   },
 };
 
 const NAV_KEYS: { key: CategoryKey; label: string }[] = [
@@ -28,6 +29,7 @@ const NAV_KEYS: { key: CategoryKey; label: string }[] = [
   { key: "title",  label: "Títulos"  },
   { key: "badge",  label: "Emblemas" },
   { key: "banner", label: "Banners"  },
+  { key: "frame",  label: "Molduras" },
 ];
 
 function VaultItemCard({
@@ -43,6 +45,7 @@ function VaultItemCard({
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
   const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
   const topBg     = isBanner && item.value
     ? item.value
     : `radial-gradient(ellipse at 50% 55%, ${glowColor}2e 0%, #0d0d10 68%)`;
@@ -88,7 +91,18 @@ function VaultItemCard({
             <Check size={10} color="#09090b" strokeWidth={3} />
           </div>
         )}
-        {isBanner ? null : (
+        {isBanner ? null : isFrame ? (
+          <div className="relative" style={{ width: 56, height: 56, margin: "0 auto" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#71717a" }}>
+              👤
+            </div>
+            {item.value?.startsWith("http") ? (
+              <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
+            ) : item.value ? (
+              <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+            ) : null}
+          </div>
+        ) : (
           <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
             {item.type === "title"  && <Crown  size={44} />}
             {item.type === "badge"  && (item.imageUrl ? (
@@ -155,6 +169,7 @@ function DetailPanel({
   const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
   const glowColor = rMeta?.color ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
 
   return (
     <div className="flex flex-col gap-4 p-5 overflow-y-auto h-full">
@@ -167,6 +182,17 @@ function DetailPanel({
             className="flex-1 rounded-2xl"
             style={{ height: 72 }}
           />
+        ) : isFrame ? (
+          <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#71717a" }}>
+              👤
+            </div>
+            {item.value?.startsWith("http") ? (
+              <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
+            ) : item.value ? (
+              <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+            ) : null}
+          </div>
         ) : item.type === "badge" && item.imageUrl ? (
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
             style={{
@@ -283,6 +309,7 @@ export default function CofrePage() {
     title:  items.filter(i => i.type === "title").length,
     badge:  items.filter(i => i.type === "badge").length,
     banner: items.filter(i => i.type === "banner").length,
+    frame:  items.filter(i => i.type === "frame").length,
   }), [items]);
 
   const list = useMemo(

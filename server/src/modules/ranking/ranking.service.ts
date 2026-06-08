@@ -43,6 +43,8 @@ export class RankingService {
       const titleAnimated = equippedTitleItem?.animated ?? false;
       const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
       const bannerAnimated = equippedBannerItem?.animated ?? false;
+      const equippedFrameItem = items.find((i) => i.equipped && i.type === "frame");
+      const frameAnimated = equippedFrameItem?.animated ?? false;
       const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
       const badgeImageUrl = equippedBadgeItem?.imageUrl ?? null;
       let parsedBadge = null;
@@ -66,6 +68,10 @@ export class RankingService {
         totalTop3: user.totalTop3,
         banner: user.banner,
         bannerAnimated,
+        frame: user.frame ?? null,
+        frameType: user.frameType ?? null,
+        frameAnimated,
+        frameScale: user.frameScale ?? 136,
         title: parsedTitle?.title || null,
         titleAnimated,
         badge: parsedBadge?.badge || null,

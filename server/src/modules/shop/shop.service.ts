@@ -106,6 +106,27 @@ export class ShopService {
         }
       }
 
+      if (shopItem.type === "frame") {
+        if (nextEquipped) {
+          const itemWithBanner = await prisma.shopItem.findUnique({
+            where: { id: itemId },
+            include: { frame: true },
+          });
+          if (itemWithBanner?.frame) {
+            const f = itemWithBanner.frame;
+            updateData.frame = f.tipo === "image" ? f.imageUrl : f.css;
+            updateData.frameType = f.tipo;
+            updateData.frameAnimated = f.animated;
+            updateData.frameScale = f.scale;
+          }
+        } else {
+          updateData.frame = null;
+          updateData.frameType = null;
+          updateData.frameAnimated = false;
+          updateData.frameScale = 136;
+        }
+      }
+
       await tx.user.update({ where: { id: userId }, data: updateData });
     });
 
@@ -173,6 +194,12 @@ export class ShopService {
         }
         updateData.user_items = filtered;
         updateData.banner = null;
+      }
+
+      if (shopItem.type === "frame" && target.equipped) {
+        updateData.frame = null;
+        updateData.frameType = null;
+        updateData.frameAnimated = false;
       }
 
       await tx.user.update({ where: { id: userId }, data: updateData });

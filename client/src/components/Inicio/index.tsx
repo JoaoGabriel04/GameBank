@@ -465,6 +465,10 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 nome={currentPlayer?.nome || "?"}
                 size="sm"
                 ring
+                frame={currentPlayer?.frame}
+                frameType={currentPlayer?.frameType}
+                frameAnimated={currentPlayer?.frameAnimated}
+                frameScale={currentPlayer?.frameScale ?? 136}
               />
               <div className="flex items-center gap-1.5">
                 <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />

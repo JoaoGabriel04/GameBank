@@ -82,6 +82,12 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/cosmeticos",
         icon: Image,
       },
+      {
+        id: "frames",
+        label: "Molduras",
+        href: "/admin/molduras",
+        icon: Image,
+      },
     ],
   },
   {

@@ -143,6 +143,10 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
                 nome={nome || profile?.nome || "?"}
                 size="xl"
                 ring
+                frame={profile?.frame}
+                frameType={profile?.frameType}
+                frameAnimated={profile?.frameAnimated}
+                frameScale={profile?.frameScale ?? 136}
               />
               <button
                 type="button"

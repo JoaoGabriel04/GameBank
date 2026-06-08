@@ -7,7 +7,7 @@ import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { getProfileHistoryApi } from "@/services/api/profile";
+import { getProfileHistoryApi, clearProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
@@ -55,6 +55,10 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
               nome={profile.nome}
               size="lg"
               ring
+              frame={profile.frame}
+              frameType={profile.frameType}
+              frameAnimated={profile.frameAnimated}
+              frameScale={profile.frameScale ?? 136}
             />
           </div>
           <div className="text-right pt-10 shrink-0 flex flex-col items-end gap-2">
@@ -135,17 +139,41 @@ function StatsRow({
 }
 
 /* ─── Match history ─────────────────────────────────────────────────────── */
-function MatchHistory({ history }: { history: GameResult[] }) {
+function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: () => void }) {
   const POS_COLOR: Record<number, string> = {
     1: "text-yellow-400",
     2: "text-zinc-300",
     3: "text-amber-600",
   };
+  const [clearing, setClearing] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
   return (
     <Panel flush>
       <PanelHead
         title="Histórico de partidas"
         sub={`${history.length} partidas registradas`}
+        right={
+          history.length > 0 && !confirm ? (
+            <button onClick={() => setConfirm(true)}
+              className="font-inconsolata text-[11px] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer">
+              Limpar
+            </button>
+          ) : confirm ? (
+            <div className="flex items-center gap-2">
+              <span className="font-inconsolata text-[11px] text-zinc-500">Tem certeza?</span>
+              <button onClick={async () => { setClearing(true); try { await onClear?.(); } finally { setConfirm(false); setClearing(false); } }}
+                disabled={clearing}
+                className="font-inconsolata text-[11px] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer">
+                {clearing ? "Limpando…" : "Sim"}
+              </button>
+              <button onClick={() => setConfirm(false)}
+                className="font-inconsolata text-[11px] text-zinc-400 hover:text-zinc-300 transition-colors cursor-pointer">
+                Não
+              </button>
+            </div>
+          ) : null
+        }
       />
       {history.length === 0 ? (
         <p className="font-inconsolata text-sm text-zinc-600 text-center py-10">
@@ -231,7 +259,10 @@ export default function PerfilPage() {
         totalWins={profile.totalWins}
         totalTop3={profile.totalTop3}
       />
-      <MatchHistory history={history} />
+      <MatchHistory history={history} onClear={async () => {
+        await clearProfileHistoryApi();
+        setHistory([]);
+      }} />
       <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
     </div>
   );

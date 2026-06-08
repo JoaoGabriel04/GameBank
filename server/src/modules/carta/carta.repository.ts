@@ -67,7 +67,7 @@ export class CartaRepository {
   }
 
   async findSessionPlayers(sessionId: number, excludeId?: number) {
-    const where: any = { sessionId };
+    const where: any = { sessionId, desistiu: false };
     if (excludeId !== undefined) where.id = { not: excludeId };
     return prisma.sessionPlayer.findMany({ where });
   }

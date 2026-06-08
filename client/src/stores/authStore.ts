@@ -7,6 +7,11 @@ export interface AuthUser {
   avatarUrl?: string | null;
   avatarUpdatedAt?: string | null;
   banner?: string | null;
+  spriteId?: string | null;
+  frame?: string | null;
+  frameType?: "image" | "gradient" | null;
+  frameAnimated?: boolean;
+  frameScale?: number;
   badge?: string | null;
   badgeImageUrl?: string | null;
   profileComplete: boolean;

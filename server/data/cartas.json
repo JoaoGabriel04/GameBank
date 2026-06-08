@@ -40,7 +40,7 @@
     { "id": 38, "texto": "Participação em reality show: ganhe R$ 2.200.",                       "tipo": "ganhar_dinheiro",   "valor": 2200 },
     { "id": 39, "texto": "Fundo de reserva liberado: ganhe R$ 1.600.",                          "tipo": "ganhar_dinheiro",   "valor": 1600 },
     { "id": 40, "texto": "Doação anônima recebida: ganhe R$ 850.",                              "tipo": "ganhar_dinheiro",   "valor": 850  },
-    { "id": 41, "texto": "Receba R$ 50 de cada jogador por coleta de pedágio.",                 "tipo": "receber_jogadores", "valor": 50   },
+    { "id": 41, "texto": "Receba R$ 50 de cada jogador por coleta de pedágio.",                 "tipo": "receber_jogadores", "valor": 750   },
     { "id": 42, "texto": "Recuperação de crédito em disputa: ganhe R$ 1.050.",                  "tipo": "ganhar_dinheiro",   "valor": 1050 },
     { "id": 43, "texto": "Bônus de produtividade: ganhe R$ 700.",                               "tipo": "ganhar_dinheiro",   "valor": 700  },
     { "id": 44, "texto": "Venda de propriedade digital: ganhe R$ 1.750.",                       "tipo": "ganhar_dinheiro",   "valor": 1750 },
@@ -95,12 +95,12 @@
     { "id": 41, "texto": "Dano a terceiros em acidente: pague R$ 980.",                         "tipo": "perder_dinheiro",   "valor": 980  },
     { "id": 42, "texto": "Pague R$ 450 para cada jogador por quebra de acordo.",                "tipo": "pagar_jogadores",   "valor": 450  },
     { "id": 43, "texto": "Substituição emergencial de encanamento: pague R$ 730.",              "tipo": "perder_dinheiro",   "valor": 730  },
-    { "id": 44, "texto": "Golpe em investimento: pague R$ 3.000.",                              "tipo": "perder_dinheiro",   "valor": 3000 },
+    { "id": 44, "texto": "Golpe em investimento: pague R$ 3.000.",                              "tipo": "perder_dinheiro",   "valor": 2000 },
     { "id": 45, "texto": "Pague R$ 200 para cada jogador por multa coletiva.",                  "tipo": "pagar_jogadores",   "valor": 200  },
     { "id": 46, "texto": "Devolução de produto com prejuízo: pague R$ 360.",                    "tipo": "perder_dinheiro",   "valor": 360  },
     { "id": 47, "texto": "Embargo de obra por irregularidade: pague R$ 1.900.",                 "tipo": "perder_dinheiro",   "valor": 1900 },
     { "id": 48, "texto": "Fraude bancária descoberta tarde: pague R$ 2.800.",                   "tipo": "perder_dinheiro",   "valor": 2800 },
     { "id": 49, "texto": "Pague R$ 700 para cada jogador por indenização trabalhista.",         "tipo": "pagar_jogadores",   "valor": 700  },
-    { "id": 50, "texto": "Catástrofe! Pague R$ 5.000 de dívida inesperada.",                    "tipo": "perder_dinheiro",   "valor": 5000 }
+    { "id": 50, "texto": "Catástrofe! Pague R$ 5.000 de dívida inesperada.",                    "tipo": "perder_dinheiro",   "valor": 2500 }
   ]
 }

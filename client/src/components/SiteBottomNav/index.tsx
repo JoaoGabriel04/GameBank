@@ -78,6 +78,10 @@ export default function SiteBottomNav() {
               nome={user.nome}
               size="sm"
               ring={isActive("/perfil")}
+              frame={user.frame}
+              frameType={user.frameType}
+              frameAnimated={user.frameAnimated}
+              frameScale={user.frameScale ?? 136}
             />
           ) : (
             <FontAwesomeIcon

@@ -96,7 +96,7 @@ function JoinModal({
 
         {user && (
           <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-xl border border-zinc-800">
-            <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="md" />
+            <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="md" frame={user.frame} frameType={user.frameType} frameAnimated={user.frameAnimated} frameScale={user.frameScale ?? 136} />
             <div>
               <div className="font-inconsolata text-sm text-zinc-100 flex items-center gap-1.5">
                 <UserBadge badge={user.badge} imageUrl={user.badgeImageUrl} variant="micro" />
@@ -255,6 +255,10 @@ function SessionCard({
                   avatarUpdatedAt={j.avatarUpdatedAt}
                   nome={j.nome}
                   size="sm"
+                  frame={j.frame}
+                  frameType={j.frameType}
+                  frameAnimated={j.frameAnimated}
+                  frameScale={j.frameScale ?? 136}
                 />
               ))}
               {playerCount > 5 && (

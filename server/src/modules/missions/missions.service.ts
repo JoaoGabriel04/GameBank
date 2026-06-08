@@ -124,7 +124,10 @@ export class MissionsService {
             ...(newLevel > user.level ? { level: newLevel } : {}),
           },
         });
-        await tx.mission.delete({ where: { id: missionId } });
+        const remaining = await tx.userMission.count({ where: { missionId } });
+        if (remaining === 0) {
+          await tx.mission.delete({ where: { id: missionId } });
+        }
       });
     } else {
       try {

@@ -8,6 +8,7 @@ import { validateAndProcessBanner } from "../../lib/image-validation.js";
 import { uploadBannerToCloudinary, deleteCloudinaryBanner, rollbackBannerUpload } from "../banner/banner-upload.service.js";
 import { validateAndProcessBadge } from "../../lib/badge-validation.js";
 import { uploadBadgeToCloudinary, deleteCloudinaryBadge, rollbackBadgeUpload } from "../badge/badge-upload.service.js";
+import { uploadFrameToCloudinary, deleteCloudinaryFrame, rollbackFrameUpload } from "../frames/frame-upload.service.js";
 
 interface Actor {
   id?: number | null;
@@ -35,8 +36,9 @@ export class AdminService {
     available: boolean;
     animated?: boolean;
     bannerId?: number | null;
+    frameId?: number | null;
   }) {
-    let payload = { ...data };
+    let payload = { ...data } as any;
     if (data.type === "banner") {
       if (!data.bannerId) throw new AppError(400, "bannerId é obrigatório para itens do tipo banner.");
       const banner = await adminRepository.findBannerById(data.bannerId);
@@ -46,6 +48,17 @@ export class AdminService {
         ...payload,
         name: banner.nome,
         value: banner.css,
+      };
+    } else if (data.type === "frame") {
+      if (!data.frameId) throw new AppError(400, "frameId é obrigatório para itens do tipo frame.");
+      const frame = await adminRepository.findFrameById(data.frameId);
+      if (!frame) throw new AppError(404, "Frame não encontrado.");
+      if (!frame.disponibilidade) throw new AppError(400, "Frame não está disponível para venda.");
+      payload = {
+        ...payload,
+        name: frame.nome,
+        value: frame.tipo === "image" ? frame.imageUrl : frame.css,
+        animated: frame.animated,
       };
     } else {
       if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title/badge.");
@@ -69,12 +82,13 @@ export class AdminService {
     available: boolean;
     animated: boolean;
     bannerId: number | null;
+    frameId: number | null;
   }>) {
     const exists = await adminRepository.findItemById(id);
     if (!exists) throw new AppError(404, "Item não encontrado.");
 
     const nextType = data.type ?? exists.type;
-    let payload: typeof data = { ...data };
+    let payload: any = { ...data };
 
     if (nextType === "banner") {
       const bannerId = data.bannerId ?? exists.bannerId ?? null;
@@ -87,11 +101,28 @@ export class AdminService {
       payload = {
         ...payload,
         bannerId,
+        frameId: null,
         name: banner.nome,
         value: banner.css,
       };
-    } else if (data.type === "title" || data.type === "badge") {
-      payload = { ...payload, bannerId: null };
+    } else if (nextType === "frame") {
+      const frameId = data.frameId ?? exists.frameId ?? null;
+      if (!frameId) throw new AppError(400, "frameId é obrigatório para itens do tipo frame.");
+      const frame = await adminRepository.findFrameById(frameId);
+      if (!frame) throw new AppError(404, "Frame não encontrado.");
+      if (!frame.disponibilidade && data.frameId !== undefined) {
+        throw new AppError(400, "Frame não está disponível para venda.");
+      }
+      payload = {
+        ...payload,
+        frameId,
+        bannerId: null,
+        name: frame.nome,
+        value: frame.tipo === "image" ? frame.imageUrl : frame.css,
+        animated: frame.animated,
+      };
+    } else if (nextType === "title" || nextType === "badge") {
+      payload = { ...payload, bannerId: null, frameId: null };
       if (data.name !== undefined && !data.name) {
         throw new AppError(400, "name não pode ser vazio para itens do tipo title/badge.");
       }
@@ -114,10 +145,13 @@ export class AdminService {
     const exists = await adminRepository.findItemById(id);
     if (!exists) throw new AppError(404, "Item não encontrado.");
 
-    // Cascade: if the item is a banner and a user has it equipped, reset to Padrão
+    // Cascade: if the item is a banner/frame and a user has it equipped, reset
     let resetCount = 0;
     if (exists.type === "banner") {
       resetCount = await adminRepository.resetEquippedBannerForUsers(id);
+    }
+    if (exists.type === "frame") {
+      resetCount = await adminRepository.resetEquippedFrameForUsers(id);
     }
     // Remove the item from every user's inventory
     const removedCount = await adminRepository.removeItemFromAllUsers(id);
@@ -665,6 +699,141 @@ export class AdminService {
     } catch (err) {
       // Rollback: remove the orphan upload if DB update fails
       await rollbackBannerUpload(uploaded.publicId);
+      throw err;
+    }
+  }
+
+  // ── Frames ───────────────────────────────────────────────────────────
+
+  async listFrames() {
+    return adminRepository.findAllFrames();
+  }
+
+  async createFrame(data: {
+    nome: string;
+    css: string;
+    animated: boolean;
+    disponibilidade: boolean;
+    frameScale?: number;
+  }) {
+    const { frameScale, ...rest } = data;
+    return adminRepository.createFrame({
+      ...rest,
+      scale: frameScale,
+    });
+  }
+
+  async updateFrame(id: number, data: Partial<{
+    nome: string;
+    css: string;
+    animated: boolean;
+    disponibilidade: boolean;
+    frameScale?: number;
+  }>, actor?: Actor) {
+    const exists = await adminRepository.findFrameById(id);
+    if (!exists) throw new AppError(404, "Frame não encontrado.");
+
+    const { frameScale, ...rest } = data;
+    const payload: (typeof rest) & { imagePublicId?: string | null; scale?: number } = { ...rest };
+    if (frameScale !== undefined) payload.scale = frameScale;
+
+    // If css is being updated, handle Cloudinary cleanup
+    if (data.css !== undefined) {
+      const isUrl = data.css.startsWith("http://") || data.css.startsWith("https://");
+      if (!isUrl && exists.imagePublicId) {
+        deleteCloudinaryFrame(exists.imagePublicId).catch((err) =>
+          console.error("[frame] Falha ao remover imagem antiga do Cloudinary:", err)
+        );
+        payload.imagePublicId = null;
+      } else if (isUrl && !data.css.includes("res.cloudinary.com")) {
+        throw new AppError(400, "URL deve ser do Cloudinary. Use POST /admin/frames/:id/image para upload.");
+      }
+    }
+
+    const updated = await adminRepository.updateFrame(id, payload);
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.frame.update",
+      target: `frame:${id}`,
+      metadata: { changedFields: Object.keys(data), updatedBy: actor?.email ?? null },
+      severity: "info",
+    });
+
+    return updated;
+  }
+
+  async deleteFrame(id: number, actor?: Actor) {
+    const exists = await adminRepository.findFrameById(id);
+    if (!exists) throw new AppError(404, "Frame não encontrado.");
+
+    const linkedItems = await prisma.shopItem.findMany({
+      where: { frameId: id },
+      select: { id: true, type: true },
+    });
+
+    let totalReset = 0;
+    for (const item of linkedItems) {
+      if (item.type === "frame") {
+        totalReset += await adminRepository.resetEquippedFrameForUsers(item.id);
+      }
+      await adminRepository.removeItemFromAllUsers(item.id);
+      await prisma.shopItem.delete({ where: { id: item.id } });
+    }
+
+    if (exists.imagePublicId) {
+      deleteCloudinaryFrame(exists.imagePublicId).catch((err) =>
+        console.error("[frame] Falha ao deletar imagem do Cloudinary:", err)
+      );
+    }
+
+    await adminRepository.deleteFrame(id);
+
+    await auditLog({
+      userId: actor?.id ?? null,
+      action: "admin.frame.delete",
+      target: `frame:${id}`,
+      metadata: { cascadedItems: linkedItems.length, usersReset: totalReset, deletedBy: actor?.email ?? null },
+      severity: "warn",
+    });
+  }
+
+  async uploadFrameImage(id: number, fileBuffer: Buffer, _fileMime: string | undefined, actor?: Actor) {
+    const exists = await adminRepository.findFrameById(id);
+    if (!exists) throw new AppError(404, "Frame não encontrado.");
+
+    const uploaded = await uploadFrameToCloudinary(id, fileBuffer);
+    const oldPublicId = exists.imagePublicId;
+
+    try {
+      const updated = await prisma.frame.update({
+        where: { id },
+        data: {
+          imageUrl: uploaded.url,
+          imagePublicId: uploaded.publicId,
+          css: uploaded.url,
+          tipo: "image",
+        },
+        select: { id: true, nome: true, tipo: true, imageUrl: true, imagePublicId: true, css: true, animated: true, scale: true, disponibilidade: true, createdAt: true },
+      });
+
+      if (oldPublicId && oldPublicId !== uploaded.publicId) {
+        deleteCloudinaryFrame(oldPublicId).catch((err) =>
+          console.error("[frame] Falha ao deletar imagem antiga do Cloudinary:", err)
+        );
+      }
+
+      await auditLog({
+        userId: actor?.id ?? null,
+        action: "admin.frame.upload_image",
+        target: `frame:${id}`,
+        metadata: { publicId: uploaded.publicId, replacedOld: !!oldPublicId, uploadedBy: actor?.email ?? null },
+        severity: "info",
+      });
+
+      return updated;
+    } catch (err) {
+      await rollbackFrameUpload(uploaded.publicId);
       throw err;
     }
   }

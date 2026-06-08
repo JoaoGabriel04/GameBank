@@ -10,13 +10,14 @@ const ItemSchema = z.object({
   name: z.string().optional(),
   description: z.string().min(1),
   price: z.number().int().min(0),
-  type: z.enum(["title", "badge", "banner"]),
+  type: z.enum(["title", "badge", "banner", "frame"]),
   value: z.string().nullable().optional(),
   icon: z.string().nullable().optional(),
   rarity: z.string().nullable().optional(),
   available: z.boolean(),
   animated: z.boolean().default(false),
   bannerId: z.number().int().positive().nullable().optional(),
+  frameId: z.number().int().positive().nullable().optional(),
 });
 
 function parseError(res: Response, err: unknown) {
@@ -344,6 +345,61 @@ export const adminController = {
       if (!fileBuffer) return res.status(400).json({ error: "Nenhuma imagem enviada" });
       const user = (req as any).user;
       res.json(await adminService.uploadBannerImage(id, fileBuffer, fileMime, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  // Frames
+  listFrames: async (_req: Request, res: Response) => {
+    try {
+      res.json(await adminService.listFrames());
+    } catch (err) { parseError(res, err); }
+  },
+
+  createFrame: async (req: Request, res: Response) => {
+    try {
+      const data = z.object({
+        nome: z.string().min(1),
+        css: z.string().min(1),
+        animated: z.boolean().default(false),
+        disponibilidade: z.boolean().default(true),
+        frameScale: z.number().int().min(100).max(200).optional(),
+      }).parse(req.body);
+      res.status(201).json(await adminService.createFrame(data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  updateFrame: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const data = z.object({
+        nome: z.string().min(1).optional(),
+        css: z.string().min(1).optional(),
+        animated: z.boolean().optional(),
+        disponibilidade: z.boolean().optional(),
+        frameScale: z.number().int().min(100).max(200).optional(),
+      }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.updateFrame(id, data, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  deleteFrame: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const user = (req as any).user;
+      await adminService.deleteFrame(id, { id: user?.userId, email: user?.email });
+      res.status(204).send();
+    } catch (err) { parseError(res, err); }
+  },
+
+  uploadFrameImage: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const fileBuffer = req.file?.buffer;
+      const fileMime = req.file?.mimetype;
+      if (!fileBuffer) return res.status(400).json({ error: "Nenhuma imagem enviada" });
+      const user = (req as any).user;
+      res.json(await adminService.uploadFrameImage(id, fileBuffer, fileMime, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
