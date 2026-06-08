@@ -295,7 +295,11 @@ function ItemModal({
                 <Field label="Banner existente" hint="Crie banners em /admin/cosmeticos">
                   <AdminSelect
                     value={form.bannerId ?? ""}
-                    onChange={(e) => set("bannerId", e.target.value ? +e.target.value : null)}
+                    onChange={(e) => {
+                      const id = e.target.value ? +e.target.value : null;
+                      const picked = banners.find((b) => b.id === id);
+                      setForm((p) => ({ ...p, bannerId: id, animated: picked?.animated ?? false }));
+                    }}
                   >
                     <option value="">— selecione —</option>
                     {banners.filter((b) => b.disponibilidade).map((b) => (
@@ -380,13 +384,15 @@ function ItemModal({
               <Toggle on={form.available} onChange={(v) => set("available", v)} />
             </div>
 
-            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
-              <div>
-                <p className="font-inconsolata text-sm text-zinc-200">✨ Animado</p>
-                <p className="font-inconsolata text-[10px] text-zinc-500">Aplica animação aurora ao banner / shimmer ao título</p>
+            {form.type === "title" && (
+              <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+                <div>
+                  <p className="font-inconsolata text-sm text-zinc-200">✨ Animado</p>
+                  <p className="font-inconsolata text-[10px] text-zinc-500">Título com efeito shimmer de brilho</p>
+                </div>
+                <Toggle on={form.animated ?? false} onChange={(v) => set("animated", v)} />
               </div>
-              <Toggle on={form.animated ?? false} onChange={(v) => set("animated", v)} />
-            </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-4">
