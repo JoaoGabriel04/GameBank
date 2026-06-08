@@ -20,6 +20,8 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
 import PlayerCard from "@/components/PlayerCard";
+import { Chip } from "@/components/user/UserUI";
+import { shimmerTitleStyle } from "@/lib/animations";
 import {
   Eye,
   EyeOff,
@@ -475,6 +477,18 @@ export default function Inicio({ onNavigate }: InicioProps) {
               {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          {currentPlayer?.title && !currentPlayer.titleAnimated && (
+            <div className="mt-1 mb-1">
+              <Chip tone="emerald">{currentPlayer.title}</Chip>
+            </div>
+          )}
+          {currentPlayer?.title && currentPlayer.titleAnimated && (
+            <div className="mt-1 mb-1">
+              <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">
+                {currentPlayer.title}
+              </span>
+            </div>
+          )}
           <p className="text-3xl font-jaro font-bold text-green-400 mb-4">
             {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
           </p>

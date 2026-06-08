@@ -350,12 +350,13 @@ export default function RankingPage() {
                       <span className={`font-inconsolata text-sm truncate ${isMe ? "text-green-300" : "text-zinc-200"}`}>
                         {p.nome}
                       </span>
-                      {isMe && <Chip tone="green">você</Chip>}
+                      
                       {p.title && (
                         p.titleAnimated
                           ? <span className="hidden sm:inline-block font-inconsolata text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10"><span style={shimmerTitleStyle}>{p.title}</span></span>
                           : <Chip tone="zinc" className="hidden sm:inline-flex">{p.title}</Chip>
                       )}
+                      {isMe && <Chip tone="green">você</Chip>}
                     </div>
                     <p className="font-inconsolata text-[10px] text-zinc-500">Nível {p.level}</p>
                   </div>

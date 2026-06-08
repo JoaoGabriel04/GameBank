@@ -3,6 +3,7 @@
 import UserBanner from '@/components/UserBanner';
 import UserAvatar from '@/components/UserAvatar';
 import UserBadge from '@/components/UserBadge';
+import { Chip } from '@/components/user/UserUI';
 import { shimmerTitleStyle } from '@/lib/animations';
 import { formatCurrency } from '@/utils/format';
 import type { Player } from '@/types/game';
@@ -112,13 +113,21 @@ export default function PlayerCard({
           </div>
         </div>
 
-        {/* Nome + Badge + VOCÊ */}
+        {/* Nome + Badge + Título + VOCÊ + Desistiu */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span className="font-inconsolata font-medium text-zinc-100 truncate" style={{ fontSize: 14 }}>
             {player.nome}
           </span>
           {player.badge && (
             <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
+          )}
+          {player.title && !player.titleAnimated && (
+            <Chip tone="emerald">{player.title}</Chip>
+          )}
+          {player.title && player.titleAnimated && (
+            <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">
+              {player.title}
+            </span>
           )}
           {isMe && (
             <span className="font-inconsolata text-[10px] text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded">
@@ -132,30 +141,8 @@ export default function PlayerCard({
           )}
         </div>
 
-        {/* Título + Nível */}
+        {/* Nível */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-          {player.title && (
-            <>
-              <span
-                style={
-                  player.titleAnimated
-                    ? shimmerTitleStyle
-                    : {
-                        fontSize: 11,
-                        color: '#a1a1aa',
-                        background: '#27272a',
-                        border: '0.5px solid #3f3f46',
-                        borderRadius: 6,
-                        padding: '2px 7px',
-                        display: 'inline-block',
-                      }
-                }
-              >
-                {player.title}
-              </span>
-              <span style={{ fontSize: 11, color: '#52525b' }}>·</span>
-            </>
-          )}
           <span className="font-inconsolata" style={{ fontSize: 11, color: '#a1a1aa' }}>
             Nível {player.level ?? '?'}
           </span>
