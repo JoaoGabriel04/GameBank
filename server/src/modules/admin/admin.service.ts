@@ -303,7 +303,7 @@ export class AdminService {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de coins deve ser um inteiro não-zero.");
     }
-    if (delta > 0) {
+    if (delta > 0 && process.env.NODE_ENV !== "development") {
       throw new AppError(403, "Admin não pode adicionar saldo — apenas subtrair.");
     }
     const result = await prisma.$transaction(async (tx) => {
@@ -332,7 +332,7 @@ export class AdminService {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de diamantes deve ser um inteiro não-zero.");
     }
-    if (delta > 0) {
+    if (delta > 0 && process.env.NODE_ENV !== "development") {
       throw new AppError(403, "Admin não pode adicionar diamantes — apenas subtrair.");
     }
     const result = await prisma.$transaction(async (tx) => {

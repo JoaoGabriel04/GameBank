@@ -169,6 +169,7 @@ function UserEditDrawer({
   const { adjustCoins, adjustDiamonds, adjustXp, setLevel, setUserAdmin, banUser, unbanUser } = useAdminStore();
   const { success: ok, error: err } = useToast();
 
+  const isDev = process.env.NODE_ENV === "development";
   const [coins, setCoins] = useState(0);
   const [diamonds, setDiamonds] = useState(0);
   const [xp, setXp] = useState(0);
@@ -251,39 +252,71 @@ function UserEditDrawer({
           ))}
         </div>
 
-        {/* Coins slider — somente redução */}
-        <Field label={`Subtrair coins — atual: ${user.coins.toLocaleString("pt-BR")}`}>
-          <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
-            Somente reduções de saldo são permitidas.
-          </p>
+        {/* Coins */}
+        <Field label={`${isDev ? "Coins (dev)" : "Subtrair coins"} — atual: ${user.coins.toLocaleString("pt-BR")}`}>
+          {isDev ? (
+            <p className="font-inconsolata text-[10px] text-emerald-400/80 mb-1">
+              Dev: adição e remoção permitidas.
+            </p>
+          ) : (
+            <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
+              Somente reduções de saldo são permitidas.
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <input
-              type="range" min={0} max={user.coins} step={100} value={coins}
+              type="range"
+              min={0}
+              max={isDev ? Math.max(user.coins * 2, 10000) : user.coins}
+              step={100}
+              value={coins}
               onChange={(e) => setCoins(+e.target.value)}
               className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
             />
             <AdminInput
-              type="number" value={coins} min={0} max={user.coins}
-              onChange={(e) => setCoins(Math.min(+e.target.value, user.coins))}
+              type="number"
+              value={coins}
+              min={0}
+              max={isDev ? undefined : user.coins}
+              onChange={(e) => {
+                const v = +e.target.value;
+                setCoins(isDev ? Math.max(0, v) : Math.min(v, user.coins));
+              }}
               className="!w-24 !py-1.5 text-right"
             />
           </div>
         </Field>
 
-        {/* Diamonds slider — somente redução */}
-        <Field label={`Subtrair diamantes — atual: ${user.diamonds.toLocaleString("pt-BR")}`}>
-          <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
-            Somente reduções de saldo são permitidas.
-          </p>
+        {/* Diamonds */}
+        <Field label={`${isDev ? "Diamantes (dev)" : "Subtrair diamantes"} — atual: ${user.diamonds.toLocaleString("pt-BR")}`}>
+          {isDev ? (
+            <p className="font-inconsolata text-[10px] text-emerald-400/80 mb-1">
+              Dev: adição e remoção permitidas.
+            </p>
+          ) : (
+            <p className="font-inconsolata text-[10px] text-amber-400/80 mb-1">
+              Somente reduções de saldo são permitidas.
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-1">
             <input
-              type="range" min={0} max={user.diamonds} step={1} value={diamonds}
+              type="range"
+              min={0}
+              max={isDev ? Math.max(user.diamonds * 2, 100) : user.diamonds}
+              step={1}
+              value={diamonds}
               onChange={(e) => setDiamonds(+e.target.value)}
               className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-sky-400"
             />
             <AdminInput
-              type="number" value={diamonds} min={0} max={user.diamonds}
-              onChange={(e) => setDiamonds(Math.min(+e.target.value, user.diamonds))}
+              type="number"
+              value={diamonds}
+              min={0}
+              max={isDev ? undefined : user.diamonds}
+              onChange={(e) => {
+                const v = +e.target.value;
+                setDiamonds(isDev ? Math.max(0, v) : Math.min(v, user.diamonds));
+              }}
               className="!w-24 !py-1.5 text-right"
             />
           </div>
