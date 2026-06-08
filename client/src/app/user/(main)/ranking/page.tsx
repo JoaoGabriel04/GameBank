@@ -12,7 +12,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { staggerContainer, staggerItem, shimmerTitleStyle } from "@/lib/animations";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { getRankingApi } from "@/services/api/ranking";
@@ -109,7 +109,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
           <h3 className="font-jaro text-xl text-white whitespace-nowrap">{player.nome}</h3>
           {player.title && (
             player.titleAnimated
-              ? <span className="gb-title-shimmer font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{player.title}</span>
+              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{player.title}</span>
               : <Chip tone="emerald">{player.title}</Chip>
           )}
         </div>
@@ -209,7 +209,7 @@ function Podium({
               </p>
               {p.title && (
                 p.titleAnimated
-                  ? <span className="gb-title-shimmer font-inconsolata text-[9px]">{p.title}</span>
+                  ? <span style={shimmerTitleStyle} className="font-inconsolata text-[9px]">{p.title}</span>
                   : <p className="font-inconsolata text-[9px] text-zinc-500">{p.title}</p>
               )}
             </div>
@@ -353,7 +353,7 @@ export default function RankingPage() {
                       {isMe && <Chip tone="green">você</Chip>}
                       {p.title && (
                         p.titleAnimated
-                          ? <span className="gb-title-shimmer font-inconsolata text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10 hidden sm:inline">{p.title}</span>
+                          ? <span className="hidden sm:inline-block font-inconsolata text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10"><span style={shimmerTitleStyle}>{p.title}</span></span>
                           : <Chip tone="zinc" className="hidden sm:inline-flex">{p.title}</Chip>
                       )}
                     </div>

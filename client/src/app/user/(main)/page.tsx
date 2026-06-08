@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, slideUp } from "@/lib/animations";
+import { staggerContainer, staggerItem, slideUp, shimmerTitleStyle } from "@/lib/animations";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -72,7 +72,7 @@ function ProfileHero() {
           <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
           {profile.title && (
             profile.titleAnimated
-              ? <span className="gb-title-shimmer font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
+              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
               : <Chip tone="emerald">{profile.title}</Chip>
           )}
         </div>

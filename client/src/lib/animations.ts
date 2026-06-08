@@ -1,4 +1,16 @@
+import type { CSSProperties } from "react";
 import type { Variants } from "framer-motion";
+
+export const shimmerTitleStyle: CSSProperties = {
+  background: "linear-gradient(90deg, #a78bfa 0%, #ffffff 25%, #fbbf24 50%, #ffffff 75%, #a78bfa 100%)",
+  backgroundSize: "200% auto",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
+  color: "transparent",
+  animation: "gb-shimmer 3s linear infinite",
+  display: "inline-block",
+};
 
 export const backdrop: Variants = {
   hidden: { opacity: 0 },

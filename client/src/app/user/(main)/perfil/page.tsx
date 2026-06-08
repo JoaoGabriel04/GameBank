@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { staggerContainer, staggerItem, shimmerTitleStyle } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
@@ -79,7 +79,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {profile.title && (
             profile.titleAnimated
-              ? <span className="gb-title-shimmer font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
+              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
               : <Chip tone="emerald">{profile.title}</Chip>
           )}
           <span className="font-inconsolata text-xs text-zinc-500">
