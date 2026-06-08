@@ -98,13 +98,11 @@ export class ShopService {
       if (shopItem.type === "banner") {
         if (nextEquipped) {
           updateData.banner = shopItem.value;
-          updateData.spriteId = shopItem.banner?.spriteId ?? null;
         } else {
           const hasDefault = finalRefs.some((r) => r.item_id === 0);
           if (hasDefault) finalRefs.forEach((r) => { if (r.item_id === 0) r.equipped = true; });
           updateData.user_items = finalRefs;
           updateData.banner = null;
-          updateData.spriteId = null;
         }
       }
 
@@ -137,7 +135,7 @@ export class ShopService {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { user_items: updatedRefs as any, banner: null, spriteId: null },
+      data: { user_items: updatedRefs as any, banner: null },
     });
 
     await this.rankingService.invalidateCache();
@@ -175,7 +173,6 @@ export class ShopService {
         }
         updateData.user_items = filtered;
         updateData.banner = null;
-        updateData.spriteId = null;
       }
 
       await tx.user.update({ where: { id: userId }, data: updateData });

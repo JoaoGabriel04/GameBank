@@ -69,7 +69,7 @@ adminRouter.post(
   adminController.uploadBannerImage
 );
 
-// User banner sync (re-sync User.spriteId from equipped item JSON)
+// User banner sync (re-sync User.banner from equipped item JSON)
 adminRouter.post("/users/:id/sync-banner", adminController.syncUserBanner);
 
 // Badges

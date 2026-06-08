@@ -108,7 +108,6 @@ export interface Banner {
   id: number;
   nome: string;
   css: string;
-  spriteId?: string | null;
   imagePublicId?: string | null;
   imageUpdatedAt?: string | null;
   disponibilidade: boolean;

@@ -66,7 +66,6 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
       <div className="relative h-28 rounded-t-2xl overflow-hidden">
         <UserBanner
           banner={player.banner}
-          spriteId={player.spriteId}
           className="absolute inset-0 w-full h-full"
         />
         <div

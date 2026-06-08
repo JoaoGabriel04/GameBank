@@ -298,7 +298,6 @@ export const adminController = {
       const data = z.object({
         nome: z.string().min(1),
         css: z.string().min(1),
-        spriteId: z.string().optional(),
         disponibilidade: z.boolean().default(true),
       }).parse(req.body);
       res.status(201).json(await adminService.createBanner(data));
@@ -311,7 +310,6 @@ export const adminController = {
       const data = z.object({
         nome: z.string().min(1).optional(),
         css: z.string().min(1).optional(),
-        spriteId: z.string().optional(),
         disponibilidade: z.boolean().optional(),
       }).parse(req.body);
       const user = (req as any).user;

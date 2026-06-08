@@ -133,7 +133,6 @@ function CosmeticCard({
           <UserBanner
             banner={item.value}
             imageUrl={item.imageUrl}
-            spriteId={null}
             className="absolute inset-0 w-full h-full"
           />
         )}
@@ -369,7 +368,7 @@ function DetailSheet({
 
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
-              <UserBanner banner={item.value} spriteId={null} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+              <UserBanner banner={item.value} className="flex-1 rounded-2xl" style={{ height: 64 }} />
             ) : (
               <div
                 className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"

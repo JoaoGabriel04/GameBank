@@ -11,7 +11,6 @@ bannerRouter.get("/", async (_req, res) => {
         id: b.id,
         name: b.nome,
         css: b.css,
-        spriteId: b.spriteId ?? null,
         imagePublicId: b.imagePublicId ?? null,
         imageUpdatedAt: b.imageUpdatedAt ? b.imageUpdatedAt.toISOString() : null,
         available: b.disponibilidade,

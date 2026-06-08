@@ -265,7 +265,7 @@ export default function NegotiationResponseModal() {
 
           {targetPlayer && (
             <div className="relative overflow-hidden rounded-xl border border-zinc-700">
-              <UserBanner banner={targetPlayer.banner} spriteId={targetPlayer.spriteId} className="absolute inset-0 w-full h-full" />
+              <UserBanner banner={targetPlayer.banner} className="absolute inset-0 w-full h-full" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
               <div className="relative z-10 flex items-center gap-3 p-3">
                 <UserAvatar
@@ -359,7 +359,7 @@ export default function NegotiationResponseModal() {
             <>
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
-                  <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
+                  <UserBanner banner={fromPlayer.banner} className="absolute inset-0 w-full h-full" />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar
@@ -434,7 +434,7 @@ export default function NegotiationResponseModal() {
             <div className="space-y-4">
               {fromPlayer && (
                 <div className="relative overflow-hidden rounded-xl border border-zinc-700">
-                  <UserBanner banner={fromPlayer.banner} spriteId={fromPlayer.spriteId} className="absolute inset-0 w-full h-full" />
+                  <UserBanner banner={fromPlayer.banner} className="absolute inset-0 w-full h-full" />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar

@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import { resolveSprite } from "@/constants/sprites";
 import { resolveBannerBackground } from "@/constants/banners";
 import { RARITY_META } from "@/constants/rarity";
 import CoinIcon from "@/components/CoinIcon";
@@ -149,14 +148,13 @@ function ItemCard({
   );
 }
 
-function ItemPreview({ form, bannerCss, bannerSpriteId, uploadPreview }: { form: Partial<ItemInput>; bannerCss?: string | null; bannerSpriteId?: string | null; uploadPreview?: string | null }) {
+function ItemPreview({ form, bannerCss, uploadPreview }: { form: Partial<ItemInput>; bannerCss?: string | null; uploadPreview?: string | null }) {
   const meta = getTypeMeta(form.type ?? "title");
   const isBanner = form.type === "banner";
   const isBadge = form.type === "badge";
   const bg = isBanner && bannerCss
     ? resolveBannerBackground(bannerCss)
     : { className: "", style: { background: "linear-gradient(150deg,#1f2937,#111827)" } };
-  const SpriteIcon = isBanner && bannerSpriteId ? resolveSprite(bannerSpriteId)?.icon : null;
   const badgeImage = uploadPreview || form.imageUrl;
 
   return (
@@ -169,8 +167,6 @@ function ItemPreview({ form, bannerCss, bannerSpriteId, uploadPreview }: { form:
           <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/80 text-zinc-200">
             {isBadge && badgeImage ? (
               <img src={badgeImage} alt="" className="w-10 h-10 object-contain" />
-            ) : SpriteIcon ? (
-              <SpriteIcon size={22} />
             ) : isBanner ? (
               <ImageIcon size={22} />
             ) : form.type === "title" ? (
@@ -251,7 +247,6 @@ function ItemModal({
   const isBanner = form.type === "banner";
   const selectedBanner = banners.find((b) => b.id === form.bannerId);
   const bannerCss = isBanner ? selectedBanner?.css ?? null : null;
-  const bannerSpriteId = isBanner ? selectedBanner?.spriteId ?? null : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -387,7 +382,7 @@ function ItemModal({
               <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
                 Pré-visualização
               </p>
-              <ItemPreview form={form} bannerCss={bannerCss} bannerSpriteId={bannerSpriteId} uploadPreview={uploadPreview} />
+              <ItemPreview form={form} bannerCss={bannerCss} uploadPreview={uploadPreview} />
             </div>
             <Btn type="submit" variant="primary" icon={Check} className="justify-center w-full" disabled={saving}>
               {saving ? "Salvando…" : isNew ? "Criar item" : "Salvar"}

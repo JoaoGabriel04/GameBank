@@ -55,8 +55,6 @@ export const adminRepository = {
     return Number(result);
   },
 
-  // For each user that has the given banner item equipped, reset to Padrão
-  // and clear User.banner / User.spriteId.
   resetEquippedBannerForUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
       UPDATE "users" u
@@ -73,8 +71,7 @@ export const adminRepository = {
           ), '[]'::jsonb)
           FROM jsonb_array_elements(u.items) item
         ),
-        "banner" = NULL,
-        "spriteId" = NULL
+        "banner" = NULL
       WHERE EXISTS (
         SELECT 1 FROM jsonb_array_elements(u.items) item
         WHERE (item->>'item_id')::int = ${itemId}
@@ -238,14 +235,12 @@ export const adminRepository = {
   createBanner: (data: {
     nome: string;
     css: string;
-    spriteId?: string;
     disponibilidade: boolean;
   }) => prisma.banner.create({ data }),
 
   updateBanner: (id: number, data: Partial<{
     nome: string;
     css: string;
-    spriteId: string;
     disponibilidade: boolean;
   }>) => prisma.banner.update({ where: { id }, data }),
 

@@ -118,7 +118,7 @@ function PlayerCard({ player, selected, onClick }: { player: Player; selected: b
       }`}
     >
       <div className="h-16 relative">
-        <UserBanner banner={player.banner} spriteId={player.spriteId} className="absolute inset-0 w-full h-full" />
+        <UserBanner banner={player.banner} className="absolute inset-0 w-full h-full" />
         <div className="absolute inset-0 bg-black/30" />
       </div>
       <div className="flex items-center gap-3 p-3">
@@ -481,7 +481,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
       {/* ── Balance Widget ── */}
       <div className="overflow-hidden border border-zinc-800 rounded-xl bg-zinc-950">
         <div className="h-24 relative">
-          <UserBanner banner={currentPlayer?.banner} spriteId={currentPlayer?.spriteId} className="absolute inset-0 w-full h-full" />
+          <UserBanner banner={currentPlayer?.banner} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-black/30" />
         </div>
         <div className="p-6">

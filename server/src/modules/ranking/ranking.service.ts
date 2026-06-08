@@ -61,7 +61,6 @@ export class RankingService {
         totalWins: user.totalWins,
         totalTop3: user.totalTop3,
         banner: user.banner,
-        spriteId: user.spriteId,
         title: parsedTitle?.title || null,
         badge: parsedBadge?.badge || null,
         badgeImageUrl,

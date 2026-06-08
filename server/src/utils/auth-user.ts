@@ -5,7 +5,6 @@ export type AuthUserPayload = {
   avatarUrl: string | null;
   avatarUpdatedAt: string | null;
   banner: string | null;
-  spriteId: string | null;
   profileComplete: boolean;
   isAdmin: boolean;
   coins: number;
@@ -19,7 +18,6 @@ export function toAuthUserPayload(user: {
   avatarUrl: string | null;
   avatarUpdatedAt: Date | null;
   banner?: string | null;
-  spriteId?: string | null;
   profileComplete: boolean;
   isAdmin?: boolean;
   coins?: number;
@@ -32,7 +30,6 @@ export function toAuthUserPayload(user: {
     avatarUrl: user.avatarUrl,
     avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
     banner: user.banner ?? null,
-    spriteId: user.spriteId ?? null,
     profileComplete: user.profileComplete,
     isAdmin: user.isAdmin ?? false,
     coins: user.coins ?? 0,

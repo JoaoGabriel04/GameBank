@@ -40,7 +40,6 @@ function ProfileHero() {
       <div className="h-32 rounded-t-2xl relative overflow-hidden">
         <UserBanner
           banner={profile.banner ?? user.banner}
-          spriteId={profile.spriteId ?? user.spriteId}
           className="absolute inset-0 w-full h-full"
         />
         <div

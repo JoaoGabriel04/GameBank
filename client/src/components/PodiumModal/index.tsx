@@ -86,7 +86,7 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
 
                 <div className="flex flex-col items-center mb-1">
                   <div className="w-20 h-8 rounded-t-xl overflow-hidden">
-                    <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="w-full h-full" />
+                    <UserBanner banner={entry.player.banner} className="w-full h-full" />
                   </div>
                   <div className="flex justify-center -mt-5 z-10">
                     <UserAvatar

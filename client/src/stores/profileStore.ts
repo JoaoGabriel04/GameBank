@@ -13,7 +13,6 @@ interface ProfileData {
   avatarUrl?: string | null
   avatarUpdatedAt?: string | null
   banner?: string | null
-  spriteId?: string | null
   level: number
   xp: number
   coins: number
@@ -64,7 +63,6 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
         useAuthStore.getState().updateUser({
           ...authUser,
           banner: profile.banner ?? null,
-          spriteId: profile.spriteId ?? null,
           badge: profile.badge ?? null,
           badgeImageUrl: profile.badgeImageUrl ?? null,
         })

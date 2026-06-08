@@ -540,7 +540,6 @@ export class AdminService {
   async createBanner(data: {
     nome: string;
     css: string;
-    spriteId?: string;
     disponibilidade: boolean;
   }) {
     return adminRepository.createBanner(data);
@@ -549,7 +548,6 @@ export class AdminService {
   async updateBanner(id: number, data: Partial<{
     nome: string;
     css: string;
-    spriteId: string;
     disponibilidade: boolean;
   }>, actor?: Actor) {
     const exists = await adminRepository.findBannerById(id);
@@ -641,7 +639,7 @@ export class AdminService {
           imagePublicId: uploaded.publicId,
           imageUpdatedAt: new Date(),
         },
-        select: { id: true, nome: true, css: true, spriteId: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
+        select: { id: true, nome: true, css: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
       });
 
       // Delete the old image (fire-and-forget)
@@ -680,7 +678,7 @@ export class AdminService {
     });
     const updated = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, nome: true, banner: true, spriteId: true },
+      select: { id: true, nome: true, banner: true },
     });
     return updated;
   }

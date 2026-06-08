@@ -44,7 +44,6 @@ model User {
   avatarPublicId   String?
   avatarUpdatedAt  DateTime?
   banner           String?
-  spriteId         String?
   profileComplete  Boolean   @default(false)
   isAdmin          Boolean   @default(false)
   createdAt        DateTime  @default(now())
@@ -464,7 +463,6 @@ model Banner {
   id              Int      @id @default(autoincrement())
   nome            String
   css             String           // pode ser URL https:// OU gradiente CSS
-  spriteId        String?
   imagePublicId   String?          // public_id do Cloudinary (para deleção)
   imageUpdatedAt  DateTime?        // última vez que a imagem foi trocada
   disponibilidade Boolean  @default(true)

@@ -49,7 +49,6 @@ export class ProfileService {
       avatarUrl: user.avatarUrl,
       avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
       banner: user.banner ?? null,
-      spriteId: user.spriteId ?? null,
       level: correctLevel,
       xp: user.xp,
       coins: user.coins,
@@ -131,7 +130,6 @@ export class ProfileService {
         avatarUrl: current.avatarUrl,
         avatarUpdatedAt: current.avatarUpdatedAt?.toISOString() ?? null,
         banner: current.banner ?? null,
-        spriteId: current.spriteId ?? null,
       };
     }
 
@@ -151,7 +149,6 @@ export class ProfileService {
         avatarUrl: user.avatarUrl,
         avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
         banner: user.banner ?? null,
-        spriteId: user.spriteId ?? null,
       };
     } catch (err) {
       if (newPublicId) await rollbackCloudinaryUpload(newPublicId);

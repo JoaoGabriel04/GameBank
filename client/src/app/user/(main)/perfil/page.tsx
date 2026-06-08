@@ -21,8 +21,6 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
   const { profile } = useProfileStore();
   if (!profile || !user) return null;
 
-  const equippedBanner = profile.items?.find(i => i.type === "banner" && i.equipped);
-  const resolvedSpriteId = profile.spriteId ?? user.spriteId ?? equippedBanner?.spriteId ?? null;
   const xpCurrent  = xpForLevel(profile.level);
   const xpPrevious = totalXpForLevels(profile.level);
   const xpInto     = profile.xp - xpPrevious;
@@ -33,7 +31,6 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
       <div className="h-32 rounded-t-2xl relative overflow-hidden">
         <UserBanner
           banner={profile.banner ?? user.banner}
-          spriteId={resolvedSpriteId}
           className="absolute inset-0 w-full h-full"
         />
         <div

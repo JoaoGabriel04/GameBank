@@ -17,7 +17,6 @@ export const rankingRepository = {
         totalWins: true,
         totalTop3: true,
         banner: true,
-        spriteId: true,
         user_items: true,
       },
     }),

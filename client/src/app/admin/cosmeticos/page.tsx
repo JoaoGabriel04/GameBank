@@ -3,15 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Image as ImageIcon, Layers, Upload, Plus, Pencil, Trash2,
-  Sparkles, Check, X,
+  Image as ImageIcon, Layers, Upload, Pencil, Trash2,
+  Check, X,
 } from "lucide-react";
 import {
   Panel, PanelHead, Chip, Btn, Field, Segmented,
 } from "@/components/admin/AdminUI";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import { SPRITE_CATALOG, resolveSprite } from "@/constants/sprites";
 import UserBanner from "@/components/UserBanner";
 import type { Banner as ApiBanner, BannerInput } from "@/services/api/admin";
 import { apiErrMsg } from "@/lib/api-error";
@@ -22,21 +21,14 @@ const SWATCHES = [
   "#be123c","#fb7185","#ea580c","#1e1b4b",
 ];
 
-function SpriteIcon({ id, size = 20 }: { id?: string | null; size?: number }) {
-  const found = resolveSprite(id);
-  if (!found) return <Sparkles size={size} />;
-  const I = found.icon;
-  return <I size={size} />;
-}
-
 function BannerPreview({
-  css, sprite, name,
+  css, name,
 }: {
-  css: string; sprite?: string | null; name: string;
+  css: string; name: string;
 }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
-      <UserBanner banner={css} spriteId={sprite} className="h-28 w-full" />
+      <UserBanner banner={css} className="h-28 w-full" />
       <div className="bg-zinc-900 px-4 pb-4 -mt-7 relative">
         <div className="w-14 h-14 rounded-full ring-4 ring-zinc-900 grid place-items-center font-jaro text-xl text-white"
           style={{ background: "linear-gradient(135deg,hsl(150 65% 45%),hsl(190 70% 35%))" }}>
@@ -54,14 +46,13 @@ function BannerPreview({
 
 const DEFAULT_BANNER: {
   c1: string; c2: string; c3: string;
-  angle: number; nome: string; sprite: string; disponibilidade: boolean;
+  angle: number; nome: string; disponibilidade: boolean;
 } = {
   c1: "#0e7490",
   c2: "#22d3ee",
   c3: "#5eead4",
   angle: 120,
   nome: "Novo banner",
-  sprite: "crown",
   disponibilidade: true,
 };
 
@@ -94,7 +85,6 @@ function BannerBuilder({
   const [c3, setC3] = useState(DEFAULT_BANNER.c3);
   const [angle, setAngle] = useState(DEFAULT_BANNER.angle);
   const [nome, setNome] = useState(DEFAULT_BANNER.nome);
-  const [sprite, setSprite] = useState(DEFAULT_BANNER.sprite);
   const [disponibilidade, setDisponibilidade] = useState(DEFAULT_BANNER.disponibilidade);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -111,7 +101,6 @@ function BannerBuilder({
       setC3(DEFAULT_BANNER.c3);
       setAngle(DEFAULT_BANNER.angle);
       setNome(DEFAULT_BANNER.nome);
-      setSprite(DEFAULT_BANNER.sprite);
       setDisponibilidade(DEFAULT_BANNER.disponibilidade);
       setImageUrl(null);
       setMode("gradient");
@@ -130,7 +119,6 @@ function BannerBuilder({
       setAngle(p.angle);
     }
     setNome(editing.nome);
-    setSprite(editing.spriteId ?? DEFAULT_BANNER.sprite);
     setDisponibilidade(editing.disponibilidade);
     setSaved(false);
   }, [editing]);
@@ -159,9 +147,9 @@ function BannerBuilder({
     try {
       const finalCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
       if (editing && onUpdate) {
-        await onUpdate(editing.id, { nome, css: finalCss, spriteId: sprite, disponibilidade });
+        await onUpdate(editing.id, { nome, css: finalCss, disponibilidade });
       } else {
-        await onSave({ nome, css: finalCss, spriteId: sprite, disponibilidade });
+        await onSave({ nome, css: finalCss, disponibilidade });
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -193,7 +181,7 @@ function BannerBuilder({
             <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
               Pré-visualização do perfil
             </p>
-            <BannerPreview css={previewCss} sprite={sprite} name={nome} />
+            <BannerPreview css={previewCss} name={nome} />
           </div>
 
           {mode === "gradient" && (
@@ -261,26 +249,6 @@ function BannerBuilder({
           <Field label="Nome do banner">
             <input value={nome} onChange={(e) => setNome(e.target.value)}
               className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 font-inconsolata text-sm text-zinc-100 focus:outline-none focus:border-cyan-500" />
-          </Field>
-
-          <Field label="Sprite / emblema">
-            <div className="grid grid-cols-6 gap-1.5">
-              {SPRITE_CATALOG.slice(0, 12).map((sp) => {
-                const I = sp.icon;
-                return (
-                  <button key={sp.id} type="button" onClick={() => setSprite(sp.id)}
-                    className={`aspect-square rounded-xl grid place-items-center border cursor-pointer transition-colors ${
-                      sprite === sp.id
-                        ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-                        : "border-zinc-800 bg-zinc-900 text-zinc-500 hover:text-zinc-300"
-                    }`}
-                    style={{ minHeight: 38 }}
-                  >
-                    <I size={16} />
-                  </button>
-                );
-              })}
-            </div>
           </Field>
 
           <Field label="Disponibilidade">
@@ -437,11 +405,6 @@ export default function AdminCosmeticosPage() {
           {banners.map((b: ApiBanner) => (
             <div key={b.id} className="group rounded-xl overflow-hidden border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-colors">
               <div className="h-20 relative" style={{ background: b.css }}>
-                {b.spriteId && (
-                  <div className="absolute top-2 right-2 text-white/70">
-                    <SpriteIcon id={b.spriteId} size={16} />
-                  </div>
-                )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center gap-2">
                   <button type="button" onClick={() => setEditing(b)} title="Editar banner" className="p-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25"><Pencil size={13} /></button>
                   {confirmDel === b.id ? (
@@ -468,32 +431,6 @@ export default function AdminCosmeticosPage() {
         </div>
       </Panel>
 
-      <Panel flush>
-        <PanelHead
-          title="Biblioteca de sprites" icon={Sparkles}
-          sub="Emblemas e ícones para banners e perfis"
-          right={<Btn variant="ghost" icon={Upload} size="sm">Enviar</Btn>}
-        />
-        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3 p-4">
-          {SPRITE_CATALOG.map((sp) => {
-            const I = sp.icon;
-            return (
-              <div key={sp.id}
-                className="aspect-square rounded-xl border border-zinc-800 bg-zinc-900 grid place-items-center text-zinc-400 hover:border-cyan-500/50 hover:text-cyan-300 transition-colors cursor-pointer group relative"
-                style={{ minHeight: 56 }}
-              >
-                <I size={22} />
-                <span className="absolute bottom-1 font-inconsolata text-[8px] text-zinc-600 group-hover:text-zinc-400 truncate px-1">
-                  {sp.id}
-                </span>
-              </div>
-            );
-          })}
-          <div className="aspect-square rounded-xl border border-dashed border-zinc-700 grid place-items-center text-zinc-600 hover:text-cyan-400 hover:border-cyan-500/50 cursor-pointer" style={{ minHeight: 56 }}>
-            <Plus size={20} />
-          </div>
-        </div>
-      </Panel>
     </div>
   );
 }

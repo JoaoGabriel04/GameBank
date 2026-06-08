@@ -57,7 +57,6 @@ export const shopRepository = {
           icon: shopItem.icon,
           value: shopItem.value,
           type: shopItem.type,
-          spriteId: shopItem.banner?.spriteId ?? null,
           imageUrl: shopItem.imageUrl ?? null,
           rarity: shopItem.rarity ?? null,
           equipped: ref.equipped,
@@ -72,8 +71,8 @@ export const shopRepository = {
       data: { user_items: refs as any },
     }),
 
-  setUserBannerAndSprite: (userId: number, banner: string | null, spriteId: string | null) =>
-    prisma.user.update({ where: { id: userId }, data: { banner, spriteId } }),
+  setUserBanner: (userId: number, banner: string | null) =>
+    prisma.user.update({ where: { id: userId }, data: { banner } }),
 
   syncUserBanner: async (userId: number) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -85,7 +84,7 @@ export const shopRepository = {
     if (!equippedBanner) {
       return prisma.user.update({
         where: { id: userId },
-        data: { banner: null, spriteId: null },
+        data: { banner: null },
       });
     }
 
@@ -95,11 +94,10 @@ export const shopRepository = {
     });
 
     const banner = equippedBanner.item_id === 0 ? null : (shopItem?.value ?? null);
-    const spriteId = shopItem?.banner?.spriteId ?? null;
 
     return prisma.user.update({
       where: { id: userId },
-      data: { banner, spriteId },
+      data: { banner },
     });
   },
 };

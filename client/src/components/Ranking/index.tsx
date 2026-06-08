@@ -82,7 +82,7 @@ export default function Ranking() {
                 isMe ? "border-green-500/60" : "border-zinc-800 hover:border-zinc-600"
               }`}
             >
-              <UserBanner banner={entry.player.banner} spriteId={entry.player.spriteId} className="absolute inset-0 w-full h-full" />
+              <UserBanner banner={entry.player.banner} className="absolute inset-0 w-full h-full" />
               <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
               <div className="relative z-10 flex items-center gap-4 p-4">
                 <div className="w-8 text-center shrink-0">
