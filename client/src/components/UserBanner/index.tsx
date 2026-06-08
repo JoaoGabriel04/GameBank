@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { resolveBannerBackground } from "@/constants/banners";
 
 type UserBannerProps = {
@@ -18,24 +19,23 @@ export default function UserBanner({ banner, imageUrl, animated = false, classNa
   const callerPositions = /\b(absolute|fixed|sticky)\b/.test(className);
   const wrapperClass = `${callerPositions ? "" : "relative"} overflow-hidden ${className}`.trim();
 
-  let innerStyle: React.CSSProperties = bg.style;
   if (animated && isGradient) {
-    // background shorthand resets background-size to auto.
-    // Use backgroundImage separately so backgroundSize:300% 300% is not overridden.
     const gradientValue = (bg.style.background ?? bg.style.backgroundImage) as string;
-    innerStyle = {
-      backgroundImage: gradientValue,
-      backgroundSize: "300% 300%",
-      backgroundPosition: "0% 50%",
-    };
+    return (
+      <div className={wrapperClass} style={style}>
+        <motion.div
+          className="absolute inset-0"
+          style={{ backgroundImage: gradientValue, backgroundSize: "300% 300%" }}
+          animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+    );
   }
 
   return (
     <div className={wrapperClass} style={style}>
-      <div
-        className={`absolute inset-0${animated && isGradient ? " gb-banner-animated" : ""}`}
-        style={innerStyle}
-      />
+      <div className="absolute inset-0" style={bg.style} />
     </div>
   );
 }
