@@ -160,8 +160,7 @@
 }
 
 .gb-banner-animated {
-  background-size: 300% 300% !important;
-  animation: gb-aurora 6s ease infinite;
+  animation: gb-aurora 6s ease infinite !important;
 }
 
 /* ── Título shimmer — brilho deslizante ── */
