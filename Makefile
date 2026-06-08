@@ -95,6 +95,9 @@ db-studio:
 db-purge-users:
 	docker compose -f docker-compose.dev.yml exec server npm run purge-users
 
+db-purge-missions:
+	docker compose -f docker-compose.dev.yml exec server npm run purge-missions
+
 db-backup:
 	@mkdir -p backups
 	docker compose -f docker-compose.dev.yml exec -T db pg_dump -U postgres ${DB_NAME:-supermaquina} > backups/sgp_$$(date +%Y%m%d_%H%M%S).sql

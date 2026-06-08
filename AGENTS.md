@@ -40,6 +40,7 @@ make dev-logs        # Logs
 make dev-shell SVC=server  # Shell no container
 make db-reset        # Recria banco do zero
 make db-studio       # Prisma Studio
+make db-purge-missions  # Limpa missões diárias/semanais compartilhadas
 make test            # Health check HTTP
 # Build manual:
 cd server && npm run build                # prisma generate + tsc
@@ -183,6 +184,7 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 | `setMessages is not a function` | Zustand criado antes do hot-reload; método novo ausente | Usar `useXxxStore.setState()` em vez de método do store |
 | `ERR_ERL_KEY_GEN_IPV6` no rate-limiter | `keyGenerator` usando `req.ip` direto — express-rate-limit v8 exige o helper para IPv6 | `ipKeyGenerator(req.ip ?? "")` — a função recebe `string`, não o objeto `Request` |
 | Import `Cannot find module '…/lib/cloudinary.js'` | Caminho relativo errado ao mover arquivo entre pastas de módulo | Contar os `../` a partir do arquivo de origem; `modules/avatar/` → `../../lib/` |
+| `track()` cria UserMission para daily/weekly de outro usuário | `findActiveMissionsByMetric` retorna todas as missions; upsert no repository cria vínculo indevido | `track()` em missions.service.ts: pular (continue) se `tipo` daily/weekly e `existing` for null |
 
 ## CSP (helmet)
 

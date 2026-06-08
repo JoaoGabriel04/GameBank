@@ -75,6 +75,9 @@ export class MissionsService {
     for (const mission of missions) {
       const existing = await missionsRepository.findUserMission(userId, mission.id);
 
+      // Missões diárias/semanais são individuais — só trackear se já atribuídas
+      if ((mission.tipo === "daily" || mission.tipo === "weekly") && !existing) continue;
+
       const newProgress = Math.min((existing?.progress ?? 0) + amount, mission.target);
       const wasCompleted = existing?.completed ?? false;
       const nowCompleted = newProgress >= mission.target && !wasCompleted;
