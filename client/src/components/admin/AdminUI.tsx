@@ -338,7 +338,7 @@ export function AdminAvatar({
       frame={user.frame}
       frameType={user.frameType as "image" | "gradient" | null | undefined}
       frameAnimated={user.frameAnimated}
-      frameScale={user.frameScale ?? 136}
+      frameScale={user.frameScale ?? 145}
     />
   );
 }

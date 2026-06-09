@@ -355,7 +355,7 @@ function fmt(n: number) {
 }
 
 function fmtK(n: number) {
-  return n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + "k" : String(n);
+  return n.toLocaleString("pt-BR");
 }
 
 function KpiCard({

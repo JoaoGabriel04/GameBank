@@ -132,6 +132,19 @@ export function connectSocket(sessionId: number) {
     useCardStore.getState().addCardEvent(data);
   });
 
+  // Atualização de cosméticos de jogador (equip/desequip durante sessão ativa)
+  socket.on("player:updated", (data: { userId: number; badge: string | null; badgeImageUrl: string | null; banner: string | null; frame: string | null; frameType: string | null; frameAnimated: boolean; frameScale: number }) => {
+    useGameStore.getState().updatePlayerInSession(data.userId, {
+      badge: data.badge,
+      badgeImageUrl: data.badgeImageUrl,
+      banner: data.banner,
+      frame: data.frame,
+      frameType: data.frameType as "image" | "gradient" | null,
+      frameAnimated: data.frameAnimated,
+      frameScale: data.frameScale,
+    });
+  });
+
   // Negociação — evento broadcast confiável (substitui eventos targeted individuais)
   // type: "new" | "accepted" | "rejected" | "counter" | "expired"
   // targetUserId: quem deve ver o toast

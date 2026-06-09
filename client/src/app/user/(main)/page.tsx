@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, slideUp, shimmerTitleStyle } from "@/lib/animations";
+import { staggerContainer, staggerItem, slideUp } from "@/lib/animations";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +16,7 @@ import { useSessions } from "@/hooks/useApi";
 import { getProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
-import UserBadge from "@/components/UserBadge";
+import UserName from "@/components/UserName";
 import {
   Progress, Chip, Panel, PanelHead, LiveDot,
   xpForLevel, totalXpForLevels,
@@ -61,25 +61,21 @@ function ProfileHero() {
               frame={profile.frame}
               frameType={profile.frameType}
               frameAnimated={profile.frameAnimated}
-              frameScale={profile.frameScale ?? 136}
+              frameScale={profile.frameScale ?? 145}
             />
           </div>
 
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <UserBadge
-            badge={profile.badge ?? user.badge}
-            imageUrl={profile.badgeImageUrl ?? user.badgeImageUrl}
-            variant="small"
-          />
-          <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
-          {profile.title && (
-            profile.titleAnimated
-              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
-              : <Chip tone="emerald">{profile.title}</Chip>
-          )}
-        </div>
+        <UserName
+          nome={profile.nome}
+          badge={profile.badge ?? user.badge}
+          badgeImageUrl={profile.badgeImageUrl ?? user.badgeImageUrl}
+          title={profile.title}
+          titleAnimated={profile.titleAnimated}
+          badgeVariant="small"
+          className="flex-wrap"
+        />
         <p className="font-inconsolata text-xs text-zinc-500 mt-0.5">
           Nível {profile.level} · <Link href="/user/ranking" className="hover:text-zinc-300 transition-colors">ver ranking</Link>
         </p>
@@ -220,7 +216,7 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
                 <div className="flex items-center justify-between">
                   <div className="flex -space-x-1.5">
                     {(s.jogadores ?? []).slice(0, 4).map((j, i) => (
-                      <UserAvatar key={i} avatarUrl={j.avatarUrl} avatarUpdatedAt={j.avatarUpdatedAt} nome={j.nome} size="xs" frame={j.frame} frameType={j.frameType} frameAnimated={j.frameAnimated} frameScale={j.frameScale ?? 136} />
+                      <UserAvatar key={i} avatarUrl={j.avatarUrl} avatarUpdatedAt={j.avatarUpdatedAt} nome={j.nome} size="xs" frame={j.frame} frameType={j.frameType} frameAnimated={j.frameAnimated} frameScale={j.frameScale ?? 145} />
                     ))}
                   </div>
                   <span className={`font-inconsolata text-[10px] px-1.5 py-0.5 rounded-lg ${

@@ -105,62 +105,6 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
-  // Missions
-  listMissions: async (_req: Request, res: Response) => {
-    try {
-      res.json(await adminService.listMissions());
-    } catch (err) { parseError(res, err); }
-  },
-
-  createMission: async (req: Request, res: Response) => {
-    try {
-      const data = z.object({
-        name: z.string().min(1),
-        description: z.string().min(1),
-        metric: z.string().min(1),
-        target: z.number().positive(),
-        xpReward: z.number().int().min(0),
-        coinReward: z.number().int().min(0),
-        perGame: z.boolean(),
-        active: z.boolean(),
-      }).parse(req.body);
-      res.status(201).json(await adminService.createMission(data));
-    } catch (err) { parseError(res, err); }
-  },
-
-  updateMission: async (req: Request, res: Response) => {
-    try {
-      const id = z.coerce.number().int().positive().parse(req.params.id);
-      const data = z.object({
-        name: z.string().min(1),
-        description: z.string().min(1),
-        metric: z.string().min(1),
-        target: z.number().positive(),
-        xpReward: z.number().int().min(0),
-        coinReward: z.number().int().min(0),
-        perGame: z.boolean(),
-        active: z.boolean(),
-      }).partial().parse(req.body);
-      res.json(await adminService.updateMission(id, data));
-    } catch (err) { parseError(res, err); }
-  },
-
-  deleteMission: async (req: Request, res: Response) => {
-    try {
-      const id = z.coerce.number().int().positive().parse(req.params.id);
-      await adminService.deleteMission(id);
-      res.status(204).send();
-    } catch (err) { parseError(res, err); }
-  },
-
-  toggleMission: async (req: Request, res: Response) => {
-    try {
-      const id = z.coerce.number().int().positive().parse(req.params.id);
-      const user = (req as any).user;
-      res.json(await adminService.toggleMission(id, { id: user?.id, email: user?.email }));
-    } catch (err) { parseError(res, err); }
-  },
-
   // Users
   listUsers: async (_req: Request, res: Response) => {
     try {

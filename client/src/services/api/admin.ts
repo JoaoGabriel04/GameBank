@@ -66,18 +66,6 @@ export interface SessionPlayer {
   user: { nome: string; avatarUrl: string | null; avatarUpdatedAt: string | null } | null;
 }
 
-export interface AdminMission {
-  id: number;
-  name: string;
-  description: string;
-  metric: string;
-  target: number;
-  xpReward: number;
-  coinReward: number;
-  perGame: boolean;
-  active: boolean;
-}
-
 export interface AdminDashboard {
   totalUsers: number;
   totalSessions: number;
@@ -95,7 +83,6 @@ export interface AdminDashboard {
 }
 
 export type ItemInput = Omit<AdminShopItem, "id" | "ownerCount">;
-export type MissionInput = Omit<AdminMission, "id">;
 
 export interface Card {
   id: number;
@@ -182,15 +169,6 @@ export const adminApi = {
   adjustPlayerBalance: (sessionId: number, playerId: number, delta: number) =>
     api.patch<SessionPlayer>(`/admin/sessions/${sessionId}/players/${playerId}/balance`, { delta }).then((r) => r.data),
 
-  // Missions
-  listMissions: () => api.get<AdminMission[]>("/admin/missions").then((r) => r.data),
-  createMission: (data: MissionInput) => api.post<AdminMission>("/admin/missions", data).then((r) => r.data),
-  updateMission: (id: number, data: Partial<MissionInput>) =>
-    api.patch<AdminMission>(`/admin/missions/${id}`, data).then((r) => r.data),
-  toggleMission: (id: number) =>
-    api.patch<{ id: number; name: string; active: boolean }>(`/admin/missions/${id}/toggle`).then((r) => r.data),
-  deleteMission: (id: number) => api.delete(`/admin/missions/${id}`),
-
   // Users
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
@@ -244,9 +222,16 @@ export const adminApi = {
   uploadFrameImage: (id: number, file: File) => {
     const form = new FormData();
     form.append("image", file);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
     return api.post<Frame>(`/admin/frames/${id}/image`, form, {
       headers: { "Content-Type": "multipart/form-data" },
-    }).then((r) => r.data);
+      signal: controller.signal,
+    }).then((r) => { clearTimeout(timeout); return r.data; }).catch((e) => {
+      clearTimeout(timeout);
+      if (e.name === "AbortError") throw new Error("Upload excedeu o tempo limite (60s)");
+      throw e;
+    });
   },
 
   uploadBadgeImage: (id: number, file: File) => {

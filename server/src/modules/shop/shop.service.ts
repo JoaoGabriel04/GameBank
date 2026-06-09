@@ -2,6 +2,8 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { shopRepository, parseUserItems, type UserItemRef } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { RankingService } from "../ranking/ranking.service.js";
+import { emitPlayerUpdated } from "../socket/socket.handler.js";
+import { getRedis } from "../../lib/redis.js";
 
 export class ShopService {
   private rankingService = new RankingService();
@@ -123,7 +125,7 @@ export class ShopService {
           updateData.frame = null;
           updateData.frameType = null;
           updateData.frameAnimated = false;
-          updateData.frameScale = 136;
+          updateData.frameScale = 145;
         }
       }
 
@@ -131,7 +133,53 @@ export class ShopService {
     });
 
     await this.rankingService.invalidateCache();
+
+    // Emitir evento Socket.IO para sessões ativas do jogador
+    await this.emitPlayerUpdate(userId);
+
     return { message: "Item atualizado", equipped: nextEquipped };
+  }
+
+  private async emitPlayerUpdate(userId: number) {
+    try {
+      const sessions = await prisma.session.findMany({
+        where: {
+          status: { in: ["Esperando", "Em Andamento"] },
+          jogadores: { some: { userId } },
+        },
+        select: { id: true },
+      });
+      if (sessions.length === 0) return;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { banner: true, frame: true, frameType: true, frameAnimated: true, frameScale: true, user_items: true },
+      });
+      if (!user) return;
+
+      const items = await shopRepository.resolveUserItems(userId);
+      const equippedBadge = items.find((i) => i.type === "badge" && i.equipped);
+
+      const redis = getRedis();
+      for (const session of sessions) {
+        emitPlayerUpdated(session.id, {
+          userId,
+          badge: equippedBadge?.value ?? null,
+          badgeImageUrl: equippedBadge?.imageUrl ?? null,
+          banner: user.banner,
+          frame: user.frame,
+          frameType: user.frameType,
+          frameAnimated: user.frameAnimated,
+          frameScale: user.frameScale,
+        });
+        // Invalidate server-side cache so next loadSession fetches fresh data
+        if (redis) {
+          redis.del(`session:cache:${session.id}`).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.error("[Shop] Erro ao emitir player:updated:", err);
+    }
   }
 
   private async equipDefaultBanner(userId: number) {
@@ -160,6 +208,10 @@ export class ShopService {
     });
 
     await this.rankingService.invalidateCache();
+
+    // Emitir evento Socket.IO para sessões ativas do jogador
+    await this.emitPlayerUpdate(userId);
+
     return { message: "Item atualizado", equipped: true };
   }
 

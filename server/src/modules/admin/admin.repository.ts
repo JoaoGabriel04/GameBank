@@ -102,41 +102,6 @@ export const adminRepository = {
       orderBy: { id: "desc" },
     }),
 
-  // Missions
-  findAllMissions: () =>
-    prisma.mission.findMany({ orderBy: { id: "asc" } }),
-
-  findMissionById: (id: number) =>
-    prisma.mission.findUnique({ where: { id } }),
-
-  createMission: (data: {
-    name: string;
-    description: string;
-    metric: string;
-    target: number;
-    xpReward: number;
-    coinReward: number;
-    perGame: boolean;
-    active: boolean;
-  }) => prisma.mission.create({ data }),
-
-  updateMission: (id: number, data: Partial<{
-    name: string;
-    description: string;
-    metric: string;
-    target: number;
-    xpReward: number;
-    coinReward: number;
-    perGame: boolean;
-    active: boolean;
-  }>) => prisma.mission.update({ where: { id }, data }),
-
-  deleteMission: (id: number) =>
-    prisma.$transaction(async (tx) => {
-      await tx.userMission.deleteMany({ where: { missionId: id } });
-      await tx.mission.delete({ where: { id } });
-    }),
-
   // Users
   findAllUsers: () =>
     prisma.user.findMany({
@@ -441,11 +406,4 @@ export const adminRepository = {
       await tx.user.delete({ where: { id } });
     }),
 
-  // Missions — extra
-  toggleMissionActive: (id: number, active: boolean) =>
-    prisma.mission.update({
-      where: { id },
-      data: { active },
-      select: { id: true, name: true, active: true },
-    }),
 };

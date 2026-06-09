@@ -6,9 +6,7 @@ import {
   type AdminShopItem,
   type AdminUser,
   type AdminSession,
-  type AdminMission,
   type ItemInput,
-  type MissionInput,
   type AdminSessionDetail,
   type AdminDashboard,
   type Card,
@@ -26,7 +24,6 @@ interface AdminStore {
   users: AdminUser[];
   sessions: AdminSession[];
   sessionDetails: Record<number, AdminSessionDetail>;
-  missions: AdminMission[];
   cards: Card[];
   banners: Banner[];
   audit: AuditEntry[];
@@ -36,7 +33,6 @@ interface AdminStore {
   loadingItems: boolean;
   loadingUsers: boolean;
   loadingSessions: boolean;
-  loadingMissions: boolean;
   loadingCards: boolean;
   loadingBanners: boolean;
   frames: Frame[];
@@ -52,7 +48,6 @@ interface AdminStore {
   loadSessionDetail: (id: number) => Promise<AdminSessionDetail>;
   endSession: (id: number) => Promise<void>;
   adjustPlayerBalance: (sessionId: number, playerId: number, delta: number) => Promise<void>;
-  loadMissions: () => Promise<void>;
   loadCards: () => Promise<void>;
   loadBanners: () => Promise<void>;
   loadAudit: (opts?: AuditListOpts) => Promise<void>;
@@ -76,11 +71,6 @@ interface AdminStore {
   unbanUser: (userId: number) => Promise<void>;
   setUserAdmin: (userId: number, isAdmin: boolean) => Promise<void>;
   deleteUser: (userId: number) => Promise<void>;
-  createMission: (data: MissionInput) => Promise<AdminMission>;
-  updateMission: (id: number, data: Partial<MissionInput>) => Promise<AdminMission>;
-  toggleMission: (id: number) => Promise<void>;
-  deleteMission: (id: number) => Promise<void>;
-
   createCard: (data: CardInput) => Promise<Card>;
   updateCard: (id: number, data: Partial<CardInput>) => Promise<Card>;
   deleteCard: (id: number) => Promise<void>;
@@ -97,7 +87,6 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   users: [],
   sessions: [],
   sessionDetails: {},
-  missions: [],
   cards: [],
   banners: [],
   audit: [],
@@ -108,7 +97,6 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   loadingItems: false,
   loadingUsers: false,
   loadingSessions: false,
-  loadingMissions: false,
   loadingCards: false,
   loadingBanners: false,
   loadingFrames: false,
@@ -177,15 +165,6 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
           },
         },
       });
-    }
-  },
-
-  loadMissions: async () => {
-    set({ loadingMissions: true });
-    try {
-      set({ missions: await adminApi.listMissions() });
-    } finally {
-      set({ loadingMissions: false });
     }
   },
 
@@ -339,28 +318,6 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   deleteUser: async (userId) => {
     await adminApi.deleteUser(userId);
     set({ users: get().users.filter((u) => u.id !== userId) });
-  },
-
-  createMission: async (data) => {
-    const mission = await adminApi.createMission(data);
-    set({ missions: [...get().missions, mission] });
-    return mission;
-  },
-
-  updateMission: async (id, data) => {
-    const updated = await adminApi.updateMission(id, data);
-    set({ missions: get().missions.map((m) => (m.id === id ? updated : m)) });
-    return updated;
-  },
-
-  toggleMission: async (id) => {
-    const result = await adminApi.toggleMission(id);
-    set({ missions: get().missions.map((m) => (m.id === id ? { ...m, active: result.active } : m)) });
-  },
-
-  deleteMission: async (id) => {
-    await adminApi.deleteMission(id);
-    set({ missions: get().missions.filter((m) => m.id !== id) });
   },
 
   createCard: async (data) => {

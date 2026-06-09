@@ -81,7 +81,7 @@ export default function SiteBottomNav() {
               frame={user.frame}
               frameType={user.frameType}
               frameAnimated={user.frameAnimated}
-              frameScale={user.frameScale ?? 136}
+              frameScale={user.frameScale ?? 145}
             />
           ) : (
             <FontAwesomeIcon

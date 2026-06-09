@@ -27,13 +27,6 @@ adminRouter.get("/sessions/:id/chat", adminController.getSessionChat);
 adminRouter.post("/sessions/:id/end", adminController.endSession);
 adminRouter.patch("/sessions/:id/players/:pid/balance", adminController.adjustPlayerBalance);
 
-// Missions
-adminRouter.get("/missions", adminController.listMissions);
-adminRouter.post("/missions", adminController.createMission);
-adminRouter.patch("/missions/:id", adminController.updateMission);
-adminRouter.patch("/missions/:id/toggle", adminController.toggleMission);
-adminRouter.delete("/missions/:id", adminController.deleteMission);
-
 // Users
 adminRouter.post("/users/notify", adminController.notifyUsers);
 adminRouter.get("/users", adminController.listUsers);

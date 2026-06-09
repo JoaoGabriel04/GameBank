@@ -238,10 +238,8 @@ export default function UserNav() {
           <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
             <CoinIcon size={14} className="text-yellow-400" />
             <span className="font-jaro text-sm text-yellow-300">
-              {profile ? (
-                profile.coins >= 1000
-                  ? (profile.coins / 1000).toFixed(1).replace(".0", "") + "k"
-                  : String(profile.coins)
+                    {profile ? (
+                String(profile.coins)
               ) : (
                 "—"
               )}
@@ -264,24 +262,16 @@ export default function UserNav() {
         {/* Avatar → perfil */}
         {user && (
           <Link href="/user/perfil" className="hover:opacity-80 transition-opacity">
-            <div
-              className={`rounded-full transition-all ${
-                isActive("/user/perfil")
-                  ? "ring-2 ring-green-400/80 ring-offset-1 ring-offset-zinc-950"
-                  : "ring-1 ring-white/10"
-              }`}
-            >
-              <UserAvatar
-                avatarUrl={user.avatarUrl}
-                avatarUpdatedAt={user.avatarUpdatedAt}
-                nome={user.nome}
-                size="sm"
-                frame={user.frame}
-                frameType={user.frameType}
-                frameAnimated={user.frameAnimated}
-                frameScale={user.frameScale ?? 136}
-              />
-            </div>
+            <UserAvatar
+              avatarUrl={user.avatarUrl}
+              avatarUpdatedAt={user.avatarUpdatedAt}
+              nome={user.nome}
+              size="sm"
+              frame={user.frame}
+              frameType={user.frameType}
+              frameAnimated={user.frameAnimated}
+              frameScale={user.frameScale ?? 145}
+            />
           </Link>
         )}
       </header>
@@ -308,9 +298,7 @@ export default function UserNav() {
                 <CoinIcon size={12} className="text-yellow-400 shrink-0" />
                 <span className="font-jaro text-xs text-yellow-300">
                   {profile ? (
-                    profile.coins >= 1000
-                      ? (profile.coins / 1000).toFixed(1).replace(".0", "") + "k"
-                      : String(profile.coins)
+                    String(profile.coins)
                   ) : (
                     "—"
                   )}
@@ -337,18 +325,16 @@ export default function UserNav() {
             {/* Avatar */}
             {user && (
               <Link href="/user/perfil" className="hover:opacity-80 transition-opacity">
-                <div className="rounded-full ring-1 ring-white/10">
-                  <UserAvatar
-                    avatarUrl={user.avatarUrl}
-                    avatarUpdatedAt={user.avatarUpdatedAt}
-                    nome={user.nome}
-                    size="xs"
-                    frame={user.frame}
-                    frameType={user.frameType}
-                    frameAnimated={user.frameAnimated}
-                    frameScale={user.frameScale ?? 136}
-                  />
-                </div>
+                <UserAvatar
+                  avatarUrl={user.avatarUrl}
+                  avatarUpdatedAt={user.avatarUpdatedAt}
+                  nome={user.nome}
+                  size="xs"
+                  frame={user.frame}
+                  frameType={user.frameType}
+                  frameAnimated={user.frameAnimated}
+                  frameScale={user.frameScale ?? 145}
+                />
               </Link>
             )}
           </div>

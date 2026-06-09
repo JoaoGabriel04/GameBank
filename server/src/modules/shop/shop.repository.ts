@@ -56,18 +56,22 @@ export const shopRepository = {
       .map((ref) => {
         const shopItem = itemMap.get(ref.item_id);
         if (!shopItem) return null;
+        const frame = shopItem.frame;
         return {
           id: shopItem.id,
           name: shopItem.name,
           description: shopItem.description,
           icon: shopItem.icon,
-          value: shopItem.value,
+          value: frame?.tipo === "image" ? (frame.imageUrl ?? shopItem.value) : (frame?.css ?? shopItem.value),
           type: shopItem.type,
           imageUrl: shopItem.imageUrl ?? null,
           rarity: shopItem.rarity ?? null,
           animated: shopItem.animated,
           equipped: ref.equipped,
           frameId: shopItem.frameId ?? null,
+          frameTipo: shopItem.type === "frame" ? (frame?.tipo ?? null) : null,
+          frameAnimated: shopItem.type === "frame" ? (frame?.animated ?? false) : null,
+          frameScale: shopItem.type === "frame" ? (frame?.scale ?? 145) : null,
         };
       })
       .filter((i): i is NonNullable<typeof i> => i !== null);

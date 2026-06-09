@@ -15,7 +15,7 @@ import { Eye, EyeOff } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import PlayerCard from "@/components/PlayerCard";
-import UserBadge from "@/components/UserBadge";
+import UserName from "@/components/UserName";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -400,11 +400,13 @@ export default function Game() {
             <div className="space-y-3">
               {spectators.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 p-3 bg-zinc-950/50 rounded-lg border border-zinc-800/50">
-                  <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" frame={p.frame} frameType={p.frameType} frameAnimated={p.frameAnimated} frameScale={p.frameScale ?? 136} />
-                  <div className="flex items-center gap-1.5">
-                    <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
-                    <span className="text-zinc-400 font-inconsolata">{p.nome}</span>
-                  </div>
+                  <UserAvatar avatarUrl={p.avatarUrl} avatarUpdatedAt={p.avatarUpdatedAt} nome={p.nome} size="sm" frame={p.frame} frameType={p.frameType} frameAnimated={p.frameAnimated} frameScale={p.frameScale ?? 145} />
+                  <UserName
+                    nome={p.nome}
+                    badge={p.badge}
+                    badgeImageUrl={p.badgeImageUrl}
+                    badgeVariant="micro"
+                  />
                 </div>
               ))}
             </div>
@@ -570,7 +572,7 @@ export default function Game() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 {currentPlayer && (
-                  <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 136} />
+                  <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 145} />
                 )}
                 <div>
                   <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
@@ -582,8 +584,17 @@ export default function Game() {
                     )}
                   </h1>
                   <div className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
-                    {currentPlayer && <UserBadge badge={currentPlayer.badge} imageUrl={currentPlayer.badgeImageUrl} variant="micro" />}
-                    {currentPlayer?.nome || "—"} · {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
+                    {currentPlayer && (
+                      <UserName
+                        nome={currentPlayer.nome}
+                        badge={currentPlayer.badge}
+                        badgeImageUrl={currentPlayer.badgeImageUrl}
+                        badgeVariant="micro"
+                      />
+                    )}
+                    {!currentPlayer && <span>—</span>}
+                    <span>·</span>
+                    <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
                   </div>
                 </div>
               </div>

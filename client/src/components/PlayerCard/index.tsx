@@ -2,9 +2,7 @@
 
 import UserBanner from '@/components/UserBanner';
 import UserAvatar from '@/components/UserAvatar';
-import UserBadge from '@/components/UserBadge';
-import { Chip } from '@/components/user/UserUI';
-import { shimmerTitleStyle } from '@/lib/animations';
+import UserName from '@/components/UserName';
 import { formatCurrency } from '@/utils/format';
 import type { Player } from '@/types/game';
 
@@ -109,26 +107,24 @@ export default function PlayerCard({
               nome={player.nome}
               size="md"
               ring={!!(selected || isMe)}
+              frame={player.frame}
+              frameType={player.frameType}
+              frameAnimated={player.frameAnimated}
+              frameScale={player.frameScale ?? 145}
             />
           </div>
         </div>
 
         {/* Nome + Badge + Título + VOCÊ + Desistiu */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span className="font-inconsolata font-medium text-zinc-100 truncate" style={{ fontSize: 14 }}>
-            {player.nome}
-          </span>
-          {player.badge && (
-            <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
-          )}
-          {player.title && !player.titleAnimated && (
-            <Chip tone="emerald">{player.title}</Chip>
-          )}
-          {player.title && player.titleAnimated && (
-            <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">
-              {player.title}
-            </span>
-          )}
+          <UserName
+            nome={player.nome}
+            badge={player.badge}
+            badgeImageUrl={player.badgeImageUrl}
+            title={player.title}
+            titleAnimated={player.titleAnimated}
+            badgeVariant="small"
+          />
           {isMe && (
             <span className="font-inconsolata text-[10px] text-green-500 bg-green-500/20 px-1.5 py-0.5 rounded">
               VOCÊ

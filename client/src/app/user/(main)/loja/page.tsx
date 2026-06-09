@@ -171,11 +171,12 @@ function CosmeticCard({
               <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#71717a" }}>
                 👤
               </div>
-              {item.value?.startsWith("http") ? (
-                <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
-              ) : item.value ? (
-                <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
-              ) : null}
+              {(() => {
+                const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                return null;
+              })()}
             </div>
           ) : (
             <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
@@ -229,9 +230,7 @@ function CoinPackCard({
   onBuy: (pack: CoinPack) => void;
 }) {
   const imgSrc = COIN_IMGS[pack.id];
-  const coinLabel = pack.coins >= 1000
-    ? `${(pack.coins / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}K`
-    : pack.coins.toLocaleString("pt-BR");
+  const coinLabel = pack.coins.toLocaleString("pt-BR");
   return (
     <motion.div variants={staggerItem}>
     <button
@@ -396,11 +395,12 @@ function DetailSheet({
                 <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#71717a" }}>
                   👤
                 </div>
-                {item.value?.startsWith("http") ? (
-                  <img src={item.value} alt="" className="absolute pointer-events-none" style={{ inset: "-15%", width: "130%", height: "130%", objectFit: "contain" }} />
-                ) : item.value ? (
-                  <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
-                ) : null}
+                {(() => {
+                  const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                  return null;
+                })()}
               </div>
             ) : (
               <div
@@ -514,9 +514,7 @@ function CoinConfirmModal({
   loading: boolean;
 }) {
   const canAfford = userDiamonds >= pack.price;
-  const coinLabel = pack.coins >= 1000
-    ? `${(pack.coins / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}K`
-    : pack.coins.toLocaleString("pt-BR");
+  const coinLabel = pack.coins.toLocaleString("pt-BR");
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">

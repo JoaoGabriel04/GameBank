@@ -25,6 +25,14 @@ const sizeMap = {
   xl: "w-28 h-28 text-5xl",
 };
 
+const FRAME_INSET: Record<string, number> = {
+  xs: 2,  // Math.round(24 * 0.0926)
+  sm: 3,  // Math.round(32 * 0.0926)
+  md: 4,  // Math.round(40 * 0.0926)
+  lg: 6,  // Math.round(64 * 0.0926)
+  xl: 10, // Math.round(112 * 0.0926)
+};
+
 function withCacheBust(url: string, avatarUpdatedAt?: string | null) {
   if (!avatarUpdatedAt || url.startsWith("blob:") || url.startsWith("preset:")) return url;
   const v = new Date(avatarUpdatedAt).getTime();
@@ -42,9 +50,12 @@ export default function UserAvatar({
   frame,
   frameType,
   frameAnimated = false,
-  frameScale = 136,
 }: UserAvatarProps) {
   const dim = sizeMap[size];
+  const insetValue = FRAME_INSET[size] ?? 4;
+  const hasFrame = !!(frame && frameType);
+  const resolvedFrameType = frameType ||
+    (frame?.startsWith("https://") ? "image" : frame ? "gradient" : null);
   const ringClass = ring && !frame ? "ring-2 ring-green-500/60 ring-offset-2 ring-offset-zinc-950" : "";
 
   const renderAvatar = () => {
@@ -91,19 +102,25 @@ export default function UserAvatar({
     );
   };
 
-  if (!frame) {
+  if (!hasFrame) {
     return renderAvatar();
   }
 
   return (
-    <div className="relative inline-flex items-center justify-center shrink-0" style={{ display: "inline-flex" }}>
-      {frameType === "gradient" && (
+    <div
+      className="relative inline-flex items-center justify-center shrink-0"
+      style={{
+        display: "inline-flex",
+        overflow: "visible",
+      }}
+    >
+      {resolvedFrameType === "gradient" && (
         <motion.div
           className="absolute"
           style={{
-            inset: -3,
+            inset: -insetValue,
             borderRadius: "50%",
-            padding: 3,
+            padding: insetValue,
             backgroundImage: frame,
             backgroundSize: frameAnimated ? "300% 300%" : "100% 100%",
             backgroundPosition: "0% 50%",
@@ -129,18 +146,20 @@ export default function UserAvatar({
         {renderAvatar()}
       </div>
 
-      {(frameType === "image" || frame.startsWith("https://")) && (
+      {resolvedFrameType === "image" && (
         <img
-          src={frame}
+          src={frame!}
           alt=""
           aria-hidden
           className="absolute pointer-events-none"
           style={{
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            zIndex: 2,
+            position: "absolute",
+            inset: -insetValue,
+            width: `calc(100% + ${insetValue * 2}px)`,
+            height: `calc(100% + ${insetValue * 2}px)`,
+            maxWidth: "none",
             objectFit: "contain",
+            zIndex: 2,
           }}
         />
       )}

@@ -1,9 +1,5 @@
 import { prisma } from "../../lib/prisma.js"
-import {
-  DAILY_TEMPLATES, WEEKLY_TEMPLATES,
-  DAILY_COUNT, WEEKLY_COUNT,
-  type MissionTemplate,
-} from "./mission-templates.js"
+import { DAILY_TEMPLATES, WEEKLY_TEMPLATES, DAILY_COUNT, WEEKLY_COUNT, type MissionTemplate } from "./mission-templates.js"
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -32,8 +28,6 @@ function buildMissionFromTemplate(
       ? template.coinBase * multiplier
       : Math.round(template.coinBase * target * multiplier),
     tipo,
-    active: true,
-    isTemplate: false,
   }
 }
 

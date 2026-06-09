@@ -1,10 +1,10 @@
 import { create } from "zustand"
 import { getProfileApi, updateProfileApi } from "@/services/api/profile"
-import { getMissionsApi, claimMissionApi } from "@/services/api/missions"
+import { getMissionsApi, claimMissionApi, claimAllMissionsApi } from "@/services/api/missions"
 import { getShopItemsApi } from "@/services/api/shop"
 import { getRankingApi } from "@/services/api/ranking"
 import { useAuthStore } from "@/stores/authStore"
-import type { ShopItem, UserItem, UserMission, RankingUser, ClaimResult } from "@/types/shop"
+import type { ShopItem, UserItem, UserMission, RankingUser, ClaimResult, ClaimAllResult } from "@/types/shop"
 import { apiErrMsg } from "@/lib/api-error"
 
 interface ProfileData {
@@ -48,6 +48,7 @@ interface ProfileStore {
   loadRanking: () => Promise<void>
   updateProfile: (formData: FormData) => Promise<void>
   claimMission: (missionId: number) => Promise<ClaimResult>
+  claimAllMissions: () => Promise<ClaimAllResult>
   clearProfile: () => void
   clearError: () => void
 }
@@ -76,7 +77,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
           frame: profile.frame ?? null,
           frameType: profile.frameType ?? null,
           frameAnimated: profile.frameAnimated ?? false,
-          frameScale: profile.frameScale ?? 136,
+          frameScale: profile.frameScale ?? 145,
         })
       }
     } catch (err) {
@@ -134,23 +135,23 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
 
   claimMission: async (missionId: number) => {
     const result = await claimMissionApi(missionId)
-    if (result.tipo === "daily" || result.tipo === "weekly") {
-      set((state) => ({
-        missions: state.missions.filter((m) => m.id !== missionId),
-        profile: state.profile
-          ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
-          : null,
-      }))
-    } else {
-      set((state) => ({
-        missions: state.missions.map((m) =>
-          m.id === missionId ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
-        ),
-        profile: state.profile
-          ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
-          : null,
-      }))
-    }
+    set((state) => ({
+      missions: state.missions.filter((m) => m.id !== missionId),
+      profile: state.profile
+        ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
+        : null,
+    }))
+    return result
+  },
+
+  claimAllMissions: async () => {
+    const result = await claimAllMissionsApi()
+    set((state) => ({
+      missions: state.missions.filter((m) => !(m.completed && !m.claimed)),
+      profile: state.profile
+        ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
+        : null,
+    }))
     return result
   },
 

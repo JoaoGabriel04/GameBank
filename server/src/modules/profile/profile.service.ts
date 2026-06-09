@@ -7,6 +7,8 @@ import {
 } from "../avatar/avatar.service.js";
 import { isAllowedAvatarPreset, presetAvatarValue } from "../../shared/constants/avatars.js";
 import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
+import { getRedis } from "../../lib/redis.js";
+import { prisma } from "../../lib/prisma.js";
 import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
 import { shopRepository } from "../shop/shop.repository.js";
@@ -36,8 +38,8 @@ export class ProfileService {
     const titleAnimated = equippedTitleItem?.animated ?? false;
     const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
     const bannerAnimated = equippedBannerItem?.animated ?? false;
-    const equippedFrameItem = items.find((i) => i.equipped && i.type === "frame");
-    const frameAnimated = equippedFrameItem?.animated ?? false;
+    const equippedFrameItem = items.find((i) => i.equipped && i.type === "frame") as { value?: string | null; animated?: boolean; frameTipo?: string | null; frameAnimated?: boolean; frameScale?: number | null } | undefined;
+    const frameAnimated = equippedFrameItem?.frameAnimated ?? equippedFrameItem?.animated ?? false;
     const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
     const badgeImageUrl = equippedBadgeItem?.imageUrl ?? null;
     let parsedBadge = null;
@@ -45,7 +47,7 @@ export class ProfileService {
       try {
         parsedBadge = JSON.parse(equippedBadgeItem.value);
       } catch {
-        // Invalid JSON in badge value, skip parsing
+        parsedBadge = { badge: equippedBadgeItem.value };
       }
     }
 
@@ -56,10 +58,10 @@ export class ProfileService {
       avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
       banner: user.banner ?? null,
       bannerAnimated,
-      frame: user.frame ?? null,
-      frameType: user.frameType ?? null,
+      frame: equippedFrameItem?.value ?? null,
+      frameType: equippedFrameItem?.frameTipo ?? null,
       frameAnimated,
-      frameScale: user.frameScale ?? 136,
+      frameScale: equippedFrameItem?.frameScale ?? 145,
       level: correctLevel,
       xp: user.xp,
       coins: user.coins,
@@ -155,6 +157,9 @@ export class ProfileService {
         );
       }
 
+      // Invalidate session cache for all active sessions the user is in
+      this.invalidateSessionCaches(userId).catch(() => {});
+
       return {
         id: user.id,
         nome: user.nome,
@@ -165,6 +170,24 @@ export class ProfileService {
     } catch (err) {
       if (newPublicId) await rollbackCloudinaryUpload(newPublicId);
       throw err;
+    }
+  }
+
+  private async invalidateSessionCaches(userId: number) {
+    try {
+      const sessions = await prisma.session.findMany({
+        where: {
+          status: { in: ["Esperando", "Em Andamento"] },
+          jogadores: { some: { userId } },
+        },
+        select: { id: true },
+      });
+      if (sessions.length === 0) return;
+      const redis = getRedis();
+      if (!redis) return;
+      await Promise.all(sessions.map((s) => redis.del(`session:cache:${s.id}`)));
+    } catch {
+      // Non-critical
     }
   }
 

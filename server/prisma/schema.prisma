@@ -50,7 +50,7 @@ model User {
   frameScale       Int       @default(136)
   profileComplete  Boolean   @default(false)
   isAdmin          Boolean   @default(false)
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime  @default(now()) @map("createdAt")
 
   level        Int       @default(1)
   xp           Int       @default(0)
@@ -211,7 +211,7 @@ model Message {
   playerId  Int
   player    SessionPlayer @relation(fields: [playerId], references: [id])
   texto     String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("createdAt")
 
   @@index([sessionId])
   @@map("messages")
@@ -229,7 +229,7 @@ model Notification {
   toPlayer        SessionPlayer @relation("NotificationToPlayer", fields: [toPlayerId], references: [id])
   sessionPossesId Int
   status          String      @default("pendente") // "pendente" | "aceita" | "recusada"
-  createdAt       DateTime    @default(now())
+  createdAt       DateTime    @default(now()) @map("createdAt")
   respondedAt     DateTime?
 
   @@index([sessionId])
@@ -247,7 +247,7 @@ model Negotiation {
   toPlayer        SessionPlayer @relation("NegotiationToPlayer", fields: [toPlayerId], references: [id])
   status          String   @default("pendente")
   expiresAt       DateTime?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("createdAt")
   respondedAt     DateTime?
 
   items NegotiationItem[]
@@ -279,7 +279,7 @@ model Debt {
   valor     Float
   descricao String
   pago      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("createdAt")
   paidAt    DateTime?
 
   @@index([playerId])
@@ -295,10 +295,7 @@ model Mission {
   target      Float
   xpReward    Int
   coinReward  Int
-  perGame     Boolean  @default(false)
-  active      Boolean  @default(true)
-  tipo        String   @default("permanent")
-  isTemplate  Boolean  @default(false)
+  tipo        String   @default("daily")
 
   userMissions UserMission[]
 
@@ -362,7 +359,7 @@ model GameResult {
   rewardMultiplier Float   @default(1.0) // multiplicador aplicado
   penaltyReason    String?               // motivo se recompensa foi reduzida
 
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("createdAt")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -379,7 +376,7 @@ model CoinTransaction {
   amount    Int      // positivo = crédito, negativo = débito
   tipo      String   // "PARTIDA" | "MISSAO" | "LOJA_COMPRA" | "LOJA_VENDA" | "ADMIN"
   sessionId Int?     // referência à partida se tipo = PARTIDA
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("createdAt")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -397,7 +394,7 @@ model DiamondTransaction {
   purchaseId      String?
   itemId          Int?
   note            String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("createdAt")
 
   user     User             @relation(fields: [userId], references: [id])
   purchase DiamondPurchase? @relation(fields: [purchaseId], references: [id])
@@ -415,7 +412,7 @@ model DiamondPackage {
   bonusPct     Int      @default(0)
   priceInCents Int
   active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  createdAt    DateTime @default(now()) @map("createdAt")
 
   purchases DiamondPurchase[]
 
@@ -435,7 +432,7 @@ model DiamondPurchase {
   mpIdempotencyKey   String   @unique
   paymentMethod      String?
   status             String   // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED"
-  createdAt          DateTime @default(now())
+  createdAt          DateTime @default(now()) @map("createdAt")
   completedAt        DateTime?
 
   user                 User                 @relation(fields: [userId], references: [id])
@@ -454,7 +451,7 @@ model Card {
   efeito  String  // "ganhar" | "pagar" | "pagarPct" | "pagarPorCasa" | "prisao" | "sairPrisao"
   valor   Int     @default(0)
   ativo   Boolean @default(true)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("createdAt")
 
   @@map("cartas")
 }
@@ -475,7 +472,7 @@ model Banner {
   imagePublicId   String?          // public_id do Cloudinary (para deleção)
   imageUpdatedAt  DateTime?        // última vez que a imagem foi trocada
   disponibilidade Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("createdAt")
 
   shopItems ShopItem[]
 
@@ -511,7 +508,7 @@ model UserNotification {
   corpo     String
   lida      Boolean   @default(false)
   lidaEm    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @map("createdAt")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -527,7 +524,7 @@ model AuditLog {
   target    String?
   metadata  Json?
   severity  String   @default("info") // info | success | warn | danger
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("createdAt")
 
   @@index([userId])
   @@index([createdAt])

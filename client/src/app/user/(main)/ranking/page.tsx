@@ -12,13 +12,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { staggerContainer, staggerItem, shimmerTitleStyle } from "@/lib/animations";
+import UserName from "@/components/UserName";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { getRankingApi } from "@/services/api/ranking";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
-import UserBadge from "@/components/UserBadge";
+
 import { Chip, Progress, Segmented, UModal, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
 import type { RankingUser } from "@/types/shop";
 
@@ -100,7 +101,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
               frame={player.frame}
               frameType={player.frameType}
               frameAnimated={player.frameAnimated}
-              frameScale={player.frameScale ?? 136}
+              frameScale={player.frameScale ?? 145}
             />
           </div>
           <div className="pt-9 flex items-center gap-1.5">
@@ -108,15 +109,15 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
         </div>
 
         {/* Name + title */}
-        <div className="flex items-center gap-2 flex-wrap mt-1">
-          <UserBadge badge={player.badge} imageUrl={player.badgeImageUrl} variant="small" />
-          <h3 className="font-jaro text-xl text-white whitespace-nowrap">{player.nome}</h3>
-          {player.title && (
-            player.titleAnimated
-              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{player.title}</span>
-              : <Chip tone="emerald">{player.title}</Chip>
-          )}
-        </div>
+        <UserName
+          nome={player.nome}
+          badge={player.badge}
+          badgeImageUrl={player.badgeImageUrl}
+          title={player.title}
+          titleAnimated={player.titleAnimated}
+          badgeVariant="small"
+          className="mt-1 flex-wrap"
+        />
         <p className="font-inconsolata text-xs text-zinc-500 mt-0.5">
           Nível {player.level} · #{player.position ?? "—"} no ranking
         </p>
@@ -202,7 +203,7 @@ function Podium({
                 frame={p.frame}
                 frameType={p.frameType}
                 frameAnimated={p.frameAnimated}
-                frameScale={p.frameScale ?? 136}
+                frameScale={p.frameScale ?? 145}
               />
               {isMe && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-green-400 border-2 border-zinc-950 grid place-items-center">
@@ -210,17 +211,15 @@ function Podium({
                 </span>
               )}
             </div>
-            <div className="text-center flex flex-col items-center gap-1">
-              <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
-              <p className="font-jaro text-sm text-zinc-100 truncate max-w-[80px] group-hover:text-green-300 transition-colors">
-                {p.nome.split(" ")[0]}
-              </p>
-              {p.title && (
-                p.titleAnimated
-                  ? <span style={shimmerTitleStyle} className="font-inconsolata text-[9px]">{p.title}</span>
-                  : <p className="font-inconsolata text-[9px] text-zinc-500">{p.title}</p>
-              )}
-            </div>
+            <UserName
+              nome={p.nome.split(" ")[0]}
+              badge={p.badge}
+              badgeImageUrl={p.badgeImageUrl}
+              title={p.title}
+              titleAnimated={p.titleAnimated}
+              badgeVariant="micro"
+              className="justify-center"
+            />
             <div className={`${heights[i]} w-24 rounded-t-xl flex flex-col items-center justify-end pb-3 ${podiumStyles[i]} hover:brightness-110 transition-all`}>
               <span className="text-2xl leading-none">{["🥈","🥇","🥉"][i]}</span>
               <p className="font-jaro text-base mt-1 text-zinc-100">{meta.format(value)}</p>
@@ -353,21 +352,20 @@ export default function RankingPage() {
                     frame={p.frame}
                     frameType={p.frameType}
                     frameAnimated={p.frameAnimated}
-                    frameScale={p.frameScale ?? 136}
+frameScale={p.frameScale ?? 145}
                   />
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <UserBadge badge={p.badge} imageUrl={p.badgeImageUrl} variant="micro" />
-                      <span className={`font-inconsolata text-sm truncate ${isMe ? "text-green-300" : "text-zinc-200"}`}>
-                        {p.nome}
-                      </span>
-                      
-                      {p.title && (
-                        p.titleAnimated
-                          ? <span className="hidden sm:inline-block font-inconsolata text-[10px] px-1.5 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10"><span style={shimmerTitleStyle}>{p.title}</span></span>
-                          : <Chip tone="zinc" className="hidden sm:inline-flex">{p.title}</Chip>
-                      )}
+                      <UserName
+                        nome={p.nome}
+                        badge={p.badge}
+                        badgeImageUrl={p.badgeImageUrl}
+                        title={p.title}
+                        titleAnimated={p.titleAnimated}
+                        badgeVariant="micro"
+                        className={`${isMe ? "text-green-300" : "text-zinc-200"}`}
+                      />
                       {isMe && <Chip tone="green">você</Chip>}
                     </div>
                     <p className="font-inconsolata text-[10px] text-zinc-500">Nível {p.level}</p>

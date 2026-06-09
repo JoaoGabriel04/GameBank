@@ -92,9 +92,17 @@ function BannerBuilder({
   const [saved, setSaved] = useState(false);
   const [mode, setMode] = useState<"gradient" | "image">("gradient");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
+    };
+  }, [imageUrl]);
 
   useEffect(() => {
     if (!editing) {
@@ -106,15 +114,18 @@ function BannerBuilder({
       setDisponibilidade(DEFAULT_BANNER.disponibilidade);
       setAnimated(DEFAULT_BANNER.animated);
       setImageUrl(null);
+      setPendingFile(null);
       setMode("gradient");
       return;
     }
     if (isImageUrl(editing.css)) {
       setMode("image");
       setImageUrl(editing.css);
+      setPendingFile(null);
     } else {
       setMode("gradient");
       setImageUrl(null);
+      setPendingFile(null);
       const p = parseBannerCss(editing.css);
       setC1(p.c1);
       setC2(p.c2);
@@ -131,24 +142,26 @@ function BannerBuilder({
   const previewCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
 
   async function handleFile(file: File) {
-    if (!editing || !onUploadImage) {
-      // Creating new banner — first save as gradient placeholder, then upload
-      // For simplicity here, require the banner to exist first
-      return;
-    }
-    setUploading(true);
-    try {
-      const updated = await onUploadImage(editing.id, file);
-      setImageUrl(updated.css);
-      setMode("image");
-    } finally {
-      setUploading(false);
-    }
+    if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
+    setImageUrl(URL.createObjectURL(file));
+    setPendingFile(file);
+    setMode("image");
   }
 
   async function handleSave() {
     setSaving(true);
     try {
+      // If there's a pending file and editing, upload first
+      if (pendingFile && editing && onUploadImage) {
+        setUploading(true);
+        try {
+          const updated = await onUploadImage(editing.id, pendingFile);
+          setImageUrl(updated.css);
+          setPendingFile(null);
+        } finally {
+          setUploading(false);
+        }
+      }
       const finalCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
       if (editing && onUpdate) {
         await onUpdate(editing.id, { nome, css: finalCss, disponibilidade, animated });

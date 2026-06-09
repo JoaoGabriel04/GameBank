@@ -96,7 +96,7 @@ db-purge-users:
 	docker compose -f docker-compose.dev.yml exec server npm run purge-users
 
 db-purge-missions:
-	docker compose -f docker-compose.dev.yml exec server npm run purge-missions
+	docker compose -f docker-compose.dev.yml exec server npx tsx scripts/purge-missions.ts
 
 db-backup:
 	@mkdir -p backups

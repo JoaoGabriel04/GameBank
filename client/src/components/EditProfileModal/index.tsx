@@ -120,7 +120,7 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
@@ -133,7 +133,7 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[75vh] overflow-y-auto rounded-b-2xl">
 
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
@@ -146,13 +146,13 @@ export default function EditProfileModal({ isOpen, onClose }: Props) {
                 frame={profile?.frame}
                 frameType={profile?.frameType}
                 frameAnimated={profile?.frameAnimated}
-                frameScale={profile?.frameScale ?? 136}
+                frameScale={profile?.frameScale ?? 145}
               />
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={submitting}
-                className="absolute bottom-1 right-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-full p-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                className="absolute bottom-1 right-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-full p-1.5 transition-colors cursor-pointer disabled:opacity-50  z-999"
                 title="Enviar foto própria"
               >
                 <Camera className="w-3.5 h-3.5 text-zinc-300" />

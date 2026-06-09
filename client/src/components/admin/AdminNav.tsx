@@ -74,7 +74,7 @@ const NAV_SECTIONS: NavSection[] = [
     group: "Conteúdo",
     items: [
       { id: "shop", label: "Loja", href: "/admin/loja", icon: Store },
-      { id: "missions", label: "Missões", href: "/admin/recompensas", icon: Target },
+
       { id: "cards", label: "Cartas", href: "/admin/cartas", icon: Dice5 },
       {
         id: "cosmetics",

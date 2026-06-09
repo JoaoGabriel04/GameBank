@@ -37,7 +37,7 @@ export async function mapSessionPlayers<T extends {
       try {
         parsedBadge = JSON.parse(badgeValue);
       } catch {
-        // Invalid JSON in badge value, skip parsing
+        parsedBadge = { badge: badgeValue };
       }
     }
     const titleItem = items.find((i: any) => i.equipped && i.type === "title");
@@ -50,16 +50,17 @@ export async function mapSessionPlayers<T extends {
         title = titleItem.value;
       }
     }
+    const frameItem = items.find((i: any) => i.equipped && i.type === "frame");
     return {
       ...rest,
       avatarUrl: user?.avatarUrl ?? null,
       avatarUpdatedAt: user?.avatarUpdatedAt?.toISOString?.() ?? null,
       banner: user?.banner ?? null,
       bannerAnimated,
-      frame: user?.frame ?? null,
-      frameType: user?.frameType ?? null,
-      frameAnimated: user?.frameAnimated ?? false,
-      frameScale: user?.frameScale ?? 136,
+      frame: frameItem?.value ?? null,
+      frameType: frameItem?.frameTipo ?? null,
+      frameAnimated: frameItem?.frameAnimated ?? frameItem?.animated ?? false,
+      frameScale: frameItem?.frameScale ?? 145,
       badge: parsedBadge?.badge || null,
       badgeImageUrl,
       title,

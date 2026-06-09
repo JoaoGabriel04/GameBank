@@ -273,60 +273,6 @@ export class AdminService {
     return updated;
   }
 
-  // ── Missions ───────────────────────────────────────────────────────────
-
-  async listMissions() {
-    return adminRepository.findAllMissions();
-  }
-
-  async createMission(data: {
-    name: string;
-    description: string;
-    metric: string;
-    target: number;
-    xpReward: number;
-    coinReward: number;
-    perGame: boolean;
-    active: boolean;
-  }) {
-    return adminRepository.createMission(data);
-  }
-
-  async updateMission(id: number, data: Partial<{
-    name: string;
-    description: string;
-    metric: string;
-    target: number;
-    xpReward: number;
-    coinReward: number;
-    perGame: boolean;
-    active: boolean;
-  }>) {
-    const exists = await adminRepository.findMissionById(id);
-    if (!exists) throw new AppError(404, "Missão não encontrada.");
-    return adminRepository.updateMission(id, data);
-  }
-
-  async toggleMission(id: number, actor: Actor) {
-    const mission = await adminRepository.findMissionById(id);
-    if (!mission) throw new AppError(404, "Missão não encontrada.");
-    const updated = await adminRepository.toggleMissionActive(id, !mission.active);
-    await auditLog({
-      userId: actor.id ?? null,
-      action: "mission.toggle",
-      target: `mission:${id}`,
-      metadata: { name: mission.name, newState: !mission.active },
-      severity: "info",
-    });
-    return updated;
-  }
-
-  async deleteMission(id: number) {
-    const exists = await adminRepository.findMissionById(id);
-    if (!exists) throw new AppError(404, "Missão não encontrada.");
-    return adminRepository.deleteMission(id);
-  }
-
   // ── Users ──────────────────────────────────────────────────────────────
 
   async listUsers() {

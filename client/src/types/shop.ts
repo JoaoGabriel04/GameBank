@@ -53,8 +53,7 @@ export interface UserMission {
   claimedAt?: string | null
   xpReward: number
   coinReward: number
-  perGame?: boolean
-  tipo?: "permanent" | "daily" | "weekly"
+  tipo?: "daily" | "weekly"
   expiresAt?: string | null
 }
 
@@ -64,7 +63,16 @@ export interface ClaimResult {
   newXp: number
   newCoins: number
   newLevel: number
-  tipo: "permanent" | "daily" | "weekly"
+  tipo: "daily" | "weekly"
+}
+
+export interface ClaimAllResult {
+  xpEarned: number
+  coinsEarned: number
+  newXp: number
+  newCoins: number
+  newLevel: number
+  claimedCount: number
 }
 
 export interface RankingUser {

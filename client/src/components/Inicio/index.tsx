@@ -19,9 +19,10 @@ import { toApiErr } from "@/lib/api-error";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserBadge from "@/components/UserBadge";
+import UserName from "@/components/UserName";
 import PlayerCard from "@/components/PlayerCard";
 import { Chip } from "@/components/user/UserUI";
-import { shimmerTitleStyle } from "@/lib/animations";
+
 import {
   Eye,
   EyeOff,
@@ -112,7 +113,7 @@ function ValorInput({ value, onChange, max }: { value: number; onChange: (v: num
 }
 
 
-function PropertyCard({ item, selected, onClick, getAluguel }: { item: { sessionProp: SessionPropriedade; prop: Propriedade }; selected: boolean; onClick: () => void; getAluguel: (prop: Propriedade, casas: number) => number }) {
+function PropertyCard({ item, selected, onClick, getAluguel, owner }: { item: { sessionProp: SessionPropriedade; prop: Propriedade }; selected: boolean; onClick: () => void; getAluguel: (prop: Propriedade, casas: number) => number; owner?: Player | null }) {
   const accent = getAccentHex(item.prop.grupo_cor)
   const casas = item.sessionProp.casas ?? 0
   const aluguelValor = getAluguel(item.prop, casas)
@@ -143,6 +144,12 @@ function PropertyCard({ item, selected, onClick, getAluguel }: { item: { session
           <span>🏠 {casas}/{5}</span>
           <span className="text-green-400">R$ {formatCurrency(aluguelValor)}</span>
         </div>
+        {owner && (
+          <div className="flex items-center gap-1 mt-2 text-[10px] font-inconsolata text-zinc-500">
+            Dono: <UserBadge badge={owner.badge} imageUrl={owner.badgeImageUrl} variant="micro" />
+            <span className="text-zinc-400">{owner.nome}</span>
+          </div>
+        )}
       </div>
     </button>
   )
@@ -468,31 +475,20 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 frame={currentPlayer?.frame}
                 frameType={currentPlayer?.frameType}
                 frameAnimated={currentPlayer?.frameAnimated}
-                frameScale={currentPlayer?.frameScale ?? 136}
+                frameScale={currentPlayer?.frameScale ?? 145}
               />
-              <div className="flex items-center gap-1.5">
-                <UserBadge badge={currentPlayer?.badge} imageUrl={currentPlayer?.badgeImageUrl} />
-                <p className="text-sm font-inconsolata text-zinc-100">
-                  {currentPlayer?.nome || "Você"}
-                </p>
-              </div>
+              <UserName
+                nome={currentPlayer?.nome || "Você"}
+                badge={currentPlayer?.badge}
+                badgeImageUrl={currentPlayer?.badgeImageUrl}
+                title={currentPlayer?.title}
+                titleAnimated={currentPlayer?.titleAnimated}
+              />
             </div>
             <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer">
               {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {currentPlayer?.title && !currentPlayer.titleAnimated && (
-            <div className="mt-1 mb-1">
-              <Chip tone="emerald">{currentPlayer.title}</Chip>
-            </div>
-          )}
-          {currentPlayer?.title && currentPlayer.titleAnimated && (
-            <div className="mt-1 mb-1">
-              <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">
-                {currentPlayer.title}
-              </span>
-            </div>
-          )}
           <p className="text-3xl font-jaro font-bold text-green-400 mb-4">
             {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
           </p>
@@ -912,6 +908,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
                       setNumDados(0)
                     }}
                     getAluguel={getAluguel}
+                    owner={currentSession?.jogadores?.find((j) => j.id === item.sessionProp.playerId)}
                   />
                 ))}
               </div>
@@ -937,7 +934,9 @@ export default function Inicio({ onNavigate }: InicioProps) {
             </div>
           )}
 
-          {selectedRentData && (
+          {selectedRentData && (() => {
+            const owner = currentSession?.jogadores?.find((j) => j.id === selectedRentData.sessionProp.playerId);
+            return (
             <div className="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
               <div className="flex justify-between items-center">
                 <div>
@@ -945,6 +944,12 @@ export default function Inicio({ onNavigate }: InicioProps) {
                   <p className="text-xs font-inconsolata text-zinc-500">
                     {selectedRentData.prop.grupo_cor} · {selectedRentData.sessionProp.casas} casa(s)
                   </p>
+                  {owner && (
+                    <p className="text-[10px] font-inconsolata text-zinc-500 flex items-center gap-1 mt-1">
+                      Dono: <UserBadge badge={owner.badge} imageUrl={owner.badgeImageUrl} variant="micro" />
+                      <span className="text-zinc-400">{owner.nome}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-inconsolata text-zinc-500">Aluguel</p>
@@ -954,7 +959,8 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <button
             onClick={handleAluguel}

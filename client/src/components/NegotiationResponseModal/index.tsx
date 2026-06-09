@@ -276,7 +276,7 @@ export default function NegotiationResponseModal() {
                   frame={targetPlayer.frame}
                   frameType={targetPlayer.frameType}
                   frameAnimated={targetPlayer.frameAnimated}
-                  frameScale={targetPlayer.frameScale ?? 136}
+                  frameScale={targetPlayer.frameScale ?? 145}
                 />
                 <div>
                   <p className="text-xs font-inconsolata text-zinc-300">Aguardando resposta de</p>
@@ -375,7 +375,7 @@ export default function NegotiationResponseModal() {
                       frame={fromPlayer.frame}
                       frameType={fromPlayer.frameType}
                       frameAnimated={fromPlayer.frameAnimated}
-                      frameScale={fromPlayer.frameScale ?? 136}
+                      frameScale={fromPlayer.frameScale ?? 145}
                     />
                     <div>
                       <p className="text-xs font-inconsolata text-zinc-300">Oferta de</p>
@@ -453,7 +453,7 @@ export default function NegotiationResponseModal() {
                       frame={fromPlayer.frame}
                       frameType={fromPlayer.frameType}
                       frameAnimated={fromPlayer.frameAnimated}
-                      frameScale={fromPlayer.frameScale ?? 136}
+                      frameScale={fromPlayer.frameScale ?? 145}
                     />
                     <div>
                       <p className="text-xs font-inconsolata text-zinc-300">Contra-oferta para</p>

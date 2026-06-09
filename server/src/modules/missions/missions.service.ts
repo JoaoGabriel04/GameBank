@@ -11,39 +11,11 @@ export class MissionsService {
 
     const now = new Date();
 
-    // Missões permanentes
-    const allMissions = await missionsRepository.findActiveMissions();
-    const permanentMissions = allMissions.filter((m) => (m as { tipo?: string }).tipo === "permanent" || !(m as { tipo?: string }).tipo);
-    const userMissions = await missionsRepository.findUserMissions(userId);
-    const progressMap = new Map(userMissions.map((m) => [m.missionId, m]));
-
-    const permanentResult = permanentMissions.map((mission) => {
-      const progress = progressMap.get(mission.id);
-      return {
-        id: mission.id,
-        name: mission.name,
-        description: mission.description,
-        metric: mission.metric,
-        target: mission.target,
-        perGame: mission.perGame,
-        xpReward: mission.xpReward,
-        coinReward: mission.coinReward,
-        tipo: "permanent" as const,
-        expiresAt: null,
-        progress: progress?.progress ?? 0,
-        completed: progress?.completed ?? false,
-        claimed: progress?.claimed ?? false,
-      };
-    });
-
     // Missões diárias/semanais (não expiradas)
     const timedUserMissions = await prisma.userMission.findMany({
       where: {
         userId,
-        OR: [
-          { expiresAt: { gt: now } },
-          { expiresAt: null },
-        ],
+        expiresAt: { gt: now },
         mission: { tipo: { in: ["daily", "weekly"] } },
       },
       include: { mission: true },
@@ -56,7 +28,6 @@ export class MissionsService {
       description: um.mission.description,
       metric: um.mission.metric,
       target: um.mission.target,
-      perGame: um.mission.perGame,
       xpReward: um.mission.xpReward,
       coinReward: um.mission.coinReward,
       tipo: um.mission.tipo as "daily" | "weekly",
@@ -66,31 +37,96 @@ export class MissionsService {
       claimed: um.claimed,
     }));
 
-    return [...timedResult, ...permanentResult];
+    return timedResult;
   }
 
   async track(userId: number, metric: string, amount: number, sessionId?: number) {
-    const missions = await missionsRepository.findActiveMissionsByMetric(metric);
+    // Find user's own missions with this metric (all missions are per-user)
+    const userMissions = await missionsRepository.findUserMissionsByMetric(userId, metric);
 
-    for (const mission of missions) {
-      const existing = await missionsRepository.findUserMission(userId, mission.id);
+    for (const um of userMissions) {
+      if (um.claimed) continue;
 
-      // Missões diárias/semanais são individuais — só trackear se já atribuídas
-      if ((mission.tipo === "daily" || mission.tipo === "weekly") && !existing) continue;
-
-      const newProgress = Math.min((existing?.progress ?? 0) + amount, mission.target);
-      const wasCompleted = existing?.completed ?? false;
-      const nowCompleted = newProgress >= mission.target && !wasCompleted;
+      const newProgress = Math.min(um.progress + amount, um.mission.target);
+      const wasCompleted = um.completed;
+      const nowCompleted = newProgress >= um.mission.target && !wasCompleted;
 
       await missionsRepository.upsertUserMission(
         userId,
-        mission.id,
+        um.missionId,
         newProgress,
         nowCompleted,
         nowCompleted ? new Date() : undefined,
-        existing?.completedAt
+        um.completedAt
       );
     }
+  }
+
+  async claimAllMissions(userId: number) {
+    const userMissions = await missionsRepository.findCompletedUserMissions(userId);
+    if (userMissions.length === 0) {
+      throw new AppError(404, "Nenhuma missão concluída para resgatar");
+    }
+
+    const user = await missionsRepository.findUserForReward(userId);
+    if (!user) {
+      throw new AppError(404, "Usuário não encontrado");
+    }
+
+    let totalXp = 0;
+    let totalCoins = 0;
+    let currentLevel = user.level;
+    let currentXp = user.xp;
+
+    const deleteUserMissionIds: number[] = [];
+    const deleteMissionIds: number[] = [];
+
+    for (const um of userMissions) {
+      const newLevel = getLevelFromXp(currentXp + um.mission.xpReward);
+
+      if (newLevel > currentLevel) {
+        currentLevel = newLevel;
+      }
+
+      totalXp += um.mission.xpReward;
+      totalCoins += um.mission.coinReward;
+      currentXp += um.mission.xpReward;
+
+      deleteUserMissionIds.push(um.id);
+      deleteMissionIds.push(um.mission.id);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (deleteUserMissionIds.length > 0) {
+        await tx.userMission.deleteMany({ where: { id: { in: deleteUserMissionIds } } });
+      }
+      if (deleteMissionIds.length > 0) {
+        const orphaned = await tx.mission.findMany({
+          where: { id: { in: deleteMissionIds }, userMissions: { none: {} } },
+          select: { id: true },
+        });
+        if (orphaned.length > 0) {
+          await tx.mission.deleteMany({ where: { id: { in: orphaned.map((m) => m.id) } } });
+        }
+      }
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          xp: { increment: totalXp },
+          coins: { increment: totalCoins },
+          ...(currentLevel > user.level ? { level: currentLevel } : {}),
+        },
+      });
+    });
+
+    return {
+      xpEarned: totalXp,
+      coinsEarned: totalCoins,
+      newXp: currentXp,
+      newCoins: user.coins + totalCoins,
+      newLevel: currentLevel,
+      claimedCount: userMissions.length,
+    };
   }
 
   async claimMission(userId: number, missionId: number) {
@@ -116,38 +152,21 @@ export class MissionsService {
     const newLevel = getLevelFromXp(user.xp + userMission.mission.xpReward);
     const tipo = userMission.mission.tipo;
 
-    if (tipo === "daily" || tipo === "weekly") {
-      await prisma.$transaction(async (tx) => {
-        await tx.userMission.delete({ where: { id: userMission.id } });
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            xp: { increment: userMission.mission.xpReward },
-            coins: { increment: userMission.mission.coinReward },
-            ...(newLevel > user.level ? { level: newLevel } : {}),
-          },
-        });
-        const remaining = await tx.userMission.count({ where: { missionId } });
-        if (remaining === 0) {
-          await tx.mission.delete({ where: { id: missionId } });
-        }
+    await prisma.$transaction(async (tx) => {
+      await tx.userMission.delete({ where: { id: userMission.id } });
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          xp: { increment: userMission.mission.xpReward },
+          coins: { increment: userMission.mission.coinReward },
+          ...(newLevel > user.level ? { level: newLevel } : {}),
+        },
       });
-    } else {
-      try {
-        await missionsRepository.claimMission(
-          userId,
-          missionId,
-          userMission.mission.xpReward,
-          userMission.mission.coinReward,
-          newLevel > user.level ? newLevel : undefined
-        );
-      } catch (err) {
-        if (err instanceof Error && err.message === "Mission already claimed") {
-          throw new AppError(409, "Recompensa já foi resgatada");
-        }
-        throw err;
+      const remaining = await tx.userMission.count({ where: { missionId } });
+      if (remaining === 0) {
+        await tx.mission.delete({ where: { id: missionId } });
       }
-    }
+    });
 
     return {
       xpEarned: userMission.mission.xpReward,

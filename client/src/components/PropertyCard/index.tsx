@@ -1,5 +1,6 @@
 'use client'
 
+import UserBadge from "@/components/UserBadge"
 import { PROPERTY_COLORS } from "@/types/game"
 
 type Props = {
@@ -14,6 +15,8 @@ type Props = {
   valorVendaPropriedade: number
   isDisponivel?: boolean
   playerName?: string
+  badge?: string | null
+  badgeImageUrl?: string | null
   onComprarCasa?: () => void
   onVenderCasa?: () => void
   onHipotecar?: () => void
@@ -33,6 +36,8 @@ export default function PropertyCard({
   custoCasa,
   isDisponivel = false,
   playerName,
+  badge,
+  badgeImageUrl,
   onComprarCasa,
   onVenderCasa,
   onHipotecar,
@@ -78,8 +83,8 @@ export default function PropertyCard({
       </div>
 
       {playerName && (
-        <div className="text-xs text-zinc-500 font-inconsolata mb-2">
-          Dono: {playerName}
+        <div className="text-xs text-zinc-500 font-inconsolata mb-2 flex items-center gap-1">
+          Dono: <UserBadge badge={badge} imageUrl={badgeImageUrl} variant="micro" />{playerName}
         </div>
       )}
 

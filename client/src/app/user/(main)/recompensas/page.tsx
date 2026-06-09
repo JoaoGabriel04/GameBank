@@ -14,13 +14,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-import { useRouter } from "next/navigation";
 import {
   Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { Loader2 } from "lucide-react";
-import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useToast } from "@/components/Toast";
 import { Progress, Chip, Segmented, UBtn } from "@/components/user/UserUI";
@@ -201,23 +199,16 @@ function MissionCard({
 
 /* ── Main page ── */
 export default function RecompensasPage() {
-  const router = useRouter();
-  const { user, token, loadFromStorage } = useAuthStore();
-  const { missions, loading, loadMissions, claimMission } = useProfileStore();
+  const { missions, loading, loadMissions, claimMission, claimAllMissions } = useProfileStore();
   const { success: toastSuccess, error: toastError } = useToast();
   const [filter, setFilter] = useState("Todas");
   const [tipoFilter, setTipoFilter] = useState("Todas");
   const [claimingIds, setClaimingIds] = useState<Set<number>>(new Set());
-
-  useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
-
-  useEffect(() => {
-    if (user?.isAdmin) router.replace("/admin/recompensas");
-  }, [user, router]);
+  const [claimingAll, setClaimingAll] = useState(false);
 
   useEffect(() => {
-    if (token) loadMissions();
-  }, [token, loadMissions]);
+    loadMissions();
+  }, [loadMissions]);
 
   async function handleClaim(id: number) {
     if (claimingIds.has(id)) return;
@@ -234,6 +225,20 @@ export default function RecompensasPage() {
     }
   }
 
+  async function handleClaimAll() {
+    if (claimingAll || available === 0) return;
+    setClaimingAll(true);
+    try {
+      const result = await claimAllMissions();
+      toastSuccess(`${result.claimedCount} missões resgatadas! +${result.xpEarned} XP e +${result.coinsEarned} moedas.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao resgatar missões";
+      toastError(msg);
+    } finally {
+      setClaimingAll(false);
+    }
+  }
+
   const available    = missions.filter((m) => m.completed && !m.claimed).length;
   const inProgress   = missions.filter((m) => !m.completed).length;
   const claimedCount = missions.filter((m) => m.claimed).length;
@@ -241,7 +246,7 @@ export default function RecompensasPage() {
   const list = missions.filter((m) => {
     if (tipoFilter === "Diárias")    return m.tipo === "daily";
     if (tipoFilter === "Semanais")   return m.tipo === "weekly";
-    if (tipoFilter === "Permanentes") return m.tipo === "permanent" || !m.tipo;
+
     return true;
   }).filter((m) => {
     if (filter === "Disponíveis")   return m.completed && !m.claimed;
@@ -272,11 +277,28 @@ export default function RecompensasPage() {
         ))}
       </motion.div>
 
+      {available > 0 && (
+        <motion.div variants={staggerItem} initial="hidden" animate="visible">
+          <button
+            onClick={handleClaimAll}
+            disabled={claimingAll}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-green-500/30 bg-green-500/5 font-jaro text-sm text-green-400 hover:bg-green-500/10 hover:border-green-500/50 transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {claimingAll ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles size={16} />
+            )}
+            {claimingAll ? "Resgatando…" : `Resgatar todas (${available})`}
+          </button>
+        </motion.div>
+      )}
+
       {/* Tipo filter */}
       <Segmented
         value={tipoFilter}
         onChange={setTipoFilter}
-        options={["Todas", "Diárias", "Semanais", "Permanentes"]}
+        options={["Todas", "Diárias", "Semanais"]}
       />
 
       {/* Status filter */}

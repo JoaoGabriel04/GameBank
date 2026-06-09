@@ -17,7 +17,7 @@ function FramePreview({
   css,
   imageUrl,
   animated,
-  frameScale = 136,
+  frameScale = 125,
 }: {
   css?: string | null;
   imageUrl?: string | null;
@@ -35,9 +35,12 @@ function FramePreview({
           {imageUrl ? (
             <img src={imageUrl} alt="" style={{
               position: "absolute",
-              inset: `-${(frameScale - 100) / 2}%`,
+              top: "50%",
+              left: "50%",
               width: `${frameScale}%`,
               height: `${frameScale}%`,
+              maxWidth: "none",
+              transform: "translate(-50%, -50%)",
               objectFit: "contain",
               pointerEvents: "none",
             }} />
@@ -88,7 +91,7 @@ const DEFAULT_FRAME: {
   nome: "Nova moldura",
   disponibilidade: true,
   animated: false,
-  frameScale: 136,
+  frameScale: 145,
 };
 
 function parseFrameCss(css: string): { angle: number; c1: string; c2: string; c3: string } {
@@ -128,9 +131,17 @@ function FrameBuilder({
   const [mode, setMode] = useState<"gradient" | "image">("gradient");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+    };
+  }, [localPreviewUrl]);
 
   const debouncedCss = useDebounce(
     mode === "image" && imageUrl ? imageUrl : `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`,
@@ -149,12 +160,16 @@ function FrameBuilder({
       setFrameScale(DEFAULT_FRAME.frameScale);
       setImageUrl(null);
       setLocalPreviewUrl(null);
+      setPendingFile(null);
       setMode("gradient");
       return;
     }
     if (editing.imageUrl) {
       setMode("image");
       setImageUrl(editing.imageUrl);
+      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(null);
+      setPendingFile(null);
     } else if (editing.css) {
       setMode("gradient");
       setImageUrl(null);
@@ -176,25 +191,27 @@ function FrameBuilder({
   const activePreviewUrl = localPreviewUrl || imageUrl;
 
   async function handleFile(file: File) {
+    if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
     setLocalPreviewUrl(URL.createObjectURL(file));
+    setPendingFile(file);
     setMode("image");
-    if (!editing || !onUploadImage) {
-      // Wait until frame is saved + image is uploaded
-      return;
-    }
-    setUploading(true);
-    try {
-      const updated = await onUploadImage(editing.id, file);
-      setImageUrl(updated.imageUrl ?? null);
-      setLocalPreviewUrl(null);
-    } finally {
-      setUploading(false);
-    }
   }
 
   async function handleSave() {
     setSaving(true);
     try {
+      // If there's a pending file and we're editing, upload first
+      if (pendingFile && editing && onUploadImage) {
+        setUploading(true);
+        try {
+          const updated = await onUploadImage(editing.id, pendingFile);
+          setImageUrl(updated.imageUrl ?? null);
+          setPendingFile(null);
+          setLocalPreviewUrl(null);
+        } finally {
+          setUploading(false);
+        }
+      }
       const frameData = { nome, disponibilidade, animated, frameScale };
       if (editing && onUpdate) {
         if (mode === "image" && imageUrl) {
@@ -346,6 +363,7 @@ function FrameBuilder({
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragOver(false);
+                  if (uploading) return;
                   const f = e.dataTransfer.files?.[0];
                   if (f) handleFile(f);
                 }}

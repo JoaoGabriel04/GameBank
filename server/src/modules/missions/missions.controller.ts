@@ -16,6 +16,17 @@ export const missionsController = {
     }
   },
 
+  claimAll: async (req: Request, res: Response) => {
+    try {
+      const result = await missionsService.claimAllMissions(req.user!.userId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao resgatar todas as missões:", err);
+      res.status(500).json({ message: "Erro ao resgatar todas as missões" });
+    }
+  },
+
   claim: async (req: Request, res: Response) => {
     try {
       const missionId = parseInt(req.params.id, 10);

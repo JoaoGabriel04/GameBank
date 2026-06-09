@@ -26,17 +26,7 @@ export async function calcularRecompensa(input: RewardInput): Promise<RewardResu
   let penaltyReason: string | null = null;
 
   // 1. Posição tem recompensa?
-  const baseReward = cfg.byPosition[position];
-  if (!baseReward) {
-    return {
-      coins: 0,
-      xp: 0,
-      activityScore: 0,
-      multiplier: 0,
-      penaltyReason: "Posição sem recompensa",
-      breakdown: ["Posição fora do top 3"],
-    };
-  }
+  const baseReward = cfg.byPosition[position] ?? cfg.default;
   breakdown.push(`Base: ${baseReward.coins} coins, ${baseReward.xp} XP (${position}º lugar)`);
 
   // 2. Duração da partida

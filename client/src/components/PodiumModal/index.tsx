@@ -98,7 +98,7 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                       frame={entry.player.frame}
                       frameType={entry.player.frameType}
                       frameAnimated={entry.player.frameAnimated}
-                      frameScale={entry.player.frameScale ?? 136}
+                      frameScale={entry.player.frameScale ?? 145}
                     />
                   </div>
                 </div>

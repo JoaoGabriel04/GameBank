@@ -22,7 +22,7 @@ import { useSessions } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import UserAvatar from "@/components/UserAvatar";
-import UserBadge from "@/components/UserBadge";
+import UserName from "@/components/UserName";
 import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import { apiErrMsg } from "@/lib/api-error";
@@ -96,12 +96,14 @@ function JoinModal({
 
         {user && (
           <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-xl border border-zinc-800">
-            <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="md" frame={user.frame} frameType={user.frameType} frameAnimated={user.frameAnimated} frameScale={user.frameScale ?? 136} />
+            <UserAvatar avatarUrl={user.avatarUrl} avatarUpdatedAt={user.avatarUpdatedAt} nome={user.nome} size="md" frame={user.frame} frameType={user.frameType} frameAnimated={user.frameAnimated} frameScale={user.frameScale ?? 145} />
             <div>
-              <div className="font-inconsolata text-sm text-zinc-100 flex items-center gap-1.5">
-                <UserBadge badge={user.badge} imageUrl={user.badgeImageUrl} variant="micro" />
-                {user.nome}
-              </div>
+              <UserName
+                nome={user.nome}
+                badge={user.badge}
+                badgeImageUrl={user.badgeImageUrl}
+                badgeVariant="micro"
+              />
               <p className="font-inconsolata text-xs text-zinc-500">Entrar com este perfil</p>
             </div>
           </div>
@@ -258,7 +260,7 @@ function SessionCard({
                   frame={j.frame}
                   frameType={j.frameType}
                   frameAnimated={j.frameAnimated}
-                  frameScale={j.frameScale ?? 136}
+                  frameScale={j.frameScale ?? 145}
                 />
               ))}
               {playerCount > 5 && (

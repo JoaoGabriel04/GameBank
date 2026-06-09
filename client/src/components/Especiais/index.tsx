@@ -234,7 +234,7 @@ export default function Especiais() {
               frame={currentPlayer?.frame}
               frameType={currentPlayer?.frameType}
               frameAnimated={currentPlayer?.frameAnimated}
-              frameScale={currentPlayer?.frameScale ?? 136}
+              frameScale={currentPlayer?.frameScale ?? 145}
             />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-inconsolata text-zinc-300">Proponente</p>
@@ -280,7 +280,7 @@ export default function Especiais() {
                   <UserBanner banner={target.banner} animated={target.bannerAnimated} className="absolute inset-0 w-full h-full" />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
-                    <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" frame={target.frame} frameType={target.frameType} frameAnimated={target.frameAnimated} frameScale={target.frameScale ?? 136} />
+                    <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" frame={target.frame} frameType={target.frameType} frameAnimated={target.frameAnimated} frameScale={target.frameScale ?? 145} />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-inconsolata text-zinc-300">Negociando com</p>
                       <div className="text-sm font-jaro text-purple-300 truncate flex items-center gap-1.5">

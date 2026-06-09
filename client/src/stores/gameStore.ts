@@ -91,6 +91,8 @@ interface GameStore {
 
   getAvailableColors: (excludePlayerId?: number) => PlayerColor[];
   getAluguel: (propriedade: Propriedade, casas: number) => number;
+
+  updatePlayerInSession: (userId: number, data: Partial<Player>) => void;
 }
 
 // ─── Utilitário de erro (fora do create, criado uma única vez) ─────────────────
@@ -498,5 +500,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       propriedade.aluguel_hotel,
     ];
     return alugueis[Math.min(casas, 5)];
+  },
+
+  updatePlayerInSession: (userId, data) => {
+    const { currentSession } = get();
+    if (!currentSession) return;
+    set({
+      currentSession: {
+        ...currentSession,
+        jogadores: currentSession.jogadores.map((p) =>
+          p.userId === userId ? { ...p, ...data } : p
+        ),
+      },
+    });
   },
 }));

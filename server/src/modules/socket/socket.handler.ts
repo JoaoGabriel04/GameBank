@@ -24,3 +24,7 @@ export async function emitUpdatedSession(sessionId: number) {
   const session = await sessionService.loadSession(sessionId);
   emitSessionUpdated(sessionId, session);
 }
+
+export function emitPlayerUpdated(sessionId: number, data: { userId: number; badge: string | null; badgeImageUrl: string | null; banner: string | null; frame: string | null; frameType: string | null; frameAnimated: boolean; frameScale: number }) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("player:updated", data);
+}

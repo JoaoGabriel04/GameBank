@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { staggerContainer, staggerItem, shimmerTitleStyle } from "@/lib/animations";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
@@ -10,7 +10,7 @@ import { useProfileStore } from "@/stores/profileStore";
 import { getProfileHistoryApi, clearProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
-import UserBadge from "@/components/UserBadge";
+import UserName from "@/components/UserName";
 import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
 import type { GameResult } from "@/types/shop";
@@ -58,7 +58,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
               frame={profile.frame}
               frameType={profile.frameType}
               frameAnimated={profile.frameAnimated}
-              frameScale={profile.frameScale ?? 136}
+              frameScale={profile.frameScale ?? 145}
             />
           </div>
           <div className="text-right pt-10 shrink-0 flex flex-col items-end gap-2">
@@ -72,20 +72,16 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap mt-1">
-          <UserBadge
-            badge={profile.badge ?? user.badge}
-            imageUrl={profile.badgeImageUrl ?? user.badgeImageUrl}
-            variant="small"
-          />
-          <h1 className="font-jaro text-xl text-white whitespace-nowrap">{profile.nome}</h1>
-        </div>
+        <UserName
+          nome={profile.nome}
+          badge={profile.badge ?? user.badge}
+          badgeImageUrl={profile.badgeImageUrl ?? user.badgeImageUrl}
+          title={profile.title}
+          titleAnimated={profile.titleAnimated}
+          badgeVariant="small"
+          className="mt-1 flex-wrap"
+        />
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {profile.title && (
-            profile.titleAnimated
-              ? <span style={shimmerTitleStyle} className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10">{profile.title}</span>
-              : <Chip tone="emerald">{profile.title}</Chip>
-          )}
           <span className="font-inconsolata text-xs text-zinc-500">
             Nível {profile.level} · #{profile.id}
           </span>

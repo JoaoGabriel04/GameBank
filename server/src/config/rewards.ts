@@ -3,12 +3,14 @@
 
 export const REWARD_CONFIG = {
   // Recompensa base por posição final. Estrutura: { coins, xp }.
-  // 4º lugar em diante não recebe recompensa de posição.
   byPosition: {
-    1: { coins: 100, xp: 90 },
-    2: { coins: 80, xp: 80 },
-    3: { coins: 50, xp: 50 },
+    1: { coins: 500, xp: 400 },
+    2: { coins: 350, xp: 200 },
+    3: { coins: 200, xp: 100 },
   } as Record<number, { coins: number; xp: number }>,
+
+  // Recompensa para 4º lugar em diante
+  default: { coins: 100, xp: 50 },
 
   // Bônus por duração da partida — incentiva partidas mais longas e legítimas.
   // Avaliado de cima para baixo: usa o primeiro tier cujo minMinutes for atingido.
