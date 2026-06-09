@@ -412,15 +412,18 @@ function DetailSheet({
                   <div className="min-w-0">
                     <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
                     <div className="mt-0.5">
-                      {item.animated ? (
-                        <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
-                          {item.value}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
-                          {item.name}
-                        </span>
-                      )}
+                      {(() => {
+                        const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
+                        return item.animated ? (
+                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
+                            {titleText}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                            {titleText}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
