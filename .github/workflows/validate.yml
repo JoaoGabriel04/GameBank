@@ -73,6 +73,9 @@ jobs:
 
       - name: Aplicar migrations no banco de teste
         run: cd server && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gamebank_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/gamebank_test
 
       - name: Rodar testes
         run: cd server && npm test -- --passWithNoTests

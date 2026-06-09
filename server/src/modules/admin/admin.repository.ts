@@ -262,8 +262,8 @@ export const adminRepository = {
           FROM jsonb_array_elements(u.items) item
         ),
         "frame" = NULL,
-        "frameType" = NULL,
-        "frameAnimated" = false
+        "frametype" = NULL,
+        "frameanimated" = false
       WHERE EXISTS (
         SELECT 1 FROM jsonb_array_elements(u.items) item
         WHERE (item->>'item_id')::int = ${itemId}
