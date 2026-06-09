@@ -20,6 +20,7 @@ import {
   Btn, Field, AdminInput, AdminAvatar,
   Drawer, AdminModal,
 } from "@/components/admin/AdminUI";
+import { xpForLevel } from "@/components/user/UserUI";
 import DiamondIcon from "@/components/DiamondIcon";
 
 function exportCsvUsers(rows: AdminUser[]) {
@@ -203,9 +204,9 @@ function UserEditDrawer({
       if (coinsDelta !== 0) await adjustCoins(user.id, coinsDelta);
       const diamondsDelta = diamonds - user.diamonds;
       if (diamondsDelta !== 0) await adjustDiamonds(user.id, diamondsDelta);
-      const xpDelta = xp - user.xp;
-      if (xpDelta !== 0) await adjustXp(user.id, xpDelta);
       if (level !== user.level) await setLevel(user.id, level);
+      const xpDelta = level !== user.level ? xp : xp - user.xp;
+      if (xpDelta !== 0) await adjustXp(user.id, xpDelta);
       if (isAdmin !== user.isAdmin) await setUserAdmin(user.id, isAdmin);
       const wasBanned = !!user.banned;
       if (banned && !wasBanned) await banUser(user.id);
@@ -327,21 +328,6 @@ function UserEditDrawer({
           </div>
         </Field>
 
-        {/* XP slider */}
-        <Field label={`XP — ${xp.toLocaleString("pt-BR")}`}>
-          <div className="flex items-center gap-2 mt-1">
-            <input
-              type="range" min={0} max={1000000} step={1000} value={xp}
-              onChange={(e) => setXp(+e.target.value)}
-              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
-            />
-            <AdminInput
-              type="number" step={1} value={xp} onChange={(e) => setXp(Math.round(+e.target.value))}
-              className="!w-32 !py-1.5 text-right"
-            />
-          </div>
-        </Field>
-
         {/* Level slider */}
         <Field label={`Nível — ${level}`}>
           <div className="flex items-center gap-2 mt-1">
@@ -357,13 +343,29 @@ function UserEditDrawer({
           </div>
         </Field>
 
+        {/* XP slider */}
+        <Field label={`XP — ${xp.toLocaleString("pt-BR")}`}>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="range" min={0} max={xpForLevel(level)} step={10} value={Math.min(xp, xpForLevel(level))}
+              onChange={(e) => setXp(+e.target.value)}
+              className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400"
+            />
+            <AdminInput
+              type="number" step={1} value={Math.min(xp, xpForLevel(level))}
+              onChange={(e) => setXp(Math.min(Math.round(+e.target.value), xpForLevel(level)))}
+              className="!w-24 !py-1.5 text-right"
+            />
+          </div>
+        </Field>
+
         {/* XP progress display */}
         <div>
           <div className="flex justify-between font-inconsolata text-[11px] text-zinc-500 mb-1.5">
-            <span>XP para nível {level}</span>
-            <span>{xp.toLocaleString("pt-BR")} XP</span>
+            <span>XP para nível {level + 1}</span>
+            <span>{Math.min(xp, xpForLevel(level)).toLocaleString("pt-BR")} / {xpForLevel(level).toLocaleString("pt-BR")} XP</span>
           </div>
-          <Progress value={xp} max={xp + 2000} tone="cyan" />
+          <Progress value={Math.min(xp, xpForLevel(level))} max={xpForLevel(level)} tone="cyan" />
         </div>
 
         {/* Role toggles */}
@@ -605,7 +607,7 @@ export default function AdminUsuariosPage() {
                           <span className="font-jaro text-sm text-cyan-300 w-5 shrink-0">
                             {u.level}
                           </span>
-                          <Progress value={u.xp} max={u.xp + 2000} tone="cyan" className="w-14" height={4} />
+                          <Progress value={u.xp} max={xpForLevel(u.level)} tone="cyan" className="w-14" height={4} />
                         </div>
                       </td>
 

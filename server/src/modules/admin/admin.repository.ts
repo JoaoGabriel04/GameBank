@@ -140,13 +140,6 @@ export const adminRepository = {
       select: { id: true, nome: true, diamonds: true },
     }),
 
-  updateUserXp: (id: number, delta: number) =>
-    prisma.user.update({
-      where: { id },
-      data: { xp: { increment: delta } },
-      select: { id: true, nome: true, xp: true, level: true },
-    }),
-
   // Cards
   findAllCards: () =>
     prisma.card.findMany({ orderBy: { id: "asc" } }),
@@ -378,6 +371,7 @@ export const adminRepository = {
         bannedAt: true,
         banReason: true,
         level: true,
+        xp: true,
       },
     }),
 

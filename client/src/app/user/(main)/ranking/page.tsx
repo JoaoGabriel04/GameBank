@@ -20,7 +20,7 @@ import { getRankingApi } from "@/services/api/ranking";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 
-import { Chip, Progress, Segmented, UModal, xpForLevel, totalXpForLevels } from "@/components/user/UserUI";
+import { Chip, Progress, Segmented, UModal, xpForLevel } from "@/components/user/UserUI";
 import type { RankingUser } from "@/types/shop";
 
 /* ── Metric config ── */
@@ -55,10 +55,9 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
   if (!player) return null;
 
   const isMe = user?.id === player.id;
-  const xpCurrent  = xpForLevel(player.level ?? 1);
-  const xpPrevious = totalXpForLevels(player.level ?? 1);
-  const xpInto     = (player.xp ?? 0) - xpPrevious;
-  const pct        = Math.min(Math.round((xpInto / xpCurrent) * 100), 100);
+  const xpCurrent = xpForLevel(player.level ?? 1);
+  const xpInto    = player.xp ?? 0;
+  const pct       = Math.min(Math.round((xpInto / xpCurrent) * 100), 100);
   const winRate    = player.totalGames > 0 ? Math.round((player.totalWins / player.totalGames) * 100) : 0;
 
   return (

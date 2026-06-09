@@ -17,3 +17,30 @@ export function getLevelFromXp(totalXp: number): number {
   }
   return MAX_LEVEL;
 }
+
+export function totalXpForLevels(level: number): number {
+  let total = 0;
+  for (let i = 1; i < level; i++) total += xpForLevel(i);
+  return total;
+}
+
+export function addXp(currentXp: number, currentLevel: number, amount: number): { xp: number; level: number } {
+  let xp = currentXp + amount;
+  let level = currentLevel;
+  while (xp >= xpForLevel(level) && level < MAX_LEVEL) {
+    xp -= xpForLevel(level);
+    level++;
+  }
+  return { xp, level };
+}
+
+export function subXp(currentXp: number, currentLevel: number, amount: number): { xp: number; level: number } {
+  let xp = currentXp - amount;
+  let level = currentLevel;
+  while (xp < 0 && level > 1) {
+    level--;
+    xp += xpForLevel(level);
+  }
+  if (xp < 0) xp = 0;
+  return { xp, level };
+}

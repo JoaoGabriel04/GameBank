@@ -4,7 +4,7 @@ export const rankingRepository = {
   findTopUsers: (limit: number) =>
     prisma.user.findMany({
       where: { totalGames: { gt: 0 } },
-      orderBy: { xp: "desc" },
+      orderBy: [{ level: "desc" }, { xp: "desc" }],
       take: limit,
       select: {
         id: true,

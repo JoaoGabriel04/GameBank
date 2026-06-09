@@ -10,7 +10,7 @@ import { isAllowedBannerPreset } from "../../shared/constants/banners.js";
 import { getRedis } from "../../lib/redis.js";
 import { prisma } from "../../lib/prisma.js";
 import { profileRepository } from "./profile.repository.js";
-import { getLevelFromXp, xpForLevel } from "../../utils/level.js";
+import { getLevelFromXp, xpForLevel, totalXpForLevels } from "../../utils/level.js";
 import { shopRepository } from "../shop/shop.repository.js";
 
 export class ProfileService {
@@ -18,9 +18,13 @@ export class ProfileService {
     const user = await profileRepository.findWithItemsAndMissions(userId);
     if (!user) throw new AppError(404, "Usuário não encontrado");
 
-    const correctLevel = getLevelFromXp(user.xp);
-    if (correctLevel !== user.level) {
-      await profileRepository.updateLevel(user.id, correctLevel);
+    if (user.xp >= xpForLevel(user.level)) {
+      const totalXp = totalXpForLevels(user.level) + user.xp;
+      const correctLevel = getLevelFromXp(totalXp);
+      const xpInLevel = totalXp - totalXpForLevels(correctLevel);
+      await profileRepository.update(user.id, { level: correctLevel, xp: Math.max(0, xpInLevel) });
+      user.level = correctLevel;
+      user.xp = Math.max(0, xpInLevel);
     }
 
     const items = await shopRepository.resolveUserItems(userId);
@@ -62,7 +66,7 @@ export class ProfileService {
       frameType: equippedFrameItem?.frameTipo ?? null,
       frameAnimated,
       frameScale: equippedFrameItem?.frameScale ?? 145,
-      level: correctLevel,
+      level: user.level,
       xp: user.xp,
       coins: user.coins,
       diamonds: user.diamonds,

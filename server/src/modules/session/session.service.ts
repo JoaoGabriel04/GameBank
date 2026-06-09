@@ -7,7 +7,7 @@ import { MissionsService } from "../missions/missions.service.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
-import { getLevelFromXp } from "../../utils/level.js";
+import { addXp } from "../../utils/level.js";
 import { clearSessionDeck } from "../carta/carta.repository.js";
 import { getMinPlayersToStart } from "../../shared/constants/session.js";
 import { calcularRecompensa, type RewardResult } from "./reward.service.js";
@@ -562,18 +562,17 @@ export class SessionService {
         const user = await tx.user.findUnique({ where: { id: p.userId } });
         if (!user) continue;
 
-        const newXp = user.xp + xp;
-        const newLevel = getLevelFromXp(newXp);
+        const { xp: newXp, level: newLevel } = addXp(user.xp, user.level, xp);
 
         await tx.user.update({
           where: { id: p.userId },
           data: {
-            xp: { increment: xp },
+            xp: newXp,
+            level: newLevel,
             coins: { increment: coins },
             totalGames: { increment: 1 },
             ...(entry.position === 1 ? { totalWins: { increment: 1 } } : {}),
             ...(entry.position <= 3 ? { totalTop3: { increment: 1 } } : {}),
-            ...(newLevel > user.level ? { level: newLevel } : {}),
           },
         });
 

@@ -287,7 +287,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
 
   setLevel: async (userId, level) => {
     const result = await adminApi.setLevel(userId, level);
-    set({ users: get().users.map((u) => (u.id === userId ? { ...u, level: result.level } : u)) });
+    set({ users: get().users.map((u) => (u.id === userId ? { ...u, xp: result.xp, level: result.level } : u)) });
   },
 
   banUser: async (userId, reason) => {

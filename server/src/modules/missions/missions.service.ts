@@ -1,5 +1,5 @@
 import { missionsRepository } from "./missions.repository.js";
-import { getLevelFromXp } from "../../utils/level.js";
+import { addXp } from "../../utils/level.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { gerarMissoesParaUsuario } from "./mission-generator.service.js";
 import { prisma } from "../../lib/prisma.js";
@@ -73,24 +73,19 @@ export class MissionsService {
       throw new AppError(404, "Usuário não encontrado");
     }
 
-    let totalXp = 0;
+    let totalXpEarned = 0;
     let totalCoins = 0;
-    let currentLevel = user.level;
-    let currentXp = user.xp;
+    let { xp: currentXp, level: currentLevel } = { xp: user.xp, level: user.level };
 
     const deleteUserMissionIds: number[] = [];
     const deleteMissionIds: number[] = [];
 
     for (const um of userMissions) {
-      const newLevel = getLevelFromXp(currentXp + um.mission.xpReward);
-
-      if (newLevel > currentLevel) {
-        currentLevel = newLevel;
-      }
-
-      totalXp += um.mission.xpReward;
+      totalXpEarned += um.mission.xpReward;
+      const result = addXp(currentXp, currentLevel, um.mission.xpReward);
+      currentXp = result.xp;
+      currentLevel = result.level;
       totalCoins += um.mission.coinReward;
-      currentXp += um.mission.xpReward;
 
       deleteUserMissionIds.push(um.id);
       deleteMissionIds.push(um.mission.id);
@@ -112,15 +107,15 @@ export class MissionsService {
       await tx.user.update({
         where: { id: userId },
         data: {
-          xp: { increment: totalXp },
+          xp: currentXp,
+          level: currentLevel,
           coins: { increment: totalCoins },
-          ...(currentLevel > user.level ? { level: currentLevel } : {}),
         },
       });
     });
 
     return {
-      xpEarned: totalXp,
+      xpEarned: totalXpEarned,
       coinsEarned: totalCoins,
       newXp: currentXp,
       newCoins: user.coins + totalCoins,
@@ -149,7 +144,7 @@ export class MissionsService {
       throw new AppError(404, "Usuário não encontrado");
     }
 
-    const newLevel = getLevelFromXp(user.xp + userMission.mission.xpReward);
+    const { xp: newXp, level: newLevel } = addXp(user.xp, user.level, userMission.mission.xpReward);
     const tipo = userMission.mission.tipo;
 
     await prisma.$transaction(async (tx) => {
@@ -157,9 +152,9 @@ export class MissionsService {
       await tx.user.update({
         where: { id: userId },
         data: {
-          xp: { increment: userMission.mission.xpReward },
+          xp: newXp,
+          level: newLevel,
           coins: { increment: userMission.mission.coinReward },
-          ...(newLevel > user.level ? { level: newLevel } : {}),
         },
       });
       const remaining = await tx.userMission.count({ where: { missionId } });
@@ -171,9 +166,9 @@ export class MissionsService {
     return {
       xpEarned: userMission.mission.xpReward,
       coinsEarned: userMission.mission.coinReward,
-      newXp: user.xp + userMission.mission.xpReward,
+      newXp,
       newCoins: user.coins + userMission.mission.coinReward,
-      newLevel: newLevel > user.level ? newLevel : user.level,
+      newLevel,
       tipo,
     };
   }

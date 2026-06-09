@@ -19,7 +19,7 @@ import UserBanner from "@/components/UserBanner";
 import UserName from "@/components/UserName";
 import {
   Progress, Chip, Panel, PanelHead, LiveDot,
-  xpForLevel, totalXpForLevels,
+  xpForLevel,
 } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import type { GameResult } from "@/types/shop";
@@ -30,10 +30,9 @@ function ProfileHero() {
   const { profile } = useProfileStore();
   if (!profile || !user) return null;
 
-  const xpCurrent  = xpForLevel(profile.level);
-  const xpPrevious = totalXpForLevels(profile.level);
-  const xpInto     = profile.xp - xpPrevious;
-  const pct        = Math.min(Math.round((xpInto / xpCurrent) * 100), 100);
+  const xpCurrent = xpForLevel(profile.level);
+  const xpInto    = profile.xp;
+  const pct       = Math.min(Math.round((xpInto / xpCurrent) * 100), 100);
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950">

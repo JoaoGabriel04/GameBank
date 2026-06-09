@@ -98,6 +98,9 @@ db-purge-users:
 db-purge-missions:
 	docker compose -f docker-compose.dev.yml exec server npx tsx scripts/purge-missions.ts
 
+db-migrate-xp:
+	docker compose -f docker-compose.dev.yml exec server npx tsx scripts/migrate-xp.ts
+
 db-backup:
 	@mkdir -p backups
 	docker compose -f docker-compose.dev.yml exec -T db pg_dump -U postgres ${DB_NAME:-supermaquina} > backups/sgp_$$(date +%Y%m%d_%H%M%S).sql

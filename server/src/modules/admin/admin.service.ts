@@ -1,7 +1,7 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { auditLog } from "../../lib/audit.js";
-import { getLevelFromXp } from "../../utils/level.js";
+import { addXp, subXp } from "../../utils/level.js";
 import { adminRepository } from "./admin.repository.js";
 import { ShopService } from "../shop/shop.service.js";
 import { validateAndProcessBanner } from "../../lib/image-validation.js";
@@ -341,25 +341,28 @@ export class AdminService {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de XP deve ser um inteiro não-zero.");
     }
-    const result = await adminRepository.updateUserXp(userId, delta);
-    // Recalculate level based on new XP
-    const newLevel = getLevelFromXp(result.xp);
-    const levelChanged = newLevel !== result.level;
-    if (levelChanged) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { level: newLevel },
-      });
-    }
-    const finalResult = { ...result, level: newLevel };
+    const user = await adminRepository.findUserById(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado.");
+
+    const { xp: newXp, level: newLevel } =
+      delta > 0
+        ? addXp(user.xp, user.level, delta)
+        : subXp(user.xp, user.level, Math.abs(delta));
+
+    const result = await prisma.user.update({
+      where: { id: userId },
+      data: { xp: newXp, level: newLevel },
+      select: { id: true, nome: true, xp: true, level: true },
+    });
+
     await auditLog({
       userId: actor.id ?? null,
       action: "user.adjust_xp",
       target: `user:${userId}`,
-      metadata: { delta, resultingXp: result.xp, oldLevel: result.level, newLevel },
+      metadata: { delta, oldXp: user.xp, oldLevel: user.level, newXp, newLevel },
       severity: "info",
     });
-    return finalResult;
+    return result;
   }
 
   async setLevel(userId: number, level: number, actor: Actor) {
@@ -370,7 +373,7 @@ export class AdminService {
     }
     const result = await prisma.user.update({
       where: { id: userId },
-      data: { level },
+      data: { level, xp: 0 },
       select: { id: true, nome: true, xp: true, level: true },
     });
     await auditLog({
