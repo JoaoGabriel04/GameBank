@@ -7,7 +7,7 @@ export const adminRepository = {
     const items = await prisma.shopItem.findMany({
       include: { banner: true, frame: true },
     });
-    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
+    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
     return items;
   },
 

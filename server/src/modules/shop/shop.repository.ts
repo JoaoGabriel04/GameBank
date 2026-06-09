@@ -27,7 +27,7 @@ export const shopRepository = {
       where: { available: true },
       include: { banner: true, frame: true },
     });
-    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
+    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
     return items;
   },
 
@@ -79,7 +79,7 @@ export const shopRepository = {
         };
       })
       .filter((i): i is NonNullable<typeof i> => i !== null)
-      .sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
+      .sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
   },
 
   saveUserItems: (userId: number, refs: UserItemRef[]) =>
