@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp } from "@/lib/animations";
+import { staggerContainer, staggerItem, backdrop, slideUp, shimmerTitleStyle } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -92,8 +92,8 @@ function VaultItemCard({
           </div>
         )}
         {isBanner ? null : isFrame ? (
-          <div className="relative" style={{ width: 56, height: 56, margin: "0 auto" }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#71717a" }}>
+          <div className="relative" style={{ width: 44, height: 44, margin: "0 auto" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
               👤
             </div>
             {(() => {
@@ -188,8 +188,8 @@ function DetailPanel({
             style={{ height: 72 }}
           />
         ) : isFrame ? (
-          <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#71717a" }}>
+          <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
               👤
             </div>
             {(() => {
@@ -212,6 +212,29 @@ function DetailPanel({
           >
             <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
           </div>
+        ) : item.type === "title" ? (
+          <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800">
+            <div className="h-7 bg-gradient-to-r from-zinc-800 to-zinc-900" />
+            <div className="px-3 py-2 flex items-center gap-2 bg-zinc-900/80">
+              <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-xs text-zinc-500">
+                👤
+              </div>
+              <div className="min-w-0">
+                <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
+                <div className="mt-0.5">
+                  {item.animated ? (
+                    <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
+                      {item.name}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                      {item.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div
             className="w-16 h-16 rounded-2xl grid place-items-center shrink-0"
@@ -221,7 +244,6 @@ function DetailPanel({
               boxShadow: `0 0 36px -8px ${glowColor}`,
             }}
           >
-            {item.type === "title"  && <Crown  size={28} />}
             {item.type === "badge"  && <Shield size={28} />}
             {item.type === "banner" && <ImageIcon size={28} />}
           </div>

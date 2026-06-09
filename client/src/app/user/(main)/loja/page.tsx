@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp, modalBox } from "@/lib/animations";
+import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitleStyle } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -141,7 +141,7 @@ function CosmeticCard({
         )}
         {item.animated && (
           <span className="absolute top-1.5 left-1.5 z-10 font-inconsolata uppercase text-[8px] px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-300" style={{ letterSpacing: "0.06em" }}>
-            ✨ Animado
+            ✨
           </span>
         )}
         <div
@@ -167,8 +167,8 @@ function CosmeticCard({
         )}
         {!isBanner && (
           isFrame ? (
-            <div className="relative" style={{ width: 56, height: 56 }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, color: "#71717a" }}>
+            <div className="relative" style={{ width: 44, height: 44 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
                 👤
               </div>
               {(() => {
@@ -391,8 +391,8 @@ function DetailSheet({
             {isBanner && item.value ? (
               <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
             ) : isFrame ? (
-              <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
-                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#71717a" }}>
+              <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
                   👤
                 </div>
                 {(() => {
@@ -402,12 +402,34 @@ function DetailSheet({
                   return null;
                 })()}
               </div>
+            ) : item.type === "title" ? (
+              <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800">
+                <div className="h-7 bg-gradient-to-r from-zinc-800 to-zinc-900" />
+                <div className="px-3 py-2 flex items-center gap-2 bg-zinc-900/80">
+                  <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-xs text-zinc-500">
+                    👤
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
+                    <div className="mt-0.5">
+                      {item.animated ? (
+                        <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
+                          {item.name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                          {item.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div
                 className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
                 style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}
               >
-                {item.type === "title"  && <Crown  size={26} />}
                 {item.type === "badge"  && <Shield size={26} />}
                 {item.type === "banner" && <ImageIcon size={26} />}
               </div>
