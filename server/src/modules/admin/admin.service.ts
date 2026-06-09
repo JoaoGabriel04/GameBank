@@ -9,6 +9,7 @@ import { uploadBannerToCloudinary, deleteCloudinaryBanner, rollbackBannerUpload 
 import { validateAndProcessBadge } from "../../lib/badge-validation.js";
 import { uploadBadgeToCloudinary, deleteCloudinaryBadge, rollbackBadgeUpload } from "../badge/badge-upload.service.js";
 import { uploadFrameToCloudinary, deleteCloudinaryFrame, rollbackFrameUpload } from "../frames/frame-upload.service.js";
+import { RankingService } from "../ranking/ranking.service.js";
 
 interface Actor {
   id?: number | null;
@@ -16,6 +17,8 @@ interface Actor {
 }
 
 export class AdminService {
+  private rankingService = new RankingService();
+
   // ── ShopItems ──────────────────────────────────────────────────────────
 
   async listItems() {
@@ -362,6 +365,7 @@ export class AdminService {
       metadata: { delta, oldXp: user.xp, oldLevel: user.level, newXp, newLevel },
       severity: "info",
     });
+    await this.rankingService.invalidateCache();
     return result;
   }
 
@@ -383,6 +387,7 @@ export class AdminService {
       metadata: { oldLevel: user.level, newLevel: level },
       severity: "info",
     });
+    await this.rankingService.invalidateCache();
     return result;
   }
 
