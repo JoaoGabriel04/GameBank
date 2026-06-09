@@ -10,7 +10,7 @@ export const CreateSessionSchema = z.object({
   nome: z.string().min(1).max(100).trim().optional(),
   senha: z.string().min(4).max(100).optional(),
   modo: z.enum(["individual", "duplas"]).default("individual"),
-  maxJogadores: z.number().int().min(2).max(12).default(6),
+  maxJogadores: z.number().int().min(3).max(6).default(6),
   saldoInicial: z.number().min(1000).default(25000),
   times: z.array(CreateTeamSchema).min(2).max(6).optional(),
   criadorNome: z.string().min(1).max(50).trim(),

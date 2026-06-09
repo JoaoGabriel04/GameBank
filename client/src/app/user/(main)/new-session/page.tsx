@@ -106,18 +106,13 @@ export default function NewSession() {
       return false;
     }
 
-    if (maxJogadores < 2) {
-      toastError("Mínimo de 2 jogadores");
+    if (maxJogadores < 3) {
+      toastError("Mínimo de 3 jogadores");
       return false;
     }
 
-    if (modo === 'individual' && maxJogadores > 6) {
-      toastError("Modo individual suporta no máximo 6 jogadores");
-      return false;
-    }
-
-    if (modo === 'duplas' && maxJogadores > 12) {
-      toastError("Modo duplas suporta no máximo 12 jogadores");
+    if (maxJogadores > 6) {
+      toastError("Máximo de 6 jogadores");
       return false;
     }
 
@@ -285,12 +280,12 @@ export default function NewSession() {
                 Máximo de Jogadores
               </h3>
               <p className="text-zinc-500 text-sm mb-3 font-inconsolata">
-                {modo === 'duplas' ? 'Máx: 12 (6 duplas)' : 'Máx: 6'}
+                Mín: 3 · Máx: 6
               </p>
               <div className="flex items-center space-x-4">
                 <button
-                  onClick={() => setMaxJogadores(Math.max(2, maxJogadores - 1))}
-                  disabled={maxJogadores <= 2}
+                  onClick={() => setMaxJogadores(Math.max(3, maxJogadores - 1))}
+                  disabled={maxJogadores <= 3}
                   className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <FontAwesomeIcon icon={faMinus} className="w-5 h-5 text-zinc-400" />
@@ -299,8 +294,8 @@ export default function NewSession() {
                   {maxJogadores}
                 </div>
                 <button
-                  onClick={() => setMaxJogadores(Math.min(modo === 'duplas' ? 12 : 6, maxJogadores + 1))}
-                  disabled={maxJogadores >= (modo === 'duplas' ? 12 : 6)}
+                  onClick={() => setMaxJogadores(Math.min(6, maxJogadores + 1))}
+                  disabled={maxJogadores >= 6}
                   className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <FontAwesomeIcon icon={faPlus} className="w-5 h-5 text-zinc-400" />

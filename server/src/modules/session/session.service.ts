@@ -34,12 +34,12 @@ export class SessionService {
       throw new AppError(400, "Modo duplas requer pelo menos 2 times.");
     }
 
-    if (modo === "duplas" && maxJogadores > 12) {
-      throw new AppError(400, "Modo duplas suporta no máximo 12 jogadores (6 duplas).");
+    if (maxJogadores < 3) {
+      throw new AppError(400, "Mínimo de 3 jogadores.");
     }
 
-    if (modo === "individual" && maxJogadores > 6) {
-      throw new AppError(400, "Modo individual suporta no máximo 6 jogadores.");
+    if (maxJogadores > 6) {
+      throw new AppError(400, "Máximo de 6 jogadores.");
     }
 
     const novaSessao = await this.repo.create({
@@ -498,6 +498,7 @@ export class SessionService {
     // Sala de espera encerrada pelo dono: apenas deleta, sem recompensar ninguém
     if (session.status === "Esperando") {
       await prisma.$transaction(async (tx) => {
+        await tx.message.deleteMany({ where: { sessionId } });
         await tx.sessionPlayer.deleteMany({ where: { sessionId } });
         await tx.sessionTeam.deleteMany({ where: { sessionId } });
         await tx.session.delete({ where: { id: sessionId } });
