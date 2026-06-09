@@ -1,12 +1,15 @@
+import { rarityWeight } from "../../shared/constants/rarity.js";
 import { prisma } from "../../lib/prisma.js";
 
 export const adminRepository = {
   // ShopItems
-  findAllItems: () =>
-    prisma.shopItem.findMany({
-      orderBy: { id: "asc" },
+  findAllItems: async () => {
+    const items = await prisma.shopItem.findMany({
       include: { banner: true, frame: true },
-    }),
+    });
+    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
+    return items;
+  },
 
   findItemById: (id: number) =>
     prisma.shopItem.findUnique({ where: { id } }),

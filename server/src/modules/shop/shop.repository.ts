@@ -1,3 +1,4 @@
+import { rarityWeight } from "../../shared/constants/rarity.js";
 import { prisma } from "../../lib/prisma.js";
 
 export interface UserItemRef {
@@ -21,11 +22,14 @@ export function parseUserItems(raw: unknown): UserItemRef[] {
 }
 
 export const shopRepository = {
-  findAvailableItems: () =>
-    prisma.shopItem.findMany({
+  findAvailableItems: async () => {
+    const items = await prisma.shopItem.findMany({
       where: { available: true },
       include: { banner: true, frame: true },
-    }),
+    });
+    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
+    return items;
+  },
 
   findShopItem: (itemId: number) =>
     prisma.shopItem.findUnique({
@@ -74,7 +78,8 @@ export const shopRepository = {
           frameScale: shopItem.type === "frame" ? (frame?.scale ?? 145) : null,
         };
       })
-      .filter((i): i is NonNullable<typeof i> => i !== null);
+      .filter((i): i is NonNullable<typeof i> => i !== null)
+      .sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity));
   },
 
   saveUserItems: (userId: number, refs: UserItemRef[]) =>
