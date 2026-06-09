@@ -36,8 +36,8 @@ describe("calcularRecompensa", () => {
       position: 1,
       sessionStartedAt: new Date(Date.now() - 15 * 60 * 1000),
     });
-    expect(r.coins).toBe(100);
-    expect(r.xp).toBe(90);
+    expect(r.coins).toBe(500);
+    expect(r.xp).toBe(400);
     expect(r.multiplier).toBe(1.0);
   });
 
@@ -47,7 +47,8 @@ describe("calcularRecompensa", () => {
       position: 1,
       sessionStartedAt: new Date(Date.now() - 45 * 60 * 1000),
     });
-    expect(r.coins).toBe(120); // 100 * 1.2
+    expect(r.coins).toBe(600); // 500 * 1.2
+    expect(r.xp).toBe(480);    // 400 * 1.2
     expect(r.multiplier).toBe(1.2);
   });
 
@@ -57,7 +58,7 @@ describe("calcularRecompensa", () => {
       position: 4,
       sessionStartedAt: new Date(Date.now() - 20 * 60 * 1000),
     });
-    expect(r.coins).toBe(0);
-    expect(r.xp).toBe(0);
+    expect(r.coins).toBe(100); // default para 4º+
+    expect(r.xp).toBe(50);
   });
 });

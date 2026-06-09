@@ -3,6 +3,17 @@ import { SessionService } from "../session/session.service.js";
 
 const sessionService = new SessionService();
 
+export interface PlayerUpdateData {
+  userId: number;
+  badge: string | null;
+  badgeImageUrl: string | null;
+  banner: string | null;
+  frame: string | null;
+  frameType: string | null;
+  frameAnimated: boolean;
+  frameScale: number;
+}
+
 export function emitSessionUpdated(sessionId: number, data: unknown) {
   getIO().of("/game").to(`session:${sessionId}`).emit("session:updated", data);
 }
@@ -25,6 +36,6 @@ export async function emitUpdatedSession(sessionId: number) {
   emitSessionUpdated(sessionId, session);
 }
 
-export function emitPlayerUpdated(sessionId: number, data: { userId: number; badge: string | null; badgeImageUrl: string | null; banner: string | null; frame: string | null; frameType: string | null; frameAnimated: boolean; frameScale: number }) {
+export function emitPlayerUpdated(sessionId: number, data: PlayerUpdateData) {
   getIO().of("/game").to(`session:${sessionId}`).emit("player:updated", data);
 }

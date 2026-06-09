@@ -2,8 +2,8 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { shopRepository, parseUserItems, type UserItemRef } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { RankingService } from "../ranking/ranking.service.js";
-import { emitPlayerUpdated } from "../socket/socket.handler.js";
 import { getRedis } from "../../lib/redis.js";
+import { getIO } from "../../lib/socket.js";
 
 export class ShopService {
   private rankingService = new RankingService();
@@ -162,7 +162,7 @@ export class ShopService {
 
       const redis = getRedis();
       for (const session of sessions) {
-        emitPlayerUpdated(session.id, {
+        getIO().of("/game").to(`session:${session.id}`).emit("player:updated", {
           userId,
           badge: equippedBadge?.value ?? null,
           badgeImageUrl: equippedBadge?.imageUrl ?? null,
