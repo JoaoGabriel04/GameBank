@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getRoomToken, setRoomToken } from '@/stores/roomTokenStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const resolvedBaseUrl =
   (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== "")
@@ -39,13 +40,18 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      const data = error.response?.data
-      if (data?.error === 'Acesso não autorizado a esta sala' || data?.error === 'Token de sala inválido ou expirado' || data?.error === 'Senha incorreta' || data?.error === 'Esta sala requer senha') {
-        console.warn('Room access issue — not logging out:', data?.error)
+      const msg = error.response?.data?.message ?? error.response?.data?.error ?? ''
+      const roomErrors = [
+        'Acesso não autorizado a esta sala',
+        'Token de sala inválido ou expirado',
+        'Senha incorreta',
+        'Esta sala requer senha',
+      ]
+      if (roomErrors.some(e => msg.includes(e))) {
+        console.warn('Room access issue — not logging out:', msg)
         return Promise.reject(error)
       }
-      localStorage.removeItem('jwt_token')
-      localStorage.removeItem('jwt_user')
+      useAuthStore.getState().logout()
       window.location.href = '/login'
     }
     if (error.code === 'ERR_CANCELED') {
