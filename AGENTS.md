@@ -41,6 +41,7 @@ make dev-shell SVC=server  # Shell no container
 make db-reset        # Recria banco do zero
 make db-studio       # Prisma Studio
 make db-purge-missions  # Limpa missões diárias/semanais compartilhadas
+make db-migrate-xp   # Converte XP cumulativo → XP por nível (uma vez)
 make test            # Health check HTTP
 # Build manual:
 cd server && npm run build                # prisma generate + tsc
@@ -173,6 +174,29 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 | Toast | `z-[100000]` | `ToastProvider` |
 
 **Regra:** qualquer novo modal/overlay que cubra a tela inteira deve usar `z-[200]`. Usar `z-50` (padrão Tailwind) faz o overlay ficar atrás do Header.
+
+## Sistema de XP
+
+`User.xp` armazena **apenas XP dentro do nível atual** (não cumulativo). Quando o usuário acumula XP suficiente para o próximo nível, o excedente é transferido.
+
+**Fórmula:** `xpForLevel(level) = floor(200 * 1.04^(level-1))` (nível 2 = 200 XP, nível 3 = 208 XP, ...)
+
+**Helpers em `server/src/utils/level.ts`:**
+| Função | Descrição |
+|---|---|
+| `xpForLevel(level)` | XP necessário para subir do nível atual para o próximo |
+| `totalXpForLevels(level)` | Total cumulativo de XP necessário para alcançar o nível (migration apenas) |
+| `getLevelFromXp(totalXp)` | Calcula nível a partir de XP total (migration/repair apenas) |
+| `addXp(currentXp, currentLevel, amount)` | Adiciona XP com level-up automático (while-loop) |
+| `subXp(currentXp, currentLevel, amount)` | Remove XP com level-down automático |
+
+**Regras:**
+- Sempre usar `addXp()`/`subXp()` ao modificar XP — nunca `{ increment: delta }`
+- Escrever `xp` e `level` como valores absolutos no banco (não increment)
+- Ranking ordena por `level DESC, xp DESC`
+- Profile service auto-corrige se `xp >= xpForLevel(level)` (reconstroi total, recalcula)
+
+**Migração (uma vez, após deploy):** `make db-migrate-xp` converte XP cumulativo → por nível.
 
 ## Bugs conhecidos (não repetir)
 
