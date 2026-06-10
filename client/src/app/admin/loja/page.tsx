@@ -9,9 +9,9 @@ import {
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import { resolveBannerBackground } from "@/constants/banners";
-import { RARITY_META } from "@/constants/rarity";
+import { RARIDADES, FRAGMENTOS_SUGERIDOS } from "@/constants/raridade";
 import CoinIcon from "@/components/CoinIcon";
-import type { AdminShopItem, Banner as ApiBanner, Frame as ApiFrame, ItemInput } from "@/services/api/admin";
+import type { AdminShopItem, Banner as ApiBanner, Frame as ApiFrame, Badge as ApiBadge, ItemInput } from "@/services/api/admin";
 import {
   Chip, Toggle, Segmented, Btn, Field,
   AdminInput, AdminTextarea, AdminSelect, AdminModal,
@@ -94,23 +94,36 @@ function ItemCard({
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            {item.rarity && RARITY_META[item.rarity] && (() => {
-              const r = RARITY_META[item.rarity];
+            {item.raridade && RARIDADES[item.raridade] && (() => {
+              const r = RARIDADES[item.raridade];
               return (
                 <span
                   className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
                   style={{
-                    color: r.color,
-                    background: `${r.color}18`,
-                    borderColor: `${r.color}40`,
+                    color: r.cor,
+                    background: `${r.cor}18`,
+                    borderColor: `${r.cor}40`,
                     letterSpacing: "0.08em",
                   }}
                 >
-                  <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: r.color }} />
+                  <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: r.cor }} />
                   {r.label}
                 </span>
               );
             })()}
+            {item.fragmentavel && (
+              <span
+                className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+                style={{
+                  color: "#a78bfa",
+                  borderColor: "#a78bfa44",
+                  background: "#a78bfa11",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                🧩 {item.fragmentosTotal ?? "?"} frags
+              </span>
+            )}
             <Chip tone={meta.tone}>{meta.label}</Chip>
             <button
               type="button"
@@ -152,14 +165,14 @@ function ItemCard({
   );
 }
 
-function ItemPreview({ form, bannerCss, uploadPreview }: { form: Partial<ItemInput>; bannerCss?: string | null; uploadPreview?: string | null }) {
+function ItemPreview({ form, bannerCss, badgeImageUrl }: { form: Partial<ItemInput>; bannerCss?: string | null; badgeImageUrl?: string | null }) {
   const meta = getTypeMeta(form.type ?? "title");
   const isBanner = form.type === "banner";
   const isBadge = form.type === "badge";
   const bg = isBanner && bannerCss
     ? resolveBannerBackground(bannerCss)
     : { className: "", style: { background: "linear-gradient(150deg,#1f2937,#111827)" } };
-  const badgeImage = uploadPreview || form.imageUrl;
+  const badgeImage = badgeImageUrl || form.imageUrl;
 
   return (
     <div
@@ -203,7 +216,8 @@ function ItemPreview({ form, bannerCss, uploadPreview }: { form: Partial<ItemInp
 
 const EMPTY: ItemInput = {
   name: "", description: "", price: 0,
-  type: "title", value: null, icon: "sparkles", rarity: "comum", imageUrl: null, available: true, bannerId: null, animated: false,
+  type: "title", value: null, icon: "sparkles", raridade: "COMUM", imageUrl: null, available: true, bannerId: null, frameId: null, badgeId: null, animated: false,
+  fragmentavel: false, fragmentosTotal: null,
 };
 const ICON_OPTIONS = ["crown","trophy","shield","target","trending","palette","sparkles","coins"];
 
@@ -211,6 +225,7 @@ function ItemModal({
   item,
   banners,
   frames,
+  badges,
   onClose,
   onSave,
   onUploadImage,
@@ -218,6 +233,7 @@ function ItemModal({
   item: AdminShopItem | "new" | null;
   banners: ApiBanner[];
   frames?: ApiFrame[];
+  badges?: ApiBadge[];
   onClose: () => void;
   onSave: (data: ItemInput, id?: number) => Promise<number | undefined>;
   onUploadImage: (id: number, file: File) => Promise<void>;
@@ -233,11 +249,15 @@ function ItemModal({
           type: item.type,
           value: item.value,
           icon: item.icon,
-          rarity: item.rarity,
+          raridade: item.raridade,
           imageUrl: item.imageUrl,
           available: item.available,
           bannerId: item.bannerId ?? null,
+          frameId: item.frameId ?? null,
+          badgeId: item.badgeId ?? null,
           animated: item.animated ?? false,
+          fragmentavel: item.fragmentavel ?? false,
+          fragmentosTotal: item.fragmentosTotal ?? null,
         }
       : null;
   const [form, setForm] = useState<ItemInput>(initial ?? EMPTY);
@@ -253,18 +273,29 @@ function ItemModal({
   const set = (k: keyof ItemInput, v: unknown) => setForm((p) => ({ ...p, [k]: v }));
   const isBanner = form.type === "banner";
   const isFrame = form.type === "frame";
+  const isBadge = form.type === "badge";
   const selectedBanner = banners.find((b) => b.id === form.bannerId);
   const bannerCss = isBanner ? selectedBanner?.css ?? null : null;
+  const selectedBadge = badges?.find((b) => b.id === form.badgeId);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (form.fragmentavel && (!form.fragmentosTotal || form.fragmentosTotal < 1)) {
+      alert("Informe quantos fragmentos são necessários para este item");
+      return;
+    }
+    if (form.fragmentavel && (form.price ?? 0) > 0) {
+      alert("Item fragmentável não deve ter preço — remova o preço ou desative a opção de fragmentos");
+      return;
+    }
+    if (isBadge && !form.badgeId) {
+      alert("Selecione um emblema existente");
+      return;
+    }
     setSaving(true);
     try {
       const id = isNew ? undefined : (item as AdminShopItem).id;
-      const savedId = await onSave(form, id);
-      if (form.type === "badge" && uploadFile && savedId !== undefined) {
-        await onUploadImage(savedId, uploadFile);
-      }
+      await onSave(form, id);
       onClose();
     } finally {
       setSaving(false);
@@ -297,7 +328,7 @@ function ItemModal({
 
             {isBanner ? (
               <>
-                <Field label="Banner existente" hint="Crie banners em /admin/cosmeticos">
+                <Field label="Banner existente" hint="Crie banners em /admin/banners">
                   <AdminSelect
                     value={form.bannerId ?? ""}
                     onChange={(e) => {
@@ -383,24 +414,18 @@ function ItemModal({
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
                   {form.type === "badge" ? (
-                    <Field label="Imagem">
-                      <label className="flex flex-col items-center justify-center w-full h-[38px] border border-dashed border-zinc-700 rounded-xl cursor-pointer hover:border-zinc-500 transition-colors bg-zinc-900/50">
-                        <span className="text-[11px] text-zinc-400 font-inconsolata">
-                          {uploadFile ? uploadFile.name : "Selecionar imagem (128x128)"}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setUploadFile(file);
-                              setUploadPreview(URL.createObjectURL(file));
-                            }
-                          }}
-                        />
-                      </label>
+                    <Field label="Emblema existente" hint="Crie emblemas via API ou upload direto">
+                      <AdminSelect
+                        value={form.badgeId ?? ""}
+                        onChange={(e) => set("badgeId", e.target.value ? +e.target.value : null)}
+                      >
+                        <option value="">— selecione —</option>
+                        {badges?.filter((b) => b.disponibilidade).map((b) => (
+                          <option key={b.id} value={b.id}>
+                            #{b.id} · {b.nome}
+                          </option>
+                        ))}
+                      </AdminSelect>
                     </Field>
                   ) : null}
                 </div>
@@ -408,15 +433,44 @@ function ItemModal({
             )}
 
             <Field label="Raridade">
-              <AdminSelect value={form.rarity ?? ""} onChange={(e) => set("rarity", e.target.value || null)}>
-                  <option value="">Sem raridade</option>
-                    <option value="comum">Comum</option>
-                    <option value="raro">Raro</option>
-                    <option value="super_raro">Super Raro</option>
-                    <option value="epico">Epico</option>
-                    <option value="lendario">Lendario</option>
+              <AdminSelect value={form.raridade ?? "COMUM"} onChange={(e) => set("raridade", e.target.value)}>
+                <option value="COMUM">Comum</option>
+                <option value="INCOMUM">Incomum</option>
+                <option value="RARO">Raro</option>
+                <option value="EPICO">Épico</option>
+                <option value="LENDARIO">Lendário</option>
               </AdminSelect>
+              <span className="ml-2 inline-block w-2 h-2 rounded-full" style={{ background: RARIDADES[form.raridade ?? "COMUM"]?.cor ?? "#9ca3af" }} />
             </Field>
+
+            <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+              <div>
+                <p className="font-inconsolata text-sm text-zinc-200">🧩 Fragmentável</p>
+                <p className="font-inconsolata text-[10px] text-zinc-500">
+                  {form.fragmentavel
+                    ? "Item só pode ser obtido via baús — não aparece na loja"
+                    : "Item disponível para compra direta na loja"}
+                </p>
+              </div>
+              <Toggle on={form.fragmentavel ?? false} onChange={(v) => set("fragmentavel", v)} />
+            </div>
+
+            {form.fragmentavel && (
+              <>
+                <Field label="Fragmentos necessários">
+                  <AdminInput
+                    type="number"
+                    min={1}
+                    value={form.fragmentosTotal ?? ""}
+                    onChange={(e) => set("fragmentosTotal", e.target.value ? Number(e.target.value) : null)}
+                    placeholder={String(FRAGMENTOS_SUGERIDOS[form.raridade as keyof typeof FRAGMENTOS_SUGERIDOS] ?? 20)}
+                  />
+                  <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">
+                    Sugerido para {RARIDADES[form.raridade ?? "COMUM"]?.label}: {FRAGMENTOS_SUGERIDOS[form.raridade as keyof typeof FRAGMENTOS_SUGERIDOS] ?? 20} fragmentos
+                  </p>
+                </Field>
+              </>
+            )}
 
             <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
               <div>
@@ -442,7 +496,7 @@ function ItemModal({
               <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
                 Pré-visualização
               </p>
-              <ItemPreview form={form} bannerCss={bannerCss} uploadPreview={uploadPreview} />
+              <ItemPreview form={form} bannerCss={bannerCss} badgeImageUrl={selectedBadge?.imageUrl} />
             </div>
             <Btn type="submit" variant="primary" icon={Check} className="justify-center w-full" disabled={saving}>
               {saving ? "Salvando…" : isNew ? "Criar item" : "Salvar"}
@@ -457,7 +511,7 @@ function ItemModal({
 
 export default function AdminLojaPage() {
   const { items, loadingItems, loadItems, createItem, updateItem, toggleItem, deleteItem, uploadBadgeImage } = useAdminStore();
-  const { banners, loadBanners, frames, loadFrames } = useAdminStore();
+  const { banners, loadBanners, frames, loadFrames, badges, loadBadges } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [filter, setFilter] = useState("Todos");
   const [editing, setEditing] = useState<AdminShopItem | "new" | null>(null);
@@ -466,7 +520,8 @@ export default function AdminLojaPage() {
     loadItems().catch(() => err("Erro ao carregar itens."));
     loadBanners().catch(() => err("Erro ao carregar banners."));
     loadFrames().catch(() => err("Erro ao carregar molduras."));
-  }, [loadItems, loadBanners, loadFrames, err]);
+    loadBadges().catch(() => err("Erro ao carregar emblemas."));
+  }, [loadItems, loadBanners, loadFrames, loadBadges, err]);
 
   const list = items.filter((i) => {
     if (filter === "Títulos")  return i.type === "title";
@@ -535,7 +590,7 @@ export default function AdminLojaPage() {
         </div>
       )}
 
-      <ItemModal item={editing} banners={banners} frames={frames} onClose={() => setEditing(null)} onSave={handleSave} onUploadImage={handleUploadBadgeImage} />
+      <ItemModal item={editing} banners={banners} frames={frames} badges={badges} onClose={() => setEditing(null)} onSave={handleSave} onUploadImage={handleUploadBadgeImage} />
     </div>
   );
 }

@@ -10,13 +10,18 @@ export interface AdminShopItem {
   type: ShopItemType;
   value: string | null;
   icon: string | null;
-  rarity: string | null;
+  raridade: string | null;
   imageUrl: string | null;
   available: boolean;
   animated: boolean;
+  fragmentavel?: boolean;
+  fragmentosTotal?: number | null;
+  fragmentosIcone?: string | null;
   ownerCount: number;
   bannerId?: number | null;
   frameId?: number | null;
+  badgeId?: number | null;
+  badge?: { imageUrl: string | null } | null;
 }
 
 export interface AdminUser {
@@ -100,6 +105,14 @@ export interface Banner {
   animated: boolean;
   imagePublicId?: string | null;
   imageUpdatedAt?: string | null;
+  disponibilidade: boolean;
+}
+
+export interface Badge {
+  id: number;
+  nome: string;
+  imageUrl: string | null;
+  imagePublicId: string | null;
   disponibilidade: boolean;
 }
 
@@ -208,9 +221,7 @@ export const adminApi = {
   uploadBannerImage: (id: number, file: File) => {
     const form = new FormData();
     form.append("image", file);
-    return api.post<Banner>(`/admin/banners/${id}/image`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }).then((r) => r.data);
+    return api.post<Banner>(`/admin/banners/${id}/image`, form).then((r) => r.data);
   },
 
   // Frames
@@ -225,7 +236,6 @@ export const adminApi = {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60000);
     return api.post<Frame>(`/admin/frames/${id}/image`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
       signal: controller.signal,
     }).then((r) => { clearTimeout(timeout); return r.data; }).catch((e) => {
       clearTimeout(timeout);
@@ -234,12 +244,17 @@ export const adminApi = {
     });
   },
 
+  // Badges
+  listBadges: () => api.get<Badge[]>("/admin/badges").then((r) => r.data),
+  createBadge: (data: { nome: string; disponibilidade?: boolean }) =>
+    api.post<Badge>("/admin/badges", data).then((r) => r.data),
+  updateBadge: (id: number, data: Partial<{ nome: string; disponibilidade: boolean }>) =>
+    api.patch<Badge>(`/admin/badges/${id}`, data).then((r) => r.data),
+  deleteBadge: (id: number) => api.delete(`/admin/badges/${id}`),
   uploadBadgeImage: (id: number, file: File) => {
     const form = new FormData();
     form.append("image", file);
-    return api.post<{ imageUrl: string; imagePublicId: string }>(`/admin/shop/badges/${id}/image`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    }).then((r) => r.data);
+    return api.post<{ imageUrl: string; imagePublicId: string }>(`/admin/badges/${id}/image`, form).then((r) => r.data);
   },
 
   // Audit

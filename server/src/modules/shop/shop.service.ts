@@ -1,9 +1,10 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { shopRepository, parseUserItems, type UserItemRef } from "./shop.repository.js";
+import { shopRepository, resolveShopItem, parseUserItems, type UserItemRef } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { getRedis } from "../../lib/redis.js";
 import { getIO } from "../../lib/socket.js";
+import { raridadeWeight } from "../../constants/raridade.js";
 
 export class ShopService {
   private rankingService = new RankingService();
@@ -399,5 +400,32 @@ export class ShopService {
 
     await this.rankingService.invalidateCache();
     return { message: "Item comprado com sucesso", item };
+  }
+
+  async catalogo(userId: number) {
+    const items = await prisma.shopItem.findMany({
+      where: { available: true, fragmentavel: true },
+      include: {
+        banner: true,
+        frame: true,
+        badge: true,
+        fragments: {
+          where: { userId },
+          select: { quantidade: true },
+        },
+      },
+      orderBy: [
+        { raridade: "desc" },
+        { name: "asc" },
+      ],
+    })
+
+    return items
+      .map((item) => ({
+        ...resolveShopItem(item),
+        fragmentosAtuais: item.fragments[0]?.quantidade ?? 0,
+        fragments: undefined,
+      }))
+      .sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.name.localeCompare(b.name))
   }
 }

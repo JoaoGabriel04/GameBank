@@ -1,4 +1,4 @@
-import { rarityWeight } from "../../shared/constants/rarity.js";
+import { raridadeWeight } from "../../constants/raridade.js";
 import { prisma } from "../../lib/prisma.js";
 
 export interface UserItemRef {
@@ -21,21 +21,52 @@ export function parseUserItems(raw: unknown): UserItemRef[] {
   return [];
 }
 
+export function resolveShopItem(item: any) {
+  let resolvedValue = item.value;
+  let resolvedImageUrl = item.imageUrl;
+  let resolvedAnimated = item.animated;
+
+  if (item.type === "banner" && item.banner) {
+    resolvedValue = item.banner.css;
+    resolvedAnimated = item.banner.animated;
+  }
+
+  if (item.type === "frame" && item.frame) {
+    resolvedValue = item.frame.css ?? item.frame.imageUrl;
+    resolvedImageUrl = item.frame.imageUrl;
+    resolvedAnimated = item.frame.animated;
+  }
+
+  if (item.type === "badge" && item.badge) {
+    resolvedImageUrl = item.badge.imageUrl;
+  }
+
+  return {
+    ...item,
+    value: resolvedValue,
+    imageUrl: resolvedImageUrl,
+    animated: resolvedAnimated,
+    banner: undefined,
+    frame: undefined,
+    badge: undefined,
+  };
+}
+
 export const shopRepository = {
   findAvailableItems: async () => {
     const items = await prisma.shopItem.findMany({
-      where: { available: true },
-      include: { banner: true, frame: true },
+      where: { available: true, fragmentavel: false },
+      include: { banner: true, frame: true, badge: true },
     });
-    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
-    return items;
+    items.sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);
+    return items.map(resolveShopItem);
   },
 
   findShopItem: (itemId: number) =>
     prisma.shopItem.findUnique({
       where: { id: itemId },
-      include: { banner: true, frame: true },
-    }),
+      include: { banner: true, frame: true, badge: true },
+    }).then((i) => i ? resolveShopItem(i) : null),
 
   findUser: (userId: number) =>
     prisma.user.findUnique({ where: { id: userId } }),
@@ -52,7 +83,7 @@ export const shopRepository = {
 
     const shopItems = await prisma.shopItem.findMany({
       where: { id: { in: refs.map((r) => r.item_id) } },
-      include: { banner: true, frame: true },
+      include: { banner: true, frame: true, badge: true },
     });
     const itemMap = new Map(shopItems.map((si) => [si.id, si]));
 
@@ -61,16 +92,24 @@ export const shopRepository = {
         const shopItem = itemMap.get(ref.item_id);
         if (!shopItem) return null;
         const frame = shopItem.frame;
+        const badge = shopItem.badge;
+
+        let resolvedValue = shopItem.value;
+        if (shopItem.type === "banner" && shopItem.banner) resolvedValue = shopItem.banner.css;
+        if (shopItem.type === "frame" && frame) resolvedValue = frame.css ?? frame.imageUrl;
+
+        const resolvedImageUrl = shopItem.type === "badge" && badge ? badge.imageUrl : shopItem.imageUrl;
+
         return {
           id: shopItem.id,
           name: shopItem.name,
           description: shopItem.description,
           icon: shopItem.icon,
-          value: frame?.tipo === "image" ? (frame.imageUrl ?? shopItem.value) : (frame?.css ?? shopItem.value),
+          value: resolvedValue,
           type: shopItem.type,
-          imageUrl: shopItem.imageUrl ?? null,
-          rarity: shopItem.rarity ?? null,
-          animated: shopItem.animated,
+          imageUrl: resolvedImageUrl ?? null,
+          raridade: shopItem.raridade ?? null,
+          animated: shopItem.type === "frame" && frame ? frame.animated : (shopItem.animated ?? false),
           equipped: ref.equipped,
           frameId: shopItem.frameId ?? null,
           frameTipo: shopItem.type === "frame" ? (frame?.tipo ?? null) : null,
@@ -79,7 +118,7 @@ export const shopRepository = {
         };
       })
       .filter((i): i is NonNullable<typeof i> => i !== null)
-      .sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
+      .sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);
   },
 
   saveUserItems: (userId: number, refs: UserItemRef[]) =>
@@ -110,7 +149,7 @@ export const shopRepository = {
       include: { banner: true },
     });
 
-    const banner = equippedBanner.item_id === 0 ? null : (shopItem?.value ?? null);
+    const banner = equippedBanner.item_id === 0 ? null : (shopItem?.banner?.css ?? shopItem?.value ?? null);
 
     return prisma.user.update({
       where: { id: userId },

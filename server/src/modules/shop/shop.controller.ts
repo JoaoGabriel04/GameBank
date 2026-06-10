@@ -112,6 +112,17 @@ export const shopController = {
       res.status(500).json({ message: "Erro ao comprar item com diamantes." });
     }
   },
+
+  catalogo: async (req: Request, res: Response) => {
+    try {
+      const items = await shopService.catalogo(req.user!.userId);
+      res.json(items);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao listar catálogo:", err);
+      res.status(500).json({ message: "Erro ao listar catálogo" });
+    }
+  },
 };
 
 export default shopController;

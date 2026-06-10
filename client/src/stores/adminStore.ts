@@ -15,6 +15,7 @@ import {
   type BannerInput,
   type Frame,
   type FrameInput,
+  type Badge,
   type AuditEntry,
   type AuditListOpts,
 } from "@/services/api/admin";
@@ -37,6 +38,8 @@ interface AdminStore {
   loadingBanners: boolean;
   frames: Frame[];
   loadingFrames: boolean;
+  badges: Badge[];
+  loadingBadges: boolean;
   loadingAudit: boolean;
   loadingSettings: boolean;
   loadingDashboard: boolean;
@@ -80,6 +83,11 @@ interface AdminStore {
   deleteBanner: (id: number) => Promise<void>;
   uploadBannerImage: (id: number, file: File) => Promise<Banner>;
   uploadBadgeImage: (id: number, file: File) => Promise<{ imageUrl: string; imagePublicId: string }>;
+
+  loadBadges: () => Promise<void>;
+  createBadge: (data: { nome: string; disponibilidade?: boolean }) => Promise<Badge>;
+  updateBadge: (id: number, data: Partial<{ nome: string; disponibilidade: boolean }>) => Promise<Badge>;
+  deleteBadge: (id: number) => Promise<void>;
 }
 
 export const useAdminStore = create<AdminStore>((set, get) => ({
@@ -93,6 +101,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   settings: {},
   dashboard: null,
   frames: [],
+  badges: [],
 
   loadingItems: false,
   loadingUsers: false,
@@ -100,6 +109,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   loadingCards: false,
   loadingBanners: false,
   loadingFrames: false,
+  loadingBadges: false,
   loadingAudit: false,
   loadingSettings: false,
   loadingDashboard: false,
@@ -363,5 +373,31 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   uploadBadgeImage: async (id, file) => {
     const result = await adminApi.uploadBadgeImage(id, file);
     return result;
+  },
+
+  loadBadges: async () => {
+    set({ loadingBadges: true });
+    try {
+      set({ badges: await adminApi.listBadges() });
+    } finally {
+      set({ loadingBadges: false });
+    }
+  },
+
+  createBadge: async (data) => {
+    const badge = await adminApi.createBadge(data);
+    set((s) => ({ badges: [...s.badges, badge] }));
+    return badge;
+  },
+
+  updateBadge: async (id, data) => {
+    const updated = await adminApi.updateBadge(id, data);
+    set((s) => ({ badges: s.badges.map((b) => (b.id === id ? updated : b)) }));
+    return updated;
+  },
+
+  deleteBadge: async (id) => {
+    await adminApi.deleteBadge(id);
+    set((s) => ({ badges: s.badges.filter((b) => b.id !== id) }));
   },
 }));

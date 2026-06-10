@@ -5,6 +5,7 @@ import { authenticate } from "../../middleware/auth.middleware.js";
 const shopRouter = Router();
 
 shopRouter.get("/items", shopController.listItems);
+shopRouter.get("/catalogo", authenticate, shopController.catalogo);
 shopRouter.post("/buy/:itemId", authenticate, shopController.buyItem);
 shopRouter.post("/sell/:itemId", authenticate, shopController.sellItem);
 shopRouter.post("/equip/:itemId", authenticate, shopController.equipItem);

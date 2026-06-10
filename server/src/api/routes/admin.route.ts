@@ -76,8 +76,12 @@ adminRouter.post(
 );
 
 // Badges
+adminRouter.get("/badges", adminController.listBadges);
+adminRouter.post("/badges", adminController.createBadge);
+adminRouter.patch("/badges/:id", adminController.updateBadge);
+adminRouter.delete("/badges/:id", adminController.deleteBadge);
 adminRouter.post(
-  "/shop/badges/:id/image",
+  "/badges/:id/image",
   bannerAdminLimiter,
   badgeUpload.single("image"),
   adminController.uploadBadgeImage

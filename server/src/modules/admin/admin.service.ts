@@ -23,7 +23,10 @@ export class AdminService {
 
   async listItems() {
     const items = await adminRepository.findAllItems();
-    return items;
+    return items.map((item: any) => ({
+      ...item,
+      imageUrl: item.type === "badge" ? (item.badge?.imageUrl ?? null) : item.imageUrl,
+    }));
   }
 
   async createItem(data: {
@@ -33,13 +36,17 @@ export class AdminService {
     type: string;
     value?: string | null;
     icon?: string | null;
-    rarity?: string | null;
+    raridade?: string | null;
+    fragmentavel?: boolean;
+    fragmentosTotal?: number | null;
+    fragmentosIcone?: string | null;
     imageUrl?: string | null;
     imagePublicId?: string | null;
     available: boolean;
     animated?: boolean;
     bannerId?: number | null;
     frameId?: number | null;
+    badgeId?: number | null;
   }) {
     let payload = { ...data } as any;
     if (data.type === "banner") {
@@ -50,7 +57,9 @@ export class AdminService {
       payload = {
         ...payload,
         name: banner.nome,
-        value: banner.css,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
       };
     } else if (data.type === "frame") {
       if (!data.frameId) throw new AppError(400, "frameId é obrigatório para itens do tipo frame.");
@@ -60,11 +69,25 @@ export class AdminService {
       payload = {
         ...payload,
         name: frame.nome,
-        value: frame.tipo === "image" ? frame.imageUrl : frame.css,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
         animated: frame.animated,
       };
+    } else if (data.type === "badge") {
+      if (!data.badgeId) throw new AppError(400, "badgeId é obrigatório para itens do tipo badge.");
+      const badge = await adminRepository.findBadgeById(data.badgeId);
+      if (!badge) throw new AppError(404, "Badge não encontrado.");
+      payload = {
+        ...payload,
+        name: badge.nome,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
+        badgeId: badge.id,
+      };
     } else {
-      if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title/badge.");
+      if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title.");
       if (data.type === "title" && data.name && !data.value) {
         payload.value = JSON.stringify({ title: data.name });
       }
@@ -79,13 +102,17 @@ export class AdminService {
     type: string;
     value: string | null;
     icon: string | null;
-    rarity: string | null;
+    raridade: string | null;
+    fragmentavel: boolean;
+    fragmentosTotal: number | null;
+    fragmentosIcone: string | null;
     imageUrl: string | null;
     imagePublicId: string | null;
     available: boolean;
     animated: boolean;
     bannerId: number | null;
     frameId: number | null;
+    badgeId: number | null;
   }>) {
     const exists = await adminRepository.findItemById(id);
     if (!exists) throw new AppError(404, "Item não encontrado.");
@@ -105,8 +132,11 @@ export class AdminService {
         ...payload,
         bannerId,
         frameId: null,
+        badgeId: null,
         name: banner.nome,
-        value: banner.css,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
       };
     } else if (nextType === "frame") {
       const frameId = data.frameId ?? exists.frameId ?? null;
@@ -120,14 +150,32 @@ export class AdminService {
         ...payload,
         frameId,
         bannerId: null,
+        badgeId: null,
         name: frame.nome,
-        value: frame.tipo === "image" ? frame.imageUrl : frame.css,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
         animated: frame.animated,
       };
-    } else if (nextType === "title" || nextType === "badge") {
-      payload = { ...payload, bannerId: null, frameId: null };
+    } else if (nextType === "badge") {
+      const badgeId = data.badgeId ?? exists.badgeId ?? null;
+      if (!badgeId) throw new AppError(400, "badgeId é obrigatório para itens do tipo badge.");
+      const badge = await adminRepository.findBadgeById(badgeId);
+      if (!badge) throw new AppError(404, "Badge não encontrado.");
+      payload = {
+        ...payload,
+        badgeId,
+        bannerId: null,
+        frameId: null,
+        name: badge.nome,
+        value: null,
+        imageUrl: null,
+        imagePublicId: null,
+      };
+    } else {
+      payload = { ...payload, bannerId: null, frameId: null, badgeId: null };
       if (data.name !== undefined && !data.name) {
-        throw new AppError(400, "name não pode ser vazio para itens do tipo title/badge.");
+        throw new AppError(400, "name não pode ser vazio para itens do tipo title.");
       }
       // Auto-generate value for titles when name changes
       if (nextType === "title" && data.name && data.name !== exists.name && data.value === undefined) {
@@ -175,10 +223,37 @@ export class AdminService {
     });
   }
 
+  // ── Badges ────────────────────────────────────────────────────────────
+
+  async listBadges() {
+    return adminRepository.findAllBadges();
+  }
+
+  async createBadge(data: { nome: string; disponibilidade?: boolean }) {
+    return adminRepository.createBadge(data);
+  }
+
+  async updateBadge(id: number, data: { nome?: string; disponibilidade?: boolean }) {
+    const exists = await adminRepository.findBadgeById(id);
+    if (!exists) throw new AppError(404, "Badge não encontrado.");
+    return adminRepository.updateBadge(id, data);
+  }
+
+  async deleteBadge(id: number) {
+    const exists = await adminRepository.findBadgeById(id);
+    if (!exists) throw new AppError(404, "Badge não encontrado.");
+    // Delete image from Cloudinary if exists
+    if (exists.imagePublicId) {
+      deleteCloudinaryBadge(exists.imagePublicId).catch((err) =>
+        console.error("[badge] Falha ao remover imagem do Cloudinary:", err)
+      );
+    }
+    return adminRepository.deleteBadge(id);
+  }
+
   async uploadBadgeImage(id: number, buffer: Buffer, mime: string | undefined, actor?: Actor) {
-    const exists = await adminRepository.findItemById(id);
-    if (!exists) throw new AppError(404, "Item não encontrado.");
-    if (exists.type !== "badge") throw new AppError(400, "Upload de imagem é permitido apenas para itens do tipo badge.");
+    const exists = await adminRepository.findBadgeById(id);
+    if (!exists) throw new AppError(404, "Badge não encontrado.");
 
     const processed = await validateAndProcessBadge(buffer, mime);
 
@@ -189,15 +264,15 @@ export class AdminService {
 
     const uploaded = await uploadBadgeToCloudinary(id, processed.buffer);
 
-    await adminRepository.updateItem(id, {
+    await adminRepository.updateBadge(id, {
       imageUrl: uploaded.url,
       imagePublicId: uploaded.publicId,
     });
 
     await auditLog({
       userId: actor?.id ?? null,
-      action: "admin.shopitem.badge_image",
-      target: `shopitem:${id}`,
+      action: "admin.badge.upload_image",
+      target: `badge:${id}`,
       metadata: { uploaded: uploaded.publicId, updatedBy: actor?.email ?? null },
       severity: "info",
     });
@@ -650,10 +725,12 @@ export class AdminService {
       });
 
       return updated;
-    } catch (err) {
-      // Rollback: remove the orphan upload if DB update fails
+    } catch (dbError: any) {
+      console.error("[banner] ERRO NO BANCO:", JSON.stringify(dbError, null, 2));
+      console.error("[banner] ERRO MENSAGEM:", dbError?.message);
+      console.error("[banner] ERRO CODE:", dbError?.code);
       await rollbackBannerUpload(uploaded.publicId);
-      throw err;
+      throw dbError;
     }
   }
 

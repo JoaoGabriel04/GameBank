@@ -77,9 +77,15 @@ const NAV_SECTIONS: NavSection[] = [
 
       { id: "cards", label: "Cartas", href: "/admin/cartas", icon: Dice5 },
       {
-        id: "cosmetics",
-        label: "Cosméticos",
-        href: "/admin/cosmeticos",
+        id: "banners",
+        label: "Banners",
+        href: "/admin/banners",
+        icon: Image,
+      },
+      {
+        id: "badges",
+        label: "Badges",
+        href: "/admin/badges",
         icon: Image,
       },
       {

@@ -1,5 +1,19 @@
 import api from './index'
-import type { ShopItem } from '@/types/shop'
+import type { Raridade, ShopItem } from '@/types/shop'
+
+export interface CatalogoItem {
+  id: number
+  name: string
+  type: string
+  value: string | null
+  icon: string | null
+  raridade: Raridade
+  fragmentosTotal: number | null
+  fragmentosIcone: string | null
+  imageUrl: string | null
+  animated: boolean
+  fragmentosAtuais: number
+}
 
 export const shopApi = {
   items: () => api.get<ShopItem[]>('/shop/items'),
@@ -46,3 +60,6 @@ export const getDiamondHistoryApi = () =>
 
 export const getDiamondBalanceApi = () =>
   api.get<{ diamonds: number }>('/diamonds/balance').then(res => res.data)
+
+export const getCatalogoApi = () =>
+  api.get<CatalogoItem[]>('/shop/catalogo').then(res => res.data)

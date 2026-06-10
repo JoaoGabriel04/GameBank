@@ -10,7 +10,7 @@ import {
 } from "@/components/admin/AdminUI";
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
-import type { Frame as ApiFrame, FrameInput } from "@/services/api/admin";
+import type { Frame as ApiFrame } from "@/services/api/admin";
 import { apiErrMsg } from "@/lib/api-error";
 
 function FramePreview({
@@ -110,14 +110,13 @@ function isImageUrl(s: string): boolean {
 }
 
 function FrameBuilder({
-  onSave, onUpdate, onUploadImage, onCancel, editing,
+  editing, onCancel,
 }: {
-  onSave: (f: FrameInput) => Promise<void>;
-  onUpdate?: (id: number, f: Partial<FrameInput>) => Promise<void>;
-  onUploadImage?: (id: number, file: File) => Promise<ApiFrame>;
-  onCancel?: () => void;
   editing?: ApiFrame | null;
+  onCancel?: () => void;
 }) {
+  const { createFrame, updateFrame, uploadFrameImage, loadFrames } = useAdminStore();
+  const { success: ok, error: err } = useToast();
   const [c1, setC1] = useState(DEFAULT_FRAME.c1);
   const [c2, setC2] = useState(DEFAULT_FRAME.c2);
   const [c3, setC3] = useState(DEFAULT_FRAME.c3);
@@ -128,15 +127,12 @@ function FrameBuilder({
   const [frameScale, setFrameScale] = useState(DEFAULT_FRAME.frameScale);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"gradient" | "image">("gradient");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup blob URL on unmount
   useEffect(() => {
     return () => {
       if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
@@ -144,7 +140,9 @@ function FrameBuilder({
   }, [localPreviewUrl]);
 
   const debouncedCss = useDebounce(
-    mode === "image" && imageUrl ? imageUrl : `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`,
+    localPreviewUrl && pendingFile
+      ? localPreviewUrl
+      : `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`,
     150,
   );
 
@@ -158,80 +156,91 @@ function FrameBuilder({
       setDisponibilidade(DEFAULT_FRAME.disponibilidade);
       setAnimated(DEFAULT_FRAME.animated);
       setFrameScale(DEFAULT_FRAME.frameScale);
-      setImageUrl(null);
       setLocalPreviewUrl(null);
       setPendingFile(null);
-      setMode("gradient");
+      setSaved(false);
       return;
     }
     if (editing.imageUrl) {
-      setMode("image");
-      setImageUrl(editing.imageUrl);
-      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
-      setLocalPreviewUrl(null);
-      setPendingFile(null);
+      setLocalPreviewUrl(editing.imageUrl);
     } else if (editing.css) {
-      setMode("gradient");
-      setImageUrl(null);
       const p = parseFrameCss(editing.css);
       setC1(p.c1);
       setC2(p.c2);
       setC3(p.c3);
       setAngle(p.angle);
+      setLocalPreviewUrl(null);
     }
     setNome(editing.nome);
     setDisponibilidade(editing.disponibilidade);
     setAnimated(editing.animated ?? false);
     setFrameScale((editing as any).frameScale ?? DEFAULT_FRAME.frameScale);
+    setPendingFile(null);
     setSaved(false);
   }, [editing]);
 
   const gradientCss = `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`;
+  const hasImage = !!localPreviewUrl;
 
-  const activePreviewUrl = localPreviewUrl || imageUrl;
-
-  async function handleFile(file: File) {
+  function handleFileSelect(file: File) {
     if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
     setLocalPreviewUrl(URL.createObjectURL(file));
     setPendingFile(file);
-    setMode("image");
   }
 
   async function handleSave() {
+    if (!nome.trim()) { alert("Nome é obrigatório"); return; }
+
     setSaving(true);
     try {
-      // If there's a pending file and we're editing, upload first
-      if (pendingFile && editing && onUploadImage) {
-        setUploading(true);
-        try {
-          const updated = await onUploadImage(editing.id, pendingFile);
-          setImageUrl(updated.imageUrl ?? null);
-          setPendingFile(null);
-          setLocalPreviewUrl(null);
-        } finally {
-          setUploading(false);
+      if (editing) {
+        if (pendingFile) {
+          setUploading(true);
+          try {
+            const updated = await uploadFrameImage(editing.id, pendingFile);
+            setLocalPreviewUrl(updated.imageUrl ?? null);
+          } finally {
+            setUploading(false);
+          }
         }
-      }
-      const frameData = { nome, disponibilidade, animated, frameScale };
-      if (editing && onUpdate) {
-        if (mode === "image" && imageUrl) {
-          await onUpdate(editing.id, frameData);
-        } else {
-          await onUpdate(editing.id, { ...frameData, css: gradientCss });
-        }
+        await updateFrame(editing.id, {
+          nome: nome.trim(),
+          disponibilidade,
+          animated,
+          frameScale,
+        });
+        ok("Moldura atualizada!");
       } else {
-        await onSave({ nome, css: gradientCss, disponibilidade, animated, tipo: "gradient", frameScale });
+        const created = await createFrame({ nome: nome.trim(), css: gradientCss, disponibilidade, animated, tipo: "gradient", frameScale });
+        if (pendingFile) {
+          setUploading(true);
+          try {
+            await uploadFrameImage(created.id, pendingFile);
+          } finally {
+            setUploading(false);
+          }
+        }
+        ok("Moldura criada!");
       }
+
+      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(null);
+      setPendingFile(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+
+      await loadFrames();
+    } catch (e) {
+      err(apiErrMsg(e, "Erro ao salvar moldura."));
     } finally {
       setSaving(false);
     }
   }
 
   function switchToGradient() {
-    setMode("gradient");
-    setImageUrl(null);
+    if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+    setLocalPreviewUrl(null);
+    setPendingFile(null);
   }
 
   return (
@@ -239,11 +248,7 @@ function FrameBuilder({
       <PanelHead
         title={editing ? "Editar moldura" : "Construtor de moldura"}
         icon={ImageIcon}
-        sub={
-          editing
-            ? `Editando #${editing.id} · ${editing.nome}`
-            : "1) Monte o gradiente · 2) Salve · 3) Clique no lápis do card para enviar uma imagem"
-        }
+        sub={editing ? `Editando #${editing.id} · ${editing.nome}` : "Crie uma moldura com gradiente ou imagem"}
         right={<Chip tone={editing ? "amber" : "cyan"}>{editing ? "editando" : "editor"}</Chip>}
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-5 p-5">
@@ -253,14 +258,14 @@ function FrameBuilder({
               Pré-visualização da moldura
             </p>
             <FramePreview
-              css={mode === "gradient" ? debouncedCss : null}
-              imageUrl={mode === "image" ? activePreviewUrl : null}
+              css={!hasImage ? debouncedCss : null}
+              imageUrl={hasImage ? localPreviewUrl : null}
               animated={animated}
               frameScale={frameScale}
             />
           </div>
 
-          {mode === "gradient" && (
+          {!hasImage && (
             <>
               <div className="grid grid-cols-3 gap-3">
                 {([["Cor externa", c1, setC1], ["Cor do meio", c2, setC2], ["Cor interna", c3, setC3]] as [string, string, (v: string) => void][]).map(([lbl, val, set]) => (
@@ -296,7 +301,7 @@ function FrameBuilder({
             </>
           )}
 
-          {mode === "image" && editing && (
+          {hasImage && editing && (
             <button type="button" onClick={switchToGradient}
               className="font-inconsolata text-[11px] text-cyan-400 hover:text-cyan-300">
               voltar para gradiente
@@ -326,75 +331,62 @@ function FrameBuilder({
             />
           </Field>
 
-          {mode === "image" && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">
-                  Escala da moldura
-                </span>
-                <span className="font-jaro text-base text-cyan-300">{frameScale}%</span>
-              </div>
-              <input type="range" min={110} max={160} value={frameScale}
-                onChange={(e) => setFrameScale(Number(e.target.value))}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400" />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">
+                Escala da moldura
+              </span>
+              <span className="font-jaro text-base text-cyan-300">{frameScale}%</span>
             </div>
-          )}
+            <input type="range" min={110} max={160} value={frameScale}
+              onChange={(e) => setFrameScale(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-zinc-800 accent-cyan-400" />
+          </div>
 
-          {editing && onUploadImage && (
-            <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-              />
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => !uploading && fileRef.current?.click()}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  if (uploading) return;
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) handleFile(f);
-                }}
-                className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
-                  dragOver ? "border-cyan-500 bg-cyan-500/5" : "border-zinc-700 hover:border-zinc-600"
-                } ${uploading ? "pointer-events-none opacity-60" : ""}`}
-              >
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFileSelect(f);
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+          />
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => !uploading && fileRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (uploading) return;
+              const f = e.dataTransfer.files?.[0];
+              if (f) handleFileSelect(f);
+            }}
+            className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+              dragOver ? "border-cyan-500 bg-cyan-500/5" : "border-zinc-700 hover:border-zinc-600"
+            } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          >
+            {localPreviewUrl && pendingFile ? (
+              <img src={localPreviewUrl} alt="" className="w-full max-h-32 object-contain" />
+            ) : (
+              <>
                 <Upload size={20} className="text-zinc-500 mx-auto" />
                 <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
                   {uploading
                     ? "Enviando…"
-                    : mode === "image"
+                    : hasImage
                       ? "Trocar imagem"
                       : "Arraste uma imagem\nou clique para enviar"}
                 </p>
-              </div>
-            </>
-          )}
-
-          {!editing && (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
-              <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">
-                Imagem
-              </p>
-              <p className="font-inconsolata text-[11px] text-zinc-500 leading-snug">
-                Salve a moldura primeiro, depois clique no&nbsp;
-                <Pencil size={11} className="inline -mt-0.5" />
-                &nbsp;do card abaixo para enviar uma imagem PNG.
-              </p>
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
           <Btn
             variant={saved ? "subtle" : "primary"}
@@ -403,7 +395,7 @@ function FrameBuilder({
             onClick={handleSave}
             disabled={saving || uploading}
           >
-            {saving ? "Salvando…" : saved ? "Moldura salva!" : editing ? "Salvar alterações" : "Salvar moldura"}
+            {saving || uploading ? "Salvando…" : saved ? "Moldura salva!" : editing ? "Salvar alterações" : "Salvar moldura"}
           </Btn>
           {editing && onCancel && (
             <Btn variant="ghost" className="w-full justify-center" onClick={onCancel}>
@@ -417,7 +409,7 @@ function FrameBuilder({
 }
 
 export default function AdminMoldurasPage() {
-  const { frames, loadingFrames, loadFrames, createFrame, updateFrame, deleteFrame, uploadFrameImage } = useAdminStore();
+  const { frames, loadingFrames, loadFrames, deleteFrame } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [confirmDel, setConfirmDel] = useState<number | null>(null);
   const [editing, setEditing] = useState<ApiFrame | null>(null);
@@ -425,37 +417,6 @@ export default function AdminMoldurasPage() {
   useEffect(() => {
     loadFrames().catch(() => err("Erro ao carregar molduras."));
   }, [loadFrames, err]);
-
-  async function addFrame(f: FrameInput) {
-    try {
-      const created = await createFrame(f);
-      ok("Moldura criada!");
-      setEditing(created);
-    } catch {
-      err("Erro ao criar moldura.");
-    }
-  }
-
-  async function editFrame(id: number, f: Partial<FrameInput>) {
-    try {
-      const updated = await updateFrame(id, f);
-      ok(`Moldura #${updated.id} atualizada!`);
-      setEditing(updated);
-    } catch {
-      err("Erro ao atualizar moldura.");
-    }
-  }
-
-  async function uploadFrameImageFn(id: number, file: File) {
-    try {
-      const updated = await uploadFrameImage(id, file);
-      ok(`Imagem da moldura #${id} atualizada!`);
-      return updated;
-    } catch (e) {
-      err(apiErrMsg(e, "Erro ao enviar imagem."));
-      throw e;
-    }
-  }
 
   async function removeFrame(id: number) {
     try {
@@ -471,11 +432,8 @@ export default function AdminMoldurasPage() {
   return (
     <div className="space-y-4">
       <FrameBuilder
-        onSave={addFrame}
-        onUpdate={editFrame}
-        onUploadImage={uploadFrameImageFn}
-        onCancel={() => setEditing(null)}
         editing={editing}
+        onCancel={() => setEditing(null)}
       />
 
       <Panel flush>

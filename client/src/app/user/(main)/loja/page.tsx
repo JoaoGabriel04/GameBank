@@ -7,13 +7,15 @@ import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitl
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi } from "@/services/api/shop";
+import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi, getCatalogoApi } from "@/services/api/shop";
+import type { CatalogoItem } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import CoinIcon from "@/components/CoinIcon";
 import DiamondIcon from "@/components/DiamondIcon";
 import { Chip } from "@/components/user/UserUI";
 import type { ShopItem } from "@/types/shop";
+import { RARIDADES } from "@/constants/raridade";
 import { apiErrMsg } from "@/lib/api-error";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
@@ -39,14 +41,6 @@ const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" 
   badge:  { label: "Emblema", color: "#a78bfa", tone: "violet" },
   banner: { label: "Banner",  color: "#38bdf8", tone: "sky"    },
   frame:  { label: "Moldura", color: "#22d3ee", tone: "cyan"   },
-};
-
-const RARITY_META: Record<string, { label: string; color: string }> = {
-  comum:      { label: "Comum",      color: "#a1a1aa" },
-  raro:       { label: "Raro",       color: "#00ba03" },
-  super_raro: { label: "Super Raro", color: "#c4b5fd" },
-  epico:      { label: "Épico",      color: "#a78bfa" },
-  lendario:   { label: "Lendário",   color: "#fcd34d" },
 };
 
 const COIN_PACKS: CoinPack[] = [
@@ -105,8 +99,8 @@ function CosmeticCard({
   onSelect: (item: ShopItem) => void;
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? meta.color;
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? meta.color;
   const isBanner  = item.type === "banner";
   const isFrame   = item.type === "frame";
   const topBg     = !isBanner
@@ -122,7 +116,7 @@ function CosmeticCard({
       style={{
         borderRadius: 14,
         border: `1px solid ${glowColor}30`,
-        boxShadow: rMeta && rMeta.color !== "#a1a1aa"
+        boxShadow: rMeta && rMeta.cor !== "#a1a1aa"
           ? `0 0 16px -8px ${glowColor}77`
           : "none",
       }}
@@ -360,8 +354,8 @@ function DetailSheet({
   if (!item) return null;
 
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const accent    = rMeta?.color ?? meta.color;
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const accent    = rMeta?.cor ?? meta.color;
   const isBanner  = item.type === "banner";
   const isFrame   = item.type === "frame";
   const canAfford = userCoins >= item.price;
@@ -902,11 +896,18 @@ export default function LojaPage() {
     if (token) {
       if (!profile) loadProfile();
       if (!shopItems.length) loadShopItems();
+      setLoadingCatalogo(true);
+      getCatalogoApi()
+        .then(setCatalogo)
+        .catch(() => {})
+        .finally(() => setLoadingCatalogo(false));
     }
   }, [token, profile, shopItems.length, loadProfile, loadShopItems]);
 
-  const [coins, setCoins]       = useState<number | null>(null);
-  const [diamonds, setDiamonds] = useState<number | null>(null);
+  const [coins, setCoins]             = useState<number | null>(null);
+  const [diamonds, setDiamonds]       = useState<number | null>(null);
+  const [catalogo, setCatalogo]       = useState<CatalogoItem[]>([]);
+  const [loadingCatalogo, setLoadingCatalogo] = useState(false);
   const userCoins    = coins    ?? profile?.coins    ?? 0;
   const userDiamonds = diamonds ?? profile?.diamonds ?? 0;
 
@@ -1155,6 +1156,104 @@ export default function LojaPage() {
           ))}
         </Grid3>
       </section>
+
+      {/* Catálogo — itens fragmentáveis */}
+      {catalogo.length > 0 && (
+        <section className="mb-10">
+          <SectionHeader label="Catálogo — itens via fragmentos" icon={Sparkles} color="#a78bfa" />
+          <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
+            Estes itens só podem ser obtidos abrindo baús de fragmentos.
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {catalogo.map((item) => {
+              const r = RARIDADES[item.raridade];
+              const pct = item.fragmentosTotal ? Math.min(100, (item.fragmentosAtuais / item.fragmentosTotal) * 100) : 0;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {item.type === "badge" && item.imageUrl && (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8, flexShrink: 0 }}
+                        />
+                      )}
+                      {item.type === "banner" && item.value && (
+                        <UserBanner
+                          banner={item.value}
+                          animated={item.animated}
+                          className="h-10 rounded-lg"
+                          style={{ width: 80, flexShrink: 0 }}
+                        />
+                      )}
+                      {item.type === "frame" && item.value && (
+                        <div className="relative shrink-0" style={{ width: 40, height: 40 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#71717a" }}>
+                            👤
+                          </div>
+                          {(() => {
+                            const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                            if (src) return (
+                              <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+                            );
+                            if (item.value) return (
+                              <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+                            );
+                            return null;
+                          })()}
+                        </div>
+                      )}
+                      {item.type === "title" && (
+                        <span className={item.animated ? "gb-title-shimmer" : ""} style={{ fontSize: 14, fontWeight: 500, color: "#f4f4f5", flexShrink: 0 }}>
+                          {item.name}
+                        </span>
+                      )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-inconsolata text-sm text-zinc-200 truncate">{item.name}</p>
+                        {r && (
+                          <span
+                            className="font-inconsolata uppercase text-[9px] px-1.5 py-0.5 rounded border"
+                            style={{
+                              color: r.cor, background: `${r.cor}18`, borderColor: `${r.cor}40`,
+                            }}
+                          >
+                            ● {r.label}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-inconsolata text-[11px] text-zinc-500">
+                          🧩 {item.fragmentosAtuais} / {item.fragmentosTotal}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 w-20">
+                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, background: r?.cor ?? "#9ca3af" }}
+                      />
+                    </div>
+                  </div>
+                  {item.fragmentosAtuais >= (item.fragmentosTotal ?? Infinity) && (
+                    <button
+                      type="button"
+                      className="shrink-0 font-inconsolata text-[10px] px-2.5 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 transition-colors cursor-pointer"
+                    >
+                      ✨ Resgatar
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <AnimatePresence>
         {selected && (

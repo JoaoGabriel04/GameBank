@@ -14,5 +14,4 @@ export const updateProfileApi = (formData: FormData) =>
   api.patch<{ id: number; nome: string; avatarUrl: string | null; avatarUpdatedAt: string | null; banner: string | null }>(
     '/profile/me',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
   ).then(res => res.data)

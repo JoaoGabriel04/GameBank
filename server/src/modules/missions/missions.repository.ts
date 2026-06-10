@@ -38,7 +38,7 @@ export const missionsRepository = {
 
   findCompletedUserMissions: (userId: number) =>
     prisma.userMission.findMany({
-      where: { userId, completed: true, claimed: false },
+      where: { userId, completed: true, claimed: false, expiresAt: { gt: new Date() } },
       include: {
         mission: { select: { id: true, xpReward: true, coinReward: true, tipo: true } },
       },

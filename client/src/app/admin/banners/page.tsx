@@ -12,7 +12,7 @@ import {
 import { useAdminStore } from "@/stores/adminStore";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
-import type { Banner as ApiBanner, BannerInput } from "@/services/api/admin";
+import type { Banner as ApiBanner } from "@/services/api/admin";
 import { apiErrMsg } from "@/lib/api-error";
 
 const SWATCHES = [
@@ -22,13 +22,17 @@ const SWATCHES = [
 ];
 
 function BannerPreview({
-  css, name, animated,
+  css, name, animated, previewImage,
 }: {
-  css: string; name: string; animated?: boolean;
+  css: string; name: string; animated?: boolean; previewImage?: string | null;
 }) {
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
-      <UserBanner banner={css} animated={animated} className="h-28 w-full" />
+      {previewImage ? (
+        <img src={previewImage} alt="" className="h-28 w-full object-cover" />
+      ) : (
+        <UserBanner banner={css} animated={animated} className="h-28 w-full" />
+      )}
       <div className="bg-zinc-900 px-4 pb-4 -mt-7 relative">
         <div className="w-14 h-14 rounded-full ring-4 ring-zinc-900 grid place-items-center font-jaro text-xl text-white"
           style={{ background: "linear-gradient(135deg,hsl(150 65% 45%),hsl(190 70% 35%))" }}>
@@ -73,14 +77,13 @@ function isImageUrl(s: string): boolean {
 }
 
 function BannerBuilder({
-  onSave, onUpdate, onUploadImage, onCancel, editing,
+  editing, onCancel,
 }: {
-  onSave: (b: BannerInput) => Promise<void>;
-  onUpdate?: (id: number, b: BannerInput) => Promise<void>;
-  onUploadImage?: (id: number, file: File) => Promise<ApiBanner>;
-  onCancel?: () => void;
   editing?: ApiBanner | null;
+  onCancel?: () => void;
 }) {
+  const { createBanner, updateBanner, uploadBannerImage, loadBanners } = useAdminStore();
+  const { success: ok, error: err } = useToast();
   const [c1, setC1] = useState(DEFAULT_BANNER.c1);
   const [c2, setC2] = useState(DEFAULT_BANNER.c2);
   const [c3, setC3] = useState(DEFAULT_BANNER.c3);
@@ -90,19 +93,17 @@ function BannerBuilder({
   const [animated, setAnimated] = useState(DEFAULT_BANNER.animated);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"gradient" | "image">("gradient");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup blob URL on unmount
   useEffect(() => {
     return () => {
-      if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
+      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
     };
-  }, [imageUrl]);
+  }, [localPreviewUrl]);
 
   useEffect(() => {
     if (!editing) {
@@ -113,71 +114,89 @@ function BannerBuilder({
       setNome(DEFAULT_BANNER.nome);
       setDisponibilidade(DEFAULT_BANNER.disponibilidade);
       setAnimated(DEFAULT_BANNER.animated);
-      setImageUrl(null);
+      setLocalPreviewUrl(null);
       setPendingFile(null);
-      setMode("gradient");
+      setSaved(false);
       return;
     }
     if (isImageUrl(editing.css)) {
-      setMode("image");
-      setImageUrl(editing.css);
-      setPendingFile(null);
+      setLocalPreviewUrl(editing.css);
     } else {
-      setMode("gradient");
-      setImageUrl(null);
-      setPendingFile(null);
       const p = parseBannerCss(editing.css);
       setC1(p.c1);
       setC2(p.c2);
       setC3(p.c3);
       setAngle(p.angle);
+      setLocalPreviewUrl(null);
     }
     setNome(editing.nome);
     setDisponibilidade(editing.disponibilidade);
     setAnimated(editing.animated ?? false);
+    setPendingFile(null);
     setSaved(false);
   }, [editing]);
 
   const gradientCss = `linear-gradient(${angle}deg, ${c1}, ${c2} 60%, ${c3})`;
-  const previewCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
+  const hasImage = !!localPreviewUrl;
 
-  async function handleFile(file: File) {
-    if (imageUrl?.startsWith("blob:")) URL.revokeObjectURL(imageUrl);
-    setImageUrl(URL.createObjectURL(file));
+  function handleFileSelect(file: File) {
+    if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+    setLocalPreviewUrl(URL.createObjectURL(file));
     setPendingFile(file);
-    setMode("image");
   }
 
   async function handleSave() {
+    if (!nome.trim()) { alert("Nome é obrigatório"); return; }
+
     setSaving(true);
     try {
-      // If there's a pending file and editing, upload first
-      if (pendingFile && editing && onUploadImage) {
-        setUploading(true);
-        try {
-          const updated = await onUploadImage(editing.id, pendingFile);
-          setImageUrl(updated.css);
-          setPendingFile(null);
-        } finally {
-          setUploading(false);
+      if (editing) {
+        if (pendingFile) {
+          setUploading(true);
+          try {
+            await uploadBannerImage(editing.id, pendingFile);
+          } finally {
+            setUploading(false);
+          }
         }
-      }
-      const finalCss = mode === "image" && imageUrl ? imageUrl : gradientCss;
-      if (editing && onUpdate) {
-        await onUpdate(editing.id, { nome, css: finalCss, disponibilidade, animated });
+        await updateBanner(editing.id, {
+          nome: nome.trim(),
+          css: localPreviewUrl ?? gradientCss,
+          disponibilidade,
+          animated,
+        });
+        ok("Banner atualizado!");
       } else {
-        await onSave({ nome, css: finalCss, disponibilidade, animated });
+        const created = await createBanner({ nome: nome.trim(), css: gradientCss, disponibilidade, animated });
+        if (pendingFile) {
+          setUploading(true);
+          try {
+            await uploadBannerImage(created.id, pendingFile);
+          } finally {
+            setUploading(false);
+          }
+        }
+        ok("Banner criado!");
       }
+
+      if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(null);
+      setPendingFile(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+
+      await loadBanners();
+    } catch (e) {
+      err(apiErrMsg(e, "Erro ao salvar banner."));
     } finally {
       setSaving(false);
     }
   }
 
   function switchToGradient() {
-    setMode("gradient");
-    setImageUrl(null);
+    if (localPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(localPreviewUrl);
+    setLocalPreviewUrl(null);
+    setPendingFile(null);
   }
 
   return (
@@ -185,11 +204,7 @@ function BannerBuilder({
       <PanelHead
         title={editing ? "Editar banner" : "Construtor de banner"}
         icon={ImageIcon}
-        sub={
-          editing
-            ? `Editando #${editing.id} · ${editing.nome}`
-            : "1) Monte o gradiente · 2) Salve · 3) Clique no lápis do card para enviar uma imagem"
-        }
+        sub={editing ? `Editando #${editing.id} · ${editing.nome}` : "Crie um banner com gradiente ou imagem"}
         right={<Chip tone={editing ? "amber" : "cyan"}>{editing ? "editando" : "editor"}</Chip>}
       />
       <div className="grid lg:grid-cols-[1fr_300px] gap-5 p-5">
@@ -198,10 +213,15 @@ function BannerBuilder({
             <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
               Pré-visualização do perfil
             </p>
-            <BannerPreview css={previewCss} name={nome} animated={animated} />
+            <BannerPreview
+              css={gradientCss}
+              name={nome}
+              animated={animated}
+              previewImage={localPreviewUrl?.startsWith("blob:") ? localPreviewUrl : null}
+            />
           </div>
 
-          {mode === "gradient" && (
+          {!hasImage && (
             <>
               <div className="grid grid-cols-3 gap-3">
                 {([["Cor inicial", c1, setC1], ["Cor central", c2, setC2], ["Cor final", c3, setC3]] as [string, string, (v: string) => void][]).map(([lbl, val, set]) => (
@@ -237,28 +257,11 @@ function BannerBuilder({
             </>
           )}
 
-          {mode === "image" && (
-            <div className="rounded-xl border border-zinc-800 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="font-inconsolata text-[11px] uppercase tracking-wider text-zinc-500">
-                  Imagem atual
-                </p>
-                {editing && (
-                  <button type="button" onClick={switchToGradient}
-                    className="font-inconsolata text-[10px] text-cyan-400 hover:text-cyan-300">
-                    voltar para gradiente
-                  </button>
-                )}
-              </div>
-              {imageUrl && (
-                <div className="rounded-lg overflow-hidden border border-zinc-700">
-                  <img src={imageUrl} alt="banner atual" className="w-full h-32 object-cover" />
-                </div>
-              )}
-              <p className="font-inconsolata text-[10px] text-zinc-600">
-                1200×400px · JPG/PNG/WebP · máx. 8MB
-              </p>
-            </div>
+          {hasImage && editing && (
+            <button type="button" onClick={switchToGradient}
+              className="font-inconsolata text-[11px] text-cyan-400 hover:text-cyan-300">
+              voltar para gradiente
+            </button>
           )}
         </div>
 
@@ -284,60 +287,50 @@ function BannerBuilder({
             />
           </Field>
 
-          {editing && onUploadImage && (
-            <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-              />
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => !uploading && fileRef.current?.click()}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) handleFile(f);
-                }}
-                className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
-                  dragOver ? "border-cyan-500 bg-cyan-500/5" : "border-zinc-700 hover:border-zinc-600"
-                } ${uploading ? "pointer-events-none opacity-60" : ""}`}
-              >
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFileSelect(f);
+              if (fileRef.current) fileRef.current.value = "";
+            }}
+          />
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => !uploading && fileRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (uploading) return;
+              const f = e.dataTransfer.files?.[0];
+              if (f) handleFileSelect(f);
+            }}
+            className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+              dragOver ? "border-cyan-500 bg-cyan-500/5" : "border-zinc-700 hover:border-zinc-600"
+            } ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          >
+            {localPreviewUrl && pendingFile ? (
+              <img src={localPreviewUrl} alt="" className="w-full h-32 object-cover rounded-lg" />
+            ) : (
+              <>
                 <Upload size={20} className="text-zinc-500 mx-auto" />
                 <p className="font-inconsolata text-[11px] text-zinc-500 mt-1.5 leading-snug">
                   {uploading
                     ? "Enviando…"
-                    : mode === "image"
+                    : hasImage
                       ? "Trocar imagem"
                       : "Arraste uma imagem\nou clique para enviar"}
                 </p>
-              </div>
-            </>
-          )}
-
-          {!editing && (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
-              <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">
-                Imagem
-              </p>
-              <p className="font-inconsolata text-[11px] text-zinc-500 leading-snug">
-                Salve o banner primeiro, depois clique no&nbsp;
-                <Pencil size={11} className="inline -mt-0.5" />
-                &nbsp;do card abaixo para enviar uma imagem.
-              </p>
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
           <Btn
             variant={saved ? "subtle" : "primary"}
@@ -346,7 +339,7 @@ function BannerBuilder({
             onClick={handleSave}
             disabled={saving || uploading}
           >
-            {saving ? "Salvando…" : saved ? "Banner salvo!" : editing ? "Salvar alterações" : "Salvar banner"}
+            {saving || uploading ? "Salvando…" : saved ? "Banner salvo!" : editing ? "Salvar alterações" : "Salvar banner"}
           </Btn>
           {editing && onCancel && (
             <Btn variant="ghost" className="w-full justify-center" onClick={onCancel}>
@@ -359,8 +352,8 @@ function BannerBuilder({
   );
 }
 
-export default function AdminCosmeticosPage() {
-  const { banners, loadingBanners, loadBanners, createBanner, updateBanner, deleteBanner, uploadBannerImage } = useAdminStore();
+export default function AdminBannersPage() {
+  const { banners, loadingBanners, loadBanners, deleteBanner } = useAdminStore();
   const { success: ok, error: err } = useToast();
   const [confirmDel, setConfirmDel] = useState<number | null>(null);
   const [editing, setEditing] = useState<ApiBanner | null>(null);
@@ -368,37 +361,6 @@ export default function AdminCosmeticosPage() {
   useEffect(() => {
     loadBanners().catch(() => err("Erro ao carregar banners."));
   }, [loadBanners, err]);
-
-  async function addBanner(b: BannerInput) {
-    try {
-      const created = await createBanner(b);
-      ok("Banner criado!");
-      setEditing(created);
-    } catch {
-      err("Erro ao criar banner.");
-    }
-  }
-
-  async function editBanner(id: number, b: BannerInput) {
-    try {
-      const updated = await updateBanner(id, b);
-      ok(`Banner #${updated.id} atualizado!`);
-      setEditing(updated);
-    } catch {
-      err("Erro ao atualizar banner.");
-    }
-  }
-
-  async function uploadBannerImageFn(id: number, file: File) {
-    try {
-      const updated = await uploadBannerImage(id, file);
-      ok(`Imagem do banner #${id} atualizada!`);
-      return updated;
-    } catch (e) {
-      err(apiErrMsg(e, "Erro ao enviar imagem."));
-      throw e;
-    }
-  }
 
   async function removeBanner(id: number) {
     try {
@@ -414,11 +376,8 @@ export default function AdminCosmeticosPage() {
   return (
     <div className="space-y-4">
       <BannerBuilder
-        onSave={addBanner}
-        onUpdate={editBanner}
-        onUploadImage={uploadBannerImageFn}
-        onCancel={() => setEditing(null)}
         editing={editing}
+        onCancel={() => setEditing(null)}
       />
 
       <Panel flush>
@@ -429,7 +388,8 @@ export default function AdminCosmeticosPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4">
           {banners.map((b: ApiBanner) => (
             <div key={b.id} className="group rounded-xl overflow-hidden border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-colors">
-              <div className="h-20 relative" style={{ background: b.css }}>
+              <div className="h-20 relative">
+                <UserBanner banner={b.css} animated={b.animated} className="w-full h-full rounded-t-lg" />
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center gap-2">
                   <button type="button" onClick={() => setEditing(b)} title="Editar banner" className="p-1.5 rounded-lg bg-white/15 text-white hover:bg-white/25"><Pencil size={13} /></button>
                   {confirmDel === b.id ? (
@@ -460,7 +420,6 @@ export default function AdminCosmeticosPage() {
           )}
         </div>
       </Panel>
-
     </div>
   );
 }

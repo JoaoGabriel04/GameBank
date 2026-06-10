@@ -69,6 +69,7 @@ model User {
   sessions             Session[]
   players              SessionPlayer[]
   missions             UserMission[]
+  fragments            UserFragment[]
   gameResults          GameResult[]
   diamondTransactions  DiamondTransaction[]
   diamondPurchases     DiamondPurchase[]
@@ -321,6 +322,19 @@ model UserMission {
   @@map("usuario_missoes")
 }
 
+model Badge {
+  id             Int      @id @default(autoincrement())
+  nome           String
+  imageUrl       String?
+  imagePublicId  String?
+  disponibilidade Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  shopItems ShopItem[]
+
+  @@map("badges")
+}
+
 model ShopItem {
   id            Int      @id @default(autoincrement())
   name          String
@@ -328,13 +342,18 @@ model ShopItem {
   price         Int
   diamondPrice  Int?
   icon          String?
-  type          String   // title | badge | banner
+  type          String   // title | badge | banner | frame
   value         String?
-  rarity        String?  // common | rare | epic | legendary
+  raridade      String   @default("COMUM")
+  // "COMUM" | "INCOMUM" | "RARO" | "EPICO" | "LENDARIO"
   imageUrl      String?  // Cloudinary URL for badge images
   imagePublicId String?  // Cloudinary public ID for deletion
   available     Boolean  @default(true)
   animated      Boolean  @default(false)
+
+  fragmentavel    Boolean  @default(false)
+  fragmentosTotal Int?
+  fragmentosIcone String?
 
   bannerId Int?
   banner   Banner? @relation(fields: [bannerId], references: [id], onDelete: SetNull)
@@ -342,7 +361,27 @@ model ShopItem {
   frameId Int?
   frame   Frame?  @relation(fields: [frameId], references: [id], onDelete: SetNull)
 
+  badgeId Int?
+  badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+
+  fragments UserFragment[]
+
   @@map("loja_itens")
+}
+
+model UserFragment {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  itemId     Int
+  quantidade Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id])
+  item ShopItem @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, itemId])
+  @@map("user_fragments")
 }
 
 model GameResult {

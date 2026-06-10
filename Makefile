@@ -99,7 +99,10 @@ db-purge-missions:
 	docker compose -f docker-compose.dev.yml exec server npx tsx scripts/purge-missions.ts
 
 db-migrate-xp:
-	docker compose -f docker-compose.dev.yml exec server npx tsx scripts/migrate-xp.ts
+	docker compose -f docker-compose.dev.yml exec server npx tsx src/scripts/migrate-xp.ts
+
+db-repair-xp:
+	docker compose -f docker-compose.dev.yml exec server npx tsx src/scripts/repair-xp.ts
 
 db-backup:
 	@mkdir -p backups

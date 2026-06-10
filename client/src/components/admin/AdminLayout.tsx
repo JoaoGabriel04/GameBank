@@ -18,7 +18,8 @@ const TITLES: Record<string, [string, string]> = {
   "/admin/shop": ["Loja", "Crie e gerencie itens cosméticos"],
   "/admin/missions": ["Missões & Recompensas", "Configure objetivos e suas recompensas"],
   "/admin/cards": ["Cartas", "Edite o baralho de Sorte e Revés"],
-  "/admin/cosmetics": ["Cosméticos", "Banners personalizados e biblioteca de sprites"],
+  "/admin/banners": ["Banners", "Banners personalizados e biblioteca de sprites"],
+  "/admin/badges": ["Badges", "Emblemas e conquistas visuais"],
   "/admin/economy": ["Economia global", "Saldos, multiplicadores e flags do sistema"],
 };
 

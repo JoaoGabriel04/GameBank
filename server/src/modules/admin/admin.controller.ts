@@ -6,18 +6,25 @@ import { prisma } from "../../lib/prisma.js";
 
 const adminService = new AdminService();
 
+const noBlobDataUrl = (val: string | null | undefined) =>
+  val == null || (!val.startsWith("blob:") && !val.startsWith("data:"));
+
 const ItemSchema = z.object({
   name: z.string().optional(),
   description: z.string().min(1),
   price: z.number().int().min(0),
   type: z.enum(["title", "badge", "banner", "frame"]),
-  value: z.string().nullable().optional(),
+  value: z.string().nullable().optional().refine(noBlobDataUrl, { message: "URL blob/data não são permitidas no campo value" }),
   icon: z.string().nullable().optional(),
-  rarity: z.string().nullable().optional(),
+  raridade: z.enum(["COMUM", "INCOMUM", "RARO", "EPICO", "LENDARIO"]).default("COMUM"),
+  fragmentavel: z.boolean().default(false),
+  fragmentosTotal: z.number().int().positive().nullable().optional(),
+  fragmentosIcone: z.string().max(2).nullable().optional(),
   available: z.boolean(),
   animated: z.boolean().default(false),
   bannerId: z.number().int().positive().nullable().optional(),
   frameId: z.number().int().positive().nullable().optional(),
+  badgeId: z.number().int().positive().nullable().optional(),
 });
 
 function parseError(res: Response, err: unknown) {
@@ -250,7 +257,7 @@ export const adminController = {
     try {
       const data = z.object({
         nome: z.string().min(1),
-        css: z.string().min(1),
+        css: z.string().min(1).refine(noBlobDataUrl, { message: "URL blob/data não são permitidas" }),
         animated: z.boolean().default(false),
         disponibilidade: z.boolean().default(true),
       }).parse(req.body);
@@ -263,7 +270,7 @@ export const adminController = {
       const id = z.coerce.number().int().positive().parse(req.params.id);
       const data = z.object({
         nome: z.string().min(1).optional(),
-        css: z.string().min(1).optional(),
+        css: z.string().min(1).refine(noBlobDataUrl, { message: "URL blob/data não são permitidas" }).optional(),
         animated: z.boolean().optional(),
         disponibilidade: z.boolean().optional(),
       }).parse(req.body);
@@ -303,7 +310,7 @@ export const adminController = {
     try {
       const data = z.object({
         nome: z.string().min(1),
-        css: z.string().min(1),
+        css: z.string().min(1).refine(noBlobDataUrl, { message: "URL blob/data não são permitidas" }),
         animated: z.boolean().default(false),
         disponibilidade: z.boolean().default(true),
         frameScale: z.number().int().min(100).max(200).optional(),
@@ -317,7 +324,7 @@ export const adminController = {
       const id = z.coerce.number().int().positive().parse(req.params.id);
       const data = z.object({
         nome: z.string().min(1).optional(),
-        css: z.string().min(1).optional(),
+        css: z.string().min(1).refine(noBlobDataUrl, { message: "URL blob/data não são permitidas" }).optional(),
         animated: z.boolean().optional(),
         disponibilidade: z.boolean().optional(),
         frameScale: z.number().int().min(100).max(200).optional(),
@@ -355,6 +362,44 @@ export const adminController = {
       if (!fileBuffer) return res.status(400).json({ error: "Nenhuma imagem enviada" });
       const user = (req as any).user;
       res.json(await adminService.uploadBadgeImage(id, fileBuffer, fileMime, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  // Badges CRUD
+  listBadges: async (_req: Request, res: Response) => {
+    try {
+      res.json(await adminService.listBadges());
+    } catch (err) { parseError(res, err); }
+  },
+
+  createBadge: async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        nome: z.string().min(1),
+        disponibilidade: z.boolean().default(true),
+      });
+      const data = schema.parse(req.body);
+      res.status(201).json(await adminService.createBadge(data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  updateBadge: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const schema = z.object({
+        nome: z.string().min(1).optional(),
+        disponibilidade: z.boolean().optional(),
+      });
+      const data = schema.parse(req.body);
+      res.json(await adminService.updateBadge(id, data));
+    } catch (err) { parseError(res, err); }
+  },
+
+  deleteBadge: async (req: Request, res: Response) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      await adminService.deleteBadge(id);
+      res.status(204).send();
     } catch (err) { parseError(res, err); }
   },
 

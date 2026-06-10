@@ -260,7 +260,7 @@ export function LiveDot({ tone = "green" }: { tone?: "green" | "amber" | "zinc" 
 
 /* ─── XP helpers ─── */
 export const xpForLevel = (level: number) =>
-  Math.floor(200 * Math.pow(1.04, level - 1));
+  Math.floor(200 * Math.pow(1.17, level - 1));
 
 export const totalXpForLevels = (level: number) => {
   let total = 0;

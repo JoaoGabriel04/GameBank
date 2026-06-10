@@ -11,7 +11,7 @@ import { equipShopItemApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import { Chip } from "@/components/user/UserUI";
-import { RARITY_META } from "@/constants/rarity";
+import { RARIDADES } from "@/constants/raridade";
 import type { UserItem } from "@/types/shop";
 
 type ItemType     = "title" | "badge" | "banner" | "frame";
@@ -42,8 +42,8 @@ function VaultItemCard({
   onSelect: (item: UserItem) => void;
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? "#d4d4d8";
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
   const isFrame   = item.type === "frame";
   const topBg     = isBanner && item.value
@@ -66,7 +66,7 @@ function VaultItemCard({
           ? "0 0 22px -6px rgba(74,222,128,0.45)"
           : isSelected
             ? "0 0 20px -8px rgba(74,222,128,0.3)"
-            : (rMeta && rMeta.color !== "#d4d4d8" ? `0 0 14px -9px ${glowColor}88` : "none"),
+            : (rMeta && rMeta.cor !== "#d4d4d8" ? `0 0 14px -9px ${glowColor}88` : "none"),
       }}
     >
       <div
@@ -171,8 +171,8 @@ function DetailPanel({
   }
 
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.rarity ? RARITY_META[item.rarity] : null;
-  const glowColor = rMeta?.color ?? "#d4d4d8";
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? "#d4d4d8";
   const isBanner  = item.type === "banner";
   const isFrame   = item.type === "frame";
 
@@ -268,13 +268,13 @@ function DetailPanel({
             <span
               className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
               style={{
-                color: rMeta.color,
-                background: rMeta.color + "18",
-                borderColor: rMeta.color + "40",
+                color: rMeta.cor,
+                background: rMeta.cor + "18",
+                borderColor: rMeta.cor + "40",
                 letterSpacing: "0.08em",
               }}
             >
-              <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: rMeta.color }} />
+              <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: rMeta.cor }} />
               {rMeta.label}
             </span>
           )}

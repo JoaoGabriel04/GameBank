@@ -179,7 +179,7 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 
 `User.xp` armazena **apenas XP dentro do nível atual** (não cumulativo). Quando o usuário acumula XP suficiente para o próximo nível, o excedente é transferido.
 
-**Fórmula:** `xpForLevel(level) = floor(200 * 1.04^(level-1))` (nível 2 = 200 XP, nível 3 = 208 XP, ...)
+**Fórmula:** `xpForLevel(level) = floor(200 * 1.17^(level-1))` (nível 2 = 200 XP, nível 3 = 234 XP, ...)
 
 **Helpers em `server/src/utils/level.ts`:**
 | Função | Descrição |
@@ -209,6 +209,7 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 | `ERR_ERL_KEY_GEN_IPV6` no rate-limiter | `keyGenerator` usando `req.ip` direto — express-rate-limit v8 exige o helper para IPv6 | `ipKeyGenerator(req.ip ?? "")` — a função recebe `string`, não o objeto `Request` |
 | Import `Cannot find module '…/lib/cloudinary.js'` | Caminho relativo errado ao mover arquivo entre pastas de módulo | Contar os `../` a partir do arquivo de origem; `modules/avatar/` → `../../lib/` |
 | `track()` cria UserMission para daily/weekly de outro usuário | `findActiveMissionsByMetric` retorna todas as missions; upsert no repository cria vínculo indevido | `track()` em missions.service.ts: pular (continue) se `tipo` daily/weekly e `existing` for null |
+| Upload de banner → `400 URL blob/data não são permitidas` | `handleSave` em `cosmeticos/page.tsx` lê `imageUrl` do closure (blob URL) em vez do `updated.css` recém-retornado do upload | Usar variável local (`resolvedImageUrl`) em vez de `setImageUrl` + ler `imageUrl` na linha seguinte |
 
 ## CSP (helmet)
 

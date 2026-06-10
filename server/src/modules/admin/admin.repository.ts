@@ -1,48 +1,24 @@
-import { rarityWeight } from "../../shared/constants/rarity.js";
+import { raridadeWeight } from "../../constants/raridade.js";
 import { prisma } from "../../lib/prisma.js";
 
 export const adminRepository = {
   // ShopItems
   findAllItems: async () => {
     const items = await prisma.shopItem.findMany({
-      include: { banner: true, frame: true },
+      include: { banner: true, frame: true, badge: true },
     });
-    items.sort((a, b) => rarityWeight(a.rarity) - rarityWeight(b.rarity) || a.id - b.id);
+    items.sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);
     return items;
   },
 
   findItemById: (id: number) =>
-    prisma.shopItem.findUnique({ where: { id } }),
+    prisma.shopItem.findUnique({ where: { id }, include: { badge: true } }),
 
-  createItem: (data: {
-    name?: string;
-    description: string;
-    price: number;
-    type: string;
-    value?: string | null;
-    icon?: string | null;
-    rarity?: string | null;
-    imageUrl?: string | null;
-    imagePublicId?: string | null;
-    available: boolean;
-    animated?: boolean;
-    bannerId?: number | null;
-  }) => prisma.shopItem.create({ data: { name: data.name ?? "", ...data } }),
+  createItem: (data: Record<string, unknown>) =>
+    prisma.shopItem.create({ data: data as any }),
 
-  updateItem: (id: number, data: Partial<{
-    name: string;
-    description: string;
-    price: number;
-    type: string;
-    value: string | null;
-    icon: string | null;
-    rarity: string | null;
-    imageUrl: string | null;
-    imagePublicId: string | null;
-    available: boolean;
-    animated: boolean;
-    bannerId: number | null;
-  }>) => prisma.shopItem.update({ where: { id }, data }),
+  updateItem: (id: number, data: Record<string, unknown>) =>
+    prisma.shopItem.update({ where: { id }, data }),
 
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
@@ -268,6 +244,30 @@ export const adminRepository = {
     `;
     return Number(result);
   },
+
+  // Badges
+  findAllBadges: () =>
+    prisma.badge.findMany({ orderBy: { id: "asc" } }),
+
+  findBadgeById: (id: number) =>
+    prisma.badge.findUnique({ where: { id } }),
+
+  createBadge: (data: {
+    nome: string;
+    imageUrl?: string | null;
+    imagePublicId?: string | null;
+    disponibilidade?: boolean;
+  }) => prisma.badge.create({ data }),
+
+  updateBadge: (id: number, data: Partial<{
+    nome: string;
+    imageUrl: string | null;
+    imagePublicId: string | null;
+    disponibilidade: boolean;
+  }>) => prisma.badge.update({ where: { id }, data }),
+
+  deleteBadge: (id: number) =>
+    prisma.badge.delete({ where: { id } }),
 
   // AuditLog
   createAuditLog: (data: {

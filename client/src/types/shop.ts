@@ -1,3 +1,5 @@
+export type Raridade = "COMUM" | "INCOMUM" | "RARO" | "EPICO" | "LENDARIO"
+
 export interface ShopItem {
   id: number
   name: string
@@ -7,10 +9,13 @@ export interface ShopItem {
   icon?: string | null
   type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
-  rarity?: string | null
+  raridade?: Raridade
   imageUrl?: string | null
   available: boolean
   animated?: boolean
+  fragmentavel?: boolean
+  fragmentosTotal?: number | null
+  fragmentosIcone?: string | null
   bannerId?: number | null
   frameId?: number | null
 }
@@ -23,11 +28,19 @@ export interface UserItem {
   value?: string | null
   icon?: string | null 
   spriteId?: string | null
-  rarity?: string | null
+  raridade?: Raridade
   imageUrl?: string | null
   animated?: boolean
   equipped: boolean
   frameId?: number | null
+}
+
+export interface UserFragment {
+  id: number
+  userId: number
+  itemId: number
+  quantidade: number
+  item?: ShopItem
 }
 
 export interface GameResult {
