@@ -224,5 +224,113 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 | Funções/variáveis | `camelCase` |
 | Zod schemas | `PascalCase + Schema` (em `server/src/shared/schemas/`) |
 | Erros de negócio | `AppError(statusCode, message)` |
-| Imports | alfabético: externos → internos → tipos |
+| Imports (server) | externos → internos (lib/ → modules/ → utils/) → tipos |
+| Imports (client) | React → terceiros → lib → stores → services → components → types → constants |
 | Commits | `feat:` / `refactor:` / `fix:` / `docs:` — rodar build antes |
+
+### Client
+
+#### Componentes
+- `export default function Nome()` — sempre default export
+- Props tipadas com `type NomeProps = { ... }` local, inline anônimo para casos simples
+- Cada componente em pasta própria com `index.tsx` (exceção: componentes simples na raiz como `CoinIcon.tsx`)
+- Componentes compostos em `UserUI.tsx` exportam funções nomeadas (`export function Chip()`)
+- `'use client'` na primeira linha (após `/* eslint-disable */`) em qualquer arquivo com hooks
+
+#### Páginas (App Router)
+- Estrutura: `/* eslint-disable */` → `'use client'` → imports → sub-componentes → `export default function Page()`
+- **3 estratégias de fetch**: (1) store Zustand (`useEffect` → `store.loadXxx()`) dominante, (2) SWR (`useSessions()`) para listas, (3) chamada direta (`api().then()`) para one-shot
+- Loading: guard clause com `<Loader2>` spinner centralizado (`min-h-[60vh]`)
+- Toast: `const { success, error } = useToast()`
+- Layout página: `max-w-2xl mx-auto px-4 py-6 pt-16 lg:pt-6 space-y-4`
+
+#### Stores (Zustand)
+- Arquivo: `stores/<nome>Store.ts`, export: `use<Nome>Store`
+- Estrutura: `create<NomeStore>((set) => ({ state, actions }))`
+- Loading: `Record<string, boolean>` (`loading: { profile: false, ... }`)
+- Cross-reference: `useXxxStore.getState().method()` / `.setState()`
+- Persistência com `zustand/middleware` `persist`
+- Helpers fora do `create` para evitar recriação
+
+#### API / Services
+- Padrão **dual export**: `xxxApi` objeto + helper functions `.then(res => res.data)`
+- Erro: `apiErrMsg(err, fallback)` de `@/lib/api-error`
+- Axios interceptor: injeta `Authorization` + `X-Room-Token`; logout automático em 401
+
+#### Estilos
+- **Tailwind classes** para estático (layout, espaçamento, tipografia), **inline `style={{}}`** para dinâmico (cores, gradientes, shadows)
+- Ordem classes Tailwind: layout → spacing → sizing → bg/border → typography → effects → interactive → responsive
+- Paleta base: `zinc-950` fundo, `zinc-900` cards, `zinc-800` nested, `zinc-100` texto primário
+- Fontes: `font-jaro` (display/títulos), `font-inconsolata` (corpo/números)
+- Cores acento: `green-400` (moedas), `amber-300/400` (coins), `cyan-300/400` (diamantes), `rose-400` (perigo)
+
+#### Animações (Framer Motion)
+- Variants centralizadas em `@/lib/animations.ts`: `backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`
+- Listas: `<motion.div variants={staggerContainer}>` + `variants={staggerItem}` nos filhos
+- Modais: `<AnimatePresence>` + `backdrop` + `modalBox`
+- Transição página: `mode="wait"` + `fadeIn` + `initial={false}` no layout
+
+### Server
+
+#### Módulos (3 arquivos)
+- `<modulo>.repository.ts` — queries Prisma puras, sem lógica
+- `<modulo>.service.ts` — regras de negócio, transações, `AppError`
+- `<modulo>.controller.ts` — extrai req, chama service, retorna res
+- **Exceções**: `avatar/`, `badge/`, `frames/` só têm service (Cloudinary); `missions/` adiciona generator+templates; `session/` adiciona `reward.service.ts`
+
+#### Repository
+- 2 estilos: **class** (`SessionRepository`) com métodos async ou **object literal** (`missionsRepository = { ... }`)
+- Class-based injetado no service via construtor: `constructor(private repo = new Repo()) {}`
+- Métodos: `find<Entity>`, `find<Entity>ById`, `create<Entity>`, `update<Entity>`, `delete<Entity>`, `upsert<Entity>`, `count<Entity>`
+
+#### Service
+- Sempre `AppError(statusCode, message)` para erros de negócio
+- Status codes: 400 (validação), 401 (auth), 403 (autorização), 404 (não encontrado), 423 (lock), 500 (inesperado)
+- Cross-module: `new MissionsService()` direto no construtor
+- `withLock(resourceId, fn)` para mutex via Redis (fallback single-instance)
+- Transações Prisma:
+  - **Array** `$transaction([...])` — operações independentes sem condicional
+  - **Callback** `$transaction(async (tx) => {...})` — com condicionais, loops, leituras dentro da transação
+
+#### Controller
+- `export const moduloController = { metodo: async (req, res) => { ... } }` — object literal
+- Extração: `req.params`, `req.body`, `req.user?.userId`, `req.roomAccess?.playerId`
+- Zod inline no controller: `CriarSchema.parse(req.body)` ou `z.object({...}).parse(req.body)`
+- ZodError com `parseError(res, err)` helper: trata AppError + ZodError + 500
+- Após mutação: chamar `emitUpdatedSession(sessionId)` do `socket.handler.ts`
+
+#### Middleware chain
+1. `authenticate` — JWT `Authorization: Bearer <token>` → `req.user: { userId, email, isAdmin }`
+2. `requireAdmin` — checa `req.user.isAdmin` (rotas admin)
+3. `authenticateRoom("params", "sessionId")` — cookie/header room token
+4. `validate(schema, "body"|"params"|"query")` — factory que retorna middleware Express (Zod parse)
+
+#### Prisma Patterns
+- `findUnique` com `where` puro (lookup simples)
+- `findMany` com `include` para relations completas
+- `select` para projeção de campos específicos
+- `$transaction` para operações atômicas
+- `upsert` para criar-ou-atualizar
+- `updateMany` / `deleteMany` sem retorno
+- `aggregate` com `_sum` para totais
+
+#### Zod Schemas
+- Compartilhados: `server/src/shared/schemas/<modulo>.schema.ts` — `PascalCase + Schema`
+- Constantes compartilhadas: `server/src/shared/constants/` (avatar, banner, session)
+- Constantes server-only: `server/src/constants/` (raridade)
+- Validação inline no controller (mais comum) ou schema compartilhado (quando reutilizado)
+
+#### Socket Events
+- Nome: `namespace:action` (`session:updated`, `chat:message`, `negotiation:toast`, `player:updated`)
+- Emit após mutação no controller:
+  - `emitUpdatedSession(sessionId)` — invalida cache + reload + broadcast
+  - `emitToPlayer(sessionId, playerId, event, data)` — para jogador específico
+  - `emitToRoom(sessionId, event, data)` — broadcast geral
+  - `emitToUser(userId, event, data)` — para usuário específico (cross-session)
+
+#### Deploy / Migrations
+- `make dev` — rebuild total
+- `npx prisma migrate dev --name <desc>` — nova migration
+- `npm run build` — prisma generate + tsc (server)
+- `npx next build --turbopack` — build client
+- Push com hook pre-push que valida TS + Prisma + migrations

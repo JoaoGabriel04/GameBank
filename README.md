@@ -222,6 +222,24 @@ bash scripts/install-hooks.sh
 
 O hook roda validações rápidas (TypeScript + Prisma + migrations) antes de cada push. A suíte completa roda no CI (GitHub Actions, `.github/workflows/validate.yml`), que dispara o deploy no Render apenas se tudo passar.
 
+## Convenções de código
+
+Regras detalhadas em [AGENTS.md](./AGENTS.md). Resumo:
+
+| Área | Padrão |
+|------|--------|
+| **Componentes** | `export default function` + `type NomeProps` local + `index.tsx` |
+| **Páginas** | `'use client'` → Zustand store → guard loading → `export default function` |
+| **Store** | `create<NomeStore>()` com `loading: Record<string, boolean>` |
+| **API client** | Objeto `xxxApi` + helpers `.then(res => res.data)` |
+| **Server módulo** | 3 arquivos: `repository.ts` → `service.ts` → `controller.ts` |
+| **Repository** | Class ou object literal, queries Prisma puras |
+| **Service** | `AppError` para erros, cross-module via `new Servico()` |
+| **Controller** | Object literal, Zod inline, `parseError()` helper |
+| **Transações** | `$transaction([...])` (array) ou `async (tx) =>` (callback) |
+| **Socket emit** | `emitUpdatedSession(sessionId)` após mutações |
+| **Z-index** | `z-40` navbars, `z-100` header, `z-[200]` modais, `z-[100000]` toast |
+
 ## Licença
 
 MIT
