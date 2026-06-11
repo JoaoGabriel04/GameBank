@@ -77,6 +77,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
           badgeImageUrl={profile.badgeImageUrl ?? user.badgeImageUrl}
           title={profile.title}
           titleAnimated={profile.titleAnimated}
+          titleRaridade={profile.titleRaridade}
           badgeVariant="small"
           className="mt-1 flex-wrap"
         />

@@ -100,6 +100,7 @@ export interface RankingUser {
   totalTop3: number
   title?: string | null
   titleAnimated?: boolean
+  titleRaridade?: string | null
   badge?: string | null
   badgeImageUrl?: string | null
   avatarUrl?: string | null

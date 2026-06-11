@@ -236,6 +236,7 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 - Cada componente em pasta própria com `index.tsx` (exceção: componentes simples na raiz como `CoinIcon.tsx`)
 - Componentes compostos em `UserUI.tsx` exportam funções nomeadas (`export function Chip()`)
 - `'use client'` na primeira linha (após `/* eslint-disable */`) em qualquer arquivo com hooks
+- **Sempre seguir o padrão visual dos cards existentes** (`CosmeticCard`, `CoinPackCard`, `DiamondPackCard`): `button` com `flex flex-col overflow-hidden w-full`, topo com `height: 96` e gradiente radial + glow line, rodapé com `background: "#111113"` + nome `font-jaro text-[13px]` + preço. Novos cards na loja devem replicar exatamente esse layout.
 
 #### Páginas (App Router)
 - Estrutura: `/* eslint-disable */` → `'use client'` → imports → sub-componentes → `export default function Page()`

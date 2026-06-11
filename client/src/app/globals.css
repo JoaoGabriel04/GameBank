@@ -158,6 +158,12 @@
   100% { background-position:  200% center; }
 }
 
+@keyframes gb-legendary-shimmer {
+  0%   { background-position: -200% center; filter: brightness(1); }
+  50%  { filter: brightness(1.4); }
+  100% { background-position:  200% center; filter: brightness(1); }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -170,4 +176,38 @@
   input, select, textarea {
     font-size: 16px !important;
   }
+}
+
+@keyframes pig-shake {
+  0%, 100% { transform: rotate(0deg) scale(1);    }
+  15%       { transform: rotate(-8deg) scale(1.05); }
+  30%       { transform: rotate(8deg)  scale(1.05); }
+  45%       { transform: rotate(-6deg) scale(1.08); }
+  60%       { transform: rotate(6deg)  scale(1.08); }
+  75%       { transform: rotate(-4deg) scale(1.1);  }
+  90%       { transform: rotate(4deg)  scale(1.1);  }
+}
+
+.pig-shaking {
+  animation: pig-shake 0.6s ease-in-out;
+}
+
+/* ── Scrollbars dark mode ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #27272a transparent;
 }

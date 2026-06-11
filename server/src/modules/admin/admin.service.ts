@@ -23,10 +23,24 @@ export class AdminService {
 
   async listItems() {
     const items = await adminRepository.findAllItems();
-    return items.map((item: any) => ({
-      ...item,
-      imageUrl: item.type === "badge" ? (item.badge?.imageUrl ?? null) : item.imageUrl,
-    }));
+    return items.map((item: any) => {
+      let resolvedValue = item.value;
+      let resolvedAnimated = item.animated ?? false;
+      if (item.type === "banner" && item.banner) {
+        resolvedValue = item.banner.css;
+        resolvedAnimated = item.banner.animated;
+      }
+      if (item.type === "frame" && item.frame) {
+        resolvedValue = item.frame.css ?? item.frame.imageUrl;
+        resolvedAnimated = item.frame.animated;
+      }
+      return {
+        ...item,
+        value: resolvedValue,
+        animated: resolvedAnimated,
+        imageUrl: item.type === "badge" ? (item.badge?.imageUrl ?? null) : item.imageUrl,
+      };
+    });
   }
 
   async createItem(data: {
@@ -90,6 +104,9 @@ export class AdminService {
       if (!data.name) throw new AppError(400, "name é obrigatório para itens do tipo title.");
       if (data.type === "title" && data.name && !data.value) {
         payload.value = JSON.stringify({ title: data.name });
+      }
+      if (data.type === "title" && data.animated && data.raridade !== "EPICO" && data.raridade !== "LENDARIO") {
+        throw new AppError(400, "Apenas títulos Épicos e Lendários podem ser animados.");
       }
     }
     return adminRepository.createItem(payload);
@@ -183,6 +200,12 @@ export class AdminService {
       }
     }
 
+    const resultRaridade = data.raridade ?? exists.raridade;
+    const resultAnimated = data.animated !== undefined ? data.animated : (exists.animated ?? false);
+    if (nextType === "title" && resultAnimated && resultRaridade !== "EPICO" && resultRaridade !== "LENDARIO") {
+      throw new AppError(400, "Apenas títulos Épicos e Lendários podem ser animados.");
+    }
+
     return adminRepository.updateItem(id, payload);
   }
 
@@ -211,6 +234,9 @@ export class AdminService {
     if (exists.imagePublicId) {
       await deleteCloudinaryBadge(exists.imagePublicId);
     }
+
+    // Limpa registros de abertura de baú que referenciam este item
+    await adminRepository.deleteBauAberturaItemByItemId(id);
 
     await adminRepository.deleteItem(id);
 

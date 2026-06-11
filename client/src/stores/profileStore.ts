@@ -28,6 +28,7 @@ interface ProfileData {
   totalTop3: number
   title?: string | null
   titleAnimated?: boolean
+  titleRaridade?: string | null
   badge?: string | null
   badgeImageUrl?: string | null
   items: UserItem[]

@@ -23,6 +23,9 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
+  deleteBauAberturaItemByItemId: (itemId: number) =>
+    prisma.bauAberturaItem.deleteMany({ where: { itemId } }),
+
   // Remove item_id from all users' user_items JSONB array
   removeItemFromAllUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`

@@ -2,10 +2,15 @@ import { prisma } from "../lib/prisma.js";
 import propriedades from "../../data/propriedades.json"
 
 const shopItems = [
-  { name: "Título Investidor",    description: "Mostre que você investe bem",          price: 200,  icon: "faChartLine",   type: "title", value: '{"title":"Investidor"}' },
-  { name: "Título Banqueiro",     description: "O dinheiro é com você",                price: 500,  icon: "faBuilding",    type: "title", value: '{"title":"Banqueiro"}' },
-  { name: "Título Magnata",       description: "Propriedades são seu sobrenome",       price: 2000, icon: "faTrophy",      type: "title", value: '{"title":"Magnata"}' },
-  { name: "Título Lendário",      description: "Sua fama ecoa pelo tabuleiro",         price: 5000, icon: "faCrown",      type: "title", value: '{"title":"Lendário"}' },
+  { name: "Título Investidor",    description: "Mostre que você investe bem",          price: 200,  icon: "faChartLine",   type: "title", value: '{"title":"Investidor"}',  raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 5  },
+  { name: "Título Banqueiro",     description: "O dinheiro é com você",                price: 500,  icon: "faBuilding",    type: "title", value: '{"title":"Banqueiro"}',   raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 10 },
+  { name: "Título Magnata",       description: "Propriedades são seu sobrenome",       price: 2000, icon: "faTrophy",      type: "title", value: '{"title":"Magnata"}',     raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 20 },
+  { name: "Título Lendário",      description: "Sua fama ecoa pelo tabuleiro",         price: 5000, icon: "faCrown",      type: "title", value: '{"title":"Lendário"}',    raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 50 },
+  { name: "Medalha de Bronze",    description: "Uma medalha de bronze reluzente",      price: 0,    icon: null,          type: "badge", raridade: "COMUM",              fragmentavel: true, fragmentosTotal: 10 },
+  { name: "Medalha de Prata",     description: "Uma medalha de prata brilhante",       price: 0,    icon: null,          type: "badge", raridade: "INCOMUM",            fragmentavel: true, fragmentosTotal: 25 },
+  { name: "Medalha de Ouro",      description: "Uma medalha de ouro cintilante",       price: 0,    icon: null,          type: "badge", raridade: "RARO",               fragmentavel: true, fragmentosTotal: 40 },
+  { name: "Medalha de Platina",   description: "Uma medalha de platina rara",          price: 0,    icon: null,          type: "badge", raridade: "EPICO",              fragmentavel: true, fragmentosTotal: 60 },
+  { name: "Medalha de Diamante",  description: "Uma medalha de diamante lendária",     price: 0,    icon: null,          type: "badge", raridade: "LENDARIO",           fragmentavel: true, fragmentosTotal: 100 },
 ];
 
 export async function ensureGameData() {

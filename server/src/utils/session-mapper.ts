@@ -42,6 +42,7 @@ export async function mapSessionPlayers<T extends {
     }
     const titleItem = items.find((i: any) => i.equipped && i.type === "title");
     const titleAnimated = titleItem?.animated ?? false;
+    const titleRaridade = titleItem?.raridade ?? null;
     let title: string | null = null;
     if (titleItem?.value) {
       try {
@@ -65,6 +66,7 @@ export async function mapSessionPlayers<T extends {
       badgeImageUrl,
       title,
       titleAnimated,
+      titleRaridade,
       level: user?.level ?? null,
     };
   });

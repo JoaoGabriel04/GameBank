@@ -158,13 +158,19 @@ function BannerBuilder({
           } finally {
             setUploading(false);
           }
+          await updateBanner(editing.id, {
+            nome: nome.trim(),
+            disponibilidade,
+            animated,
+          });
+        } else {
+          await updateBanner(editing.id, {
+            nome: nome.trim(),
+            css: localPreviewUrl ?? gradientCss,
+            disponibilidade,
+            animated,
+          });
         }
-        await updateBanner(editing.id, {
-          nome: nome.trim(),
-          css: localPreviewUrl ?? gradientCss,
-          disponibilidade,
-          animated,
-        });
         ok("Banner atualizado!");
       } else {
         const created = await createBanner({ nome: nome.trim(), css: gradientCss, disponibilidade, animated });

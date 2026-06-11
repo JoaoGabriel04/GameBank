@@ -11,6 +11,7 @@ import { useToast } from "@/components/Toast";
 import { resolveBannerBackground } from "@/constants/banners";
 import { RARIDADES, FRAGMENTOS_SUGERIDOS } from "@/constants/raridade";
 import CoinIcon from "@/components/CoinIcon";
+import UserBanner from "@/components/UserBanner";
 import type { AdminShopItem, Banner as ApiBanner, Frame as ApiFrame, Badge as ApiBadge, ItemInput } from "@/services/api/admin";
 import {
   Chip, Toggle, Segmented, Btn, Field,
@@ -55,109 +56,164 @@ function ItemCard({
   const [confirmDel, setConfirmDel] = useState(false);
   const meta = getTypeMeta(item.type);
   const isBanner = item.type === "banner";
-  const bg = isBanner && item.value ? resolveBannerBackground(item.value) : null;
+  const isFrame = item.type === "frame";
+  const rMeta = item.raridade && RARIDADES[item.raridade] ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? "#52525b";
+  const topBg = !isBanner
+    ? `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`
+    : undefined;
 
   return (
     <div
       className={`relative rounded-2xl border overflow-hidden transition-all bg-zinc-900 ${
         item.available ? "border-zinc-800" : "border-zinc-800/60 opacity-55"
       }`}
-      style={bg ? { ...bg.style, boxShadow: `0 0 30px -14px rgba(34, 211, 238, 0.5)` } : { boxShadow: "none" }}
+      style={{
+        boxShadow: rMeta && rMeta.cor !== "#a1a1aa"
+          ? `0 0 20px -10px ${glowColor}55`
+          : "none",
+      }}
     >
-      {bg && (
-        <div className="absolute inset-0 pointer-events-none bg-zinc-900/60" />
-      )}
-
-      <div className="relative p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className={`w-11 h-11 rounded-xl grid place-items-center bg-zinc-900/70 backdrop-blur-sm text-zinc-200`}>
-            {isBanner ? <ImageIcon size={20} /> : item.type === "title" ? <Crown size={20} /> : <ItemIcon name={item.icon} size={20} />}
-          </div>
+      <div
+        className="relative overflow-hidden flex items-center justify-center"
+        style={{ height: 96, background: topBg }}
+      >
+        {isBanner && (
+          <UserBanner
+            banner={item.value}
+            imageUrl={item.imageUrl}
+            animated={item.animated}
+            className="absolute inset-0 w-full h-full"
+          />
+        )}
+        {item.animated && (
+          <span className="absolute top-1.5 left-1.5 z-10 font-inconsolata uppercase text-[8px] px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-300" style={{ letterSpacing: "0.06em" }}>
+            ✨
+          </span>
+        )}
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
+            opacity: 0.85,
+          }}
+        />
+        <div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1.5">
           <Chip tone={meta.tone}>{meta.label}</Chip>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <h3 className="font-jaro text-base text-zinc-100">{item.name}</h3>
-          {item.animated && (
-            <span className="font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300 shrink-0">✨ anim</span>
+          {rMeta && (
+            <span
+              className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+              style={{
+                color: rMeta.cor,
+                background: `${rMeta.cor}18`,
+                borderColor: `${rMeta.cor}40`,
+                letterSpacing: "0.08em",
+              }}
+            >
+              <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: rMeta.cor }} />
+              {rMeta.label}
+            </span>
           )}
         </div>
-        <p className="font-inconsolata text-[11px] text-zinc-400 mt-0.5 leading-snug line-clamp-2 h-8">
-          {item.description}
-        </p>
+        {!isBanner && (
+          isFrame ? (
+            <div className="relative" style={{ width: 44, height: 44 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
+                👤
+              </div>
+              {(() => {
+                const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                return null;
+              })()}
+            </div>
+          ) : (
+            <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
+              {item.type === "title" && <Crown size={40} />}
+              {item.type === "badge" && item.imageUrl ? (
+                <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+              ) : item.type === "badge" ? (
+                <Shield size={40} />
+              ) : null}
+            </div>
+          )
+        )}
+        <span
+          className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
+          style={{ fontSize: 8, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}
+        >
+          {meta.label}
+        </span>
+      </div>
 
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800/80">
-          <div className="flex items-center gap-1">
-            <Toggle on={item.available} onChange={() => onToggle(item.id)} size="sm" />
-            <span className="font-inconsolata text-[10px] text-zinc-500 ml-1">
-              {item.available ? "ativo" : "inativo"}
-            </span>
+      <div style={{ background: "#111113", borderTop: `1px solid ${glowColor}22` }}>
+        <div className="p-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-jaro text-sm text-zinc-100 truncate">{item.name}</h3>
+            {item.animated && (
+              <span className="font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300 shrink-0">✨ anim</span>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
-            {item.raridade && RARIDADES[item.raridade] && (() => {
-              const r = RARIDADES[item.raridade];
-              return (
+          <p className="font-inconsolata text-[11px] text-zinc-400 mt-0.5 leading-snug line-clamp-2" style={{ minHeight: 32 }}>
+            {item.description}
+          </p>
+
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/80">
+            <div className="flex items-center gap-1">
+              <Toggle on={item.available} onChange={() => onToggle(item.id)} size="sm" />
+              <span className="font-inconsolata text-[10px] text-zinc-500 ml-1">
+                {item.available ? "ativo" : "inativo"}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {item.fragmentavel && (
                 <span
                   className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
                   style={{
-                    color: r.cor,
-                    background: `${r.cor}18`,
-                    borderColor: `${r.cor}40`,
+                    color: "#a78bfa",
+                    borderColor: "#a78bfa44",
+                    background: "#a78bfa11",
                     letterSpacing: "0.08em",
                   }}
                 >
-                  <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: r.cor }} />
-                  {r.label}
+                  🧩 {item.fragmentosTotal ?? "?"} frags
                 </span>
-              );
-            })()}
-            {item.fragmentavel && (
-              <span
-                className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
-                style={{
-                  color: "#a78bfa",
-                  borderColor: "#a78bfa44",
-                  background: "#a78bfa11",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                🧩 {item.fragmentosTotal ?? "?"} frags
-              </span>
-            )}
-            <Chip tone={meta.tone}>{meta.label}</Chip>
-            <button
-              type="button"
-              onClick={() => onEdit(item)}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-zinc-800 cursor-pointer transition-colors"
-            >
-              <Pencil size={13} />
-            </button>
-            {confirmDel ? (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => { setConfirmDel(false); onDelete(item.id); }}
-                  className="text-rose-400 hover:text-rose-300 cursor-pointer p-1"
-                >
-                  <Check size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDel(false)}
-                  className="text-zinc-500 hover:text-white cursor-pointer p-1"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ) : (
+              )}
               <button
                 type="button"
-                onClick={() => setConfirmDel(true)}
-                className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 cursor-pointer transition-colors"
+                onClick={() => onEdit(item)}
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-cyan-400 hover:bg-zinc-800 cursor-pointer transition-colors"
               >
-                <Trash2 size={13} />
+                <Pencil size={13} />
               </button>
-            )}
+              {confirmDel ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmDel(false); onDelete(item.id); }}
+                    className="text-rose-400 hover:text-rose-300 cursor-pointer p-1"
+                  >
+                    <Check size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDel(false)}
+                    className="text-zinc-500 hover:text-white cursor-pointer p-1"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDel(true)}
+                  className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 cursor-pointer transition-colors"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -353,9 +409,11 @@ function ItemModal({
                   />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
+                  {!form.fragmentavel && (
                   <Field label="Preço (coins)">
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
+                  )}
                   <Field label="Ícone">
                     <AdminSelect value={form.icon ?? "image"} onChange={(e) => set("icon", e.target.value)}>
                       <option value="image">image</option>
@@ -390,9 +448,11 @@ function ItemModal({
                   />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
+                  {!form.fragmentavel && (
                   <Field label="Preço (coins)">
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
+                  )}
                   <Field label="Ícone">
                     <AdminSelect value={form.icon ?? "image"} onChange={(e) => set("icon", e.target.value)}>
                       <option value="image">image</option>
@@ -410,9 +470,11 @@ function ItemModal({
                   <AdminTextarea rows={2} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Descrição curta" required />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
+                  {!form.fragmentavel && (
                   <Field label="Preço (coins)">
                     <AdminInput type="number" min={0} value={form.price} onChange={(e) => set("price", +e.target.value)} required />
                   </Field>
+                  )}
                   {form.type === "badge" ? (
                     <Field label="Emblema existente" hint="Crie emblemas via API ou upload direto">
                       <AdminSelect
@@ -480,7 +542,7 @@ function ItemModal({
               <Toggle on={form.available} onChange={(v) => set("available", v)} />
             </div>
 
-            {form.type === "title" && (
+            {form.type === "title" && (form.raridade === "EPICO" || form.raridade === "LENDARIO") && (
               <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
                 <div>
                   <p className="font-inconsolata text-sm text-zinc-200">✨ Animado</p>

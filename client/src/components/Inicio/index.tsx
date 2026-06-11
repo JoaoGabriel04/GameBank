@@ -483,6 +483,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 badgeImageUrl={currentPlayer?.badgeImageUrl}
                 title={currentPlayer?.title}
                 titleAnimated={currentPlayer?.titleAnimated}
+                titleRaridade={currentPlayer?.titleRaridade}
               />
             </div>
             <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer">

@@ -10,6 +10,7 @@ import { webhookRouter } from "./api/routes/webhook.routes.js";
 import { ensureGameData } from "./utils/ensureGameData.js";
 import { seedAdmin } from "./utils/seed-admin.js";
 import { seedDiamondPackages } from "./utils/seed-diamond-packages.js";
+import { seedBaus } from "./utils/seed-baus.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket } from "./lib/socket.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
@@ -109,6 +110,7 @@ async function start() {
   await ensureGameData();
   await seedAdmin();
   await seedDiamondPackages();
+  await seedBaus();
   startNegotiationCleanup();
   startCronJobs();
 

@@ -55,7 +55,7 @@ export function resolveShopItem(item: any) {
 export const shopRepository = {
   findAvailableItems: async () => {
     const items = await prisma.shopItem.findMany({
-      where: { available: true, fragmentavel: false },
+      where: { available: true },
       include: { banner: true, frame: true, badge: true },
     });
     items.sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);

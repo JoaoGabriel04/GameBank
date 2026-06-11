@@ -403,8 +403,20 @@ export class ShopService {
   }
 
   async catalogo(userId: number) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { user_items: true },
+    })
+    const ownedIds = new Set(
+      (parseUserItems(user?.user_items) ?? []).map(r => r.item_id)
+    )
+
     const items = await prisma.shopItem.findMany({
-      where: { available: true, fragmentavel: true },
+      where: {
+        available: true,
+        fragmentavel: true,
+        id: { notIn: Array.from(ownedIds) },
+      },
       include: {
         banner: true,
         frame: true,

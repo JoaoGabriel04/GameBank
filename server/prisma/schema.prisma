@@ -77,6 +77,8 @@ model User {
   auditLogs            AuditLog[]
   userNotifications    UserNotification[]
 
+  bauAberturas BauAbertura[]
+
   @@map("users")
 }
 
@@ -364,7 +366,8 @@ model ShopItem {
   badgeId Int?
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
 
-  fragments UserFragment[]
+  fragments    UserFragment[]
+  bauAberturas BauAberturaItem[]
 
   @@map("loja_itens")
 }
@@ -382,6 +385,49 @@ model UserFragment {
 
   @@unique([userId, itemId])
   @@map("user_fragments")
+}
+
+model Bau {
+  id            Int     @id @default(autoincrement())
+  tipo          String  @unique
+  nome          String
+  descricao     String
+  precoCoins    Int?
+  precoDiamonds Int?
+  ativo         Boolean @default(true)
+
+  aberturas BauAbertura[]
+
+  @@map("baus")
+}
+
+model BauAbertura {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  bauId       Int
+  coinsGanhos Int      @default(0)
+  custoPago   String   // "coins" | "diamonds"
+  valorPago   Int
+  createdAt   DateTime @default(now())
+
+  user  User             @relation(fields: [userId], references: [id])
+  bau   Bau              @relation(fields: [bauId],  references: [id])
+  itens BauAberturaItem[]
+
+  @@map("bau_aberturas")
+}
+
+model BauAberturaItem {
+  id         Int    @id @default(autoincrement())
+  aberturaId Int
+  itemId     Int
+  raridade   String
+  fragmentos Int
+
+  abertura BauAbertura @relation(fields: [aberturaId], references: [id])
+  item     ShopItem    @relation(fields: [itemId],     references: [id])
+
+  @@map("bau_abertura_itens")
 }
 
 model GameResult {

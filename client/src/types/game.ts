@@ -65,6 +65,7 @@ export interface Player {
   badgeImageUrl?: string | null;
   title?: string | null;
   titleAnimated?: boolean;
+  titleRaridade?: string | null;
   frame?: string | null;
   frameType?: "image" | "gradient" | null;
   frameAnimated?: boolean;

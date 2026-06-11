@@ -41,6 +41,7 @@ export class RankingService {
         }
       }
       const titleAnimated = equippedTitleItem?.animated ?? false;
+      const titleRaridade = equippedTitleItem?.raridade ?? null;
       const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
       const bannerAnimated = equippedBannerItem?.animated ?? false;
       const equippedFrameItem = items.find((i) => i.equipped && i.type === "frame") as { value?: string | null; animated?: boolean; frameTipo?: string | null; frameAnimated?: boolean; frameScale?: number | null } | undefined;
@@ -74,6 +75,7 @@ export class RankingService {
         frameScale: equippedFrameItem?.frameScale ?? 145,
         title: parsedTitle?.title || null,
         titleAnimated,
+        titleRaridade,
         badge: parsedBadge?.badge || null,
         badgeImageUrl,
       };

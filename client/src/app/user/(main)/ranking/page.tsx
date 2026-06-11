@@ -119,6 +119,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
           badgeImageUrl={player.badgeImageUrl}
           title={player.title}
           titleAnimated={player.titleAnimated}
+          titleRaridade={player.titleRaridade}
           badgeVariant="small"
           className="mt-1 flex-wrap"
         />
@@ -221,6 +222,7 @@ function Podium({
               badgeImageUrl={p.badgeImageUrl}
               title={p.title}
               titleAnimated={p.titleAnimated}
+                            titleRaridade={p.titleRaridade}
               badgeVariant="micro"
               className="justify-center"
             />
@@ -368,6 +370,7 @@ frameScale={p.frameScale ?? 145}
                         badgeImageUrl={p.badgeImageUrl}
                         title={p.title}
                         titleAnimated={p.titleAnimated}
+                            titleRaridade={p.titleRaridade}
                         badgeVariant="micro"
                         className={`${isMe ? "text-green-300" : "text-zinc-200"}`}
                       />

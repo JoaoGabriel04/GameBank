@@ -4,10 +4,12 @@ import type { Raridade, ShopItem } from '@/types/shop'
 export interface CatalogoItem {
   id: number
   name: string
+  description: string
   type: string
   value: string | null
   icon: string | null
   raridade: Raridade
+  fragmentavel?: boolean
   fragmentosTotal: number | null
   fragmentosIcone: string | null
   imageUrl: string | null

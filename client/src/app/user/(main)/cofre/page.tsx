@@ -3,13 +3,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp, shimmerTitleStyle } from "@/lib/animations";
+import { staggerContainer, staggerItem, backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { equipShopItemApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
+import LegendaryTitle from "@/components/LegendaryTitle";
 import { Chip } from "@/components/user/UserUI";
 import { RARIDADES } from "@/constants/raridade";
 import type { UserItem } from "@/types/shop";
@@ -177,15 +178,15 @@ function DetailPanel({
   const isFrame   = item.type === "frame";
 
   return (
-    <div className="flex flex-col gap-4 p-5 overflow-y-auto h-full">
+    <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-5 overflow-y-auto h-full">
       <div className="flex items-start justify-between gap-2.5">
-        {isBanner && item.value ? (
+        {isBanner ? (
           <UserBanner
             banner={item.value}
             imageUrl={item.imageUrl}
             animated={item.animated}
             className="flex-1 rounded-2xl"
-            style={{ height: 72 }}
+            style={{ height: 64 }}
           />
         ) : isFrame ? (
           <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
@@ -221,20 +222,24 @@ function DetailPanel({
               </div>
               <div className="min-w-0">
                 <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
-                <div className="mt-0.5">
-                  {(() => {
-                    const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
-                    return item.animated ? (
-                      <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
-                        {titleText}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
-                        {titleText}
-                      </span>
-                    );
-                  })()}
-                </div>
+                    <div className="mt-0.5">
+                      {(() => {
+                        const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
+                        if (!item.animated) return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                            {titleText}
+                          </span>
+                        );
+                        if (item.raridade === "LENDARIO") return (
+                          <LegendaryTitle text={titleText ?? ""} />
+                        );
+                        return (
+                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
+                            {titleText}
+                          </span>
+                        );
+                      })()}
+                    </div>
               </div>
             </div>
           </div>

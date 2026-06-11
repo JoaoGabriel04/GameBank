@@ -123,6 +123,7 @@ export default function PlayerCard({
             badgeImageUrl={player.badgeImageUrl}
             title={player.title}
             titleAnimated={player.titleAnimated}
+            titleRaridade={player.titleRaridade}
             badgeVariant="small"
           />
           {isMe && (

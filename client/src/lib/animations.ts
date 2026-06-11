@@ -12,6 +12,18 @@ export const shimmerTitleStyle: CSSProperties = {
   display: "inline-block",
 };
 
+export const legendaryTitleStyle: CSSProperties = {
+  background: "linear-gradient(90deg, #fbbf24 0%, #f59e0b 15%, #fde68a 30%, #fbbf24 50%, #f59e0b 65%, #fde68a 80%, #fbbf24 100%)",
+  backgroundSize: "200% auto",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text",
+  color: "transparent",
+  animation: "gb-legendary-shimmer 4s ease-in-out infinite",
+  display: "inline-block",
+  textShadow: "0 0 20px rgba(251,191,36,0.3), 0 0 40px rgba(245,158,11,0.15)",
+};
+
 export const backdrop: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },

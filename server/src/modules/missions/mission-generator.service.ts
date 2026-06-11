@@ -48,6 +48,12 @@ function getExpiresAt(tipo: "daily" | "weekly"): Date {
 }
 
 export async function gerarMissoesParaUsuario(userId: number) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  })
+  if (!user) return
+
   const now = new Date()
 
   const existingDaily = await prisma.userMission.findMany({

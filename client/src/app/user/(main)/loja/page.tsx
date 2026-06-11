@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitleStyle } from "@/lib/animations";
+import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -11,15 +11,25 @@ import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDi
 import type { CatalogoItem } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
+import LegendaryTitle from "@/components/LegendaryTitle";
 import CoinIcon from "@/components/CoinIcon";
 import DiamondIcon from "@/components/DiamondIcon";
 import { Chip } from "@/components/user/UserUI";
 import type { ShopItem } from "@/types/shop";
-import { RARIDADES } from "@/constants/raridade";
+import { RARIDADES, raridadeWeight } from "@/constants/raridade";
 import { apiErrMsg } from "@/lib/api-error";
+import { getBausApi, abrirBauApi } from "@/services/api/baus";
+import BauCard from "@/components/BauCard";
+import BauDetailModal from "@/components/BauDetailModal";
+import BauResultadoModal from "@/components/BauResultadoModal";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 type ItemType = "title" | "badge" | "banner" | "frame";
+
+interface FragmentItem extends CatalogoItem {
+  fragmentavel: true
+  fragmentosTotal: number
+}
 
 interface CoinPack {
   id: string;
@@ -94,9 +104,11 @@ function SectionHeader({
 function CosmeticCard({
   item,
   onSelect,
+  fragData,
 }: {
   item: ShopItem;
   onSelect: (item: ShopItem) => void;
+  fragData?: { atual: number; total: number } | null;
 }) {
   const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
   const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
@@ -196,10 +208,32 @@ function CosmeticCard({
         style={{ background: "#111113", borderTop: `1px solid ${glowColor}22` }}
       >
         <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{item.name}</p>
-        <span className="inline-flex items-center gap-1 font-jaro text-[13px] text-amber-300">
-          <CoinIcon size={11} className="text-amber-400" />
-          {item.price.toLocaleString("pt-BR")}
-        </span>
+        {fragData ? (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between font-inconsolata text-[11px]">
+              <span style={{ color: glowColor }}>
+                🧩 {fragData.atual}/{fragData.total}
+              </span>
+              <span className="text-zinc-600">
+                {Math.round((fragData.atual / fragData.total) * 100)}%
+              </span>
+            </div>
+            <div className="bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (fragData.atual / fragData.total) * 100)}%`,
+                  background: glowColor,
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <span className="inline-flex items-center gap-1 font-jaro text-[13px] text-amber-300">
+            <CoinIcon size={11} className="text-amber-400" />
+            {item.price.toLocaleString("pt-BR")}
+          </span>
+        )}
       </div>
     </button>
     </motion.div>
@@ -379,7 +413,7 @@ function DetailSheet({
         exit="exit"
       >
         <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
-        <div className="flex flex-col gap-4 p-5 pb-8">
+        <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-8">
 
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
@@ -408,12 +442,16 @@ function DetailSheet({
                     <div className="mt-0.5">
                       {(() => {
                         const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
-                        return item.animated ? (
-                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
+                        if (!item.animated) return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
                             {titleText}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                        );
+                        if (item.raridade === "LENDARIO") return (
+                          <LegendaryTitle text={titleText ?? ""} />
+                        );
+                        return (
+                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>
                             {titleText}
                           </span>
                         );
@@ -503,6 +541,157 @@ function DetailSheet({
   );
 }
 
+/* ─── Fragment detail bottom sheet ──────────────────────────────────────── */
+function FragmentDetailSheet({
+  data,
+  onClose,
+}: {
+  data: { item: FragmentItem; atual: number; total: number } | null;
+  onClose: () => void;
+}) {
+  if (!data) return null;
+
+  const item   = data.item;
+  const meta   = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
+  const accent = rMeta?.cor ?? meta.color;
+  const isBanner = item.type === "banner";
+  const isFrame  = item.type === "frame";
+  const progress = data.total > 0 ? Math.min(100, (data.atual / data.total) * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        variants={backdrop}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl overflow-y-auto"
+        style={{ maxHeight: "72vh" }}
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        exit="exit"
+      >
+        <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
+        <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-8">
+
+          <div className="flex items-start justify-between gap-3">
+            {isBanner && item.value ? (
+              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+            ) : isFrame ? (
+              <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
+                  👤
+                </div>
+                {(() => {
+                  const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                  return null;
+                })()}
+              </div>
+            ) : item.type === "title" ? (
+              <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800">
+                <div className="h-7 bg-gradient-to-r from-zinc-800 to-zinc-900" />
+                <div className="px-3 py-2 flex items-center gap-2 bg-zinc-900/80">
+                  <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-xs text-zinc-500">👤</div>
+                  <div className="min-w-0">
+                    <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
+                    <div className="mt-0.5">
+                      {(() => {
+                        const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
+                        if (!item.animated) return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">{titleText}</span>
+                        );
+                        if (item.raridade === "LENDARIO") return (
+                          <LegendaryTitle text={titleText ?? ""} />
+                        );
+                        return (
+                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>{titleText}</span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
+                style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}
+              >
+                {item.type === "badge"  && item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" className="w-8 h-8 object-contain" />
+                ) : item.type === "badge" ? (
+                  <Shield size={26} />
+                ) : item.type === "banner" && <ImageIcon size={26} />}
+              </div>
+            )}
+            <button type="button" onClick={onClose}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div>
+            <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
+            <div className="flex gap-1.5 flex-wrap">
+              <Chip tone={meta.tone}>{meta.label}</Chip>
+              {rMeta && (
+                <span
+                  className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+                  style={{ color: accent, background: accent + "18", borderColor: accent + "40", letterSpacing: "0.08em" }}
+                >
+                  <span className="w-[5px] h-[5px] rounded-full inline-block" style={{ background: accent }} />
+                  {rMeta.label}
+                </span>
+              )}
+            </div>
+            {item.description && (
+              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
+            )}
+          </div>
+
+          <div className="border-t border-zinc-800" />
+
+          {/* Fragmentos progresso */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between font-inconsolata text-xs">
+              <span className="text-zinc-500">Fragmentos</span>
+              <span style={{ color: accent }}>{data.atual}/{data.total}</span>
+            </div>
+            <div className="bg-zinc-800 rounded-full h-2 overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                style={{ background: accent }}
+              />
+            </div>
+            <p className="font-inconsolata text-[10px] text-zinc-600 leading-relaxed">
+              {data.atual >= data.total
+                ? "Item desbloqueado! ⭐"
+                : `Faltam ${data.total - data.atual} fragmentos para desbloquear este item. Continue abrindo baús para coletar mais fragmentos.`}
+            </p>
+          </div>
+
+          <div className="bg-zinc-900/50 rounded-xl px-4 py-3 border border-zinc-800/50">
+            <p className="font-inconsolata text-[11px] text-zinc-500 leading-relaxed">
+              🎁 Fragmentos são obtidos ao abrir baús na seção <strong className="text-zinc-300">Baús</strong> acima.
+              Cada baú concede fragmentos dos itens que vierem no sorteio.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ─── 3-column animated grid ────────────────────────────────────────────── */
 function Grid3({ children }: { children: React.ReactNode }) {
   return (
@@ -575,8 +764,8 @@ function CoinConfirmModal({
 
           <div className="flex items-center justify-between font-inconsolata text-xs px-0.5">
             <span className="text-zinc-500">Seu saldo</span>
-            <span className={canAfford ? "text-zinc-400" : "text-rose-400"}>
-              {userDiamonds.toLocaleString("pt-BR")} 💎
+            <span className={`inline-flex items-center gap-1 ${canAfford ? "text-zinc-400" : "text-rose-400"}`}>
+              {userDiamonds.toLocaleString("pt-BR")} <DiamondIcon size={14} />
             </span>
           </div>
 
@@ -882,6 +1071,7 @@ export default function LojaPage() {
   const { success, error } = useToast();
 
   const [selected, setSelected]             = useState<ShopItem | null>(null);
+  const [selectedFragment, setSelectedFragment] = useState<{ item: FragmentItem; atual: number; total: number } | null>(null);
   const [buying, setBuying]                 = useState(false);
   const [buyingCoin, setBuyingCoin]         = useState(false);
   const [coinConfirm, setCoinConfirm]       = useState<CoinPack | null>(null);
@@ -890,6 +1080,11 @@ export default function LojaPage() {
   const [mpModal, setMpModal]               = useState<"success" | "failed" | "pending" | "expired" | null>(null);
   const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
   const [countdown, setCountdown]           = useState<string>("");
+
+  const [baus, setBaus]                     = useState<any[]>([]);
+  const [abrindo, setAbrindo]               = useState<string | null>(null);
+  const [resultado, setResultado]           = useState<any>(null);
+  const [bauDetalhes, setBauDetalhes]       = useState<any>(null);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -903,6 +1098,25 @@ export default function LojaPage() {
         .finally(() => setLoadingCatalogo(false));
     }
   }, [token, profile, shopItems.length, loadProfile, loadShopItems]);
+
+  useEffect(() => {
+    getBausApi().then(setBaus).catch(() => setBaus([]));
+  }, []);
+
+  async function handleAbrirBau(tipo: string) {
+    if (abrindo) return;
+    setAbrindo(tipo);
+    setBauDetalhes(null);
+    try {
+      const res = await abrirBauApi(tipo);
+      setResultado(res);
+      loadProfile();
+    } catch (err) {
+      error(apiErrMsg(err, "Erro ao abrir baú"));
+    } finally {
+      setAbrindo(null);
+    }
+  }
 
   const [coins, setCoins]             = useState<number | null>(null);
   const [diamonds, setDiamonds]       = useState<number | null>(null);
@@ -1012,15 +1226,31 @@ export default function LojaPage() {
     [profile?.items]
   );
 
-  const available = useMemo(
-    () => shopItems.filter(i => i.available && !ownedIds.has(i.id)),
+  const nonFragment = useMemo(
+    () => shopItems.filter(i => i.available && !ownedIds.has(i.id) && !i.fragmentavel),
     [shopItems, ownedIds]
   );
 
-  const titles  = available.filter(i => i.type === "title");
-  const badges  = available.filter(i => i.type === "badge");
-  const banners = available.filter(i => i.type === "banner");
-  const frames  = available.filter(i => i.type === "frame");
+  const fragmentItems = useMemo(
+    () => catalogo.filter((i): i is FragmentItem =>
+      i.fragmentavel === true && i.fragmentosTotal != null && !ownedIds.has(i.id)
+    ),
+    [catalogo, ownedIds]
+  );
+
+  function categoryItems(type: ItemType) {
+    const coin = nonFragment.filter(i => i.type === type).sort((a, b) => {
+      const wa = raridadeWeight(a.raridade);
+      const wb = raridadeWeight(b.raridade);
+      return wa !== wb ? wa - wb : a.name.localeCompare(b.name);
+    });
+    const frag = fragmentItems.filter(i => i.type === type).sort((a, b) => {
+      const wa = raridadeWeight(a.raridade);
+      const wb = raridadeWeight(b.raridade);
+      return wa !== wb ? wa - wb : a.name.localeCompare(b.name);
+    });
+    return { coin, frag };
+  }
 
   async function handleBuyCosmetic(item: ShopItem) {
     setBuying(true);
@@ -1039,7 +1269,7 @@ export default function LojaPage() {
 
   async function handleBuyCoinPack(pack: CoinPack) {
     if (userDiamonds < pack.price) {
-      error(`Você precisa de ${pack.price} 💎 para comprar este pacote.`);
+      error(`Você precisa de ${pack.price} diamantes para comprar este pacote.`);
       setCoinConfirm(null);
       return;
     }
@@ -1100,34 +1330,113 @@ export default function LojaPage() {
 
 
       {/* Títulos */}
-      {titles.length > 0 && (
-        <section className="mb-10">
-          <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${titles.length} disponíveis`} />
-          <Grid3>{titles.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
-        </section>
-      )}
+      {(() => {
+        const { coin, frag } = categoryItems("title");
+        const total = coin.length + frag.length;
+        if (!total) return null;
+        return (
+          <section className="mb-10">
+            <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${total} disponíveis`} />
+            <Grid3>
+              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
+              {frag.map(i => (
+                <CosmeticCard
+                  key={i.id}
+                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
+                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
+                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
+                />
+              ))}
+            </Grid3>
+          </section>
+        );
+      })()}
 
       {/* Emblemas */}
-      {badges.length > 0 && (
-        <section className="mb-10">
-          <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${badges.length} disponíveis`} />
-          <Grid3>{badges.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
-        </section>
-      )}
+      {(() => {
+        const { coin, frag } = categoryItems("badge");
+        const total = coin.length + frag.length;
+        if (!total) return null;
+        return (
+          <section className="mb-10">
+            <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${total} disponíveis`} />
+            <Grid3>
+              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
+              {frag.map(i => (
+                <CosmeticCard
+                  key={i.id}
+                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
+                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
+                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
+                />
+              ))}
+            </Grid3>
+          </section>
+        );
+      })()}
 
       {/* Banners */}
-      {banners.length > 0 && (
-        <section className="mb-10">
-          <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${banners.length} disponíveis`} />
-          <Grid3>{banners.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
-        </section>
-      )}
+      {(() => {
+        const { coin, frag } = categoryItems("banner");
+        const total = coin.length + frag.length;
+        if (!total) return null;
+        return (
+          <section className="mb-10">
+            <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${total} disponíveis`} />
+            <Grid3>
+              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
+              {frag.map(i => (
+                <CosmeticCard
+                  key={i.id}
+                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
+                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
+                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
+                />
+              ))}
+            </Grid3>
+          </section>
+        );
+      })()}
 
       {/* Molduras */}
-      {frames.length > 0 && (
+      {(() => {
+        const { coin, frag } = categoryItems("frame");
+        const total = coin.length + frag.length;
+        if (!total) return null;
+        return (
+          <section className="mb-10">
+            <SectionHeader label="Molduras" icon={ImageIcon} color="#22d3ee" sub={`${total} disponíveis`} />
+            <Grid3>
+              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
+              {frag.map(i => (
+                <CosmeticCard
+                  key={i.id}
+                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
+                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
+                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
+                />
+              ))}
+            </Grid3>
+          </section>
+        );
+      })()}
+
+      {/* Baús */}
+      {baus.length > 0 && (
         <section className="mb-10">
-          <SectionHeader label="Molduras" icon={ImageIcon} color="#22d3ee" sub={`${frames.length} disponíveis`} />
-          <Grid3>{frames.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}</Grid3>
+          <SectionHeader label="Baús" icon={Sparkles} color="#a78bfa" />
+          <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
+            Abra baús para ganhar Coins e fragmentos de itens exclusivos
+          </p>
+          <Grid3>
+            {baus.map(bau => (
+              <BauCard
+                key={bau.tipo}
+                bau={bau}
+                onAbrir={setBauDetalhes}
+              />
+            ))}
+          </Grid3>
         </section>
       )}
 
@@ -1135,7 +1444,7 @@ export default function LojaPage() {
       <section className="mb-10">
         <SectionHeader label="Coins" icon={Coins} color="#fbbf24" sub={`seu saldo: ${userCoins.toLocaleString("pt-BR")}`} />
         <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
-          Compre coins com seus 💎 Diamantes.
+          Compre coins com seus <DiamondIcon size={12} className="inline align-middle" /> Diamantes.
         </p>
         <Grid3>
           {COIN_PACKS.map(p => (
@@ -1146,7 +1455,7 @@ export default function LojaPage() {
 
       {/* Diamantes */}
       <section className="mb-10">
-        <SectionHeader label="Diamantes" icon={Sparkles} color="#22d3ee" sub={`seu saldo: ${userDiamonds} 💎`} />
+        <SectionHeader label="Diamantes" icon={Sparkles} color="#22d3ee" sub={`seu saldo: ${userDiamonds}`} />
         <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
           Diamantes são a moeda premium do GameBank. Compra 100% segura.
         </p>
@@ -1157,104 +1466,6 @@ export default function LojaPage() {
         </Grid3>
       </section>
 
-      {/* Catálogo — itens fragmentáveis */}
-      {catalogo.length > 0 && (
-        <section className="mb-10">
-          <SectionHeader label="Catálogo — itens via fragmentos" icon={Sparkles} color="#a78bfa" />
-          <p className="font-inconsolata text-[11px] text-zinc-600 mb-3">
-            Estes itens só podem ser obtidos abrindo baús de fragmentos.
-          </p>
-          <div className="grid grid-cols-1 gap-3">
-            {catalogo.map((item) => {
-              const r = RARIDADES[item.raridade];
-              const pct = item.fragmentosTotal ? Math.min(100, (item.fragmentosAtuais / item.fragmentosTotal) * 100) : 0;
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {item.type === "badge" && item.imageUrl && (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          style={{ width: 40, height: 40, objectFit: "contain", borderRadius: 8, flexShrink: 0 }}
-                        />
-                      )}
-                      {item.type === "banner" && item.value && (
-                        <UserBanner
-                          banner={item.value}
-                          animated={item.animated}
-                          className="h-10 rounded-lg"
-                          style={{ width: 80, flexShrink: 0 }}
-                        />
-                      )}
-                      {item.type === "frame" && item.value && (
-                        <div className="relative shrink-0" style={{ width: 40, height: 40 }}>
-                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, color: "#71717a" }}>
-                            👤
-                          </div>
-                          {(() => {
-                            const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                            if (src) return (
-                              <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
-                            );
-                            if (item.value) return (
-                              <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
-                            );
-                            return null;
-                          })()}
-                        </div>
-                      )}
-                      {item.type === "title" && (
-                        <span className={item.animated ? "gb-title-shimmer" : ""} style={{ fontSize: 14, fontWeight: 500, color: "#f4f4f5", flexShrink: 0 }}>
-                          {item.name}
-                        </span>
-                      )}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-inconsolata text-sm text-zinc-200 truncate">{item.name}</p>
-                        {r && (
-                          <span
-                            className="font-inconsolata uppercase text-[9px] px-1.5 py-0.5 rounded border"
-                            style={{
-                              color: r.cor, background: `${r.cor}18`, borderColor: `${r.cor}40`,
-                            }}
-                          >
-                            ● {r.label}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="font-inconsolata text-[11px] text-zinc-500">
-                          🧩 {item.fragmentosAtuais} / {item.fragmentosTotal}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="shrink-0 w-20">
-                    <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, background: r?.cor ?? "#9ca3af" }}
-                      />
-                    </div>
-                  </div>
-                  {item.fragmentosAtuais >= (item.fragmentosTotal ?? Infinity) && (
-                    <button
-                      type="button"
-                      className="shrink-0 font-inconsolata text-[10px] px-2.5 py-1.5 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 transition-colors cursor-pointer"
-                    >
-                      ✨ Resgatar
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       <AnimatePresence>
         {selected && (
           <DetailSheet
@@ -1263,6 +1474,15 @@ export default function LojaPage() {
             onClose={() => setSelected(null)}
             onBuy={handleBuyCosmetic}
             buying={buying}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedFragment && (
+          <FragmentDetailSheet
+            data={selectedFragment}
+            onClose={() => setSelectedFragment(null)}
           />
         )}
       </AnimatePresence>
@@ -1299,6 +1519,18 @@ export default function LojaPage() {
         {mpModal === "expired"  && <MPExpiredModal  onClose={handleCloseMpModal} />}
         {mpModal === "pending"  && <MPPendingModal  countdown={countdown} onCancel={handleCancelPending} />}
       </AnimatePresence>
+
+      <BauDetailModal
+        bau={bauDetalhes}
+        onClose={() => setBauDetalhes(null)}
+        onAbrir={handleAbrirBau}
+        abrindo={abrindo !== null}
+      />
+
+      <BauResultadoModal
+        resultado={resultado}
+        onClose={() => setResultado(null)}
+      />
     </div>
   );
 }
