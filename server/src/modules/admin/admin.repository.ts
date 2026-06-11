@@ -398,6 +398,14 @@ export const adminRepository = {
 
   deleteUser: (id: number) =>
     prisma.$transaction(async (tx) => {
+      await tx.bauAberturaItem.deleteMany({ where: { abertura: { userId: id } } });
+      await tx.bauAbertura.deleteMany({ where: { userId: id } });
+      await tx.diamondTransaction.deleteMany({ where: { userId: id } });
+      await tx.diamondPurchase.deleteMany({ where: { userId: id } });
+      await tx.bauAdquirido.deleteMany({ where: { userId: id } });
+      await tx.coinTransaction.deleteMany({ where: { userId: id } });
+      await tx.userFragment.deleteMany({ where: { userId: id } });
+      await tx.userNotification.deleteMany({ where: { userId: id } });
       await tx.auditLog.updateMany({ where: { userId: id }, data: { userId: null } });
       await tx.session.updateMany({ where: { ownerId: id }, data: { ownerId: null } });
       await tx.sessionPlayer.updateMany({ where: { userId: id }, data: { userId: null } });
