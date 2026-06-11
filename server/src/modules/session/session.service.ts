@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
 import { MissionsService } from "../missions/missions.service.js";
 import { RankingService } from "../ranking/ranking.service.js";
+import { BauService } from "../bau/bau.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
 import { addXp } from "../../utils/level.js";
@@ -480,6 +481,7 @@ export class SessionService {
 
   private missionService = new MissionsService();
   private rankingService = new RankingService();
+  private bauService = new BauService();
 
   async endSession(sessionId: number, userId?: number, isAdmin = false) {
     if (userId && !isAdmin) {
@@ -598,6 +600,24 @@ export class SessionService {
 
     // Invalida cache do ranking — XP/level dos jogadores mudou
     this.rankingService.invalidateCache().catch(() => {});
+
+    // Concede baús por posição (falha silenciosa, fora da transação)
+    for (const entry of ranked) {
+      const p = entry.player;
+      if (!p.userId) continue;
+      const reward = rewardByPlayer.get(p.id);
+      const teveRecompensa = (reward?.coins ?? 0) > 0 || (reward?.xp ?? 0) > 0;
+      if (!teveRecompensa) continue;
+      try {
+        if (entry.position === 1) {
+          await this.bauService.concederBauPartida(p.userId, "premium", sessionId, 1);
+        } else if (entry.position === 2) {
+          await this.bauService.concederBauPartida(p.userId, "comum", sessionId, 2);
+        }
+      } catch (e) {
+        console.error("Erro ao conceder baú:", e);
+      }
+    }
 
     // Track cumulative missions (non-critical, after transaction)
     for (const entry of ranked) {

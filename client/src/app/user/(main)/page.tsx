@@ -12,6 +12,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
+import { useBauStore } from "@/stores/bauStore";
 import { useSessions } from "@/hooks/useApi";
 import { getProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
@@ -23,6 +24,9 @@ import {
 } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import type { GameResult } from "@/types/shop";
+import type { BauResultado } from "@/components/BauAbertura";
+import BauAbertura from "@/components/BauAbertura";
+import BauAdquiridoCard from "@/components/BauAdquiridoCard";
 
 /* --- Profile hero -------------------------------------------------------- */
 function ProfileHero() {
@@ -331,6 +335,57 @@ function RecentGames({ history }: { history: GameResult[] }) {
   );
 }
 
+/* --- Cofres adquiridos --------------------------------------------------- */
+function CofresSection() {
+  const { adquiridos, loadAdquiridos, abrirAdquirido } = useBauStore();
+  const [resultado, setResultado] = useState<BauResultado | null>(null);
+
+  useEffect(() => { loadAdquiridos(); }, [loadAdquiridos]);
+
+  const visiveis = adquiridos.slice(0, 4);
+  const slots = Array.from({ length: 4 }, (_, i) => visiveis[i] ?? null);
+
+  return (
+    <>
+      <Panel flush>
+        <PanelHead title="Cofres adquiridos" sub="Ganhos em partidas" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
+          {slots.map((b, i) =>
+            b ? (
+              <BauAdquiridoCard
+                key={b.id}
+                bau={b}
+                onAbrir={async () => {
+                  try {
+                    const res = await abrirAdquirido(b.id);
+                    setResultado(res);
+                  } catch {}
+                }}
+              />
+            ) : (
+              <div
+                key={`empty-${i}`}
+                className="flex flex-col items-center justify-center gap-2 rounded-xl p-3 text-center"
+                style={{ background: "#111113", border: "1px dashed #27272a", minHeight: 152 }}
+              >
+                <span className="font-inconsolata text-[11px] text-zinc-600 leading-relaxed">
+                  Ganhe Cofres<br />ganhando partidas
+                </span>
+              </div>
+            )
+          )}
+        </div>
+      </Panel>
+      {resultado && (
+        <BauAbertura
+          resultado={resultado}
+          onClose={() => { setResultado(null); loadAdquiridos(); }}
+        />
+      )}
+    </>
+  );
+}
+
 /* --- Page ---------------------------------------------------------------- */
 export default function DashboardPage() {
   const { user, token, loadFromStorage } = useAuthStore();
@@ -377,6 +432,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
       <QuickActions activeSession={activeSession} />
+      <CofresSection />
       <LiveSessions sessions={sessions ?? []} activeSessionId={activeSession?.id} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MissionsPreview />

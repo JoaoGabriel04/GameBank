@@ -25,6 +25,18 @@ export async function calcularRecompensa(input: RewardInput): Promise<RewardResu
   const breakdown: string[] = [];
   let penaltyReason: string | null = null;
 
+  if (process.env.DISABLE_ANTI_FARM === "true") {
+    const baseReward = cfg.byPosition[position] ?? cfg.default;
+    return {
+      coins: baseReward.coins,
+      xp: baseReward.xp,
+      activityScore: 999,
+      multiplier: 1,
+      penaltyReason: null,
+      breakdown: ["Anti-farm desabilitado (DISABLE_ANTI_FARM=true)"],
+    }
+  }
+
   // 1. Posição tem recompensa?
   const baseReward = cfg.byPosition[position] ?? cfg.default;
   breakdown.push(`Base: ${baseReward.coins} coins, ${baseReward.xp} XP (${position}º lugar)`);

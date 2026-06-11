@@ -67,6 +67,50 @@ export const bauRepository = {
     include: { itens: true },
   }),
 
+  findBauAdquiridos: (userId: number) =>
+    prisma.bauAdquirido.findMany({
+      where: { userId, openedAt: null },
+      orderBy: { createdAt: "desc" },
+      include: { bau: { select: { id: true, tipo: true, nome: true } } },
+    }),
+
+  findBauAdquiridoById: (id: number) =>
+    prisma.bauAdquirido.findUnique({
+      where: { id },
+      include: { bau: { select: { id: true, tipo: true, nome: true } } },
+    }),
+
+  countBauAdquiridosToday: (userId: number) => {
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    return prisma.bauAdquirido.count({
+      where: { userId, createdAt: { gte: hoje } },
+    })
+  },
+
+  createBauAdquirido: (data: {
+    userId: number; bauId: number; sessionId?: number; position?: number; unlockAt: Date
+  }) => prisma.bauAdquirido.create({ data }),
+
+  updateBauAdquiridoOpened: (id: number) =>
+    prisma.bauAdquirido.update({
+      where: { id },
+      data: { openedAt: new Date() },
+    }),
+
+  deleteBauAdquiridoOld: (userId: number) => {
+    const limite = new Date(Date.now() - 5 * 60 * 1000)
+    return prisma.bauAdquirido.deleteMany({
+      where: { userId, openedAt: { not: null, lt: limite } },
+    })
+  },
+
+  unlockBauAdquiridos: (userId: number) =>
+    prisma.bauAdquirido.updateMany({
+      where: { userId, status: "BLOQUEADO", unlockAt: { lte: new Date() } },
+      data: { status: "PRONTO" },
+    }),
+
   findHistoricoUsuario: (userId: number) =>
     prisma.bauAbertura.findMany({
       where: { userId },

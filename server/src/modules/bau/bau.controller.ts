@@ -40,4 +40,26 @@ export const bauController = {
       parseError(res, err)
     }
   },
+
+  adquiridos: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId
+      const lista = await bauService.listarAdquiridos(userId)
+      res.json(lista)
+    } catch (err) {
+      parseError(res, err)
+    }
+  },
+
+  abrirAdquirido: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId
+      const id = Number(req.params.id)
+      const resultado = await bauService.abrirAdquirido(userId, id)
+      emitToUser(userId, "bau:aberto", resultado)
+      res.json(resultado)
+    } catch (err) {
+      parseError(res, err)
+    }
+  },
 }

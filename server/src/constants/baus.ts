@@ -98,3 +98,11 @@ export const BAU_CONFIG: Record<string, BauConfigEntry> = {
 }
 
 export type TipoBau = keyof typeof BAU_CONFIG
+
+export const BAU_TEMPO_ESCOLTA: Record<string, number> = {
+  comum:    10,
+  premium:  180,
+  lendario: 1440,
+}
+
+export const MAX_BAUS_PARTIDA_POR_DIA = 4
