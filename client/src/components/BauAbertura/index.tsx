@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { RARIDADES, RARIDADE_FUNDO, RARIDADE_DELAY } from "@/constants/raridade"
+import { RARIDADES } from "@/constants/raridade"
 import BauItemPreview from "@/components/BauItemPreview"
 import BauParticulas from "@/components/BauParticulas"
 import CoinIcon from "@/components/CoinIcon"
@@ -36,10 +37,16 @@ type BauAberturaProps = {
   onClose: () => void
 }
 
+const BAU_IMAGENS: Record<string, string> = {
+  comum:    "/images/Cofrinho.png",
+  premium:  "/images/Cofre Premium.png",
+  lendario: "/images/Cofre Lendário.png",
+}
+
 const BAU_CORES: Record<string, string> = {
-  comum:    "#22c55e",
-  premium:  "#22d3ee",
-  lendario: "#f4f4f5",
+  comum:    "#00BE03",
+  premium:  "#9D00FF",
+  lendario: "#FFC800",
 }
 
 const slideVariants = {
@@ -74,7 +81,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     setResumoVisiveis([])
     setBloqueado(false)
 
-    const t = setTimeout(() => setFase("coins"), 1800)
+    const t = setTimeout(() => setFase("coins"), 2500)
     return () => clearTimeout(t)
   }, [resultado])
 
@@ -116,7 +123,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         setTimeout(() => {
           setFase("itens")
           setBloqueado(false)
-        }, RARIDADE_DELAY["LENDARIO"])
+        }, 3000)
       } else {
         setDirection(1)
         setItemIdx(proximo)
@@ -135,10 +142,9 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const item = resultado.itens[itemIdx]
   const corItem = item ? (RARIDADES[item.raridade]?.cor ?? "#a1a1aa") : "#a1a1aa"
   const isLendario = item?.raridade === "LENDARIO"
-  const fundoItem = item ? RARIDADE_FUNDO[item.raridade] : "transparent"
   const corBau = BAU_CORES[resultado.tipoBau] ?? "#27272a"
 
-  return (
+  return createPortal(
     <div
       onClick={avancar}
       style={{
@@ -152,18 +158,38 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
       {fase === "luz" && (
         <div style={{
           position: "absolute", inset: 0,
-          background: "#000",
+          background: "#09090b",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
         }}>
-          <div style={{
-            width: 60, height: 60,
-            borderRadius: "50%",
-            background: corBau,
-            animation: "bau-light-expand 1.8s ease-out forwards",
-          }} />
+          <motion.img
+            src={BAU_IMAGENS[resultado.tipoBau] ?? "/images/Cofrinho.png"}
+            alt={resultado.tipoBau}
+            initial={{ scale: 1, opacity: 1 }}
+            animate={{ scale: [1, 1.05, 1.1, 1.15, 1.2], opacity: [1, 1, 1, 0.8, 0] }}
+            transition={{ duration: 1.2, ease: "easeIn", delay: 0.3 }}
+            style={{ width: 160, height: 160, objectFit: "contain", zIndex: 2 }}
+          />
+
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: [0, 5, 15, 20, 20], opacity: [0, 1, 1, 1, 0] }}
+            transition={{
+              duration: 1.2,
+              delay: 0.6,
+              times: [0, 0.15, 0.3, 0.5, 1],
+            }}
+            style={{
+              position: "absolute",
+              width: 80, height: 80,
+              borderRadius: "50%",
+              background: "radial-gradient(circle at center, #fff 0%, #fff 25%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.1) 75%, transparent 100%)",
+              boxShadow: "0 0 120px 60px rgba(255,255,255,0.4)",
+              zIndex: 10,
+            }}
+          />
         </div>
       )}
 
@@ -173,7 +199,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
           animate={{ opacity: 1 }}
           style={{
             position: "absolute", inset: 0,
-            background: "#000",
+            background: "#09090b",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -260,8 +286,17 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         <div
           style={{
             position: "absolute", inset: 0,
-            background: isLendario ? undefined : "#000",
-            transition: "background 0.5s",
+            backgroundColor: "#09090b",
+            backgroundImage: item.raridade === "RARO"
+              ? "linear-gradient(to bottom, #09090b, #0a3b1e)"
+              : item.raridade === "EPICO"
+              ? "linear-gradient(to bottom, #09090b, #1f0033)"
+              : isLendario
+              ? "linear-gradient(-45deg, #2a1500, #5c2d00, #b85a00, #fbbf2433)"
+              : "none",
+            backgroundSize: isLendario ? "400% 400%" : undefined,
+            animation: isLendario ? "bau-lendario-bg 4s ease infinite" : undefined,
+            transition: "background-color 0.5s, background-image 0.5s",
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -269,15 +304,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             justifyContent: "center",
             gap: 24,
           }}
-          className={isLendario ? "bau-lendario-bg" : ""}
         >
-          {!isLendario && fundoItem !== "transparent" && (
-            <div style={{
-              position: "absolute", inset: 0,
-              background: fundoItem,
-              pointerEvents: "none",
-            }} />
-          )}
 
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -433,7 +460,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
           animate={{ opacity: 1 }}
           style={{
             position: "absolute", inset: 0,
-            background: "#000",
+            background: "#09090b",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -636,6 +663,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
           </AnimatePresence>
         </motion.div>
       )}
-    </div>
+    </div>,
+    document.body
   )
 }
