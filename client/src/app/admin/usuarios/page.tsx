@@ -51,7 +51,7 @@ function exportCsvUsers(rows: AdminUser[]) {
   URL.revokeObjectURL(url);
 }
 
-/* ── User Edit Drawer ── */
+/* -- User Edit Drawer -- */
 function DeleteUserDialog({
   user,
   open,
@@ -429,7 +429,7 @@ function UserEditDrawer({
   );
 }
 
-/* ── Main page ── */
+/* -- Main page -- */
 export default function AdminUsuariosPage() {
   const { users, loadingUsers, loadUsers, banUser } = useAdminStore();
   const { success: ok, error: err } = useToast();

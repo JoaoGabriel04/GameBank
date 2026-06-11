@@ -12,7 +12,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { backdrop, modalBox } from "@/lib/animations";
 
-/* ─── Progress bar ─── */
+/* --- Progress bar --- */
 export function Progress({
   value,
   max = 100,
@@ -50,7 +50,7 @@ export function Progress({
   );
 }
 
-/* ─── Chip / badge ─── */
+/* --- Chip / badge --- */
 type ChipTone = "green" | "emerald" | "amber" | "rose" | "cyan" | "violet" | "sky" | "zinc" | "teal";
 
 const CHIP_TONES: Record<ChipTone, string> = {
@@ -86,7 +86,7 @@ export function Chip({
   );
 }
 
-/* ─── Panel ─── */
+/* --- Panel --- */
 export function Panel({
   children,
   className = "",
@@ -125,7 +125,7 @@ export function PanelHead({
   );
 }
 
-/* ─── Segmented control ─── */
+/* --- Segmented control --- */
 export function Segmented({
   options,
   value,
@@ -162,7 +162,7 @@ export function Segmented({
   );
 }
 
-/* ─── Button ─── */
+/* --- Button --- */
 type BtnVariant = "primary" | "ghost" | "subtle" | "danger";
 
 export function UBtn({
@@ -204,7 +204,7 @@ export function UBtn({
   );
 }
 
-/* ─── Modal (centered overlay) ─── */
+/* --- Modal (centered overlay) --- */
 export function UModal({
   open,
   onClose,
@@ -244,7 +244,7 @@ export function UModal({
   );
 }
 
-/* ─── Live dot ─── */
+/* --- Live dot --- */
 export function LiveDot({ tone = "green" }: { tone?: "green" | "amber" | "zinc" }) {
   const c = { green: "#4ade80", amber: "#fbbf24", zinc: "#71717a" }[tone];
   return (
@@ -258,7 +258,7 @@ export function LiveDot({ tone = "green" }: { tone?: "green" | "amber" | "zinc" 
   );
 }
 
-/* ─── XP helpers ─── */
+/* --- XP helpers --- */
 export const xpForLevel = (level: number) =>
   Math.floor(200 * Math.pow(1.17, level - 1));
 

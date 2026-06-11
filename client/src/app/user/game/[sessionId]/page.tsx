@@ -69,7 +69,7 @@ export default function Game() {
 
   const isOwner = !!currentSession?.ownerId && !!authUser?.id && currentSession.ownerId === authUser.id;
 
-  // ─── WebSocket ────────────────────────────────────────────────────────────
+  // --- WebSocket ------------------------------------------------------------
   useEffect(() => {
     if (!sessionId) return;
     connectSocket(sessionId);
@@ -90,7 +90,7 @@ export default function Game() {
     };
   }, [sessionId, mutate]);
 
-  // ─── Card drawn → toast broadcast ──────────────────────────────────────
+  // --- Card drawn → toast broadcast --------------------------------------
   useEffect(() => {
     const unsub = useCardStore.subscribe((state, prev) => {
       if (state.events.length > prev.events.length) {
@@ -108,7 +108,7 @@ export default function Game() {
     return unsub;
   }, [toastSuccess, toastError]);
 
-  // ─── SWR → Zustand (fallback) ────────────────────────────────────────────
+  // --- SWR → Zustand (fallback) --------------------------------------------
   useEffect(() => {
     if (swrSession) {
       useGameStore.setState({ currentSession: swrSession });
@@ -244,7 +244,7 @@ export default function Game() {
   };
 
 
-  // ── Waiting Room ────────────────────────────────────────────────────────
+  // -- Waiting Room --------------------------------------------------------
   function renderWaitingRoom() {
     if (!currentSession) return null;
     const allPlayers = currentSession.jogadores || [];

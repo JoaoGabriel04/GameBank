@@ -50,7 +50,7 @@ import {
   pagarDividaApi,
 } from "@/services/api/dividas";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// --- Tipos --------------------------------------------------------------------
 
 interface GameStore {
   sessions: GameSession[];
@@ -95,7 +95,7 @@ interface GameStore {
   updatePlayerInSession: (userId: number, data: Partial<Player>) => void;
 }
 
-// ─── Utilitário de erro (fora do create, criado uma única vez) ─────────────────
+// --- Utilitário de erro (fora do create, criado uma única vez) -----------------
 
 function extractErrorMessage(err: unknown): string {
   if (err instanceof AxiosError) {
@@ -115,7 +115,7 @@ function handleError(
   throw err;
 }
 
-// ─── Store ────────────────────────────────────────────────────────────────────
+// --- Store --------------------------------------------------------------------
 
 export const useGameStore = create<GameStore>((set, get) => ({
   sessions: [],
@@ -126,7 +126,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   error: null,
   propertiesCache: {},
 
-  // ── Sessões ──────────────────────────────────────────────────────────────
+  // -- Sessões --------------------------------------------------------------
 
   createSession: async (nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex) => {
     set({ loading: true, error: null });
@@ -193,7 +193,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ── Jogadores ────────────────────────────────────────────────────────────
+  // -- Jogadores ------------------------------------------------------------
 
   // Usa loadingProperty para não travar a UI principal durante leitura
   getPlayerById: async (playerId) => {
@@ -245,7 +245,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ── Propriedades ─────────────────────────────────────────────────────────
+  // -- Propriedades ---------------------------------------------------------
 
   // Usa loadingProperty para não travar a UI principal durante leitura
   getPropertyById: async (propriedadeId) => {
@@ -350,7 +350,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ── Banco ────────────────────────────────────────────────────────────────
+  // -- Banco ----------------------------------------------------------------
 
   deposito: async ({ userId, sessionId, valor }) => {
     set({ loading: true, error: null });
@@ -443,7 +443,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ── Sorte e Revés ────────────────────────────────────────────────────────
+  // -- Sorte e Revés --------------------------------------------------------
 
   sortearCarta: async (sessionId, playerId) => {
     set({ loading: true, error: null });
@@ -476,7 +476,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // ── Utilitários ──────────────────────────────────────────────────────────
+  // -- Utilitários ----------------------------------------------------------
 
   getAvailableColors: (excludePlayerId) => {
     const { currentSession } = get();

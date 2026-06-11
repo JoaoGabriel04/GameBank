@@ -46,7 +46,7 @@ export default function ConfiguracoesPage() {
 
         <h1 className="font-jaro text-2xl text-zinc-100">Configurações</h1>
 
-        {/* ── Música ── */}
+        {/* -- Música -- */}
         <section className="bg-zinc-800 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Music className="w-4 h-4 text-green-400" />
@@ -107,7 +107,7 @@ export default function ConfiguracoesPage() {
           </div>
         </section>
 
-        {/* ── Sobre ── */}
+        {/* -- Sobre -- */}
         <section className="bg-zinc-800 rounded-2xl p-5 space-y-5">
           <h2 className="font-jaro text-base text-zinc-100">Sobre o GameBank</h2>
 
@@ -176,7 +176,7 @@ export default function ConfiguracoesPage() {
           </div>
         </section>
 
-        {/* ── Sair ── */}
+        {/* -- Sair -- */}
         <section className="bg-zinc-800 rounded-2xl p-5">
           <button
             onClick={() => { logout(); router.push("/"); }}

@@ -27,7 +27,7 @@ import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import { apiErrMsg } from "@/lib/api-error";
 
-/* ── Join modal (mantém lógica existente, visual redesenhado) ── */
+/* -- Join modal (mantém lógica existente, visual redesenhado) -- */
 function JoinModal({
   session,
   open,
@@ -184,7 +184,7 @@ function JoinModal({
   );
 }
 
-/* ── Session card ── */
+/* -- Session card -- */
 function SessionCard({
   session,
   onJoin,
@@ -291,7 +291,7 @@ function SessionCard({
   );
 }
 
-/* ── Main page ── */
+/* -- Main page -- */
 export default function SessionsPage() {
   const router      = useRouter();
   const { user }    = useAuthStore();

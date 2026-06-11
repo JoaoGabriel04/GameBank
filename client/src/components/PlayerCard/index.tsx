@@ -53,7 +53,7 @@ export default function PlayerCard({
       onClick={onClick}
       className={`overflow-hidden rounded-xl border bg-zinc-950 text-left ${borderClass} ${hoverClass} ${onClick ? 'cursor-pointer transition-colors' : ''} ${className}`}
     >
-      {/* ── Faixa do banner ── */}
+      {/* -- Faixa do banner -- */}
       <div className="relative" style={{ height: 56 }}>
         <UserBanner
           banner={player.banner}
@@ -96,7 +96,7 @@ export default function PlayerCard({
         </div>
       </div>
 
-      {/* ── Área de informações ── */}
+      {/* -- Área de informações -- */}
       <div className="relative" style={{ padding: '26px 14px 12px' }}>
         {/* Avatar sobreposto ao banner */}
         <div className="absolute" style={{ top: -20, left: 14 }}>

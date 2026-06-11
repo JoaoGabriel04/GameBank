@@ -253,7 +253,7 @@ export default function NegotiationResponseModal() {
       isOpen={(!!activeNegotiation && !isExpired) || showPendingView}
       onClose={() => { setActive(null); resetCounter(); setMinhaNegociacaoAberto(false); }}
     >
-      {/* ── Vista pendente (proponente aguardando resposta) ── */}
+      {/* -- Vista pendente (proponente aguardando resposta) -- */}
       {showPendingView && minhaNegociacaoPendente && (
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-sm font-inconsolata text-zinc-400">
@@ -349,7 +349,7 @@ export default function NegotiationResponseModal() {
         </div>
       )}
 
-      {/* ── Vista normal (negociação recebida / contra-oferta) ── */}
+      {/* -- Vista normal (negociação recebida / contra-oferta) -- */}
       {!showPendingView && activeNegotiation && timeLeft !== null && (
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 text-sm font-inconsolata text-zinc-400">

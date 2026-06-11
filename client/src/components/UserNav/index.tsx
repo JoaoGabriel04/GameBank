@@ -28,7 +28,7 @@ import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
 import UserAvatar from "@/components/UserAvatar";
 
-/* ── Nav tab definitions ── */
+/* -- Nav tab definitions -- */
 const NAV_TABS = [
   { label: "Dashboard",   icon: LayoutDashboard, path: "/user"             },
   { label: "Cofre",       icon: Layers,          path: "/user/cofre"     },
@@ -45,7 +45,7 @@ function relativeTime(ts: string): string {
   return `${Math.floor(diff / 86400)}d`;
 }
 
-/* ── Live clock ── */
+/* -- Live clock -- */
 function Clock() {
   const [t, setT] = useState(() => new Date());
   useEffect(() => {
@@ -59,7 +59,7 @@ function Clock() {
   );
 }
 
-/* ── Notifications dropdown ── */
+/* -- Notifications dropdown -- */
 function NotifBell() {
   const [open, setOpen] = useState(false);
   const { notifications, unreadCount, load, markAllRead } = useUserNotificationStore();
@@ -162,7 +162,7 @@ function NotifBell() {
   );
 }
 
-/* ── Main component ── */
+/* -- Main component -- */
 export default function UserNav() {
   const pathname = usePathname();
   const router   = useRouter();
@@ -186,7 +186,7 @@ export default function UserNav() {
 
   return (
     <>
-      {/* ── Desktop header ── */}
+      {/* -- Desktop header -- */}
       <header className="hidden lg:flex fixed top-0 left-0 w-full h-16 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800 items-center gap-3 px-6 z-50">
 
         {/* Logo */}
@@ -276,7 +276,7 @@ export default function UserNav() {
         )}
       </header>
 
-      {/* ── Mobile header ── */}
+      {/* -- Mobile header -- */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800">
         <div className="flex items-center justify-between px-4 h-14">
           {/* Logo */}
@@ -341,7 +341,7 @@ export default function UserNav() {
         </div>
       </header>
 
-      {/* ── Mobile bottom nav ── */}
+      {/* -- Mobile bottom nav -- */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
         {/* Mobile — 6 tabs */}
         <ul className="grid grid-cols-5 w-full">

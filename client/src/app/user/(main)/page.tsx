@@ -24,7 +24,7 @@ import {
 import type { GameSession } from "@/types/game";
 import type { GameResult } from "@/types/shop";
 
-/* ─── Profile hero ──────────────────────────────────────────────────────── */
+/* --- Profile hero -------------------------------------------------------- */
 function ProfileHero() {
   const { user }    = useAuthStore();
   const { profile } = useProfileStore();
@@ -92,7 +92,7 @@ function ProfileHero() {
   );
 }
 
-/* ─── Active game banner ────────────────────────────────────────────────── */
+/* --- Active game banner -------------------------------------------------- */
 function ActiveGameBanner({ session }: { session: GameSession }) {
   const router = useRouter();
   return (
@@ -117,7 +117,7 @@ function ActiveGameBanner({ session }: { session: GameSession }) {
   );
 }
 
-/* ─── Quick actions ─────────────────────────────────────────────────────── */
+/* --- Quick actions ------------------------------------------------------- */
 function QuickActions({ activeSession }: { activeSession: GameSession | null }) {
   const router = useRouter();
   return (
@@ -161,7 +161,7 @@ function QuickActions({ activeSession }: { activeSession: GameSession | null }) 
   );
 }
 
-/* ─── Live sessions ─────────────────────────────────────────────────────── */
+/* --- Live sessions ------------------------------------------------------- */
 function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; activeSessionId?: number | null }) {
   const router = useRouter();
   const live = sessions.filter(s =>
@@ -238,7 +238,7 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
   );
 }
 
-/* ─── Missions preview ──────────────────────────────────────────────────── */
+/* --- Missions preview ---------------------------------------------------- */
 function MissionsPreview() {
   const { missions } = useProfileStore();
   const router = useRouter();
@@ -291,7 +291,7 @@ function MissionsPreview() {
   );
 }
 
-/* ─── Recent games ──────────────────────────────────────────────────────── */
+/* --- Recent games -------------------------------------------------------- */
 function RecentGames({ history }: { history: GameResult[] }) {
   const POS_COLOR: Record<number, string> = {
     1: "text-yellow-400", 2: "text-zinc-300", 3: "text-amber-600",
@@ -331,7 +331,7 @@ function RecentGames({ history }: { history: GameResult[] }) {
   );
 }
 
-/* ─── Page ──────────────────────────────────────────────────────────────── */
+/* --- Page ---------------------------------------------------------------- */
 export default function DashboardPage() {
   const { user, token, loadFromStorage } = useAuthStore();
   const { profile, loading, loadProfile, loadMissions } = useProfileStore();

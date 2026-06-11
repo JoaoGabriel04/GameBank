@@ -434,7 +434,7 @@ export default function CofrePage() {
   return (
     <div className="px-4 py-6 pt-16 lg:pt-6 relative">
 
-      {/* ── Desktop: sidebar + grid + detail ── */}
+      {/* -- Desktop: sidebar + grid + detail -- */}
       <div
         className="hidden lg:grid"
         style={{
@@ -522,7 +522,7 @@ export default function CofrePage() {
         </div>
       </div>
 
-      {/* ── Mobile: chips + grid ── */}
+      {/* -- Mobile: chips + grid -- */}
       <div className="lg:hidden flex flex-col gap-3.5">
         {/* Category chips */}
         <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>

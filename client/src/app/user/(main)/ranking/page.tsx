@@ -23,7 +23,7 @@ import UserBanner from "@/components/UserBanner";
 import { Chip, Progress, Segmented, UModal, xpForLevel } from "@/components/user/UserUI";
 import type { RankingUser } from "@/types/shop";
 
-/* ── Metric config ── */
+/* -- Metric config -- */
 type Metric = "nivel" | "xp" | "vitorias" | "partidas" | "winrate";
 
 interface MetricMeta {
@@ -46,7 +46,7 @@ const METRIC_META: Record<Metric, MetricMeta> = {
   winrate:  { label: "Win Rate", icon: TrendingUp, getValue: (p) => p.totalGames > 0 ? Math.round((p.totalWins / p.totalGames) * 100) : 0, format: (v) => v + "%",      unit: "%" },
 };
 
-/* ── Medal component ── */
+/* -- Medal component -- */
 const MEDALS: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
 function Medal({ rank }: { rank: number }) {
@@ -54,7 +54,7 @@ function Medal({ rank }: { rank: number }) {
   return <span className="font-jaro text-sm text-zinc-500">#{rank}</span>;
 }
 
-/* ── Player modal ── */
+/* -- Player modal -- */
 function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose: () => void }) {
   const { user } = useAuthStore();
   if (!player) return null;
@@ -158,7 +158,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
   );
 }
 
-/* ── Podium ── */
+/* -- Podium -- */
 function Podium({
   top3,
   metric,
@@ -238,7 +238,7 @@ function Podium({
   );
 }
 
-/* ── Main page ── */
+/* -- Main page -- */
 export default function RankingPage() {
   const { user } = useAuthStore();
   const [raw, setRaw]           = useState<RankingUser[]>([]);

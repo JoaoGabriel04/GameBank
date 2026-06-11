@@ -20,11 +20,11 @@ import {
 import UserAvatar from "@/components/UserAvatar";
 import type { AdminUser } from "@/services/api/admin";
 
-/* ─── Types ─── */
+/* --- Types --- */
 export type ChipTone =
   | "cyan" | "emerald" | "amber" | "rose" | "violet" | "sky" | "zinc" | "teal";
 
-/* ─── Chip ─── */
+/* --- Chip --- */
 const CHIP_TONES: Record<ChipTone, string> = {
   cyan:    "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
   emerald: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
@@ -57,7 +57,7 @@ export function Chip({
   );
 }
 
-/* ─── Toggle switch ─── */
+/* --- Toggle switch --- */
 export function Toggle({
   on,
   onChange,
@@ -96,7 +96,7 @@ export function Toggle({
   );
 }
 
-/* ─── Progress bar ─── */
+/* --- Progress bar --- */
 export function Progress({
   value,
   max = 100,
@@ -132,7 +132,7 @@ export function Progress({
   );
 }
 
-/* ─── Panel ─── */
+/* --- Panel --- */
 export function Panel({
   children,
   className = "",
@@ -180,7 +180,7 @@ export function PanelHead({
   );
 }
 
-/* ─── Segmented control ─── */
+/* --- Segmented control --- */
 export function Segmented({
   options,
   value,
@@ -217,7 +217,7 @@ export function Segmented({
   );
 }
 
-/* ─── Button ─── */
+/* --- Button --- */
 type BtnVariant = "primary" | "ghost" | "subtle" | "danger";
 export function Btn({
   children,
@@ -263,7 +263,7 @@ export function Btn({
   );
 }
 
-/* ─── Form field wrapper ─── */
+/* --- Form field wrapper --- */
 export function Field({
   label,
   children,
@@ -321,7 +321,7 @@ export function AdminSelect({
   );
 }
 
-/* ─── User avatar wrapper (uses real UserAvatar component) ─── */
+/* --- User avatar wrapper (uses real UserAvatar component) --- */
 export function AdminAvatar({
   user,
   size = "md",
@@ -343,7 +343,7 @@ export function AdminAvatar({
   );
 }
 
-/* ─── Drawer (right slide-over) ─── */
+/* --- Drawer (right slide-over) --- */
 export function Drawer({
   open,
   onClose,
@@ -402,7 +402,7 @@ export function Drawer({
   );
 }
 
-/* ─── Modal (centered overlay) ─── */
+/* --- Modal (centered overlay) --- */
 export function AdminModal({
   open,
   onClose,
@@ -431,7 +431,7 @@ export function AdminModal({
   );
 }
 
-/* ─── Live dot ─── */
+/* --- Live dot --- */
 export function LiveDot({ tone = "emerald" }: { tone?: "emerald" | "amber" | "zinc" }) {
   const c = { emerald: "#34d399", amber: "#fbbf24", zinc: "#71717a" }[tone];
   return (
@@ -445,7 +445,7 @@ export function LiveDot({ tone = "emerald" }: { tone?: "emerald" | "amber" | "zi
   );
 }
 
-/* ─── Delta indicator ─── */
+/* --- Delta indicator --- */
 export function Delta({ value }: { value: number }) {
   const up = value >= 0;
   const Icon = up ? ArrowUp : ArrowDown;
@@ -461,7 +461,7 @@ export function Delta({ value }: { value: number }) {
   );
 }
 
-/* ─── Confirm delete inline button ─── */
+/* --- Confirm delete inline button --- */
 export function ConfirmDelete({
   onConfirm,
   icon: Icon,
@@ -500,7 +500,7 @@ export function ConfirmDelete({
   );
 }
 
-/* ─── Mock avatar (gradient with initial) ─── */
+/* --- Mock avatar (gradient with initial) --- */
 export function Avatar({
   user,
   size = 36,
@@ -526,7 +526,7 @@ export function Avatar({
   );
 }
 
-/* ─── Live clock ─── */
+/* --- Live clock --- */
 export function Clock() {
   const [t, setT] = useState(new Date());
   useEffect(() => {

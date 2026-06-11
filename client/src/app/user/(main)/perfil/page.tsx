@@ -15,7 +15,7 @@ import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel } from "@/components/user/UserUI";
 import type { GameResult } from "@/types/shop";
 
-/* ─── Hero ──────────────────────────────────────────────────────────────── */
+/* --- Hero ---------------------------------------------------------------- */
 function ProfileHero({ onEdit }: { onEdit: () => void }) {
   const { user }    = useAuthStore();
   const { profile } = useProfileStore();
@@ -99,7 +99,7 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
   );
 }
 
-/* ─── Stats ─────────────────────────────────────────────────────────────── */
+/* --- Stats --------------------------------------------------------------- */
 function StatsRow({
   totalGames,
   totalWins,
@@ -134,7 +134,7 @@ function StatsRow({
   );
 }
 
-/* ─── Match history ─────────────────────────────────────────────────────── */
+/* --- Match history ------------------------------------------------------- */
 function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: () => void }) {
   const POS_COLOR: Record<number, string> = {
     1: "text-yellow-400",
@@ -213,7 +213,7 @@ function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: (
   );
 }
 
-/* ─── Page ──────────────────────────────────────────────────────────────── */
+/* --- Page ---------------------------------------------------------------- */
 export default function PerfilPage() {
   const { user, token, loadFromStorage } = useAuthStore();
   const { profile, loading, loadProfile } = useProfileStore();

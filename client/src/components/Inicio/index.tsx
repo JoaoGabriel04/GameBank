@@ -457,7 +457,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
 
   return (
     <div className="space-y-6 px-4 sm:px-6 lg:px-10">
-      {/* ── Balance Widget ── */}
+      {/* -- Balance Widget -- */}
       <div className="overflow-hidden border border-zinc-800 rounded-xl bg-zinc-950">
         <div className="h-24 relative">
           <UserBanner banner={currentPlayer?.banner} animated={currentPlayer?.bannerAnimated} className="absolute inset-0 w-full h-full" />
@@ -582,7 +582,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       )}
 
-      {/* ── Cartas Especiais ── */}
+      {/* -- Cartas Especiais -- */}
       <div>
         <h2 className="text-xl font-jaro text-zinc-100 mb-4">Cartas Especiais</h2>
         {currentPlayer?.carta_prisao ? (
@@ -609,7 +609,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         )}
       </div>
 
-      {/* ── Dívidas Pendentes ── */}
+      {/* -- Dívidas Pendentes -- */}
       {myDebts.length > 0 && (
         <div>
           <h2 className="text-xl font-jaro text-zinc-100 mb-4 flex items-center gap-2">
@@ -650,7 +650,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       )}
 
-      {/* ── Negociações ── */}
+      {/* -- Negociações -- */}
       {(pendentes.length > 0 || minhaNegociacaoPendente) && (
         <div>
           <h2 className="text-xl font-jaro text-zinc-100 mb-4 flex items-center gap-2">
@@ -726,7 +726,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       )}
 
-      {/* ── My Properties ── */}
+      {/* -- My Properties -- */}
       <div>
         <h2 className="text-xl font-jaro text-zinc-100 mb-4">
           Minhas Propriedades
@@ -787,7 +787,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
          MODAIS
          ════════════════════════════════════════════════ */}
 
-      {/* ── Depósito ── */}
+      {/* -- Depósito -- */}
       <Modal size="md" title="Depositar" isOpen={activeModal === "deposito"} onClose={closeModal}>
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
@@ -812,7 +812,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </Modal>
 
-      {/* ── Saque ── */}
+      {/* -- Saque -- */}
       <Modal size="md" title="Sacar" isOpen={activeModal === "saque"} onClose={closeModal}>
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
@@ -837,7 +837,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </Modal>
 
-      {/* ── Transferência ── */}
+      {/* -- Transferência -- */}
       <Modal size="md" title="Transferir Dinheiro" isOpen={activeModal === "transferencia"} onClose={closeModal}>
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
@@ -884,7 +884,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </Modal>
 
-      {/* ── Pagar Aluguel ── */}
+      {/* -- Pagar Aluguel -- */}
       <Modal size="md" title="Pagar Aluguel" isOpen={activeModal === "aluguel"} onClose={closeModal}>
         <div className="space-y-5">
           <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
@@ -973,7 +973,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </Modal>
 
-      {/* ── Comprar Casas em Lote ── */}
+      {/* -- Comprar Casas em Lote -- */}
       <Modal size="lg" title="Comprar Casas" isOpen={activeModal === "casas"} onClose={() => { setActiveModal(null); setSelectedBatchProps([]) }}>
         <div className="space-y-6">
           {completedColorGroups.length === 0 ? (
@@ -1084,7 +1084,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </Modal>
 
-      {/* ── Vender Casas em Lote ── */}
+      {/* -- Vender Casas em Lote -- */}
       <Modal size="lg" title="Vender Casas" isOpen={activeModal === "venderCasas"} onClose={() => { setActiveModal(null); setSellQuantities({}) }}>
         <div className="space-y-6">
           {myProps.length === 0 ? (
@@ -1197,7 +1197,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         />
       )}
 
-      {/* ── Confirmar Sorteio ── */}
+      {/* -- Confirmar Sorteio -- */}
       <ConfirmationModal
         isOpen={confirmSortearOpen}
         onClose={() => setConfirmSortearOpen(false)}
@@ -1208,7 +1208,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
         color="purple"
       />
 
-      {/* ── Modal Carta Sorteada ── */}
+      {/* -- Modal Carta Sorteada -- */}
       <Modal
         size="sm"
         title={cardResult ? (cardResult.tipoBaralho === "sorte" ? "Sorte!" : "Revés!") : "Sorteando..."}

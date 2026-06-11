@@ -2,7 +2,7 @@
 
 import React from "react";
 
-/* ─── Helper: build SVG path from data ─── */
+/* --- Helper: build SVG path from data --- */
 function buildPath(
   data: number[],
   w: number,
@@ -21,7 +21,7 @@ function buildPath(
   });
 }
 
-/* ─── AreaChart ─── */
+/* --- AreaChart --- */
 export function AreaChart({
   data,
   w = 600,
@@ -98,7 +98,7 @@ export function AreaChart({
   );
 }
 
-/* ─── MultiLine ─── */
+/* --- MultiLine --- */
 export function MultiLine({
   series,
   w = 600,
@@ -144,7 +144,7 @@ export function MultiLine({
   );
 }
 
-/* ─── BarChart ─── */
+/* --- BarChart --- */
 export function BarChart({
   data,
   w = 600,
@@ -191,7 +191,7 @@ export function BarChart({
   );
 }
 
-/* ─── Sparkline ─── */
+/* --- Sparkline --- */
 export function Sparkline({
   data,
   w = 120,
@@ -226,7 +226,7 @@ export function Sparkline({
   );
 }
 
-/* ─── Donut ─── */
+/* --- Donut --- */
 export function Donut({
   segments,
   size = 140,

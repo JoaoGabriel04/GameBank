@@ -23,7 +23,7 @@ import BauCard from "@/components/BauCard";
 import BauDetailModal from "@/components/BauDetailModal";
 import BauResultadoModal from "@/components/BauResultadoModal";
 
-/* ─── Types ─────────────────────────────────────────────────────────────── */
+/* --- Types --------------------------------------------------------------- */
 type ItemType = "title" | "badge" | "banner" | "frame";
 
 interface FragmentItem extends CatalogoItem {
@@ -71,7 +71,7 @@ const DIAMOND_PACKS: DiamondPack[] = [
   { id: "d6", name: "Diamante Supremo", diamonds: 8250, brl: "R$ 119,99" },
 ];
 
-/* ─── Section header ────────────────────────────────────────────────────── */
+/* --- Section header ------------------------------------------------------ */
 function SectionHeader({
   label,
   icon: Icon,
@@ -100,7 +100,7 @@ function SectionHeader({
   );
 }
 
-/* ─── Cosmetic card ─────────────────────────────────────────────────────── */
+/* --- Cosmetic card ------------------------------------------------------- */
 function CosmeticCard({
   item,
   onSelect,
@@ -240,7 +240,7 @@ function CosmeticCard({
   );
 }
 
-/* ─── Coin pack card ────────────────────────────────────────────────────── */
+/* --- Coin pack card ------------------------------------------------------ */
 const COIN_IMGS: Record<string, string> = {
   c1: "/images/coin-shop-1.png",
   c2: "/images/coin-shop-2.png",
@@ -295,7 +295,7 @@ function CoinPackCard({
   );
 }
 
-/* ─── Diamond pack card ─────────────────────────────────────────────────── */
+/* --- Diamond pack card --------------------------------------------------- */
 const DIAMOND_IMGS: Record<string, string> = {
   d1: "/images/diamond-shop-1.png",
   d2: "/images/diamond-shop-2.png",
@@ -371,7 +371,7 @@ function DiamondPackCard({
   );
 }
 
-/* ─── Detail bottom sheet ─────────────────────────────────────────────────── */
+/* --- Detail bottom sheet --------------------------------------------------- */
 function DetailSheet({
   item,
   userCoins,
@@ -541,7 +541,7 @@ function DetailSheet({
   );
 }
 
-/* ─── Fragment detail bottom sheet ──────────────────────────────────────── */
+/* --- Fragment detail bottom sheet ---------------------------------------- */
 function FragmentDetailSheet({
   data,
   onClose,
@@ -692,7 +692,7 @@ function FragmentDetailSheet({
   );
 }
 
-/* ─── 3-column animated grid ────────────────────────────────────────────── */
+/* --- 3-column animated grid ---------------------------------------------- */
 function Grid3({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
@@ -707,7 +707,7 @@ function Grid3({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ─── Coin confirm modal ────────────────────────────────────────────────── */
+/* --- Coin confirm modal -------------------------------------------------- */
 function CoinConfirmModal({
   pack,
   userDiamonds,
@@ -795,7 +795,7 @@ function CoinConfirmModal({
   );
 }
 
-/* ─── Diamond confirm modal ─────────────────────────────────────────────── */
+/* --- Diamond confirm modal ----------------------------------------------- */
 function DiamondConfirmModal({
   pack,
   onClose,
@@ -876,7 +876,7 @@ function DiamondConfirmModal({
   );
 }
 
-/* ─── Checkout redirect overlay ─────────────────────────────────────────── */
+/* --- Checkout redirect overlay ------------------------------------------- */
 function CheckoutRedirectOverlay() {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
@@ -908,7 +908,7 @@ function CheckoutRedirectOverlay() {
   );
 }
 
-/* ─── MP return modals ──────────────────────────────────────────────────── */
+/* --- MP return modals ---------------------------------------------------- */
 function MPSuccessModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
@@ -1064,7 +1064,7 @@ function MPPendingModal({ countdown, onCancel }: { countdown: string; onCancel: 
   );
 }
 
-/* ─── Page ──────────────────────────────────────────────────────────────── */
+/* --- Page ---------------------------------------------------------------- */
 export default function LojaPage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();

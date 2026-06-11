@@ -24,7 +24,7 @@ import { useToast } from "@/components/Toast";
 import { Progress, Chip, Segmented, UBtn } from "@/components/user/UserUI";
 import type { UserMission } from "@/types/shop";
 
-/* ── Metric → visual metadata ── */
+/* -- Metric → visual metadata -- */
 type MetricTone = "emerald" | "teal" | "amber" | "violet" | "sky" | "cyan";
 
 interface MetricMeta {
@@ -64,7 +64,7 @@ function getMetaMeta(metric: string): MetricMeta {
   return METRIC_META[metric] ?? { icon: Trophy, tone: "emerald", label: metric };
 }
 
-/* ── Countdown badge ── */
+/* -- Countdown badge -- */
 function CountdownBadge({ expiresAt }: { expiresAt: string }) {
   const calc = useCallback(() => {
     const diff = new Date(expiresAt).getTime() - Date.now();
@@ -91,7 +91,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: string }) {
   );
 }
 
-/* ── Mission card ── */
+/* -- Mission card -- */
 function MissionCard({
   m,
   onClaim,
@@ -197,7 +197,7 @@ function MissionCard({
   );
 }
 
-/* ── Main page ── */
+/* -- Main page -- */
 export default function RecompensasPage() {
   const { missions, loading, loadMissions, claimMission, claimAllMissions } = useProfileStore();
   const { success: toastSuccess, error: toastError } = useToast();

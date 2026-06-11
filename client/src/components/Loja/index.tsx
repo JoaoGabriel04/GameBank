@@ -127,7 +127,7 @@ export default function Loja() {
     return currentPlayer ? currentPlayer.saldo >= custo : false
   }
 
-  // ── Notificações ─────────────────────────────────────────────────────────
+  // -- Notificações ---------------------------------------------------------
   const notifications = useNotificationStore((s) => s.notifications)
   const pendingNotifs = notifications.filter(
     (n) => n.tipo === "compra_hipotecada" && n.status === "pendente" && n.toPlayerId === currentPlayer?.id

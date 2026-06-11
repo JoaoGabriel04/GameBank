@@ -223,7 +223,7 @@ export function connectSocket(sessionId: number) {
 
 }
 
-// ─── Chat Store ──────────────────────────────────────────────────────────
+// --- Chat Store ----------------------------------------------------------
 
 import { create } from "zustand";
 
@@ -247,7 +247,7 @@ export function sendChatMessage(texto: string) {
   }
 }
 
-// ─── Notification Store ──────────────────────────────────────────────────
+// --- Notification Store --------------------------------------------------
 
 interface NotificationStore {
   notifications: GameNotification[];
@@ -265,7 +265,7 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
   clearNotifications: () => set({ notifications: [] }),
 }));
 
-// ─── Card Events Store ──────────────────────────────────────────────────
+// --- Card Events Store --------------------------------------------------
 
 interface CardEventData {
   playerNome: string;
