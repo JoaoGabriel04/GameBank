@@ -336,8 +336,8 @@ function ItemModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (form.fragmentavel && (!form.fragmentosTotal || form.fragmentosTotal < 1)) {
-      alert("Informe quantos fragmentos são necessários para este item");
+    if (form.fragmentavel && !form.fragmentosTotal) {
+      alert("Erro interno: fragmentosTotal não foi definido automaticamente");
       return;
     }
     if (form.fragmentavel && (form.price ?? 0) > 0) {
@@ -495,7 +495,11 @@ function ItemModal({
             )}
 
             <Field label="Raridade">
-              <AdminSelect value={form.raridade ?? "COMUM"} onChange={(e) => set("raridade", e.target.value)}>
+              <AdminSelect value={form.raridade ?? "COMUM"} onChange={(e) => {
+                const v = e.target.value;
+                set("raridade", v);
+                if (form.fragmentavel) set("fragmentosTotal", FRAGMENTOS_SUGERIDOS[v] ?? 20);
+              }}>
                 <option value="COMUM">Comum</option>
                 <option value="INCOMUM">Incomum</option>
                 <option value="RARO">Raro</option>
@@ -510,29 +514,16 @@ function ItemModal({
                 <p className="font-inconsolata text-sm text-zinc-200">🧩 Fragmentável</p>
                 <p className="font-inconsolata text-[10px] text-zinc-500">
                   {form.fragmentavel
-                    ? "Item só pode ser obtido via baús — não aparece na loja"
+                    ? `Item só pode ser obtido via baús — ${form.fragmentosTotal ?? "?"} fragmentos necessários`
                     : "Item disponível para compra direta na loja"}
                 </p>
               </div>
-              <Toggle on={form.fragmentavel ?? false} onChange={(v) => set("fragmentavel", v)} />
+              <Toggle on={form.fragmentavel ?? false} onChange={(v) => {
+                set("fragmentavel", v);
+                if (v) set("fragmentosTotal", FRAGMENTOS_SUGERIDOS[form.raridade ?? "COMUM"] ?? 20);
+                else set("fragmentosTotal", null);
+              }} />
             </div>
-
-            {form.fragmentavel && (
-              <>
-                <Field label="Fragmentos necessários">
-                  <AdminInput
-                    type="number"
-                    min={1}
-                    value={form.fragmentosTotal ?? ""}
-                    onChange={(e) => set("fragmentosTotal", e.target.value ? Number(e.target.value) : null)}
-                    placeholder={String(FRAGMENTOS_SUGERIDOS[form.raridade as keyof typeof FRAGMENTOS_SUGERIDOS] ?? 20)}
-                  />
-                  <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">
-                    Sugerido para {RARIDADES[form.raridade ?? "COMUM"]?.label}: {FRAGMENTOS_SUGERIDOS[form.raridade as keyof typeof FRAGMENTOS_SUGERIDOS] ?? 20} fragmentos
-                  </p>
-                </Field>
-              </>
-            )}
 
             <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
               <div>
