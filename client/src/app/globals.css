@@ -161,7 +161,46 @@
 @keyframes gb-legendary-shimmer {
   0%   { background-position: -200% center; filter: brightness(1); }
   50%  { filter: brightness(1.4); }
-  100% { background-position:  200% center; filter: brightness(1); }
+   100% { background-position:  200% center; filter: brightness(1); }
+}
+
+/* ── Bau abertura ─────────────────────────────────── */
+@keyframes bau-light-expand {
+  0%   { transform: scale(0); opacity: 1; }
+  70%  { transform: scale(8); opacity: 1; }
+  100% { transform: scale(12); opacity: 0; }
+}
+
+@keyframes bau-lendario-bg {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes bau-particle-orbit {
+  0%   { transform: rotate(0deg)   translateX(var(--orbit-r)) scale(1);   opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(var(--orbit-r)) scale(0.3); opacity: 0; }
+}
+
+@keyframes bau-circle-pulse {
+  0%, 100% { box-shadow: 0 0 20px var(--rarity-color), 0 0 40px var(--rarity-color-dim); }
+  50%       { box-shadow: 0 0 40px var(--rarity-color), 0 0 80px var(--rarity-color-dim); }
+}
+
+@keyframes bau-suspense {
+  0%, 100% { opacity: 0.3; transform: scale(0.95); }
+  50%       { opacity: 0.7; transform: scale(1.02); }
+}
+
+.bau-lendario-bg {
+  background: linear-gradient(-45deg, #1a0a00, #3d1f00, #7c3b00, #fbbf2422);
+  background-size: 400% 400%;
+  animation: bau-lendario-bg 4s ease infinite;
+}
+
+.bau-suspense-pulse {
+  animation: bau-suspense 0.8s ease-in-out infinite;
 }
 
 @layer base {

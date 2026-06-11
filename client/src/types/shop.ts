@@ -1,4 +1,6 @@
-export type Raridade = "COMUM" | "INCOMUM" | "RARO" | "EPICO" | "LENDARIO"
+import type { Raridade } from "./raridade"
+
+export type { Raridade }
 
 export interface ShopItem {
   id: number

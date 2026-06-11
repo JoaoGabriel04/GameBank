@@ -21,7 +21,7 @@ import { apiErrMsg } from "@/lib/api-error";
 import { getBausApi, abrirBauApi } from "@/services/api/baus";
 import BauCard from "@/components/BauCard";
 import BauDetailModal from "@/components/BauDetailModal";
-import BauResultadoModal from "@/components/BauResultadoModal";
+import BauAbertura from "@/components/BauAbertura";
 
 /* --- Types --------------------------------------------------------------- */
 type ItemType = "title" | "badge" | "banner" | "frame";
@@ -1527,7 +1527,7 @@ export default function LojaPage() {
         abrindo={abrindo !== null}
       />
 
-      <BauResultadoModal
+      <BauAbertura
         resultado={resultado}
         onClose={() => setResultado(null)}
       />

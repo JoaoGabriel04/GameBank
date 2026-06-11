@@ -1,8 +1,8 @@
 export const RARIDADES = {
   COMUM:    { label: "Comum",    cor: "#9ca3af", probabilidade: 0.60 },
   INCOMUM:  { label: "Incomum",  cor: "#22d3ee", probabilidade: 0.25 },
-  RARO:     { label: "Raro",     cor: "#a78bfa", probabilidade: 0.10 },
-  EPICO:    { label: "Épico",    cor: "#f97316", probabilidade: 0.04 },
+  RARO:     { label: "Raro",     cor: "#009B15", probabilidade: 0.10 },
+  EPICO:    { label: "Épico",    cor: "#A600FF", probabilidade: 0.04 },
   LENDARIO: { label: "Lendário", cor: "#fbbf24", probabilidade: 0.01 },
 } as const
 
