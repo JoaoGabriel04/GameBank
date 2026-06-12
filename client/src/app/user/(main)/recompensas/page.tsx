@@ -243,17 +243,22 @@ export default function RecompensasPage() {
   const inProgress   = missions.filter((m) => !m.completed).length;
   const claimedCount = missions.filter((m) => m.claimed).length;
 
-  const list = missions.filter((m) => {
-    if (tipoFilter === "Diárias")    return m.tipo === "daily";
-    if (tipoFilter === "Semanais")   return m.tipo === "weekly";
-
-    return true;
-  }).filter((m) => {
-    if (filter === "Disponíveis")   return m.completed && !m.claimed;
-    if (filter === "Em andamento")  return !m.completed;
-    if (filter === "Resgatadas")    return m.claimed;
-    return true;
-  });
+  const list = missions
+    .filter((m) => {
+      if (tipoFilter === "Diárias")    return m.tipo === "daily";
+      if (tipoFilter === "Semanais")   return m.tipo === "weekly";
+      return true;
+    })
+    .filter((m) => {
+      if (filter === "Disponíveis")   return m.completed && !m.claimed;
+      if (filter === "Em andamento")  return !m.completed;
+      if (filter === "Resgatadas")    return m.claimed;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.claimed !== b.claimed) return a.claimed ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">

@@ -59,6 +59,7 @@ export async function gerarMissoesParaUsuario(userId: number) {
   const existingDaily = await prisma.userMission.findMany({
     where: {
       userId,
+      claimed: false,
       mission: { tipo: "daily" },
       expiresAt: { gt: now },
     },
@@ -67,6 +68,7 @@ export async function gerarMissoesParaUsuario(userId: number) {
   const existingWeekly = await prisma.userMission.findMany({
     where: {
       userId,
+      claimed: false,
       mission: { tipo: "weekly" },
       expiresAt: { gt: now },
     },
@@ -112,10 +114,14 @@ export async function gerarMissoesParaUsuario(userId: number) {
 export async function limparMissoesExpiradas() {
   const now = new Date()
 
-  const deletadas = await prisma.userMission.deleteMany({
+  const seteDiasAtras = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  await prisma.userMission.deleteMany({
     where: {
-      expiresAt: { lt: now },
-      claimed: false,
+      OR: [
+        { expiresAt: { lt: now }, claimed: false },
+        { expiresAt: { lt: now }, claimed: true, claimedAt: { lt: seteDiasAtras } },
+      ],
     },
   })
 
@@ -126,5 +132,5 @@ export async function limparMissoesExpiradas() {
     },
   })
 
-  console.log(`[missions] Limpeza: ${deletadas.count} missões expiradas removidas`)
+  console.log(`[missions] Limpeza: missões expiradas removidas`)
 }

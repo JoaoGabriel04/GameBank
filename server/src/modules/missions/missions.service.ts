@@ -46,10 +46,10 @@ export class MissionsService {
 
     for (const um of userMissions) {
       if (um.claimed) continue;
+      if (um.completed) continue;
 
       const newProgress = Math.min(um.progress + amount, um.mission.target);
-      const wasCompleted = um.completed;
-      const nowCompleted = newProgress >= um.mission.target && !wasCompleted;
+      const nowCompleted = newProgress >= um.mission.target;
 
       await missionsRepository.upsertUserMission(
         userId,
@@ -77,8 +77,7 @@ export class MissionsService {
     let totalCoins = 0;
     let { xp: currentXp, level: currentLevel } = { xp: user.xp, level: user.level };
 
-    const deleteUserMissionIds: number[] = [];
-    const deleteMissionIds: number[] = [];
+    const updateIds: number[] = [];
 
     for (const um of userMissions) {
       totalXpEarned += um.mission.xpReward;
@@ -87,22 +86,15 @@ export class MissionsService {
       currentLevel = result.level;
       totalCoins += um.mission.coinReward;
 
-      deleteUserMissionIds.push(um.id);
-      deleteMissionIds.push(um.mission.id);
+      updateIds.push(um.id);
     }
 
     await prisma.$transaction(async (tx) => {
-      if (deleteUserMissionIds.length > 0) {
-        await tx.userMission.deleteMany({ where: { id: { in: deleteUserMissionIds } } });
-      }
-      if (deleteMissionIds.length > 0) {
-        const orphaned = await tx.mission.findMany({
-          where: { id: { in: deleteMissionIds }, userMissions: { none: {} } },
-          select: { id: true },
+      if (updateIds.length > 0) {
+        await tx.userMission.updateMany({
+          where: { id: { in: updateIds } },
+          data: { claimed: true, claimedAt: new Date() },
         });
-        if (orphaned.length > 0) {
-          await tx.mission.deleteMany({ where: { id: { in: orphaned.map((m) => m.id) } } });
-        }
       }
       await tx.user.update({
         where: { id: userId },
@@ -148,7 +140,10 @@ export class MissionsService {
     const tipo = userMission.mission.tipo;
 
     await prisma.$transaction(async (tx) => {
-      await tx.userMission.delete({ where: { id: userMission.id } });
+      await tx.userMission.update({
+        where: { id: userMission.id },
+        data: { claimed: true, claimedAt: new Date() },
+      });
       await tx.user.update({
         where: { id: userId },
         data: {
@@ -157,10 +152,6 @@ export class MissionsService {
           coins: { increment: userMission.mission.coinReward },
         },
       });
-      const remaining = await tx.userMission.count({ where: { missionId } });
-      if (remaining === 0) {
-        await tx.mission.delete({ where: { id: missionId } });
-      }
     });
 
     return {
