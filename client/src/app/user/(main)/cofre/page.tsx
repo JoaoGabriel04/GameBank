@@ -5,10 +5,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, staggerItem, backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/animations";
-import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X } from "lucide-react";
+import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X, Coins } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { equipShopItemApi } from "@/services/api/shop";
+import { equipShopItemApi, getCatalogoApi } from "@/services/api/shop";
+import type { CatalogoItem } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import LegendaryTitle from "@/components/LegendaryTitle";
@@ -328,6 +329,245 @@ function DetailPanel({
   );
 }
 
+/* --- Unowned item card (fragmentável não possuído) ---------------------- */
+function UnownedItemCard({
+  item,
+  onSelect,
+}: {
+  item: CatalogoItem;
+  onSelect: (item: CatalogoItem) => void;
+}) {
+  const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? "#d4d4d8";
+  const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
+  const topBg     = isBanner && item.value
+    ? item.value
+    : `radial-gradient(ellipse at 50% 55%, ${glowColor}2e 0%, #0d0d10 68%)`;
+  const progress = item.fragmentosTotal ? Math.min(100, (item.fragmentosAtuais / item.fragmentosTotal) * 100) : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(item)}
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all"
+      style={{
+        borderRadius: 14,
+        border: `1px dashed ${glowColor}30`,
+        opacity: 0.75,
+      }}
+    >
+      <div
+        className="relative overflow-hidden flex items-center justify-center"
+        style={{ height: 104, background: isBanner ? undefined : topBg }}
+      >
+        {isBanner && (
+          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
+        )}
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: `linear-gradient(90deg, transparent, ${glowColor}66, transparent)`, opacity: 0.4 }}
+        />
+        {isBanner ? null : isFrame ? (
+          <div className="relative" style={{ width: 44, height: 44, margin: "0 auto" }}>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
+              👤
+            </div>
+            {(() => {
+              const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+              if (src) {
+                return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+              }
+              if (item.value) {
+                return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+              }
+              return null;
+            })()}
+          </div>
+        ) : (
+          <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)`, opacity: 0.55 }}>
+            {item.type === "title"  && <Crown  size={44} />}
+            {item.type === "badge"  && (item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+            ) : (
+              <Shield size={44} />
+            ))}
+          </div>
+        )}
+        <span
+          className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
+          style={{ fontSize: 9, letterSpacing: "0.1em", color: "rgba(255,255,255,0.25)" }}
+        >
+          {meta.label}
+        </span>
+      </div>
+
+      <div className="px-2.5 pt-2.5 pb-2.5" style={{ background: "#111113" }}>
+        <p className="font-jaro text-[13px] text-zinc-400 leading-tight mb-1.5">{item.name}</p>
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              style={{ background: glowColor }}
+            />
+          </div>
+          <span className="font-inconsolata text-[10px] text-zinc-500 shrink-0">
+            {item.fragmentosAtuais}/{item.fragmentosTotal}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* --- Detail panel for unowned (fragmentável) item ----------------------- */
+function UnownedDetailPanel({
+  item,
+  onClose,
+}: {
+  item: CatalogoItem | null;
+  onClose: () => void;
+}) {
+  if (!item) return null;
+
+  const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const glowColor = rMeta?.cor ?? meta.color;
+  const isBanner  = item.type === "banner";
+  const isFrame   = item.type === "frame";
+  const progress  = item.fragmentosTotal ? Math.min(100, (item.fragmentosAtuais / item.fragmentosTotal) * 100) : 0;
+
+  return (
+    <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-5 overflow-y-auto h-full">
+      <div className="flex items-start justify-between gap-2.5">
+        {isBanner ? (
+          <UserBanner
+            banner={item.value}
+            imageUrl={item.imageUrl}
+            animated={item.animated}
+            className="flex-1 rounded-2xl"
+            style={{ height: 64, opacity: 0.7 }}
+          />
+        ) : isFrame ? (
+          <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
+              👤
+            </div>
+            {(() => {
+              const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+              if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+              if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
+              return null;
+            })()}
+          </div>
+        ) : item.type === "badge" && item.imageUrl ? (
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
+            style={{
+              background: glowColor + "22",
+              boxShadow: `0 0 36px -8px ${glowColor}`,
+            }}
+          >
+            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" style={{ opacity: 0.7 }} />
+          </div>
+        ) : item.type === "title" ? (
+          <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800" style={{ opacity: 0.7 }}>
+            <div className="h-7 bg-gradient-to-r from-zinc-800 to-zinc-900" />
+            <div className="px-3 py-2 flex items-center gap-2 bg-zinc-900/80">
+              <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-xs text-zinc-500">👤</div>
+              <div className="min-w-0">
+                <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
+                <div className="mt-0.5">
+                  {(() => {
+                    const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
+                    if (!item.animated) return (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">{titleText}</span>
+                    );
+                    if (item.raridade === "LENDARIO") return (
+                      <LegendaryTitle text={titleText ?? ""} />
+                    );
+                    return (
+                      <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>{titleText}</span>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="w-16 h-16 rounded-2xl grid place-items-center shrink-0"
+            style={{ background: glowColor + "22", color: glowColor, boxShadow: `0 0 36px -8px ${glowColor}`, opacity: 0.7 }}
+          >
+            {item.type === "badge"  && <Shield size={28} />}
+            {item.type === "banner" && <ImageIcon size={28} />}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div>
+        <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
+        <div className="flex gap-1.5 flex-wrap">
+          <Chip tone={meta.tone}>{meta.label}</Chip>
+          {rMeta && (
+            <span
+              className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+              style={{ color: rMeta.cor, background: rMeta.cor + "18", borderColor: rMeta.cor + "40", letterSpacing: "0.08em" }}
+            >
+              <span className="rounded-full inline-block" style={{ width: 5, height: 5, background: rMeta.cor }} />
+              {rMeta.label}
+            </span>
+          )}
+        </div>
+        {item.description && (
+          <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
+        )}
+      </div>
+
+      <div className="border-t border-zinc-800" />
+
+      {/* Fragmentos progresso */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between font-inconsolata text-xs">
+          <span className="text-zinc-500">Fragmentos</span>
+          <span style={{ color: glowColor }}>{item.fragmentosAtuais}/{item.fragmentosTotal}</span>
+        </div>
+        <div className="bg-zinc-800 rounded-full h-2 overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            style={{ background: glowColor }}
+          />
+        </div>
+        <p className="font-inconsolata text-[10px] text-zinc-600 leading-relaxed">
+          {item.fragmentosAtuais >= (item.fragmentosTotal ?? 0)
+            ? "Item desbloqueado! Vá até a Loja para resgatar."
+            : `Faltam ${(item.fragmentosTotal ?? 0) - item.fragmentosAtuais} fragmentos para desbloquear. Continue abrindo baús para coletar mais fragmentos.`}
+        </p>
+      </div>
+
+      <div className="bg-zinc-900/50 rounded-xl px-4 py-3 border border-zinc-800/50">
+        <p className="font-inconsolata text-[11px] text-zinc-500 leading-relaxed flex items-center gap-1.5">
+          <span style={{ fontSize: 14, lineHeight: 1 }}>🎁</span>
+          Fragmentos são obtidos ao abrir baús. Cada baú concede fragmentos dos itens sorteados.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CofrePage() {
   const { token, loadFromStorage } = useAuthStore();
   const { profile, loadProfile, loading } = useProfileStore();
@@ -337,11 +577,20 @@ export default function CofrePage() {
   const [selected, setSelected]   = useState<UserItem | null>(null);
   const [equipping, setEquipping] = useState(false);
   const [mobileSheet, setMobileSheet] = useState(false);
+  const [catalogo, setCatalogo]   = useState<CatalogoItem[]>([]);
+  const [selectedUnowned, setSelectedUnowned] = useState<CatalogoItem | null>(null);
+  const [mobileUnownedSheet, setMobileUnownedSheet] = useState(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
     if (token && !profile) loadProfile();
   }, [token, profile, loadProfile]);
+
+  useEffect(() => {
+    if (token) {
+      getCatalogoApi().then(setCatalogo).catch(() => {});
+    }
+  }, [token]);
 
   const items: UserItem[] = useMemo(() => profile?.items ?? [], [profile]);
 
@@ -362,12 +611,14 @@ export default function CofrePage() {
 
   function handleSelect(item: UserItem) {
     setSelected(item);
+    setSelectedUnowned(null);
     setMobileSheet(true);
   }
 
   function handleCatChange(key: CategoryKey) {
     setCat(key);
     setSelected(null);
+    setSelectedUnowned(null);
   }
 
   async function handleEquip(item: UserItem) {
@@ -401,36 +652,93 @@ export default function CofrePage() {
     );
   }
 
-  const ItemGrid = () =>
-    list.length === 0 ? (
-      <div className="flex flex-col items-center justify-center h-[200px] gap-2.5">
-        <Sparkles size={32} color="#3f3f46" />
-        <p className="font-inconsolata text-sm text-zinc-600">
-          Nenhum item nessa categoria.
-        </p>
+  const unownedList = useMemo(
+    () => cat === "equipados" ? [] : catalogo.filter(i => i.type === cat),
+    [cat, catalogo]
+  );
+
+  function handleSelectUnowned(item: CatalogoItem) {
+    setSelectedUnowned(item);
+    setSelected(null);
+    setMobileUnownedSheet(true);
+  }
+
+  const ItemGrid = () => {
+    const owned = list;
+    const unowned = unownedList;
+    const hasOwned = owned.length > 0;
+    const hasUnowned = unowned.length > 0;
+
+    if (!hasOwned && !hasUnowned) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[200px] gap-2.5">
+          <Sparkles size={32} color="#3f3f46" />
+          <p className="font-inconsolata text-sm text-zinc-600">
+            Nenhum item nessa categoria.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {hasOwned && (
+          <div>
+            <p className="font-inconsolata text-[11px] text-zinc-500 uppercase tracking-wider mb-2.5 px-0.5">
+              Itens Possuídos
+            </p>
+            <motion.div
+              className="grid gap-2.5"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
+                alignItems: "start",
+              }}
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {owned.map(item => (
+                <motion.div key={item.id} variants={staggerItem}>
+                  <VaultItemCard
+                    item={item}
+                    isSelected={selected?.id === item.id}
+                    onSelect={handleSelect}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        )}
+
+        {hasUnowned && (
+          <div>
+            <p className="font-inconsolata text-[11px] text-zinc-500 uppercase tracking-wider mb-2.5 px-0.5">
+              Itens não Possuídos
+            </p>
+            <motion.div
+              className="grid gap-2.5"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
+                alignItems: "start",
+              }}
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {unowned.map(item => (
+                <motion.div key={item.id} variants={staggerItem}>
+                  <UnownedItemCard
+                    item={item}
+                    onSelect={handleSelectUnowned}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        )}
       </div>
-    ) : (
-      <motion.div
-        className="grid gap-2.5"
-        style={{
-          gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
-          alignItems: "start",
-        }}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
-        {list.map(item => (
-          <motion.div key={item.id} variants={staggerItem}>
-            <VaultItemCard
-              item={item}
-              isSelected={selected?.id === item.id}
-              onSelect={handleSelect}
-            />
-          </motion.div>
-        ))}
-      </motion.div>
     );
+  };
 
   return (
     <div className="px-4 py-6 pt-16 lg:pt-6 relative">
@@ -514,12 +822,19 @@ export default function CofrePage() {
 
         {/* Detail panel */}
         <div className="border-l border-zinc-800">
-          <DetailPanel
-            item={selected}
-            onClose={() => setSelected(null)}
-            onEquip={handleEquip}
-            equipping={equipping}
-          />
+          {selectedUnowned && !selected ? (
+            <UnownedDetailPanel
+              item={selectedUnowned}
+              onClose={() => setSelectedUnowned(null)}
+            />
+          ) : (
+            <DetailPanel
+              item={selected}
+              onClose={() => setSelected(null)}
+              onEquip={handleEquip}
+              equipping={equipping}
+            />
+          )}
         </div>
       </div>
 
@@ -596,6 +911,35 @@ export default function CofrePage() {
                 onClose={() => { setMobileSheet(false); setSelected(null); }}
                 onEquip={handleEquip}
                 equipping={equipping}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile bottom sheet — unowned */}
+      <AnimatePresence>
+        {mobileUnownedSheet && selectedUnowned && (
+          <div className="lg:hidden fixed inset-0 z-[200] flex flex-col justify-end">
+            <motion.div
+              variants={backdrop}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setMobileUnownedSheet(false)}
+            />
+            <motion.div
+              variants={slideUp}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl max-h-[78vh] overflow-y-auto"
+            >
+              <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3 mb-1" />
+              <UnownedDetailPanel
+                item={selectedUnowned}
+                onClose={() => { setMobileUnownedSheet(false); setSelectedUnowned(null); }}
               />
             </motion.div>
           </div>

@@ -8,8 +8,7 @@ import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitl
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
-import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi, getCatalogoApi } from "@/services/api/shop";
-import type { CatalogoItem } from "@/services/api/shop";
+import { buyShopItemApi, buyCoinsWithDiamondsApi, startDiamondCheckoutApi, getDiamondBalanceApi } from "@/services/api/shop";
 import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import LegendaryTitle from "@/components/LegendaryTitle";
@@ -26,11 +25,6 @@ import BauAbertura from "@/components/BauAbertura";
 
 /* --- Types --------------------------------------------------------------- */
 type ItemType = "title" | "badge" | "banner" | "frame";
-
-interface FragmentItem extends CatalogoItem {
-  fragmentavel: true
-  fragmentosTotal: number
-}
 
 interface CoinPack {
   id: string;
@@ -542,157 +536,6 @@ function DetailSheet({
   );
 }
 
-/* --- Fragment detail bottom sheet ---------------------------------------- */
-function FragmentDetailSheet({
-  data,
-  onClose,
-}: {
-  data: { item: FragmentItem; atual: number; total: number } | null;
-  onClose: () => void;
-}) {
-  if (!data) return null;
-
-  const item   = data.item;
-  const meta   = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
-  const accent = rMeta?.cor ?? meta.color;
-  const isBanner = item.type === "banner";
-  const isFrame  = item.type === "frame";
-  const progress = data.total > 0 ? Math.min(100, (data.atual / data.total) * 100) : 0;
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      <motion.div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        variants={backdrop}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-        onClick={onClose}
-      />
-      <motion.div
-        className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl overflow-y-auto"
-        style={{ maxHeight: "72vh" }}
-        variants={slideUp}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
-        <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
-        <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-8">
-
-          <div className="flex items-start justify-between gap-3">
-            {isBanner && item.value ? (
-              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
-            ) : isFrame ? (
-              <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
-                  👤
-                </div>
-                {(() => {
-                  const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
-                  if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
-                  return null;
-                })()}
-              </div>
-            ) : item.type === "title" ? (
-              <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800">
-                <div className="h-7 bg-gradient-to-r from-zinc-800 to-zinc-900" />
-                <div className="px-3 py-2 flex items-center gap-2 bg-zinc-900/80">
-                  <div className="w-7 h-7 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-xs text-zinc-500">👤</div>
-                  <div className="min-w-0">
-                    <span className="block text-[11px] text-zinc-100 font-inconsolata truncate leading-tight">Você</span>
-                    <div className="mt-0.5">
-                      {(() => {
-                        const titleText = (() => { try { return JSON.parse(item.value ?? "{}").title } catch { return null } })();
-                        if (!item.animated) return (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg border font-inconsolata text-[10px] uppercase tracking-wider whitespace-nowrap bg-emerald-500/10 text-emerald-300 border-emerald-500/30">{titleText}</span>
-                        );
-                        if (item.raridade === "LENDARIO") return (
-                          <LegendaryTitle text={titleText ?? ""} />
-                        );
-                        return (
-                          <span className="inline-block font-inconsolata text-[10px] px-2 py-0.5 rounded-full border border-violet-500/30 bg-violet-500/10" style={shimmerTitleStyle}>{titleText}</span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div
-                className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
-                style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}
-              >
-                {item.type === "badge"  && item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="w-8 h-8 object-contain" />
-                ) : item.type === "badge" ? (
-                  <Shield size={26} />
-                ) : item.type === "banner" && <ImageIcon size={26} />}
-              </div>
-            )}
-            <button type="button" onClick={onClose}
-              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div>
-            <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
-            <div className="flex gap-1.5 flex-wrap">
-              <Chip tone={meta.tone}>{meta.label}</Chip>
-              {rMeta && (
-                <span
-                  className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
-                  style={{ color: accent, background: accent + "18", borderColor: accent + "40", letterSpacing: "0.08em" }}
-                >
-                  <span className="w-[5px] h-[5px] rounded-full inline-block" style={{ background: accent }} />
-                  {rMeta.label}
-                </span>
-              )}
-            </div>
-            {item.description && (
-              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
-            )}
-          </div>
-
-          <div className="border-t border-zinc-800" />
-
-          {/* Fragmentos progresso */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between font-inconsolata text-xs">
-              <span className="text-zinc-500">Fragmentos</span>
-              <span style={{ color: accent }}>{data.atual}/{data.total}</span>
-            </div>
-            <div className="bg-zinc-800 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{ background: accent }}
-              />
-            </div>
-            <p className="font-inconsolata text-[10px] text-zinc-600 leading-relaxed">
-              {data.atual >= data.total
-                ? "Item desbloqueado! ⭐"
-                : `Faltam ${data.total - data.atual} fragmentos para desbloquear este item. Continue abrindo baús para coletar mais fragmentos.`}
-            </p>
-          </div>
-
-          <div className="bg-zinc-900/50 rounded-xl px-4 py-3 border border-zinc-800/50">
-            <p className="font-inconsolata text-[11px] text-zinc-500 leading-relaxed">
-              🎁 Fragmentos são obtidos ao abrir baús na seção <strong className="text-zinc-300">Baús</strong> acima.
-              Cada baú concede fragmentos dos itens que vierem no sorteio.
-            </p>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 /* --- 3-column animated grid ---------------------------------------------- */
 function Grid3({ children }: { children: React.ReactNode }) {
   return (
@@ -1072,7 +915,6 @@ export default function LojaPage() {
   const { success, error } = useToast();
 
   const [selected, setSelected]             = useState<ShopItem | null>(null);
-  const [selectedFragment, setSelectedFragment] = useState<{ item: FragmentItem; atual: number; total: number } | null>(null);
   const [buying, setBuying]                 = useState(false);
   const [buyingCoin, setBuyingCoin]         = useState(false);
   const [coinConfirm, setCoinConfirm]       = useState<CoinPack | null>(null);
@@ -1092,11 +934,6 @@ export default function LojaPage() {
     if (token) {
       if (!profile) loadProfile();
       if (!shopItems.length) loadShopItems();
-      setLoadingCatalogo(true);
-      getCatalogoApi()
-        .then(setCatalogo)
-        .catch(() => {})
-        .finally(() => setLoadingCatalogo(false));
     }
   }, [token, profile, shopItems.length, loadProfile, loadShopItems]);
 
@@ -1121,8 +958,6 @@ export default function LojaPage() {
 
   const [coins, setCoins]             = useState<number | null>(null);
   const [diamonds, setDiamonds]       = useState<number | null>(null);
-  const [catalogo, setCatalogo]       = useState<CatalogoItem[]>([]);
-  const [loadingCatalogo, setLoadingCatalogo] = useState(false);
   const userCoins    = coins    ?? profile?.coins    ?? 0;
   const userDiamonds = diamonds ?? profile?.diamonds ?? 0;
 
@@ -1232,25 +1067,12 @@ export default function LojaPage() {
     [shopItems, ownedIds]
   );
 
-  const fragmentItems = useMemo(
-    () => catalogo.filter((i): i is FragmentItem =>
-      i.fragmentavel === true && i.fragmentosTotal != null && !ownedIds.has(i.id)
-    ),
-    [catalogo, ownedIds]
-  );
-
   function categoryItems(type: ItemType) {
-    const coin = nonFragment.filter(i => i.type === type).sort((a, b) => {
+    return nonFragment.filter(i => i.type === type).sort((a, b) => {
       const wa = raridadeWeight(a.raridade);
       const wb = raridadeWeight(b.raridade);
       return wa !== wb ? wa - wb : a.name.localeCompare(b.name);
     });
-    const frag = fragmentItems.filter(i => i.type === type).sort((a, b) => {
-      const wa = raridadeWeight(a.raridade);
-      const wb = raridadeWeight(b.raridade);
-      return wa !== wb ? wa - wb : a.name.localeCompare(b.name);
-    });
-    return { coin, frag };
   }
 
   async function handleBuyCosmetic(item: ShopItem) {
@@ -1332,22 +1154,13 @@ export default function LojaPage() {
 
       {/* Títulos */}
       {(() => {
-        const { coin, frag } = categoryItems("title");
-        const total = coin.length + frag.length;
-        if (!total) return null;
+        const items = categoryItems("title");
+        if (!items.length) return null;
         return (
           <section className="mb-10">
-            <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${total} disponíveis`} />
+            <SectionHeader label="Títulos" icon={Crown} color="#f59e0b" sub={`${items.length} disponíveis`} />
             <Grid3>
-              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
-              {frag.map(i => (
-                <CosmeticCard
-                  key={i.id}
-                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
-                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
-                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
-                />
-              ))}
+              {items.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
             </Grid3>
           </section>
         );
@@ -1355,22 +1168,13 @@ export default function LojaPage() {
 
       {/* Emblemas */}
       {(() => {
-        const { coin, frag } = categoryItems("badge");
-        const total = coin.length + frag.length;
-        if (!total) return null;
+        const items = categoryItems("badge");
+        if (!items.length) return null;
         return (
           <section className="mb-10">
-            <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${total} disponíveis`} />
+            <SectionHeader label="Emblemas" icon={Shield} color="#a78bfa" sub={`${items.length} disponíveis`} />
             <Grid3>
-              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
-              {frag.map(i => (
-                <CosmeticCard
-                  key={i.id}
-                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
-                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
-                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
-                />
-              ))}
+              {items.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
             </Grid3>
           </section>
         );
@@ -1378,22 +1182,13 @@ export default function LojaPage() {
 
       {/* Banners */}
       {(() => {
-        const { coin, frag } = categoryItems("banner");
-        const total = coin.length + frag.length;
-        if (!total) return null;
+        const items = categoryItems("banner");
+        if (!items.length) return null;
         return (
           <section className="mb-10">
-            <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${total} disponíveis`} />
+            <SectionHeader label="Banners" icon={ImageIcon} color="#38bdf8" sub={`${items.length} disponíveis`} />
             <Grid3>
-              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
-              {frag.map(i => (
-                <CosmeticCard
-                  key={i.id}
-                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
-                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
-                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
-                />
-              ))}
+              {items.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
             </Grid3>
           </section>
         );
@@ -1401,22 +1196,13 @@ export default function LojaPage() {
 
       {/* Molduras */}
       {(() => {
-        const { coin, frag } = categoryItems("frame");
-        const total = coin.length + frag.length;
-        if (!total) return null;
+        const items = categoryItems("frame");
+        if (!items.length) return null;
         return (
           <section className="mb-10">
-            <SectionHeader label="Molduras" icon={ImageIcon} color="#22d3ee" sub={`${total} disponíveis`} />
+            <SectionHeader label="Molduras" icon={ImageIcon} color="#22d3ee" sub={`${items.length} disponíveis`} />
             <Grid3>
-              {coin.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
-              {frag.map(i => (
-                <CosmeticCard
-                  key={i.id}
-                  item={{ id: i.id, name: i.name, description: '', price: 0, type: i.type as ItemType, value: i.value, raridade: i.raridade, imageUrl: i.imageUrl, available: true, animated: i.animated, fragmentavel: true, fragmentosTotal: i.fragmentosTotal, fragmentosIcone: i.fragmentosIcone }}
-                  onSelect={() => setSelectedFragment({ item: i, atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 })}
-                  fragData={{ atual: i.fragmentosAtuais, total: i.fragmentosTotal ?? 0 }}
-                />
-              ))}
+              {items.map(i => <CosmeticCard key={i.id} item={i} onSelect={setSelected} />)}
             </Grid3>
           </section>
         );
@@ -1475,15 +1261,6 @@ export default function LojaPage() {
             onClose={() => setSelected(null)}
             onBuy={handleBuyCosmetic}
             buying={buying}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {selectedFragment && (
-          <FragmentDetailSheet
-            data={selectedFragment}
-            onClose={() => setSelectedFragment(null)}
           />
         )}
       </AnimatePresence>
