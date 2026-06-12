@@ -2,9 +2,6 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { dailyOffersRepository, resolveDailyOffer } from "./daily-offers.repository.js";
 import { parseUserItems } from "./shop.repository.js";
-import { raridadeWeight } from "../../constants/raridade.js";
-
-const DAILY_OFFER_COUNT = 6;
 
 const PRECO_POR_RARIDADE: Record<string, number> = {
   COMUM: 100,
@@ -32,13 +29,15 @@ function shuffle<T>(arr: T[]): T[] {
 
 export class DailyOffersService {
   async getOffers(userId: number) {
-    const existing = await dailyOffersRepository.findActiveByUser(userId);
+    // Remove offers from previous day to always regenerate exactly 6
+    await prisma.userDailyOffer.deleteMany({
+      where: {
+        userId,
+        purchased: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-    if (existing.length >= DAILY_OFFER_COUNT) {
-      return existing.map(resolveDailyOffer);
-    }
-
-    // Lazy-generate missing offers
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { user_items: true },
