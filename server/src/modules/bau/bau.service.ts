@@ -110,17 +110,13 @@ export class BauService {
     const itensSorteados: ItemSorteado[] = []
     const idsUsados = new Set<number>()
 
-    for (let i = 0; i < qtdItens; i++) {
-      const { raridade } = sortearPonderado(config.probabilidadesRaridade)
-      const idx = ORDEM_RARIDADES.indexOf(raridade)
-
+    const pegarItem = async (raridadeAlvo: Raridade): Promise<ItemSorteado | null> => {
       const deltas = [0]
       for (let step = 1; step < 5; step++) {
         deltas.push(step)
         deltas.push(-step)
       }
-
-      let itemEncontrado: ItemSorteado | null = null
+      const idx = ORDEM_RARIDADES.indexOf(raridadeAlvo)
       for (const delta of deltas) {
         const rIdx = idx + delta
         if (rIdx < 0 || rIdx >= ORDEM_RARIDADES.length) continue
@@ -130,15 +126,32 @@ export class BauService {
         if (disponiveis.length > 0) {
           const item = disponiveis[randInt(0, disponiveis.length - 1)]
           idsUsados.add(item.id)
-          itemEncontrado = { ...item, raridade: r }
-          break
+          return { ...item, raridade: r }
         }
       }
-
-      if (itemEncontrado) {
-        itensSorteados.push(itemEncontrado)
-      }
+      return null
     }
+
+    if (tipo === "lendario") {
+      const epic = await pegarItem("EPICO")
+      if (epic) itensSorteados.push(epic)
+      const lendario = await pegarItem("LENDARIO")
+      if (lendario) itensSorteados.push(lendario)
+    } else if (tipo === "premium") {
+      const raro = await pegarItem("RARO")
+      if (raro) itensSorteados.push(raro)
+    }
+
+    const restantes = Math.max(0, qtdItens - itensSorteados.length)
+    for (let i = 0; i < restantes; i++) {
+      const { raridade } = sortearPonderado(config.probabilidadesRaridade)
+      const item = await pegarItem(raridade)
+      if (item) itensSorteados.push(item)
+    }
+
+    itensSorteados.sort((a, b) => {
+      return ORDEM_RARIDADES.indexOf(a.raridade) - ORDEM_RARIDADES.indexOf(b.raridade)
+    })
 
     const temFragmentosPendentes = itensSorteados.length > 0
 
