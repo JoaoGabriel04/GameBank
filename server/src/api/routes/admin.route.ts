@@ -3,7 +3,7 @@ import { adminController } from "../../modules/admin/admin.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { requireAdmin } from "../../middleware/admin.middleware.js";
 import { bannerUpload, badgeUpload, frameUpload } from "../../middleware/upload.middleware.js";
-import { bannerAdminLimiter } from "../../modules/auth/auth.controller.js";
+import { bannerAdminLimiter } from "../../config/rate-limiters.js";
 import { diamondAdminController } from "../../modules/diamonds/diamond-admin.controller.js";
 
 const adminRouter = Router();

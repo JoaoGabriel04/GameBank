@@ -1,16 +1,9 @@
 import type { Request, Response } from "express";
 import { UserService } from "./user.service.js";
-import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { emitSessionUpdated } from "../socket/socket.handler.js";
+import { emitUpdatedSession } from "../socket/socket.handler.js";
 
 const userService = new UserService();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 export const userController = {
   getById: async (req: Request, res: Response) => {

@@ -1,24 +1,11 @@
-import { prisma } from "../../lib/prisma.js"
+import { diamondsRepository } from "./diamonds.repository.js"
 
 export async function listarPacotesAtivos() {
-  return prisma.diamondPackage.findMany({
-    where: { active: true },
-    orderBy: { priceInCents: "asc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      diamonds: true,
-      bonusPct: true,
-      priceInCents: true,
-    },
-  })
+  return diamondsRepository.findActivePackages()
 }
 
 export async function buscarPacote(packageId: number) {
-  const pkg = await prisma.diamondPackage.findUnique({
-    where: { id: packageId, active: true },
-  })
+  const pkg = await diamondsRepository.findPackageById(packageId)
   if (!pkg) throw new Error("Pacote não encontrado ou inativo")
   return pkg
 }

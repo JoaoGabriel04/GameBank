@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { Request, Response } from "express";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { AuthService } from "./auth.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { authRepository } from "./auth.repository.js";
@@ -13,26 +12,8 @@ const emailSchema = z
   .string()
   .email("Email inválido")
   .transform((value) => value.trim().toLowerCase());
+
 const senhaMin6 = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
-
-export const avatarProfileLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: Number(process.env.AVATAR_UPLOAD_RATE_LIMIT || 5),
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Muitos uploads de avatar. Tente novamente em 1 minuto." },
-  keyGenerator: (req) => req.user?.userId != null ? String(req.user.userId) : ipKeyGenerator(req.ip ?? ""),
-});
-
-export const bannerAdminLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: Number(process.env.BANNER_UPLOAD_RATE_LIMIT || 5),
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Muitos uploads de banner. Tente novamente em 1 minuto." },
-  keyGenerator: (req) => req.user?.userId != null ? String(req.user.userId) : ipKeyGenerator(req.ip ?? ""),
-});
-
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
   if (err instanceof z.ZodError) return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });

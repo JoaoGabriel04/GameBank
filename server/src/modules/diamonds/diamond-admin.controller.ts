@@ -1,73 +1,52 @@
 import type { Request, Response } from "express"
-import { prisma } from "../../lib/prisma.js"
+import { diamondsRepository } from "./diamonds.repository.js"
+import { AppError, parseError } from "../../middleware/error-handler.middleware.js"
 
 export const diamondAdminController = {
   createPackage: async (req: Request, res: Response) => {
     try {
       const { name, description, diamonds, priceInCents, bonusPct } = req.body
       if (!name || !diamonds || !priceInCents) {
-        return res.status(400).json({ error: "name, diamonds e priceInCents são obrigatórios" })
+        throw new AppError(400, "name, diamonds e priceInCents são obrigatórios")
       }
-      const pkg = await prisma.diamondPackage.create({
-        data: {
-          name,
-          description: description ?? "",
-          diamonds: Number(diamonds),
-          priceInCents: Number(priceInCents),
-          bonusPct: Number(bonusPct ?? 0),
-        },
+      const pkg = await diamondsRepository.createPackage({
+        name,
+        description: description ?? "",
+        diamonds: Number(diamonds),
+        priceInCents: Number(priceInCents),
+        bonusPct: Number(bonusPct ?? 0),
       })
       res.status(201).json(pkg)
-    } catch (err: any) {
-      res.status(500).json({ error: err.message })
-    }
+    } catch (err) { parseError(res, err) }
   },
 
   listPackages: async (_req: Request, res: Response) => {
     try {
-      const packages = await prisma.diamondPackage.findMany({
-        orderBy: { priceInCents: "asc" },
-      })
+      const packages = await diamondsRepository.findAllPackages()
       res.json(packages)
-    } catch (err: any) {
-      res.status(500).json({ error: err.message })
-    }
+    } catch (err) { parseError(res, err) }
   },
 
   updatePackage: async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id)
       const { active, name, description, diamonds, priceInCents, bonusPct } = req.body
-      const pkg = await prisma.diamondPackage.update({
-        where: { id },
-        data: {
-          ...(active !== undefined && { active }),
-          ...(name !== undefined && { name }),
-          ...(description !== undefined && { description }),
-          ...(diamonds !== undefined && { diamonds: Number(diamonds) }),
-          ...(priceInCents !== undefined && { priceInCents: Number(priceInCents) }),
-          ...(bonusPct !== undefined && { bonusPct: Number(bonusPct) }),
-        },
+      const pkg = await diamondsRepository.updatePackage(id, {
+        ...(active !== undefined && { active }),
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(diamonds !== undefined && { diamonds: Number(diamonds) }),
+        ...(priceInCents !== undefined && { priceInCents: Number(priceInCents) }),
+        ...(bonusPct !== undefined && { bonusPct: Number(bonusPct) }),
       })
       res.json(pkg)
-    } catch (err: any) {
-      res.status(500).json({ error: err.message })
-    }
+    } catch (err) { parseError(res, err) }
   },
 
   listPurchases: async (_req: Request, res: Response) => {
     try {
-      const purchases = await prisma.diamondPurchase.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        include: {
-          user: { select: { id: true, nome: true } },
-          package: { select: { name: true } },
-        },
-      })
+      const purchases = await diamondsRepository.findPurchases()
       res.json(purchases)
-    } catch (err: any) {
-      res.status(500).json({ error: err.message })
-    }
+    } catch (err) { parseError(res, err) }
   },
 }

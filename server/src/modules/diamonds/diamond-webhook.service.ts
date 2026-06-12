@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { getMPPayment, getWebhookSecret } from "../../lib/mercadopago.js"
 import { prisma } from "../../lib/prisma.js"
+import { diamondsRepository } from "./diamonds.repository.js"
 import type { Request, Response } from "express"
 
 // Comparação segura que não lança mesmo com buffers de tamanhos diferentes
@@ -126,15 +127,7 @@ async function processarNotificacaoPagamento(mpPaymentId: string) {
   }
 
   // Idempotência — verificar se já processado
-  const jaProcessado = await prisma.diamondPurchase.findFirst({
-    where: {
-      OR: [
-        { mpPaymentId },
-        { mpIdempotencyKey: idempotencyKey },
-      ],
-      status: "COMPLETED",
-    },
-  })
+  const jaProcessado = await diamondsRepository.findCompletedPurchase(mpPaymentId, idempotencyKey)
 
   if (jaProcessado) {
     console.log("[webhook-mp] Pagamento já processado — ignorando:", mpPaymentId)
@@ -172,8 +165,5 @@ async function processarNotificacaoPagamento(mpPaymentId: string) {
 }
 
 async function marcarComoFalhou(mpPaymentId: string) {
-  await prisma.diamondPurchase.updateMany({
-    where: { mpPaymentId, status: "PENDING" },
-    data: { status: "FAILED" },
-  })
+  await diamondsRepository.markAsFailed(mpPaymentId)
 }

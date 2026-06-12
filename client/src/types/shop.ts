@@ -7,7 +7,6 @@ export interface ShopItem {
   name: string
   description: string
   price: number
-  /** Generic icon field. For banners, use bannerId+banner.spriteId instead. */
   icon?: string | null
   type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
@@ -29,7 +28,6 @@ export interface UserItem {
   type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
   icon?: string | null 
-  spriteId?: string | null
   raridade?: Raridade
   imageUrl?: string | null
   animated?: boolean
@@ -109,7 +107,6 @@ export interface RankingUser {
   avatarUpdatedAt?: string | null
   banner?: string | null
   bannerAnimated?: boolean
-  spriteId?: string | null
   frame?: string | null
   frameType?: "image" | "gradient" | null
   frameAnimated?: boolean

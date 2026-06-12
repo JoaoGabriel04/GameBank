@@ -118,10 +118,10 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
           <span style={{ fontSize: size * 0.25 }}>👑</span>
           <span style={{
             fontFamily: "var(--font-jaro)",
-            fontSize: size * 0.09,
+            fontSize: size * 0.05,
             color: cor,
             textAlign: "center",
-            padding: "2px 12px",
+            padding: "1px 10px",
             border: `1px solid ${cor}44`,
             borderRadius: 20,
             background: `${cor}11`,

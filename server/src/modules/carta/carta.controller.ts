@@ -1,20 +1,12 @@
 import type { Request, Response } from "express";
 import { CartaService } from "./carta.service.js";
 import { CartaRepository, carregarBaralho } from "./carta.repository.js";
-import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { emitSessionUpdated } from "../socket/socket.handler.js";
+import { emitUpdatedSession } from "../socket/socket.handler.js";
 import { getIO } from "../../lib/socket.js";
 
 const cartaService = new CartaService();
 const cartaRepo = new CartaRepository();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 async function getPlayerNome(playerId: number): Promise<string> {
   const p = await cartaRepo.findPlayerById(playerId);

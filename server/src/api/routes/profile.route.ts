@@ -1,7 +1,7 @@
 import { Router } from "express";
 import profileController from "../../modules/profile/profile.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
-import { avatarProfileLimiter } from "../../modules/auth/auth.controller.js";
+import { avatarProfileLimiter } from "../../config/rate-limiters.js";
 import { avatarUpload } from "../../middleware/upload.middleware.js";
 
 const profileRouter = Router();

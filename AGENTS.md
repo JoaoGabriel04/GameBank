@@ -94,21 +94,8 @@ O UserNav exibe 5 abas no bottom nav (grid-cols-5): Dashboard, Cofre, Loja, Reco
 
 | Arquivo | Motivo |
 |---|---|
-| `client/src/components/BadgeCollection/index.tsx` | Substituído pelo Cofre (`/user/cofre`) |
-| `client/src/components/Header/index.tsx` | Substituído pelo `UserNav` + `LandingHeader` |
-| `client/src/components/MobileMenu/index.tsx` | Não utilizado |
-| `client/src/components/PlayerCard/index.tsx` | Substituído por versão local em `Inicio`/game page |
-| `client/src/components/Title1/index.tsx` | Não utilizado |
-| `client/src/components/ui/button.tsx` | shadcn/ui não utilizado |
-| `client/src/components/ui/dropdown-menu.tsx` | shadcn/ui não utilizado |
-| `client/src/components/ui/select.tsx` | shadcn/ui não utilizado |
-| `client/src/lib/asyncAction.ts` | Nunca importado |
-| `client/src/hooks/useBannerCatalog.ts` | Nunca importado (só usado por `services/api/banners.ts` que por sua vez só é importado por este hook) |
-| `client/src/constants/badges.ts` | Nunca importado |
+| `client/src/components/PlayerCard/index.tsx` | Substituído por versão local em `Inicio`/game page (ainda importado por compatibilidade) |
 | `root/SESSION.md` | Log de terminal |
-| `root/INSTRUCOES.md` | Notas de design obsoletas |
-| `root/GameBank Design System/` | Mockups de design |
-| `root/screenshots/` | Screenshots não referenciados |
 
 ## WebSocket
 
@@ -153,7 +140,7 @@ Alternativa: avatar preset (string `preset:<id>`) — não usa Cloudinary.
 ## Validação Zod
 
 Schemas compartilhados ficam em `server/src/shared/schemas/`:
-- `auth.schema.ts`, `banco.schema.ts`, `player.schema.ts`, `propriedade.schema.ts`, `session.schema.ts`
+- `auth.schema.ts`, `bau.schema.ts`
 
 Constantes de avatar/banner: `server/src/shared/constants/`.
 
@@ -277,7 +264,8 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 - `<modulo>.repository.ts` — queries Prisma puras, sem lógica
 - `<modulo>.service.ts` — regras de negócio, transações, `AppError`
 - `<modulo>.controller.ts` — extrai req, chama service, retorna res
-- **Exceções**: `avatar/`, `badge/`, `frames/` só têm service (Cloudinary); `missions/` adiciona generator+templates; `session/` adiciona `reward.service.ts`
+- **Exceções**: `avatar/`, `badge/`, `frames/` só têm service (Cloudinary); `missions/` adiciona generator+templates; `session/` adiciona `reward.service.ts`; `socket/` só tem handler (eventos Socket.IO)
+- Rate limiters em `server/src/config/rate-limiters.ts`
 
 #### Repository
 - 2 estilos: **class** (`SessionRepository`) com métodos async ou **object literal** (`missionsRepository = { ... }`)

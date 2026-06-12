@@ -14,7 +14,6 @@ interface ProfileData {
   avatarUpdatedAt?: string | null
   banner?: string | null
   bannerAnimated?: boolean
-  spriteId?: string | null
   frame?: string | null
   frameType?: "image" | "gradient" | null
   frameAnimated?: boolean
@@ -72,7 +71,6 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
         useAuthStore.getState().updateUser({
           ...authUser,
           banner: profile.banner ?? null,
-          spriteId: profile.spriteId ?? null,
           badge: profile.badge ?? null,
           badgeImageUrl: profile.badgeImageUrl ?? null,
           frame: profile.frame ?? null,

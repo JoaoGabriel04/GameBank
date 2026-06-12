@@ -1,26 +1,8 @@
 import { Router } from "express";
-import { adminRepository } from "../../modules/admin/admin.repository.js";
+import { bannerController } from "../../modules/banner/banner.controller.js";
 
 const bannerRouter = Router();
 
-bannerRouter.get("/", async (_req, res) => {
-  try {
-    const banners = await adminRepository.findAllBanners();
-    res.json(
-      banners.map((b) => ({
-        id: b.id,
-        name: b.nome,
-        css: b.css,
-        animated: b.animated,
-        imagePublicId: b.imagePublicId ?? null,
-        imageUpdatedAt: b.imageUpdatedAt ? b.imageUpdatedAt.toISOString() : null,
-        available: b.disponibilidade,
-      }))
-    );
-  } catch (err) {
-    console.error("Erro ao listar banners públicos:", err);
-    res.status(500).json({ message: "Erro ao listar banners" });
-  }
-});
+bannerRouter.get("/", bannerController.listPublic);
 
 export default bannerRouter;

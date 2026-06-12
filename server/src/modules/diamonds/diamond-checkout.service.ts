@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid"
 import { getMPPreference } from "../../lib/mercadopago.js"
-import { prisma } from "../../lib/prisma.js"
+import { diamondsRepository } from "./diamonds.repository.js"
 import { buscarPacote, calcularDiamonds } from "./diamond-packages.service.js"
 
 export async function criarCheckout(userId: number, packageId: number) {
@@ -50,20 +50,21 @@ export async function criarCheckout(userId: number, packageId: number) {
     requestOptions: { idempotencyKey },
   })
 
-  await prisma.diamondPurchase.create({
-    data: {
-      userId,
-      packageId,
-      diamondsGranted: diamondsTotal,
-      amountPaidCents: pkg.priceInCents,
-      mpPreferenceId: response.id,
-      mpIdempotencyKey: idempotencyKey,
-      status: "PENDING",
-    },
+  const preferenceId = response.id!
+  if (!preferenceId) throw new Error("Falha ao criar preferência MP — sem ID")
+
+  await diamondsRepository.createPurchase({
+    userId,
+    packageId,
+    diamondsGranted: diamondsTotal,
+    amountPaidCents: pkg.priceInCents,
+    mpPreferenceId: preferenceId,
+    mpIdempotencyKey: idempotencyKey,
+    status: "PENDING",
   })
 
   return {
-    checkoutUrl: response.init_point,
-    sandboxUrl: response.sandbox_init_point,
+    checkoutUrl: response.init_point ?? "",
+    sandboxUrl: response.sandbox_init_point ?? "",
   }
 }

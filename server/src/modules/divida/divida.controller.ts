@@ -1,17 +1,9 @@
 import type { Request, Response } from "express";
 import { DividaService } from "./divida.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
-import { SessionService } from "../session/session.service.js";
-import { emitSessionUpdated } from "../socket/socket.handler.js";
+import { emitUpdatedSession } from "../socket/socket.handler.js";
 
 const dividaService = new DividaService();
-const sessionService = new SessionService();
-
-async function emitUpdatedSession(sessionId: number) {
-  await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
-}
 
 export const dividaController = {
   listarPendentes: async (req: Request, res: Response) => {
