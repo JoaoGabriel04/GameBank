@@ -112,15 +112,26 @@ export class DailyOffersService {
       const pct = randomBetween(0.05, 0.1);
       const total = Math.max(1, Math.round((item.fragmentosTotal ?? 20) * pct));
 
-      const offer = await dailyOffersRepository.createOffer(
-        userId,
-        item.id,
-        preco,
-        total,
-        expiresAt,
-      );
+      try {
+        const offer = await dailyOffersRepository.createOffer(
+          userId,
+          item.id,
+          preco,
+          total,
+          expiresAt,
+        );
+        created.push({ ...offer, item });
+      } catch (err: any) {
+        // P2002 = unique constraint — offer already exists from concurrent request
+        if (err?.code === "P2002") continue;
+        throw err;
+      }
+    }
 
-      created.push({ ...offer, item });
+    // If nothing was created (all already existed), return existing
+    if (created.length === 0) {
+      const existing = await dailyOffersRepository.findActiveByUser(userId);
+      return existing.map(resolveDailyOffer);
     }
 
     return created.map(resolveDailyOffer);
