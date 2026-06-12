@@ -68,44 +68,44 @@ export class DailyOffersService {
 
     const expiresAt = getExpiresAt();
 
-    // Helper: pick n items from a rarity pool
-    function pickN(rarity: string, n: number): typeof candidates {
-      const pool = byRarity[rarity] ?? [];
-      return shuffle(pool).slice(0, n);
+    // Helper: pick up to n items from a rarity pool (removes picked items)
+    function pickN(rarity: string, n: number, used: Set<number>): typeof candidates {
+      const pool = shuffle(byRarity[rarity] ?? []).filter(p => !used.has(p.id));
+      const picked = pool.slice(0, Math.min(n, pool.length));
+      picked.forEach(p => used.add(p.id));
+      return picked;
     }
 
-    // Distribution: 2 Comum, 2 Incomum, 1 Raro, 1 Epic/Legendary
+    const used = new Set<number>();
     const picks: typeof candidates = [];
 
-    picks.push(...pickN("COMUM", 2));
-    picks.push(...pickN("INCOMUM", 2));
-    picks.push(...pickN("RARO", 1));
+    // Priority distribution
+    picks.push(...pickN("COMUM", 2, used));
+    picks.push(...pickN("INCOMUM", 2, used));
+    picks.push(...pickN("RARO", 1, used));
 
-    // 90% Epic / 10% Legendary
-    const epicPool = byRarity["EPICO"] ?? [];
-    const legendaryPool = byRarity["LENDARIO"] ?? [];
-
-    if (Math.random() < 0.1 && legendaryPool.length > 0) {
-      picks.push(shuffle(legendaryPool)[0]);
-    } else if (epicPool.length > 0) {
-      picks.push(shuffle(epicPool)[0]);
-    } else if (legendaryPool.length > 0) {
-      picks.push(shuffle(legendaryPool)[0]);
+    // 90% Epic / 10% Legendary (if available)
+    if (Math.random() < 0.1) {
+      picks.push(...pickN("LENDARIO", 1, used));
+    }
+    if (picks.length < 6) {
+      picks.push(...pickN("EPICO", 6 - picks.length, used));
     }
 
-    // Deduplicate by id
-    const seen = new Set<number>();
-    const uniquePicks = picks.filter((p) => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    });
-
-    if (uniquePicks.length === 0) return [];
+    // Fill remaining slots with any rarity
+    if (picks.length < 6) {
+      const allRemaining = shuffle(
+        Object.entries(byRarity)
+          .filter(([_, items]) => items.some(i => !used.has(i.id)))
+          .flatMap(([_, items]) => items.filter(i => !used.has(i.id)))
+      );
+      const fill = allRemaining.slice(0, 6 - picks.length);
+      fill.forEach(f => { picks.push(f); used.add(f.id); });
+    }
 
     // Create offers in DB
     const created: any[] = [];
-    for (const item of uniquePicks) {
+    for (const item of picks) {
       const preco = PRECO_POR_RARIDADE[item.raridade ?? "COMUM"] ?? 100;
 
       const pct = randomBetween(0.05, 0.1);
