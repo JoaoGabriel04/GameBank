@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
-type Particula = {
+type Sparkle = {
   id: number
-  angle: number
-  orbitR: number
+  top: number
+  left: number
   size: number
-  duration: number
   delay: number
-  cor: string
+  duration: number
+  driftX: number
+  driftY: number
 }
 
 type BauParticulasProps = {
@@ -19,24 +20,23 @@ type BauParticulasProps = {
 }
 
 export default function BauParticulas({ cor, ativo, qtd = 12 }: BauParticulasProps) {
-  const [particulas, setParticulas] = useState<Particula[]>([])
+  const sparkles: Sparkle[] = useMemo(() =>
+    ativo
+      ? Array.from({ length: qtd }, (_, i) => ({
+          id: i,
+          top: 10 + Math.random() * 80,
+          left: 8 + Math.random() * 84,
+          size: 1.5 + Math.random() * 4,
+          delay: Math.random() * 3,
+          duration: 1.2 + Math.random() * 2.5,
+          driftX: (Math.random() - 0.5) * 80,
+          driftY: (Math.random() - 0.5) * 80,
+        }))
+      : [],
+    [ativo, qtd],
+  )
 
-  useEffect(() => {
-    if (!ativo) { setParticulas([]); return }
-
-    const novas: Particula[] = Array.from({ length: qtd }, (_, i) => ({
-      id: i,
-      angle: (360 / qtd) * i,
-      orbitR: 60 + Math.random() * 40,
-      size: 3 + Math.random() * 4,
-      duration: 1.5 + Math.random() * 1.5,
-      delay: Math.random() * 0.8,
-      cor,
-    }))
-    setParticulas(novas)
-  }, [ativo, cor, qtd])
-
-  if (!ativo || particulas.length === 0) return null
+  if (!ativo || sparkles.length === 0) return null
 
   return (
     <div
@@ -44,26 +44,68 @@ export default function BauParticulas({ cor, ativo, qtd = 12 }: BauParticulasPro
         position: "absolute",
         inset: 0,
         pointerEvents: "none",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        overflow: "hidden",
+        zIndex: 0,
       }}
     >
-      {particulas.map((p) => (
+      {sparkles.map((s) => (
         <div
-          key={p.id}
+          key={s.id}
           style={{
             position: "absolute",
-            width: p.size,
-            height: p.size,
-            borderRadius: "50%",
-            background: p.cor,
-            boxShadow: `0 0 ${p.size * 2}px ${p.cor}`,
-            "--orbit-r": `${p.orbitR}px`,
-            transform: `rotate(${p.angle}deg) translateX(${p.orbitR}px)`,
-            animation: `bau-particle-orbit ${p.duration}s linear ${p.delay}s infinite`,
+            top: `${s.top}%`,
+            left: `${s.left}%`,
+            width: s.size * 3,
+            height: s.size * 3,
+            "--drift-x": `${s.driftX}px`,
+            "--drift-y": `${s.driftY}px`,
+            animation: s.id % 2 === 0
+              ? `bau-sparkle ${s.duration}s ease-in-out ${s.delay}s infinite`
+              : `bau-sparkle-cross ${s.duration + 0.5}s ease-in-out ${s.delay + 0.3}s infinite`,
           } as React.CSSProperties}
-        />
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                width: s.size,
+                height: s.size,
+                borderRadius: "50%",
+                background: cor,
+                boxShadow: `0 0 ${s.size * 3}px ${cor}, 0 0 ${s.size * 6}px ${cor}`,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                width: s.size * 3,
+                height: 1,
+                background: `linear-gradient(90deg, transparent, ${cor}, transparent)`,
+                borderRadius: "50%",
+                boxShadow: `0 0 ${s.size * 1.5}px ${cor}`,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                width: 1,
+                height: s.size * 3,
+                background: `linear-gradient(0deg, transparent, ${cor}, transparent)`,
+                borderRadius: "50%",
+                boxShadow: `0 0 ${s.size * 1.5}px ${cor}`,
+              }}
+            />
+          </div>
+        </div>
       ))}
     </div>
   )

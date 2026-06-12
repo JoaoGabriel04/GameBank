@@ -66,6 +66,23 @@ const slideVariants = {
   }),
 }
 
+const slideVariantsLendario = {
+  enter: (dir: number) => ({
+    x: dir > 0 ? "100%" : "-100%",
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    transition: { type: "spring" as const, stiffness: 100, damping: 22, mass: 2.5 },
+  },
+  exit: (dir: number) => ({
+    x: dir > 0 ? "-100%" : "100%",
+    opacity: 0,
+    transition: { duration: 0.3 },
+  }),
+}
+
 export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const [fase, setFase] = useState<Fase>("luz")
   const [itemIdx, setItemIdx] = useState(0)
@@ -330,11 +347,17 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
               <motion.div
                 key={item.id}
                 custom={direction}
-                variants={slideVariants}
+                variants={item.raridade === "LENDARIO" ? slideVariantsLendario : slideVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className={fase === "suspense" ? "bau-suspense-pulse" : ""}
+                className={
+                  fase === "suspense"
+                    ? item.raridade === "LENDARIO"
+                      ? "bau-suspense-pulse bau-suspense-lendario"
+                      : "bau-suspense-pulse"
+                    : ""
+                }
               >
                 <BauItemPreview item={item} size={200} />
               </motion.div>
@@ -343,7 +366,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             {(item.raridade === "EPICO" || item.raridade === "LENDARIO") && (
               <BauParticulas
                 cor={corItem}
-                ativo={fase === "itens"}
+                ativo={fase === "itens" || fase === "suspense"}
                 qtd={item.raridade === "LENDARIO" ? 20 : 12}
               />
             )}
