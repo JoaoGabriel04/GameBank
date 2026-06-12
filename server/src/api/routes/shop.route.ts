@@ -13,5 +13,7 @@ shopRouter.post("/sync-banner", authenticate, shopController.syncBanner);
 shopRouter.post("/coins-buy", authenticate, shopController.buyCoinsWithDiamonds);
 shopRouter.post("/diamonds-buy", authenticate, shopController.buyDiamonds);
 shopRouter.post("/buy-diamonds/:itemId", authenticate, shopController.buyItemWithDiamonds);
+shopRouter.get("/daily-offers", authenticate, shopController.dailyOffers);
+shopRouter.post("/daily-offers/buy/:offerId", authenticate, shopController.buyDailyOffer);
 
 export default shopRouter;

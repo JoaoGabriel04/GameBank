@@ -1,8 +1,10 @@
 import type { Request, Response } from "express";
 import { ShopService } from "./shop.service.js";
+import { DailyOffersService } from "./daily-offers.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 
 const shopService = new ShopService();
+const dailyOffersService = new DailyOffersService();
 
 export const shopController = {
   listItems: async (_req: Request, res: Response) => {
@@ -121,6 +123,32 @@ export const shopController = {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
       console.error("Erro ao listar catálogo:", err);
       res.status(500).json({ message: "Erro ao listar catálogo" });
+    }
+  },
+
+  dailyOffers: async (req: Request, res: Response) => {
+    try {
+      const offers = await dailyOffersService.getOffers(req.user!.userId);
+      res.json(offers);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao listar ofertas diárias:", err);
+      res.status(500).json({ message: "Erro ao listar ofertas diárias" });
+    }
+  },
+
+  buyDailyOffer: async (req: Request, res: Response) => {
+    try {
+      const offerId = parseInt(req.params.offerId);
+      if (!Number.isFinite(offerId)) {
+        return res.status(400).json({ message: "ID de oferta inválido" });
+      }
+      const result = await dailyOffersService.buyOffer(req.user!.userId, offerId);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+      console.error("Erro ao comprar oferta diária:", err);
+      res.status(500).json({ message: "Erro ao comprar oferta diária" });
     }
   },
 };

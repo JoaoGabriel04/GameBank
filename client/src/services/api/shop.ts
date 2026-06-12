@@ -51,6 +51,28 @@ export interface DiamondPurchaseHistory {
   package: { name: string }
 }
 
+export interface DailyOfferItem {
+  id: number
+  name: string
+  description: string
+  type: string
+  value: string | null
+  icon: string | null
+  raridade: Raridade
+  imageUrl: string | null
+  animated: boolean
+}
+
+export interface DailyOffer {
+  id: number
+  itemId: number
+  preco: number
+  quantidade: number
+  expiresAt: string
+  purchased: boolean
+  item: DailyOfferItem
+}
+
 export const getDiamondPackagesApi = () =>
   api.get<DiamondPackage[]>('/diamonds/packages').then(res => res.data)
 
@@ -65,3 +87,9 @@ export const getDiamondBalanceApi = () =>
 
 export const getCatalogoApi = () =>
   api.get<CatalogoItem[]>('/shop/catalogo').then(res => res.data)
+
+export const getDailyOffersApi = () =>
+  api.get<DailyOffer[]>('/shop/daily-offers').then(res => res.data)
+
+export const buyDailyOfferApi = (offerId: number) =>
+  api.post<{ message: string; offerId: number; coins: number; fragmentosAtuais: number }>(`/shop/daily-offers/buy/${offerId}`).then(res => res.data)

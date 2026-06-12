@@ -19,6 +19,8 @@ import type { ShopItem } from "@/types/shop";
 import { RARIDADES, raridadeWeight } from "@/constants/raridade";
 import { apiErrMsg } from "@/lib/api-error";
 import { getBausApi, abrirBauApi } from "@/services/api/baus";
+import { getDailyOffersApi, buyDailyOfferApi } from "@/services/api/shop";
+import type { DailyOffer } from "@/services/api/shop";
 import BauCard from "@/components/BauCard";
 import BauDetailModal from "@/components/BauDetailModal";
 import BauAbertura from "@/components/BauAbertura";
@@ -551,6 +553,199 @@ function Grid3({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* --- Daily offer card --------------------------------------------------- */
+function DailyOfferCard({
+  offer,
+  onSelect,
+}: {
+  offer: DailyOffer;
+  onSelect: (offer: DailyOffer) => void;
+}) {
+  const item   = offer.item;
+  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
+  const glow   = rMeta?.cor ?? "#d4d4d8";
+  const isBanner = item.type === "banner";
+  const isFrame  = item.type === "frame";
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(offer)}
+      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all"
+      style={{
+        borderRadius: 14,
+        border: `1px solid ${glow}40`,
+        background: "#111113",
+      }}
+    >
+      <div
+        className="relative overflow-hidden flex items-center justify-center"
+        style={{ height: 92, background: isBanner && item.value ? item.value : `radial-gradient(ellipse at 50% 55%, ${glow}2e 0%, #0d0d10 68%)` }}
+      >
+        {isBanner && <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />}
+        <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${glow}, transparent)`, opacity: 0.7 }} />
+        {isBanner ? null : isFrame ? (
+          <div className="relative" style={{ width: 38, height: 38 }}>
+            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#71717a" }}>👤</div>
+            {(() => {
+              const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+              if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+              if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+              return null;
+            })()}
+          </div>
+        ) : item.type === "badge" && item.imageUrl ? (
+          <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
+        ) : (
+          <div className="relative z-10" style={{ color: glow, filter: `drop-shadow(0 0 12px ${glow}99)`, opacity: 0.7 }}>
+            {item.type === "title" && <Crown  size={38} />}
+            {item.type === "badge" && <Shield size={38} />}
+          </div>
+        )}
+        <span className="absolute top-1.5 right-1.5 font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded-md"
+          style={{ background: glow + "22", color: glow, letterSpacing: "0.06em" }}>
+          {rMeta?.label ?? "??"}
+        </span>
+      </div>
+      <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1">
+        <p className="font-jaro text-[12px] text-zinc-200 leading-tight truncate">{item.name}</p>
+        <div className="flex items-center justify-between">
+          <span className="font-inconsolata text-[10px] text-zinc-500">+{offer.quantidade} frags</span>
+          <span className="inline-flex items-center gap-0.5 font-jaro text-[11px] text-amber-400">
+            <CoinIcon size={10} className="inline" />
+            {offer.preco.toLocaleString("pt-BR")}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* --- Daily offer bottom sheet ------------------------------------------- */
+function DailyOfferSheet({
+  offer,
+  onClose,
+  onBuy,
+  buying,
+}: {
+  offer: DailyOffer | null;
+  onClose: () => void;
+  onBuy: (offer: DailyOffer) => void;
+  buying: boolean;
+}) {
+  if (!offer) return null;
+
+  const item   = offer.item;
+  const meta   = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
+  const accent = rMeta?.cor ?? meta.color;
+  const isBanner = item.type === "banner";
+  const isFrame  = item.type === "frame";
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        variants={backdrop} initial="hidden" animate="visible" exit="exit"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative bg-zinc-950 border-t border-zinc-800 rounded-t-2xl shadow-2xl overflow-y-auto"
+        style={{ maxHeight: "72vh" }}
+        variants={slideUp} initial="hidden" animate="visible" exit="exit"
+      >
+        <div className="w-9 h-1 rounded-sm bg-zinc-700 mx-auto mt-3" />
+        <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-8">
+          <div className="flex items-start justify-between gap-3">
+            {isBanner && item.value ? (
+              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+            ) : isFrame ? (
+              <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>👤</div>
+                {(() => {
+                  const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                  return null;
+                })()}
+              </div>
+            ) : item.type === "badge" && item.imageUrl ? (
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
+                style={{ background: accent + "22", boxShadow: `0 0 36px -8px ${accent}` }}>
+                <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+              </div>
+            ) : item.type === "title" ? (
+              <div className="shrink-0 rounded-xl overflow-hidden border border-zinc-800" style={{ width: 170 }}>
+                <div className="h-6 bg-gradient-to-r from-zinc-800 to-zinc-900" />
+                <div className="px-3 py-1.5 flex items-center gap-2 bg-zinc-900/80">
+                  <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-[10px] text-zinc-500">👤</div>
+                  <span className="font-inconsolata text-[10px] text-zinc-100 truncate">
+                    {(() => { try { return JSON.parse(item.value ?? "{}").title } catch { return item.name } })()}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
+                style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}>
+                {item.type === "badge" && <Shield size={26} />}
+                {item.type === "title" && <Crown size={26} />}
+              </div>
+            )}
+            <button type="button" onClick={onClose}
+              className="text-zinc-600 hover:text-zinc-300 transition-colors cursor-pointer p-1 shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div>
+            <h3 className="font-jaro text-[22px] text-white leading-tight mb-2">{item.name}</h3>
+            <div className="flex gap-1.5 flex-wrap">
+              <Chip tone={meta.tone}>{meta.label}</Chip>
+              {rMeta && (
+                <span className="inline-flex items-center gap-1 font-inconsolata uppercase text-[10px] rounded-lg px-2 py-0.5 border"
+                  style={{ color: accent, background: accent + "18", borderColor: accent + "40", letterSpacing: "0.08em" }}>
+                  <span className="w-[5px] h-[5px] rounded-full inline-block" style={{ background: accent }} />
+                  {rMeta.label}
+                </span>
+              )}
+            </div>
+            {item.description && (
+              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
+            )}
+          </div>
+
+          <div className="border-t border-zinc-800" />
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between font-inconsolata text-xs">
+              <span className="text-zinc-500">Fragmentos</span>
+              <span style={{ color: accent }}>+{offer.quantidade}</span>
+            </div>
+            <div className="bg-zinc-900/50 rounded-xl px-4 py-3 border border-zinc-800/50">
+              <p className="font-inconsolata text-[11px] text-zinc-500 leading-relaxed">
+                🎁 Adquira <strong className="text-zinc-300">{offer.quantidade} fragmentos</strong> de <strong className="text-zinc-300">{item.name}</strong> para acelerar o desbloqueio deste item.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={buying}
+            onClick={() => onBuy(offer)}
+            className="w-full flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-5 py-3.5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-[0_0_24px_-6px_rgba(251,191,36,0.5)]"
+          >
+            {buying ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <><CoinIcon size={16} className="inline" /> Comprar por {offer.preco.toLocaleString("pt-BR")} coins</>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* --- Coin confirm modal -------------------------------------------------- */
 function CoinConfirmModal({
   pack,
@@ -928,6 +1123,9 @@ export default function LojaPage() {
   const [abrindo, setAbrindo]               = useState<string | null>(null);
   const [resultado, setResultado]           = useState<any>(null);
   const [bauDetalhes, setBauDetalhes]       = useState<any>(null);
+  const [dailyOffers, setDailyOffers]       = useState<DailyOffer[]>([]);
+  const [dailyOfferSelected, setDailyOfferSelected] = useState<DailyOffer | null>(null);
+  const [buyingOffer, setBuyingOffer]       = useState(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -940,6 +1138,12 @@ export default function LojaPage() {
   useEffect(() => {
     getBausApi().then(setBaus).catch(() => setBaus([]));
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      getDailyOffersApi().then(setDailyOffers).catch(() => setDailyOffers([]));
+    }
+  }, [token]);
 
   async function handleAbrirBau(tipo: string) {
     if (abrindo) return;
@@ -1131,6 +1335,22 @@ export default function LojaPage() {
     }
   }
 
+  async function handleBuyDailyOffer(offer: DailyOffer) {
+    setBuyingOffer(true);
+    try {
+      const res = await buyDailyOfferApi(offer.id);
+      setCoins(c => (c ?? 0) - offer.preco);
+      success(res.message);
+      setDailyOffers(prev => prev.filter(o => o.id !== offer.id));
+      setDailyOfferSelected(null);
+      loadProfile();
+    } catch (e) {
+      error(apiErrMsg(e, "Erro ao comprar oferta."));
+    } finally {
+      setBuyingOffer(false);
+    }
+  }
+
   if (!token) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] font-inconsolata text-sm text-zinc-500">
@@ -1208,6 +1428,21 @@ export default function LojaPage() {
         );
       })()}
 
+      {/* Ofertas do Dia */}
+      {dailyOffers.length > 0 && (
+        <section className="mb-10">
+          <SectionHeader label="Ofertas do Dia" icon={Sparkles} color="#fbbf24" sub={`${dailyOffers.length} ofertas`} />
+          <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
+            Ofertas limitadas — fragmentos de itens exclusivos por tempo limitado!
+          </p>
+          <Grid3>
+            {dailyOffers.map(o => (
+              <DailyOfferCard key={o.id} offer={o} onSelect={setDailyOfferSelected} />
+            ))}
+          </Grid3>
+        </section>
+      )}
+
       {/* Baús */}
       {baus.length > 0 && (
         <section className="mb-10">
@@ -1261,6 +1496,17 @@ export default function LojaPage() {
             onClose={() => setSelected(null)}
             onBuy={handleBuyCosmetic}
             buying={buying}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {dailyOfferSelected && (
+          <DailyOfferSheet
+            offer={dailyOfferSelected}
+            onClose={() => setDailyOfferSelected(null)}
+            onBuy={handleBuyDailyOffer}
+            buying={buyingOffer}
           />
         )}
       </AnimatePresence>

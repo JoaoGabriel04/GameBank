@@ -70,6 +70,7 @@ model User {
   players              SessionPlayer[]
   missions             UserMission[]
   fragments            UserFragment[]
+  dailyOffers          UserDailyOffer[]
   gameResults          GameResult[]
   diamondTransactions  DiamondTransaction[]
   diamondPurchases     DiamondPurchase[]
@@ -368,6 +369,7 @@ model ShopItem {
   badge   Badge?  @relation(fields: [badgeId], references: [id], onDelete: SetNull)
 
   fragments    UserFragment[]
+  dailyOffers  UserDailyOffer[]
   bauAberturas BauAberturaItem[]
 
   @@map("loja_itens")
@@ -386,6 +388,23 @@ model UserFragment {
 
   @@unique([userId, itemId])
   @@map("user_fragments")
+}
+
+model UserDailyOffer {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  itemId     Int
+  preco      Int
+  quantidade Int
+  expiresAt  DateTime
+  purchased  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User     @relation(fields: [userId], references: [id])
+  item ShopItem @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, itemId, expiresAt])
+  @@map("user_daily_offers")
 }
 
 model Bau {
