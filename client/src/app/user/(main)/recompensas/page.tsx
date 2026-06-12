@@ -250,8 +250,8 @@ export default function RecompensasPage() {
       return true;
     })
     .filter((m) => {
-      if (filter === "Disponíveis")   return m.completed && !m.claimed;
       if (filter === "Em andamento")  return !m.completed;
+      if (filter === "Para resgatar") return m.completed && !m.claimed;
       if (filter === "Resgatadas")    return m.claimed;
       return true;
     })
@@ -310,7 +310,7 @@ export default function RecompensasPage() {
       <Segmented
         value={filter}
         onChange={setFilter}
-        options={["Todas", "Disponíveis", "Em andamento", "Resgatadas"]}
+        options={["Todas", "Em andamento", "Para resgatar", "Resgatadas"]}
       />
 
       {/* Mission list */}
