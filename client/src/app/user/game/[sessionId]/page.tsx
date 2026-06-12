@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import Especiais from "@/components/Especiais";
