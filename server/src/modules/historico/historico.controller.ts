@@ -25,4 +25,3 @@ export const historicoController = {
   },
 };
 
-export default historicoController;

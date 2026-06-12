@@ -169,4 +169,3 @@ export const propsController = {
   },
 };
 
-export default propsController;

@@ -74,4 +74,22 @@ export const diamondsRepository = {
       where: { mpPaymentId, status: "PENDING" },
       data: { status: "FAILED" },
     }),
+
+  findUserDiamonds: (userId: number) =>
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { diamonds: true },
+    }),
+
+  findUserPurchases: (userId: number) =>
+    prisma.diamondPurchase.findMany({
+      where: { userId, status: "COMPLETED" },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true, diamondsGranted: true, amountPaidCents: true,
+        paymentMethod: true, createdAt: true,
+        package: { select: { name: true } },
+      },
+    }),
 }

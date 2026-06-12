@@ -125,4 +125,3 @@ export const shopController = {
   },
 };
 
-export default shopController;

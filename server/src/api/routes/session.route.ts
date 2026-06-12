@@ -1,5 +1,5 @@
 import {Router} from "express"
-import sessionController from "../../modules/session/session.controller.js"
+import { sessionController } from "../../modules/session/session.controller.js"
 import { authenticate } from "../../middleware/auth.middleware.js"
 import { authenticateRoom } from "../../middleware/room-auth.middleware.js"
 

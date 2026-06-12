@@ -151,4 +151,3 @@ export const bancoController = {
   },
 };
 
-export default bancoController;

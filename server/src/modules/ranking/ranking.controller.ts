@@ -17,4 +17,3 @@ export const rankingController = {
   },
 };
 
-export default rankingController;

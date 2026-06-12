@@ -4,7 +4,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
-import api from "@/services/api";
+import api from "@/services/api/index";
 import Link from "next/link";
 import { getPostAuthPath } from "@/utils/authRedirect";
 import Button1 from "@/components/Button01";

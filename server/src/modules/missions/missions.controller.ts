@@ -44,4 +44,3 @@ export const missionsController = {
   },
 };
 
-export default missionsController;

@@ -447,6 +447,8 @@ model BauAdquirido {
   bau  Bau  @relation(fields: [bauId],  references: [id])
 
   @@index([userId])
+  @@index([userId, status])
+  @@index([userId, unlockAt])
   @@map("baus_adquiridos")
 }
 

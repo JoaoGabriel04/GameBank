@@ -1,5 +1,5 @@
 import {Router} from "express"
-import negociacaoController from "../../modules/negociacao/negociacao.controller.js"
+import { negociacaoController } from "../../modules/negociacao/negociacao.controller.js"
 import { authenticate } from "../../middleware/auth.middleware.js"
 
 const negociacaoRouter = Router();

@@ -36,4 +36,3 @@ export const dividaController = {
   },
 };
 
-export default dividaController;

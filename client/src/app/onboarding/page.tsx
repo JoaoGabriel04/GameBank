@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, ChevronRight } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
-import api from "@/services/api";
+import api from "@/services/api/index";
 import Loading from "@/components/Loading";
 import UserAvatar from "@/components/UserAvatar";
 import {

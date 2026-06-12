@@ -1,5 +1,5 @@
 import { Router } from "express";
-import profileController from "../../modules/profile/profile.controller.js";
+import { profileController } from "../../modules/profile/profile.controller.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import { avatarProfileLimiter } from "../../config/rate-limiters.js";
 import { avatarUpload } from "../../middleware/upload.middleware.js";

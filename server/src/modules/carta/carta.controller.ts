@@ -93,4 +93,3 @@ export const cartaController = {
   },
 };
 
-export default cartaController;

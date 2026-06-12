@@ -1,5 +1,5 @@
 import {Router} from "express"
-import cartaController from "../../modules/carta/carta.controller.js"
+import { cartaController } from "../../modules/carta/carta.controller.js"
 
 const cartaRouter = Router();
 

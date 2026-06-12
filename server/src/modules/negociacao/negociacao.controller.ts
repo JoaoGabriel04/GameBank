@@ -149,4 +149,3 @@ export const negociacaoController = {
   },
 };
 
-export default negociacaoController;

@@ -1,5 +1,5 @@
 import {Router} from "express"
-import bancoController from "../../modules/banco/banco.controller.js"
+import { bancoController } from "../../modules/banco/banco.controller.js"
 import { authenticate } from "../../middleware/auth.middleware.js"
 
 const bancoRouter = Router();
