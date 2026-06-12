@@ -570,12 +570,13 @@ function DailyOfferCard({
   return (
     <button
       type="button"
-      onClick={() => onSelect(offer)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all"
+      onClick={() => !offer.purchased && onSelect(offer)}
+      className={`flex flex-col overflow-hidden w-full outline-none transition-all ${offer.purchased ? "cursor-default" : "cursor-pointer"}`}
       style={{
         borderRadius: 14,
-        border: `1px solid ${glow}40`,
+        border: `1px solid ${offer.purchased ? "#22c55e40" : `${glow}40`}`,
         background: "#111113",
+        opacity: offer.purchased ? 0.6 : 1,
       }}
     >
       <div
@@ -606,6 +607,14 @@ function DailyOfferCard({
           style={{ background: glow + "22", color: glow, letterSpacing: "0.06em" }}>
           {rMeta?.label ?? "??"}
         </span>
+
+        {offer.purchased && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[14px]">
+            <span className="font-inconsolata text-[11px] text-green-400 font-semibold uppercase tracking-wider bg-zinc-950/80 px-3 py-1 rounded-lg border border-green-500/30">
+              Comprada
+            </span>
+          </div>
+        )}
       </div>
       <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1">
         <p className="font-jaro text-[12px] text-zinc-200 leading-tight truncate">{item.name}</p>
@@ -1341,7 +1350,7 @@ export default function LojaPage() {
       const res = await buyDailyOfferApi(offer.id);
       setCoins(c => (c ?? 0) - offer.preco);
       success(res.message);
-      setDailyOffers(prev => prev.filter(o => o.id !== offer.id));
+      setDailyOffers(prev => prev.map(o => o.id === offer.id ? { ...o, purchased: true } : o));
       setDailyOfferSelected(null);
       loadProfile();
     } catch (e) {
