@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { getBausAdquiridosApi, abrirBauAdquiridoApi } from "@/services/api/baus"
 import { apiErrMsg } from "@/lib/api-error"
+import type { BauResultado } from "@/components/BauAbertura"
 
 export interface BauAdquirido {
   id: number
@@ -19,9 +20,12 @@ interface BauStore {
   adquiridos: BauAdquirido[]
   loading: boolean
   error: string | null
+  abrindoId: number | null
+  ultimoResultado: BauResultado | null
 
   loadAdquiridos: () => Promise<void>
   abrirAdquirido: (id: number) => Promise<any>
+  limparUltimoResultado: () => void
   clearError: () => void
 }
 
@@ -29,6 +33,13 @@ export const useBauStore = create<BauStore>((set, get) => ({
   adquiridos: [],
   loading: false,
   error: null,
+  abrindoId: null,
+  ultimoResultado: (() => {
+    try {
+      const saved = typeof window !== "undefined" && sessionStorage.getItem("bau_ultimo_resultado")
+      return saved ? JSON.parse(saved) : null
+    } catch { return null }
+  })(),
 
   loadAdquiridos: async () => {
     set({ loading: true, error: null })
@@ -41,11 +52,27 @@ export const useBauStore = create<BauStore>((set, get) => ({
   },
 
   abrirAdquirido: async (id: number) => {
-    const result = await abrirBauAdquiridoApi(id)
-    set((state) => ({
-      adquiridos: state.adquiridos.filter((b) => b.id !== id),
-    }))
-    return result
+    set({ abrindoId: id, error: null })
+    try {
+      const result = await abrirBauAdquiridoApi(id)
+      set((state) => ({
+        adquiridos: state.adquiridos.filter((b) => b.id !== id),
+        abrindoId: null,
+        ultimoResultado: result,
+      }))
+      try {
+        sessionStorage.setItem("bau_ultimo_resultado", JSON.stringify(result))
+      } catch {}
+      return result
+    } catch (err) {
+      set({ abrindoId: null })
+      throw err
+    }
+  },
+
+  limparUltimoResultado: () => {
+    try { sessionStorage.removeItem("bau_ultimo_resultado") } catch {}
+    set({ ultimoResultado: null })
   },
 
   clearError: () => set({ error: null }),

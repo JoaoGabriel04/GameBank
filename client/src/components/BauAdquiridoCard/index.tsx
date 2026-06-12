@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { Clock } from "lucide-react"
+import { Clock, Loader2 } from "lucide-react"
 import type { BauAdquirido } from "@/stores/bauStore"
 
 const BAU_IMAGENS: Record<string, string> = {
@@ -30,9 +30,10 @@ function formatTimer(ms: number): string {
 type Props = {
   bau: BauAdquirido
   onAbrir: () => void
+  abrindo?: boolean
 }
 
-export default function BauAdquiridoCard({ bau, onAbrir }: Props) {
+export default function BauAdquiridoCard({ bau, onAbrir, abrindo }: Props) {
   const [agora, setAgora] = useState(Date.now())
   const unlockAt = new Date(bau.unlockAt).getTime()
   const restante = unlockAt - agora
@@ -46,21 +47,27 @@ export default function BauAdquiridoCard({ bau, onAbrir }: Props) {
 
   return (
     <button
-      onClick={bau.status === "PRONTO" ? onAbrir : undefined}
-      disabled={bau.status !== "PRONTO"}
+      onClick={bau.status === "PRONTO" && !abrindo ? onAbrir : undefined}
+      disabled={bau.status !== "PRONTO" || abrindo}
       className="flex flex-col items-center gap-2 rounded-xl p-3 transition-colors cursor-pointer text-center"
       style={{
         background: "#111113",
         border: `1px solid ${cor}22`,
         borderTop: `2px solid ${cor}66`,
-        opacity: bau.status === "PRONTO" ? 1 : 0.7,
+        opacity: bau.status === "PRONTO" && !abrindo ? 1 : 0.7,
       }}
     >
-      <img
-        src={BAU_IMAGENS[bau.bau.tipo] ?? "/images/Cofrinho.png"}
-        alt={bau.bau.tipo}
-        className="w-16 h-16 object-contain"
-      />
+      <div className="w-16 h-16 grid place-items-center">
+        {abrindo ? (
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: cor }} />
+        ) : (
+          <img
+            src={BAU_IMAGENS[bau.bau.tipo] ?? "/images/Cofrinho.png"}
+            alt={bau.bau.tipo}
+            className="w-16 h-16 object-contain"
+          />
+        )}
+      </div>
 
       <span className="font-jaro text-[13px] text-zinc-100 truncate w-full">
         {bau.bau.nome}
@@ -79,12 +86,18 @@ export default function BauAdquiridoCard({ bau, onAbrir }: Props) {
         </span>
       )}
 
-      {bau.status === "PRONTO" && (
+      {bau.status === "PRONTO" && !abrindo && (
         <span
           className="font-inconsolata text-[11px] px-3 py-1 rounded-full"
           style={{ background: `${cor}22`, color: cor }}
         >
           Abrir
+        </span>
+      )}
+
+      {bau.status === "PRONTO" && abrindo && (
+        <span className="font-inconsolata text-[11px] text-zinc-500">
+          Abrindo…
         </span>
       )}
     </button>

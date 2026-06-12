@@ -18,6 +18,7 @@ import { getProfileHistoryApi } from "@/services/api/profile";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserName from "@/components/UserName";
+import { useToast } from "@/components/Toast";
 import {
   Progress, Chip, Panel, PanelHead, LiveDot,
   xpForLevel,
@@ -337,10 +338,18 @@ function RecentGames({ history }: { history: GameResult[] }) {
 
 /* --- Cofres adquiridos --------------------------------------------------- */
 function CofresSection() {
-  const { adquiridos, loadAdquiridos, abrirAdquirido } = useBauStore();
+  const { adquiridos, loading, abrindoId, ultimoResultado, loadAdquiridos, abrirAdquirido, limparUltimoResultado } = useBauStore();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [resultado, setResultado] = useState<BauResultado | null>(null);
 
   useEffect(() => { loadAdquiridos(); }, [loadAdquiridos]);
+
+  // Recovery: se o usuário deu refresh durante a animação, reexibe
+  useEffect(() => {
+    if (ultimoResultado && !resultado) {
+      setResultado(ultimoResultado);
+    }
+  }, [ultimoResultado, resultado]);
 
   const visiveis = adquiridos.slice(0, 4);
   const slots = Array.from({ length: 4 }, (_, i) => visiveis[i] ?? null);
@@ -350,28 +359,42 @@ function CofresSection() {
       <Panel flush>
         <PanelHead title="Cofres adquiridos" sub="Ganhos em partidas" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
-          {slots.map((b, i) =>
-            b ? (
-              <BauAdquiridoCard
-                key={b.id}
-                bau={b}
-                onAbrir={async () => {
-                  try {
-                    const res = await abrirAdquirido(b.id);
-                    setResultado(res);
-                  } catch {}
-                }}
-              />
-            ) : (
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
               <div
-                key={`empty-${i}`}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl p-3 text-center"
-                style={{ background: "#111113", border: "1px dashed #27272a", minHeight: 152 }}
-              >
-                <span className="font-inconsolata text-[11px] text-zinc-600 leading-relaxed">
-                  Ganhe Cofres<br />ganhando partidas
-                </span>
-              </div>
+                key={`skeleton-${i}`}
+                className="rounded-xl animate-pulse"
+                style={{ background: "#111113", minHeight: 152 }}
+              />
+            ))
+          ) : (
+            slots.map((b, i) =>
+              b ? (
+                <BauAdquiridoCard
+                  key={b.id}
+                  bau={b}
+                  abrindo={abrindoId === b.id}
+                  onAbrir={async () => {
+                    try {
+                      const res = await abrirAdquirido(b.id);
+                      setResultado(res);
+                    } catch (err: unknown) {
+                      const msg = err instanceof Error ? err.message : "Erro ao abrir baú";
+                      toastError(msg);
+                    }
+                  }}
+                />
+              ) : (
+                <div
+                  key={`empty-${i}`}
+                  className="flex flex-col items-center justify-center gap-2 rounded-xl p-3 text-center"
+                  style={{ background: "#111113", border: "1px dashed #27272a", minHeight: 152 }}
+                >
+                  <span className="font-inconsolata text-[11px] text-zinc-600 leading-relaxed">
+                    Ganhe Cofres<br />ganhando partidas
+                  </span>
+                </div>
+              )
             )
           )}
         </div>
@@ -379,7 +402,21 @@ function CofresSection() {
       {resultado && (
         <BauAbertura
           resultado={resultado}
-          onClose={() => { setResultado(null); loadAdquiridos(); }}
+          onClose={() => {
+            const res = resultado;
+            setResultado(null);
+            limparUltimoResultado();
+            loadAdquiridos();
+            const totalItens = res.itens.length;
+            const completos = res.itens.filter((i) => i.itemCompleto).length;
+            const partes = [`+${res.coinsGanhos.toLocaleString("pt-BR")} coins`];
+            if (res.xpBonus) partes.push(`+${res.xpBonus} XP`);
+            if (totalItens > 0) {
+              partes.push(`${totalItens} item(ns)`);
+              if (completos > 0) partes.push(`${completos} desbloqueado(s)!`);
+            }
+            toastSuccess(`Baú aberto: ${partes.join(", ")}`);
+          }}
         />
       )}
     </>

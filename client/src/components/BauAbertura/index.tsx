@@ -168,26 +168,27 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             src={BAU_IMAGENS[resultado.tipoBau] ?? "/images/Cofrinho.png"}
             alt={resultado.tipoBau}
             initial={{ scale: 1, opacity: 1 }}
-            animate={{ scale: [1, 1.05, 1.1, 1.15, 1.2], opacity: [1, 1, 1, 0.8, 0] }}
-            transition={{ duration: 1.2, ease: "easeIn", delay: 0.3 }}
+            animate={{ scale: [1, 1.08, 1.12], opacity: [1, 0.6, 0] }}
+            transition={{ duration: 0.9, ease: "easeIn", delay: 0.2 }}
             style={{ width: 160, height: 160, objectFit: "contain", zIndex: 2 }}
           />
 
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [0, 5, 15, 20, 20], opacity: [0, 1, 1, 1, 0] }}
+            animate={{ scale: [0, 3, 8, 8], opacity: [0, 0.8, 0.6, 0] }}
             transition={{
-              duration: 1.2,
-              delay: 0.6,
-              times: [0, 0.15, 0.3, 0.5, 1],
+              duration: 1.1,
+              delay: 0.4,
+              times: [0, 0.2, 0.45, 1],
             }}
             style={{
               position: "absolute",
               width: 80, height: 80,
               borderRadius: "50%",
-              background: "radial-gradient(circle at center, #fff 0%, #fff 25%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0.1) 75%, transparent 100%)",
-              boxShadow: "0 0 120px 60px rgba(255,255,255,0.4)",
+              background: "radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.05) 70%, transparent 100%)",
+              boxShadow: "0 0 80px 40px rgba(255,255,255,0.3)",
               zIndex: 10,
+              filter: "blur(2px)",
             }}
           />
         </div>
