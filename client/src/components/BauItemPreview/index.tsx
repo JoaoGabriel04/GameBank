@@ -67,31 +67,44 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
             borderRadius: "50%",
             background: "#27272a",
           }} />
-          {item.value?.startsWith("https://") ? (
-            <img
-              src={item.value}
-              style={{
-                position: "absolute",
-                inset: "-10%",
-                width: "120%",
-                height: "120%",
-                objectFit: "contain",
-                pointerEvents: "none",
-                zIndex: 2,
-              }}
-            />
-          ) : item.value ? (
-            <div style={{
-              position: "absolute", inset: -3,
-              borderRadius: "50%", padding: 3,
-              background: item.value,
-              WebkitMask:
-                "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-              WebkitMaskComposite: "xor",
-              maskComposite: "exclude",
-              zIndex: 2,
-            }} />
-          ) : null}
+          {(() => {
+            const src = item.value?.startsWith("https://")
+              ? item.value
+              : item.imageUrl?.startsWith("https://")
+              ? item.imageUrl
+              : null
+            if (src) {
+              return (
+                <img
+                  src={src}
+                  style={{
+                    position: "absolute",
+                    inset: "-10%",
+                    width: "120%",
+                    height: "120%",
+                    objectFit: "contain",
+                    pointerEvents: "none",
+                    zIndex: 2,
+                  }}
+                />
+              )
+            }
+            if (item.value) {
+              return (
+                <div style={{
+                  position: "absolute", inset: -3,
+                  borderRadius: "50%", padding: 3,
+                  background: item.value,
+                  WebkitMask:
+                    "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                  WebkitMaskComposite: "xor",
+                  maskComposite: "exclude",
+                  zIndex: 2,
+                }} />
+              )
+            }
+            return null
+          })()}
         </>
       )}
 

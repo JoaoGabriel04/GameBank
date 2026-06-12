@@ -564,49 +564,8 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
                     borderRadius: 12,
                   }}
                 >
-                  <div
-                    className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16"
-                    style={{
-                      borderRadius: "50%",
-                      background: "#18181b",
-                      border: `1px solid ${cor}33`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      overflow: "hidden",
-                      position: "relative",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {i.type === "badge" && i.imageUrl && (
-                      <img src={i.imageUrl}
-                        style={{ width: "70%", height: "70%", objectFit: "contain" }} />
-                    )}
-                    {i.type === "banner" && (
-                      <div style={{
-                        position: "absolute", inset: 0,
-                        background: i.value?.startsWith("https://")
-                          ? `url(${i.value}) center/cover`
-                          : i.value ?? "#27272a",
-                      }} />
-                    )}
-                    {i.type === "frame" && i.value?.startsWith("https://") && (
-                      <>
-                        <div style={{
-                          width: 30, height: 30,
-                          borderRadius: "50%",
-                          background: "#27272a",
-                        }} />
-                        <img src={i.value} style={{
-                          position: "absolute", inset: "-10%",
-                          width: "120%", height: "120%",
-                          objectFit: "contain",
-                        }} />
-                      </>
-                    )}
-                    {i.type === "title" && (
-                      <span style={{ fontSize: 20 }}>👑</span>
-                    )}
+                  <div style={{ width: 56, height: 56 }}>
+                    <BauItemPreview item={i} size={56} />
                   </div>
 
                   <p style={{
