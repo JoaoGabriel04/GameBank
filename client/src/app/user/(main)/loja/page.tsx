@@ -1370,7 +1370,20 @@ export default function LojaPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 pt-16 lg:pt-6 relative">
 
-
+      {/* Ofertas do Dia — primeiro */}
+      {dailyOffers.length > 0 && (
+        <section className="mb-10">
+          <SectionHeader label="Ofertas do Dia" icon={Sparkles} color="#fbbf24" sub={`${dailyOffers.length} ofertas`} />
+          <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
+            Ofertas limitadas — fragmentos de itens exclusivos por tempo limitado!
+          </p>
+          <Grid3>
+            {dailyOffers.map(o => (
+              <DailyOfferCard key={o.id} offer={o} onSelect={setDailyOfferSelected} />
+            ))}
+          </Grid3>
+        </section>
+      )}
 
       {/* Títulos */}
       {(() => {
@@ -1427,21 +1440,6 @@ export default function LojaPage() {
           </section>
         );
       })()}
-
-      {/* Ofertas do Dia */}
-      {dailyOffers.length > 0 && (
-        <section className="mb-10">
-          <SectionHeader label="Ofertas do Dia" icon={Sparkles} color="#fbbf24" sub={`${dailyOffers.length} ofertas`} />
-          <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
-            Ofertas limitadas — fragmentos de itens exclusivos por tempo limitado!
-          </p>
-          <Grid3>
-            {dailyOffers.map(o => (
-              <DailyOfferCard key={o.id} offer={o} onSelect={setDailyOfferSelected} />
-            ))}
-          </Grid3>
-        </section>
-      )}
 
       {/* Baús */}
       {baus.length > 0 && (
