@@ -79,17 +79,26 @@ export class DailyOffersService {
     const used = new Set<number>();
     const picks: typeof candidates = [];
 
-    // Priority distribution
-    picks.push(...pickN("COMUM", 2, used));
-    picks.push(...pickN("INCOMUM", 2, used));
-    picks.push(...pickN("RARO", 1, used));
+    // Cascading overflow: o que falta numa raridade sobe pra próxima
+    const priority: { rarity: string; quota: number }[] = [
+      { rarity: "COMUM",   quota: 2 },
+      { rarity: "INCOMUM", quota: 2 },
+      { rarity: "RARO",    quota: 1 },
+    ];
 
-    // 90% Epic / 10% Legendary (if available)
+    let overflow = 0;
+    for (const { rarity, quota } of priority) {
+      const want = quota + overflow;
+      const taken = pickN(rarity, want, used);
+      picks.push(...taken);
+      overflow = want - taken.length;
+    }
+
+    // Bonus: 90% Épico / 10% Lendário
     if (Math.random() < 0.1) {
       picks.push(...pickN("LENDARIO", 1, used));
-    }
-    if (picks.length < 6) {
-      picks.push(...pickN("EPICO", 6 - picks.length, used));
+    } else {
+      picks.push(...pickN("EPICO", 1, used));
     }
 
     // Fill remaining slots with any rarity
