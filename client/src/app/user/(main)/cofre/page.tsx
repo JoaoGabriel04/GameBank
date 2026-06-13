@@ -14,6 +14,7 @@ import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import LegendaryTitle from "@/components/LegendaryTitle";
 import { Chip } from "@/components/user/UserUI";
+import MarqueeText from "@/components/MarqueeText";
 import { RARIDADES } from "@/constants/raridade";
 import type { UserItem } from "@/types/shop";
 
@@ -135,7 +136,7 @@ function VaultItemCard({
           borderTop: `1px solid ${item.equipped ? "rgba(74,222,128,0.2)" : glowColor + "28"}`,
         }}
       >
-        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1">{item.name}</p>
+        <MarqueeText className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1">{item.name}</MarqueeText>
         <span
           className="font-inconsolata uppercase"
           style={{
@@ -404,7 +405,7 @@ function UnownedItemCard({
       </div>
 
       <div className="px-2.5 pt-2.5 pb-2.5" style={{ background: "#111113" }}>
-        <p className="font-jaro text-[13px] text-zinc-400 leading-tight mb-1.5">{item.name}</p>
+        <MarqueeText className="font-jaro text-[13px] text-zinc-400 leading-tight mb-1.5">{item.name}</MarqueeText>
         <div className="flex items-center gap-1.5">
           <div className="flex-1 bg-zinc-800 rounded-full h-1.5 overflow-hidden">
             <motion.div
@@ -607,6 +608,11 @@ export default function CofrePage() {
     [cat, items]
   );
 
+  const unownedList = useMemo(
+    () => cat === "equipados" ? [] : catalogo.filter(i => i.type === cat),
+    [cat, catalogo]
+  );
+
   const equippedCount = items.filter(i => i.equipped).length;
 
   function handleSelect(item: UserItem) {
@@ -651,11 +657,6 @@ export default function CofrePage() {
       </div>
     );
   }
-
-  const unownedList = useMemo(
-    () => cat === "equipados" ? [] : catalogo.filter(i => i.type === cat),
-    [cat, catalogo]
-  );
 
   function handleSelectUnowned(item: CatalogoItem) {
     setSelectedUnowned(item);

@@ -13,8 +13,10 @@ export async function seedBaus() {
         precoDiamonds: config.precoDiamonds ?? null,
       },
       update: {
-        nome:      config.nome,
-        descricao: config.descricao,
+        nome:          config.nome,
+        descricao:     config.descricao,
+        precoCoins:    config.precoCoins    ?? null,
+        precoDiamonds: config.precoDiamonds ?? null,
       },
     })
   }

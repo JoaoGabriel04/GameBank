@@ -29,13 +29,16 @@ export default function UserName({
   showTitle = true,
 }: UserNameProps) {
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
-      {(badge || badgeImageUrl) && (
-        <UserBadge badge={badge} imageUrl={badgeImageUrl} variant={badgeVariant} />
-      )}
-      <span className="font-inconsolata font-medium text-zinc-100 truncate">
-        {nome}
-      </span>
+    <div className='flex flex-col justify-center'>
+      <div className={`flex items-center gap-1.5 ${className}`}>
+        {(badge || badgeImageUrl) && (
+          <UserBadge badge={badge} imageUrl={badgeImageUrl} variant={badgeVariant} />
+        )}
+        <span className="font-inconsolata font-medium text-zinc-100 truncate">
+          {nome}
+        </span>
+
+      </div>
       {showTitle && title && !titleAnimated && (
         <Chip tone="emerald">{title}</Chip>
       )}

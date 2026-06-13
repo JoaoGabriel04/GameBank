@@ -30,7 +30,7 @@ export type BauResultado = {
   itens: ItemResultado[]
 }
 
-type Fase = "luz" | "coins" | "itens" | "suspense" | "resumo"
+type Fase = "luz" | "coins" | "itens" | "resumo"
 
 type BauAberturaProps = {
   resultado: BauResultado | null
@@ -74,12 +74,12 @@ const slideVariantsLendario = {
   center: {
     x: 0,
     opacity: 1,
-    transition: { type: "spring" as const, stiffness: 100, damping: 22, mass: 2.5 },
+    transition: { type: "spring" as const, stiffness: 100, damping: 50, mass: 5 },
   },
   exit: (dir: number) => ({
     x: dir > 0 ? "-100%" : "100%",
     opacity: 0,
-    transition: { duration: 0.3 },
+    transition: { duration: 0.4 },
   }),
 }
 
@@ -88,7 +88,6 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const [itemIdx, setItemIdx] = useState(0)
   const [direction, setDirection] = useState(1)
   const [resumoVisiveis, setResumoVisiveis] = useState<number[]>([])
-  const [bloqueado, setBloqueado] = useState(false)
 
   useEffect(() => {
     if (!resultado) return
@@ -96,7 +95,6 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     setItemIdx(0)
     setDirection(1)
     setResumoVisiveis([])
-    setBloqueado(false)
 
     const t = setTimeout(() => setFase("coins"), 2500)
     return () => clearTimeout(t)
@@ -112,7 +110,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   }, [fase, resultado])
 
   const avancar = useCallback(() => {
-    if (bloqueado || !resultado) return
+    if (!resultado) return
 
     if (fase === "coins") {
       setDirection(1)
@@ -128,23 +126,8 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         return
       }
 
-      const proximoItem = resultado.itens[proximo]
-      const isNextLendario = proximoItem.raridade === "LENDARIO"
-
-      if (isNextLendario) {
-        setBloqueado(true)
-        setDirection(1)
-        setItemIdx(proximo)
-        setFase("suspense")
-
-        setTimeout(() => {
-          setFase("itens")
-          setBloqueado(false)
-        }, 3000)
-      } else {
-        setDirection(1)
-        setItemIdx(proximo)
-      }
+      setDirection(1)
+      setItemIdx(proximo)
     }
 
     if (fase === "resumo") {
@@ -152,7 +135,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         onClose()
       }
     }
-  }, [fase, itemIdx, resultado, bloqueado, resumoVisiveis, onClose])
+  }, [fase, itemIdx, resultado, resumoVisiveis, onClose])
 
   if (!resultado) return null
 
@@ -168,7 +151,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         position: "fixed",
         inset: 0,
         zIndex: 200,
-        cursor: bloqueado ? "default" : "pointer",
+        cursor: "pointer",
         userSelect: "none",
       }}
     >
@@ -300,7 +283,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         </motion.div>
       )}
 
-      {(fase === "itens" || fase === "suspense") && item && (
+      {(fase === "itens") && item && (
         <div
           style={{
             position: "absolute", inset: 0,
@@ -351,13 +334,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className={
-                  fase === "suspense"
-                    ? item.raridade === "LENDARIO"
-                      ? "bau-suspense-pulse bau-suspense-lendario"
-                      : "bau-suspense-pulse"
-                    : ""
-                }
+                className=""
               >
                 <BauItemPreview item={item} size={200} />
               </motion.div>
@@ -366,7 +343,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             {(item.raridade === "EPICO" || item.raridade === "LENDARIO") && (
               <BauParticulas
                 cor={corItem}
-                ativo={fase === "itens" || fase === "suspense"}
+                ativo={fase === "itens"}
                 qtd={item.raridade === "LENDARIO" ? 20 : 12}
               />
             )}
@@ -468,9 +445,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
               color: "#52525b",
               margin: 0,
             }}>
-              {fase === "suspense"
-                ? "Prepare-se..."
-                : itemIdx < resultado.itens.length - 1
+              {itemIdx < resultado.itens.length - 1
                 ? "Clique para revelar..."
                 : "Clique para ver o resumo..."}
             </p>

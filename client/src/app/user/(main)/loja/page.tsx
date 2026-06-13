@@ -13,6 +13,7 @@ import { useToast } from "@/components/Toast";
 import UserBanner from "@/components/UserBanner";
 import LegendaryTitle from "@/components/LegendaryTitle";
 import CoinIcon from "@/components/CoinIcon";
+import MarqueeText from "@/components/MarqueeText";
 import DiamondIcon from "@/components/DiamondIcon";
 import { Chip } from "@/components/user/UserUI";
 import type { ShopItem } from "@/types/shop";
@@ -97,6 +98,69 @@ function SectionHeader({
   );
 }
 
+/* --- Card shell (botão + glow + top gradiente + footer escuro) ----------- */
+function CardShell({
+  glow,
+  purchased,
+  onClick,
+  topContent,
+  footerContent,
+  topHeight = 96,
+  topBg,
+  footerClassName = "px-2.5 pt-2.5 pb-3",
+}: {
+  glow: string;
+  purchased?: boolean;
+  onClick: () => void;
+  topContent: React.ReactNode;
+  footerContent: React.ReactNode;
+  topHeight?: number;
+  topBg?: string;
+  footerClassName?: string;
+}) {
+  return (
+    <motion.div variants={staggerItem}>
+    <button
+      type="button"
+      onClick={() => !purchased && onClick()}
+      className={`flex flex-col overflow-hidden w-full outline-none transition-all hover:-translate-y-0.5 ${purchased ? "cursor-default" : "cursor-pointer"}`}
+      style={{
+        borderRadius: 14,
+        border: `1px solid ${purchased ? "#22c55e40" : `${glow}30`}`,
+        boxShadow: !purchased && glow !== "#a1a1aa"
+          ? `0 0 16px -8px ${glow}77`
+          : "none",
+        opacity: purchased ? 0.6 : 1,
+      }}
+    >
+      <div
+        className="relative overflow-hidden flex items-center justify-center"
+        style={{ height: topHeight, background: topBg ?? `radial-gradient(ellipse at 50% 60%, ${glow}2e 0%, #0d0d10 70%)` }}
+      >
+        {topContent}
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: `linear-gradient(90deg, transparent, ${glow}, transparent)`, opacity: 0.85 }}
+        />
+        {purchased && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[14px]">
+            <span className="font-inconsolata text-[11px] text-green-400 font-semibold uppercase tracking-wider bg-zinc-950/80 px-3 py-1 rounded-lg border border-green-500/30">
+              Comprada
+            </span>
+          </div>
+        )}
+      </div>
+      <div
+        className={footerClassName}
+        style={{ background: "#111113", borderTop: `1px solid ${glow}22` }}
+      >
+        {footerContent}
+      </div>
+    </button>
+    </motion.div>
+  );
+}
+
 /* --- Cosmetic card ------------------------------------------------------- */
 function CosmeticCard({
   item,
@@ -117,123 +181,104 @@ function CosmeticCard({
     : undefined;
 
   return (
-    <motion.div variants={staggerItem}>
-    <button
-      type="button"
+    <CardShell
+      glow={glowColor}
       onClick={() => onSelect(item)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${glowColor}30`,
-        boxShadow: rMeta && rMeta.cor !== "#a1a1aa"
-          ? `0 0 16px -8px ${glowColor}77`
-          : "none",
-      }}
-    >
-      <div
-        className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 96, background: topBg }}
-      >
-        {isBanner && (
-          <UserBanner
-            banner={item.value}
-            imageUrl={item.imageUrl}
-            animated={item.animated}
-            className="absolute inset-0 w-full h-full"
-          />
-        )}
-        {item.animated && (
-          <span className="absolute top-1.5 left-1.5 z-10 font-inconsolata uppercase text-[8px] px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-300" style={{ letterSpacing: "0.06em" }}>
-            ✨
-          </span>
-        )}
-        <div
-          className="absolute top-0 left-0 right-0 h-0.5"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`,
-            opacity: 0.85,
-          }}
-        />
-        {rMeta && (
-          <span
-            className="absolute top-1.5 right-1.5 font-inconsolata uppercase"
-            style={{
-              fontSize: 8, letterSpacing: "0.06em",
-              color: glowColor,
-              background: glowColor + "22",
-              border: `1px solid ${glowColor}44`,
-              borderRadius: 4, padding: "1px 4px", lineHeight: "13px",
-            }}
-          >
-            {rMeta.label}
-          </span>
-        )}
-        {!isBanner && (
-          isFrame ? (
-            <div className="relative" style={{ width: 44, height: 44 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
-                👤
+      topHeight={96}
+      topBg={topBg}
+      topContent={
+        <>
+          {isBanner && (
+            <UserBanner
+              banner={item.value}
+              imageUrl={item.imageUrl}
+              animated={item.animated}
+              className="absolute inset-0 w-full h-full"
+            />
+          )}
+          {item.animated && (
+            <span className="absolute top-1.5 left-1.5 z-10 font-inconsolata uppercase text-[8px] px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-300" style={{ letterSpacing: "0.06em" }}>
+              ✨
+            </span>
+          )}
+          {rMeta && (
+            <span
+              className="absolute top-1.5 right-1.5 font-inconsolata uppercase"
+              style={{
+                fontSize: 8, letterSpacing: "0.06em",
+                color: glowColor,
+                background: glowColor + "22",
+                border: `1px solid ${glowColor}44`,
+                borderRadius: 4, padding: "1px 4px", lineHeight: "13px",
+              }}
+            >
+              {rMeta.label}
+            </span>
+          )}
+          {!isBanner && (
+            isFrame ? (
+              <div className="relative" style={{ width: 44, height: 44 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, color: "#71717a" }}>
+                  👤
+                </div>
+                {(() => {
+                  const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                  return null;
+                })()}
               </div>
-              {(() => {
-                const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
-                if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
-                return null;
-              })()}
+            ) : (
+              <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
+                {item.type === "title"  && <Crown  size={40} />}
+                {item.type === "badge" && item.imageUrl ? (
+                  <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+                ) : item.type === "badge" ? (
+                  <Shield size={40} />
+                ) : null}
+              </div>
+            )
+          )}
+          <span
+            className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
+            style={{ fontSize: 8, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}
+          >
+            {meta.label}
+          </span>
+        </>
+      }
+      footerContent={
+        <>
+          <MarqueeText className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{item.name}</MarqueeText>
+          {fragData ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between font-inconsolata text-[11px]">
+                <span style={{ color: glowColor }}>
+                  🧩 {fragData.atual}/{fragData.total}
+                </span>
+                <span className="text-zinc-600">
+                  {Math.round((fragData.atual / fragData.total) * 100)}%
+                </span>
+              </div>
+              <div className="bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (fragData.atual / fragData.total) * 100)}%`,
+                    background: glowColor,
+                  }}
+                />
+              </div>
             </div>
           ) : (
-            <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
-              {item.type === "title"  && <Crown  size={40} />}
-              {item.type === "badge" && item.imageUrl ? (
-                <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
-              ) : item.type === "badge" ? (
-                <Shield size={40} />
-              ) : null}
-            </div>
-          )
-        )}
-        <span
-          className="absolute bottom-1.5 left-2 font-inconsolata uppercase"
-          style={{ fontSize: 8, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)" }}
-        >
-          {meta.label}
-        </span>
-      </div>
-
-      <div
-        className="px-2.5 pt-2.5 pb-3"
-        style={{ background: "#111113", borderTop: `1px solid ${glowColor}22` }}
-      >
-        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{item.name}</p>
-        {fragData ? (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between font-inconsolata text-[11px]">
-              <span style={{ color: glowColor }}>
-                🧩 {fragData.atual}/{fragData.total}
-              </span>
-              <span className="text-zinc-600">
-                {Math.round((fragData.atual / fragData.total) * 100)}%
-              </span>
-            </div>
-            <div className="bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${Math.min(100, (fragData.atual / fragData.total) * 100)}%`,
-                  background: glowColor,
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <span className="inline-flex items-center gap-1 font-jaro text-[13px] text-amber-300">
-            <CoinIcon size={11} className="text-amber-400" />
-            {item.price.toLocaleString("pt-BR")}
-          </span>
-        )}
-      </div>
-    </button>
-    </motion.div>
+            <span className="inline-flex items-center gap-1 font-jaro text-[13px] text-amber-300">
+              <CoinIcon size={11} className="text-amber-400" />
+              {item.price.toLocaleString("pt-BR")}
+            </span>
+          )}
+        </>
+      }
+    />
   );
 }
 
@@ -568,65 +613,53 @@ function DailyOfferCard({
   const isFrame  = item.type === "frame";
 
   return (
-    <button
-      type="button"
-      onClick={() => !offer.purchased && onSelect(offer)}
-      className={`flex flex-col overflow-hidden w-full outline-none transition-all ${offer.purchased ? "cursor-default" : "cursor-pointer"}`}
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${offer.purchased ? "#22c55e40" : `${glow}40`}`,
-        background: "#111113",
-        opacity: offer.purchased ? 0.6 : 1,
-      }}
-    >
-      <div
-        className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 92, background: isBanner && item.value ? item.value : `radial-gradient(ellipse at 50% 55%, ${glow}2e 0%, #0d0d10 68%)` }}
-      >
-        {isBanner && <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />}
-        <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${glow}, transparent)`, opacity: 0.7 }} />
-        {isBanner ? null : isFrame ? (
-          <div className="relative" style={{ width: 38, height: 38 }}>
-            <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#71717a" }}>👤</div>
-            {(() => {
-              const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-              if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
-              if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
-              return null;
-            })()}
-          </div>
-        ) : item.type === "badge" && item.imageUrl ? (
-          <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
-        ) : (
-          <div className="relative z-10" style={{ color: glow, filter: `drop-shadow(0 0 12px ${glow}99)`, opacity: 0.7 }}>
-            {item.type === "title" && <Crown  size={38} />}
-            {item.type === "badge" && <Shield size={38} />}
-          </div>
-        )}
-        <span className="absolute top-1.5 right-1.5 font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded-md"
-          style={{ background: glow + "22", color: glow, letterSpacing: "0.06em" }}>
-          {rMeta?.label ?? "??"}
-        </span>
-
-        {offer.purchased && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[14px]">
-            <span className="font-inconsolata text-[11px] text-green-400 font-semibold uppercase tracking-wider bg-zinc-950/80 px-3 py-1 rounded-lg border border-green-500/30">
-              Comprada
+    <CardShell
+      glow={glow}
+      purchased={offer.purchased}
+      onClick={() => onSelect(offer)}
+      topHeight={92}
+      topBg={isBanner && item.value ? item.value : undefined}
+      footerClassName="px-2 pt-2 pb-2.5 flex flex-col gap-1"
+      topContent={
+        <>
+          {isBanner && <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />}
+          {isBanner ? null : isFrame ? (
+            <div className="relative" style={{ width: 38, height: 38 }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#71717a" }}>👤</div>
+              {(() => {
+                const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
+                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
+                return null;
+              })()}
+            </div>
+          ) : item.type === "badge" && item.imageUrl ? (
+            <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
+          ) : (
+            <div className="relative z-10" style={{ color: glow, filter: `drop-shadow(0 0 12px ${glow}99)`, opacity: 0.7 }}>
+              {item.type === "title" && <Crown  size={38} />}
+              {item.type === "badge" && <Shield size={38} />}
+            </div>
+          )}
+          <span className="absolute top-1.5 right-1.5 font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded-md"
+            style={{ background: glow + "22", color: glow, letterSpacing: "0.06em" }}>
+            {rMeta?.label ?? "??"}
+          </span>
+        </>
+      }
+      footerContent={
+        <>
+          <p className="font-jaro text-[12px] text-zinc-200 leading-tight truncate">{item.name}</p>
+          <div className="flex items-center justify-between">
+            <span className="font-inconsolata text-[10px] text-zinc-500">+{offer.quantidade} frags</span>
+            <span className="inline-flex items-center gap-0.5 font-jaro text-[11px] text-amber-400">
+              <CoinIcon size={10} className="inline" />
+              {offer.preco.toLocaleString("pt-BR")}
             </span>
           </div>
-        )}
-      </div>
-      <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1">
-        <p className="font-jaro text-[12px] text-zinc-200 leading-tight truncate">{item.name}</p>
-        <div className="flex items-center justify-between">
-          <span className="font-inconsolata text-[10px] text-zinc-500">+{offer.quantidade} frags</span>
-          <span className="inline-flex items-center gap-0.5 font-jaro text-[11px] text-amber-400">
-            <CoinIcon size={10} className="inline" />
-            {offer.preco.toLocaleString("pt-BR")}
-          </span>
-        </div>
-      </div>
-    </button>
+        </>
+      }
+    />
   );
 }
 
@@ -1382,7 +1415,7 @@ export default function LojaPage() {
       {/* Ofertas do Dia — primeiro */}
       {dailyOffers.length > 0 && (
         <section className="mb-10">
-          <SectionHeader label="Ofertas do Dia" icon={Sparkles} color="#fbbf24" sub={`${dailyOffers.length} ofertas`} />
+          <SectionHeader label="Ofertas do Dia" icon={Sparkles} color="#fbbf24" sub={`${dailyOffers.filter(o => !o.purchased).length} restantes`} />
           <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
             Ofertas limitadas — fragmentos de itens exclusivos por tempo limitado!
           </p>

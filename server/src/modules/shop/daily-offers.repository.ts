@@ -6,7 +6,6 @@ export const dailyOffersRepository = {
     prisma.userDailyOffer.findMany({
       where: {
         userId,
-        purchased: false,
         expiresAt: { gt: new Date() },
       },
       include: {

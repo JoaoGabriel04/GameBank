@@ -29,13 +29,15 @@ function shuffle<T>(arr: T[]): T[] {
 
 export class DailyOffersService {
   async getOffers(userId: number) {
-    // Remove offers from previous day to always regenerate exactly 6
+    // 🔒 Stability: return existing active offers (don't regenerate per refresh)
+    const existing = await dailyOffersRepository.findActiveByUser(userId);
+    if (existing.length > 0) {
+      return existing.map(resolveDailyOffer);
+    }
+
+    // Clean expired offers
     await prisma.userDailyOffer.deleteMany({
-      where: {
-        userId,
-        purchased: false,
-        expiresAt: { gt: new Date() },
-      },
+      where: { userId, expiresAt: { lte: new Date() } },
     });
 
     const user = await prisma.user.findUnique({
@@ -66,51 +68,59 @@ export class DailyOffersService {
       byRarity[r].push(c);
     }
 
-    const expiresAt = getExpiresAt();
+    const RARITY_ORDER = ["COMUM", "INCOMUM", "RARO", "EPICO", "LENDARIO"];
+    const SHORT_MAP: Record<string, string> = { C:"COMUM", I:"INCOMUM", R:"RARO", E:"EPICO", L:"LENDARIO" };
 
-    // Helper: pick up to n items from a rarity pool (removes picked items)
-    function pickN(rarity: string, n: number, used: Set<number>): typeof candidates {
+    // Distribution rules keyed by sorted empty-rarity letters
+    const DISTRIBUTION_RULES: Record<string, string[]> = {
+      "":        ["C","C","I","I","R","E/L"],
+      "C":       ["I","I","I","R","R","E/L"],
+      "I":       ["C","C","C","R","R","E/L"],
+      "R":       ["C","C","C","I","I","E/L"],
+      "C,I":     ["R","R","R","E","E","L"],
+      "C,R":     ["I","I","I","E","E","L"],
+      "I,R":     ["C","C","C","E","E","L"],
+      "C,I,R":   ["E","E","E","L","L","L"],
+    };
+
+    const emptyKey = RARITY_ORDER
+      .filter(r => (byRarity[r] ?? []).length === 0)
+      .map(r => r[0])
+      .join(",");
+
+    const rule = DISTRIBUTION_RULES[emptyKey] ?? DISTRIBUTION_RULES[""];
+
+    // Helper: pick one unused item from a rarity, returns null if none
+    function pickOne(rarity: string, used: Set<number>): (typeof candidates)[0] | null {
       const pool = shuffle(byRarity[rarity] ?? []).filter(p => !used.has(p.id));
-      const picked = pool.slice(0, Math.min(n, pool.length));
-      picked.forEach(p => used.add(p.id));
-      return picked;
+      return pool.length > 0 ? pool[0] : null;
     }
 
     const used = new Set<number>();
     const picks: typeof candidates = [];
 
-    // Cascading overflow: o que falta numa raridade sobe pra próxima
-    const priority: { rarity: string; quota: number }[] = [
-      { rarity: "COMUM",   quota: 2 },
-      { rarity: "INCOMUM", quota: 2 },
-      { rarity: "RARO",    quota: 1 },
-    ];
-
-    let overflow = 0;
-    for (const { rarity, quota } of priority) {
-      const want = quota + overflow;
-      const taken = pickN(rarity, want, used);
-      picks.push(...taken);
-      overflow = want - taken.length;
+    for (const slot of rule) {
+      if (picks.length >= 6) break;
+      if (slot === "E/L") {
+        const bonusTarget = Math.random() < 0.1 ? "LENDARIO" : "EPICO";
+        const picked = pickOne(bonusTarget, used) ?? pickOne(bonusTarget === "EPICO" ? "LENDARIO" : "EPICO", used);
+        if (picked) { used.add(picked.id); picks.push(picked); }
+      } else {
+        const picked = pickOne(SHORT_MAP[slot], used);
+        if (picked) { used.add(picked.id); picks.push(picked); }
+      }
     }
 
-    // Bonus: 90% Épico / 10% Lendário
-    if (Math.random() < 0.1) {
-      picks.push(...pickN("LENDARIO", 1, used));
-    } else {
-      picks.push(...pickN("EPICO", 1, used));
-    }
-
-    // Fill remaining slots with any rarity
+    // Fill remaining if any slot couldn't pick
     if (picks.length < 6) {
       const allRemaining = shuffle(
-        Object.entries(byRarity)
-          .filter(([_, items]) => items.some(i => !used.has(i.id)))
-          .flatMap(([_, items]) => items.filter(i => !used.has(i.id)))
+        Object.values(byRarity).flat().filter(i => !used.has(i.id))
       );
       const fill = allRemaining.slice(0, 6 - picks.length);
-      fill.forEach(f => { picks.push(f); used.add(f.id); });
+      fill.forEach(f => { used.add(f.id); picks.push(f); });
     }
+
+    const expiresAt = getExpiresAt();
 
     // Create offers in DB
     const created: any[] = [];
@@ -138,8 +148,8 @@ export class DailyOffersService {
 
     // If nothing was created (all already existed), return existing
     if (created.length === 0) {
-      const existing = await dailyOffersRepository.findActiveByUser(userId);
-      return existing.map(resolveDailyOffer);
+      const existing2 = await dailyOffersRepository.findActiveByUser(userId);
+      return existing2.map(resolveDailyOffer);
     }
 
     return created.map(resolveDailyOffer);
