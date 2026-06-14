@@ -29,7 +29,7 @@ export default function UserName({
   showTitle = true,
 }: UserNameProps) {
   return (
-    <div className='flex flex-col justify-center'>
+    <div className='flex flex-col justify-center items-start'>
       <div className={`flex items-center gap-1.5 ${className}`}>
         {(badge || badgeImageUrl) && (
           <UserBadge badge={badge} imageUrl={badgeImageUrl} variant={badgeVariant} />

@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import DiamondIcon from "@/components/DiamondIcon";
+import RankBadge from "@/components/RankBadge";
+import TrophyCount from "@/components/TrophyCount";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
@@ -233,16 +235,12 @@ export default function UserNav() {
 
         <div className="flex-1" />
 
-        {/* Coins + Diamonds + Level pill */}
+        {/* Coins + Diamonds + Level + Trophies pill */}
         {user && (
           <div className="hidden sm:flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
             <CoinIcon size={14} className="text-yellow-400" />
             <span className="font-jaro text-sm text-yellow-300">
-                    {profile ? (
-                String(profile.coins)
-              ) : (
-                "—"
-              )}
+              {profile ? String(profile.coins) : "—"}
             </span>
             <span className="w-px h-4 bg-zinc-700 mx-1" />
             <DiamondIcon size={14} />
@@ -253,6 +251,13 @@ export default function UserNav() {
             <span className="font-jaro text-sm text-green-300">
               Nv.{profile?.level ?? "—"}
             </span>
+            <span className="w-px h-4 bg-zinc-700 mx-1" />
+            <TrophyCount
+              count={profile?.trophies ?? 0}
+              size={14}
+              textClassName="font-jaro text-sm text-amber-300"
+            />
+            <RankBadge trophies={profile?.trophies ?? 0} size={20} />
           </div>
         )}
 
@@ -292,22 +297,25 @@ export default function UserNav() {
 
           {/* Right side: coins, clock, notif, avatar */}
           <div className="flex items-center gap-2">
-            {/* Coins + Diamonds (compact) */}
+            {/* Coins + Diamonds + Trophies (compact) */}
             {user && (
               <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1">
                 <CoinIcon size={12} className="text-yellow-400 shrink-0" />
                 <span className="font-jaro text-xs text-yellow-300">
-                  {profile ? (
-                    String(profile.coins)
-                  ) : (
-                    "—"
-                  )}
+                  {profile ? String(profile.coins) : "—"}
                 </span>
                 <span className="w-px h-3 bg-zinc-700 mx-0.5" />
                 <DiamondIcon size={11} />
                 <span className="font-jaro text-xs text-cyan-300">
                   {profile?.diamonds ?? 0}
                 </span>
+                <span className="w-px h-3 bg-zinc-700 mx-0.5" />
+                <TrophyCount
+                  count={profile?.trophies ?? 0}
+                  size={12}
+                  textClassName="font-jaro text-xs text-amber-300"
+                />
+                <RankBadge trophies={profile?.trophies ?? 0} size={16} />
               </div>
             )}
 

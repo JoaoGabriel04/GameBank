@@ -13,6 +13,7 @@ import { addXp } from "../../utils/level.js";
 import { clearSessionDeck } from "../carta/carta.repository.js";
 import { getMinPlayersToStart } from "../../shared/constants/session.js";
 import { calcularRecompensa, type RewardResult } from "./reward.service.js";
+import { calcularDeltaTrofeus } from "../../shared/constants/trophies.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
@@ -462,7 +463,7 @@ export class SessionService {
 
       await tx.sessionPlayer.update({
         where: { id: player.id },
-        data: { saldo: 0, desistiu: true },
+        data: { saldo: 0, desistiu: true, motivoDesistencia: "VOLUNTARIA", desistiuEm: new Date() },
       });
     });
 
@@ -536,6 +537,8 @@ export class SessionService {
       rewardByPlayer.set(p.id, reward);
     }
 
+    const trophyByPlayer = new Map<number, { trophyDelta: number; trophyBefore: number; trophyAfter: number }>();
+
     await prisma.$transaction(async (tx) => {
       // Marca rewardGranted antes de creditar (lock contra race condition)
       await tx.session.update({ where: { id: sessionId }, data: { rewardGranted: true } });
@@ -567,6 +570,11 @@ export class SessionService {
 
         const { xp: newXp, level: newLevel } = addXp(user.xp, user.level, xp);
 
+        const trophyBefore = user.trophies;
+        const trophyDelta  = calcularDeltaTrofeus(trophyBefore, entry.position, ranked.length);
+        const trophyAfter  = Math.max(0, trophyBefore + trophyDelta);
+        trophyByPlayer.set(p.id, { trophyDelta, trophyBefore, trophyAfter });
+
         await tx.user.update({
           where: { id: p.userId },
           data: {
@@ -576,7 +584,13 @@ export class SessionService {
             totalGames: { increment: 1 },
             ...(entry.position === 1 ? { totalWins: { increment: 1 } } : {}),
             ...(entry.position <= 3 ? { totalTop3: { increment: 1 } } : {}),
+            trophies: trophyAfter,
           },
+        });
+
+        await tx.gameResult.update({
+          where: { userId_sessionId: { userId: p.userId, sessionId } },
+          data: { trophyDelta, trophyBefore, trophyAfter },
         });
 
         // Auditoria imutável — registra apenas crédito de partida
@@ -611,9 +625,9 @@ export class SessionService {
       if (!teveRecompensa) continue;
       try {
         if (entry.position === 1) {
-          await this.bauService.concederBauPartida(p.userId, "premium", sessionId, 1);
+          await this.bauService.concederBauPartida(p.userId, "premium", undefined, 1);
         } else if (entry.position === 2) {
-          await this.bauService.concederBauPartida(p.userId, "comum", sessionId, 2);
+          await this.bauService.concederBauPartida(p.userId, "comum", undefined, 2);
         }
       } catch (e) {
         console.error("Erro ao conceder baú:", e);
@@ -633,15 +647,27 @@ export class SessionService {
       }
     }
 
-    // Enriquece o retorno com as recompensas calculadas + motivo de penalidade
+    // Enriquece o retorno com as recompensas calculadas + motivo de penalidade + troféus + baú
     return ranked.map((entry: any) => {
-      const reward = entry.player.userId ? rewardByPlayer.get(entry.player.id) : null;
+      const reward  = entry.player.userId ? rewardByPlayer.get(entry.player.id) : null;
+      const trophies = entry.player.userId ? trophyByPlayer.get(entry.player.id) : null;
+      const teveRecompensa = (reward?.coins ?? 0) > 0 || (reward?.xp ?? 0) > 0;
+      const bauEarned: "premium" | "comum" | null =
+        teveRecompensa && entry.player.userId
+          ? entry.position === 1 ? "premium"
+          : entry.position === 2 ? "comum"
+          : null
+          : null;
       return {
         ...entry,
         xpEarned: reward?.xp ?? 0,
         coinsEarned: reward?.coins ?? 0,
         penaltyReason: reward?.penaltyReason ?? null,
         breakdown: reward?.breakdown ?? [],
+        trophyDelta: trophies?.trophyDelta ?? 0,
+        trophyBefore: trophies?.trophyBefore ?? 0,
+        trophyAfter: trophies?.trophyAfter ?? 0,
+        bauEarned,
       };
     });
   }
@@ -662,13 +688,30 @@ export class SessionService {
           }
         }
       }
-      return { player: p, patrimony };
+
+      // grupo 0 = ativo até o fim; 1 = falência; 2 = desistência voluntária
+      // null é tratado como falência para preservar compatibilidade com partidas antigas
+      const grupo = !p.desistiu
+        ? 0
+        : p.motivoDesistencia === "VOLUNTARIA" ? 2 : 1;
+
+      return {
+        player: p,
+        patrimony,
+        grupo,
+        desistiuEm: p.desistiuEm as Date | null,
+      };
     });
 
-    withPatrimony.sort((a: any, b: any) => b.patrimony - a.patrimony);
+    withPatrimony.sort((a: any, b: any) => {
+      if (a.grupo !== b.grupo) return a.grupo - b.grupo;
+      if (a.grupo < 2) return b.patrimony - a.patrimony;
+      // grupo 2 (voluntários): quem saiu mais tarde é melhor colocado
+      const ta = a.desistiuEm?.getTime() ?? 0;
+      const tb = b.desistiuEm?.getTime() ?? 0;
+      return tb - ta;
+    });
 
-    // Atribui apenas posição e patrimônio. As recompensas (coins/xp) são
-    // calculadas pelo reward.service (sistema anti-farm) na finalização.
     return withPatrimony.map((entry: any, index: number) => ({
       ...entry,
       position: index + 1,

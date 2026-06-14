@@ -25,6 +25,8 @@ interface ProfileData {
   totalGames: number
   totalWins: number
   totalTop3: number
+  trophies: number
+  trophyAsset?: string
   title?: string | null
   titleAnimated?: boolean
   titleRaridade?: string | null

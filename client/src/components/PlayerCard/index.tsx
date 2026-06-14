@@ -3,6 +3,7 @@
 import UserBanner from '@/components/UserBanner';
 import UserAvatar from '@/components/UserAvatar';
 import UserName from '@/components/UserName';
+import RankBadge from '@/components/RankBadge';
 import { formatCurrency } from '@/utils/format';
 import type { Player } from '@/types/game';
 
@@ -138,11 +139,12 @@ export default function PlayerCard({
           )}
         </div>
 
-        {/* Nível */}
+        {/* Nível + Patente */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
           <span className="font-inconsolata" style={{ fontSize: 11, color: '#a1a1aa' }}>
             Nível {player.level ?? '?'}
           </span>
+          <RankBadge trophies={player.trophies ?? 0} size={16} />
           {propCount != null && (
             <>
               <span style={{ fontSize: 11, color: '#52525b' }}>·</span>

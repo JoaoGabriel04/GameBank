@@ -15,7 +15,10 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import UserName from "@/components/UserName";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X } from "lucide-react";
+import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X, Star } from "lucide-react";
+import RankBadge from "@/components/RankBadge";
+import TrophyCount from "@/components/TrophyCount";
+import { getTrophyLabel } from "@/utils/trophies";
 import { useAuthStore } from "@/stores/authStore";
 import { getRankingApi } from "@/services/api/ranking";
 import UserAvatar from "@/components/UserAvatar";
@@ -25,7 +28,7 @@ import { Chip, Progress, Segmented, UModal, xpForLevel } from "@/components/user
 import type { RankingUser } from "@/types/shop";
 
 /* -- Metric config -- */
-type Metric = "nivel" | "vitorias" | "partidas" | "winrate";
+type Metric = "nivel" | "trofeus" | "vitorias" | "partidas" | "winrate";
 
 interface MetricMeta {
   label: string;
@@ -41,6 +44,7 @@ function nivelSortKey(p: RankingUser) {
 
 const METRIC_META: Record<Metric, MetricMeta> = {
   nivel:    { label: "Nível",    icon: TrendingUp, getValue: nivelSortKey,                                        format: (v) => `Lv ${Math.floor(v / 100000)}`, unit: "nível"  },
+  trofeus:  { label: "Rank",     icon: Star,       getValue: (p) => p.trophies ?? 0,                              format: (v) => v.toLocaleString("pt-BR"),       unit: "troféus" },
   vitorias: { label: "Vitórias", icon: Crown,      getValue: (p) => p.totalWins ?? 0,                             format: (v) => String(v),                      unit: "vitórias" },
   partidas: { label: "Partidas", icon: Gamepad2,   getValue: (p) => p.totalGames ?? 0,                            format: (v) => String(v),                      unit: "partidas" },
   winrate:  { label: "Win Rate", icon: TrendingUp, getValue: (p) => p.totalGames > 0 ? Math.round((p.totalWins / p.totalGames) * 100) : 0, format: (v) => v + "%",      unit: "%" },
@@ -136,6 +140,15 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
           <Progress value={xpInto} max={xpCurrent} tone="green" height={5} />
         </div>
 
+        {/* Trophy rank */}
+        <div className="flex items-center gap-2 mb-3 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
+          <RankBadge trophies={player.trophies ?? 0} size={28} />
+          <div>
+            <p className="font-jaro text-sm text-zinc-100 leading-none">{getTrophyLabel(player.trophies ?? 0)}</p>
+            <TrophyCount count={player.trophies ?? 0} size={12} textClassName="font-inconsolata text-[10px] text-zinc-400" />
+          </div>
+        </div>
+
         {/* Stats grid */}
         <div className="grid grid-cols-4 gap-2 mb-3">
           {[
@@ -228,8 +241,14 @@ function Podium({
             />
             <div className={`${heights[i]} w-24 rounded-t-xl flex flex-col items-center justify-end pb-3 ${podiumStyles[i]} hover:brightness-110 transition-all`}>
               <span className="text-2xl leading-none">{["🥈","🥇","🥉"][i]}</span>
-              <p className="font-jaro text-base mt-1 text-zinc-100">{meta.format(value)}</p>
-              <p className="font-inconsolata text-[9px] text-zinc-500">{meta.unit}</p>
+              {metric === "trofeus" ? (
+                <TrophyCount count={value} size={14} textClassName="font-jaro text-base text-zinc-100" className="mt-1" />
+              ) : (
+                <>
+                  <p className="font-jaro text-base mt-1 text-zinc-100">{meta.format(value)}</p>
+                  <p className="font-inconsolata text-[9px] text-zinc-500">{meta.unit}</p>
+                </>
+              )}
             </div>
           </motion.div>
         );
@@ -243,7 +262,7 @@ export default function RankingPage() {
   const { user } = useAuthStore();
   const [raw, setRaw]           = useState<RankingUser[]>([]);
   const [loading, setLoading]   = useState(true);
-  const [metric, setMetric]     = useState<Metric>("nivel");
+  const [metric, setMetric]     = useState<Metric>("trofeus");
   const [selected, setSelected] = useState<RankingUser | null>(null);
 
   useEffect(() => {
@@ -285,6 +304,7 @@ export default function RankingPage() {
         value={metric}
         onChange={(v) => setMetric(v as Metric)}
         options={[
+          { value: "trofeus",  label: "Rank"     },
           { value: "nivel",    label: "Nível"    },
           { value: "vitorias", label: "Vitórias"  },
           { value: "partidas", label: "Partidas"  },
@@ -298,9 +318,14 @@ export default function RankingPage() {
           <span className="font-jaro text-2xl text-green-300">#{myPos.position}</span>
           <div className="flex-1">
             <p className="font-inconsolata text-sm text-zinc-200">Sua posição atual</p>
-            <p className="font-inconsolata text-xs text-zinc-500">
-              {meta.label}: {meta.format(meta.getValue(myPos))}
-            </p>
+            <div className="flex items-center gap-1 font-inconsolata text-xs text-zinc-500">
+              <span>{meta.label}:</span>
+              {metric === "trofeus" ? (
+                <TrophyCount count={meta.getValue(myPos)} size={12} textClassName="font-inconsolata text-xs text-zinc-500" />
+              ) : (
+                <span>{meta.format(meta.getValue(myPos))}</span>
+              )}
+            </div>
           </div>
           <TrendingUp size={18} className="text-green-400" />
         </div>
@@ -379,8 +404,17 @@ frameScale={p.frameScale ?? 145}
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="font-jaro text-base text-zinc-100">{value}</p>
-                    <p className="font-inconsolata text-[10px] text-zinc-500">{meta.unit}</p>
+                    {metric === "trofeus" ? (
+                      <>
+                        <RankBadge trophies={p.trophies ?? 0} size={22} className="ml-auto mb-0.5" />
+                        <TrophyCount count={meta.getValue(p)} size={13} textClassName="font-jaro text-sm text-zinc-100" />
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-jaro text-base text-zinc-100">{value}</p>
+                        <p className="font-inconsolata text-[10px] text-zinc-500">{meta.unit}</p>
+                      </>
+                    )}
                   </div>
 
                   <ChevronRight size={14} className="text-zinc-700 shrink-0" />

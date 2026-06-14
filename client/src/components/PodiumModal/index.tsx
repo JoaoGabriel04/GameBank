@@ -10,6 +10,11 @@ import UserBanner from "@/components/UserBanner"
 import UserAvatar from "@/components/UserAvatar"
 import UserBadge from "@/components/UserBadge"
 
+const BAU_IMAGENS: Record<string, string> = {
+  comum:   "/images/Cofrinho.png",
+  premium: "/images/Cofre Premium.png",
+}
+
 interface PodiumModalProps {
   ranking: RankedPlayer[]
   userId?: number | null
@@ -125,6 +130,27 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
                       <CoinIcon size={12} className="inline" /> {entry.coinsEarned} coins
                     </p>
                   )}
+                  {entry.trophyDelta !== undefined && (
+                    <p className={`text-xs flex items-center justify-center gap-1 ${(entry.trophyDelta ?? 0) >= 0 ? "text-cyan-400" : "text-rose-400"}`}>
+                      {(entry.trophyDelta ?? 0) >= 0 ? "+" : ""}{entry.trophyDelta}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/images/TROFEU.png" alt="" style={{ width: 11, height: 11 }} className="object-contain" />
+                    </p>
+                  )}
+                  {entry.bauEarned && (
+                    <div className="flex items-center justify-center gap-1 mt-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={BAU_IMAGENS[entry.bauEarned]}
+                        alt={entry.bauEarned === "premium" ? "Cofre Premium" : "Cofrinho"}
+                        style={{ width: 20, height: 20 }}
+                        className="object-contain"
+                      />
+                      <span className={`text-[10px] font-inconsolata ${entry.bauEarned === "premium" ? "text-violet-400" : "text-green-400"}`}>
+                        {entry.bauEarned === "premium" ? "Cofre Premium" : "Cofrinho"}
+                      </span>
+                    </div>
+                  )}
                   {entry.penaltyReason && (
                     <p className="text-[10px] text-zinc-500 mt-1 max-w-28 mx-auto">⚠ {entry.penaltyReason}</p>
                   )}
@@ -156,6 +182,13 @@ export default function PodiumModal({ ranking, userId, onClose }: PodiumModalPro
           {meInRanking.xpEarned > 0 && (
             <p className="text-xs text-green-400 flex items-center justify-center gap-1 mt-1">
               <FontAwesomeIcon icon={faBolt} /> {meInRanking.xpEarned} XP
+            </p>
+          )}
+          {meInRanking.trophyDelta !== undefined && (
+            <p className={`text-xs flex items-center justify-center gap-1 mt-1 ${(meInRanking.trophyDelta ?? 0) >= 0 ? "text-cyan-400" : "text-rose-400"}`}>
+              {(meInRanking.trophyDelta ?? 0) >= 0 ? "+" : ""}{meInRanking.trophyDelta}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/TROFEU.png" alt="" style={{ width: 11, height: 11 }} className="object-contain" />
             </p>
           )}
         </motion.div>

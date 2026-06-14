@@ -271,13 +271,16 @@ export class BauService {
   }
 
   async concederBauPartida(
-    userId: number, tipo: TipoBau, sessionId: number, position: number
+    userId: number, tipo: TipoBau, sessionId: number | undefined, position: number
   ) {
     const config = BAU_CONFIG[tipo]
     if (!config) throw new AppError(400, "Tipo de baú inválido")
 
-    const countHoje = await bauRepository.countBauAdquiridosToday(userId)
-    if (countHoje >= MAX_BAUS_PARTIDA_POR_DIA) return null
+    // Cap diário ignorado em dev para facilitar testes
+    if (process.env.DISABLE_ANTI_FARM !== "true") {
+      const countHoje = await bauRepository.countBauAdquiridosToday(userId)
+      if (countHoje >= MAX_BAUS_PARTIDA_POR_DIA) return null
+    }
 
     const bau = await bauRepository.findBauByTipo(tipo)
     if (!bau) return null

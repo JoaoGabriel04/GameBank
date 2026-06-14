@@ -11,6 +11,7 @@ export async function mapSessionPlayers<T extends {
     frameType?: string | null;
     frameAnimated?: boolean;
     frameScale?: number;
+    trophies?: number;
     user_items?: any;
   } | null;
 }>(players: T[]): Promise<any[]> {
@@ -68,6 +69,7 @@ export async function mapSessionPlayers<T extends {
       titleAnimated,
       titleRaridade,
       level: user?.level ?? null,
+      trophies: user?.trophies ?? 0,
     };
   });
 }

@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { staggerContainer, staggerItem } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
+import RankBadge from "@/components/RankBadge";
+import TrophyCount from "@/components/TrophyCount";
+import RankProgressModal from "@/components/RankProgressModal";
+import { getTrophyLabel } from "@/utils/trophies";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -17,7 +21,7 @@ import { Progress, Chip, Panel, PanelHead, xpForLevel } from "@/components/user/
 import type { GameResult } from "@/types/shop";
 
 /* --- Hero ---------------------------------------------------------------- */
-function ProfileHero({ onEdit }: { onEdit: () => void }) {
+function ProfileHero({ onEdit, onOpenRank }: { onEdit: () => void; onOpenRank: () => void }) {
   const { user }    = useAuthStore();
   const { profile } = useProfileStore();
   if (!profile || !user) return null;
@@ -95,6 +99,20 @@ function ProfileHero({ onEdit }: { onEdit: () => void }) {
           </div>
           <Progress value={xpInto} max={xpCurrent} tone="green" height={6} />
         </div>
+
+        <button
+          onClick={onOpenRank}
+          className="mt-3 flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/60 hover:border-zinc-700 rounded-xl px-3 py-2 w-fit transition-colors cursor-pointer group"
+        >
+          <RankBadge trophies={profile.trophies ?? 0} size={24} />
+          <div className="text-left">
+            <p className="font-jaro text-sm text-zinc-100 leading-none">{getTrophyLabel(profile.trophies ?? 0)}</p>
+            <TrophyCount count={profile.trophies ?? 0} size={11} textClassName="font-inconsolata text-[9px] text-zinc-400" />
+          </div>
+          <span className="font-inconsolata text-[10px] text-zinc-600 group-hover:text-zinc-400 transition-colors ml-1">
+            ver tudo →
+          </span>
+        </button>
       </div>
     </div>
   );
@@ -202,9 +220,12 @@ function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: (
               </div>
               <div className="text-right shrink-0 space-y-0.5">
                 <p className="font-inconsolata text-xs text-green-400">+{r.xpEarned} XP</p>
-                <p className="font-inconsolata text-[10px] text-amber-400">
-                  +{r.coinsEarned} coins
-                </p>
+                <p className="font-inconsolata text-[10px] text-amber-400">+{r.coinsEarned} coins</p>
+                {r.trophyDelta !== undefined && (
+                  <p className={`font-inconsolata text-[10px] ${(r.trophyDelta ?? 0) >= 0 ? "text-cyan-400" : "text-rose-400"}`}>
+                    {(r.trophyDelta ?? 0) >= 0 ? "+" : ""}{r.trophyDelta} 🏆
+                  </p>
+                )}
               </div>
             </motion.div>
           ))}
@@ -220,6 +241,7 @@ export default function PerfilPage() {
   const { profile, loading, loadProfile } = useProfileStore();
   const [history, setHistory] = useState<GameResult[]>([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [rankOpen, setRankOpen] = useState(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
@@ -250,7 +272,7 @@ export default function PerfilPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pt-16 lg:pt-6 space-y-4">
-      <ProfileHero onEdit={() => setEditOpen(true)} />
+      <ProfileHero onEdit={() => setEditOpen(true)} onOpenRank={() => setRankOpen(true)} />
       <StatsRow
         totalGames={profile.totalGames}
         totalWins={profile.totalWins}
@@ -261,6 +283,11 @@ export default function PerfilPage() {
         setHistory([]);
       }} />
       <EditProfileModal isOpen={editOpen} onClose={() => setEditOpen(false)} />
+      <RankProgressModal
+        trophies={profile.trophies ?? 0}
+        isOpen={rankOpen}
+        onClose={() => setRankOpen(false)}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ export const rankingRepository = {
         totalGames: true,
         totalWins: true,
         totalTop3: true,
+        trophies: true,
         banner: true,
         frame: true,
         frameType: true,

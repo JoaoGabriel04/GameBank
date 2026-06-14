@@ -1,30 +1,36 @@
 'use client'
 
-import { useId } from "react"
+import { useId, useMemo } from "react"
 import { motion } from "framer-motion"
 import { legendaryTitleStyle } from "@/lib/animations"
-
-function rand(n: number) { return Math.random() * n }
 
 const PARTICLE_COUNT = 12
 
 export default function LegendaryTitle({ text }: { text: string }) {
   const uid = useId()
-  const particles = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-    key: `${uid}-${i}`,
-    x: rand(100) - 50,
-    y: rand(100) - 50,
-    size: rand(3) + 2,
-    delay: rand(3),
-    duration: rand(1.5) + 2,
-  }))
+
+  // Posições estáveis — rand() no style={} executa a cada render e reposiciona as partículas
+  const particles = useMemo(() =>
+    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+      key: `${uid}-${i}`,
+      left: Math.random() * 80 + 10,
+      top: Math.random() * 80 + 10,
+      size: Math.random() * 3 + 2,
+      delay: Math.random() * 3,
+      duration: Math.random() * 1.5 + 2,
+      travelY: -(Math.random() * 6 + 3),
+      travelX: Math.random() * 8 - 4,
+    })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
   return (
     <span
       style={{
         position: "relative",
-        display: "inline-flex",
-        alignItems: "center",
+        display: "inline-block",
+        overflow: "hidden",
       }}
     >
       <span
@@ -44,14 +50,14 @@ export default function LegendaryTitle({ text }: { text: string }) {
             background: "#fde68a",
             boxShadow: "0 0 6px rgba(251,191,36,0.6), 0 0 12px rgba(245,158,11,0.3)",
             pointerEvents: "none",
-            left: `${rand(80) + 10}%`,
-            top: `${rand(80) + 10}%`,
+            left: `${p.left}%`,
+            top: `${p.top}%`,
           }}
           animate={{
             opacity: [0, 1, 1, 0],
             scale: [0, 1.2, 1, 0],
-            y: [0, -12 - rand(16)],
-            x: [0, rand(16) - 8],
+            y: [0, p.travelY],
+            x: [0, p.travelX],
           }}
           transition={{
             duration: p.duration,

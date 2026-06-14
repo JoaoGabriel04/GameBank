@@ -67,6 +67,7 @@ export class RankingService {
         totalGames: user.totalGames,
         totalWins: user.totalWins,
         totalTop3: user.totalTop3,
+        trophies: user.trophies,
         banner: user.banner,
         bannerAnimated,
         frame: equippedFrameItem?.value ?? null,

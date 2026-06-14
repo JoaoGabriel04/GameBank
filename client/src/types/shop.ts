@@ -51,6 +51,9 @@ export interface GameResult {
   patrimony: number
   xpEarned: number
   coinsEarned: number
+  trophyDelta?: number
+  trophyBefore?: number
+  trophyAfter?: number
   createdAt: string
 }
 
@@ -98,6 +101,7 @@ export interface RankingUser {
   totalGames: number
   totalWins: number
   totalTop3: number
+  trophies: number
   title?: string | null
   titleAnimated?: boolean
   titleRaridade?: string | null

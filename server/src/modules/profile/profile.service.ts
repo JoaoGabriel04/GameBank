@@ -11,6 +11,7 @@ import { getRedis } from "../../lib/redis.js";
 import { prisma } from "../../lib/prisma.js";
 import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel, totalXpForLevels } from "../../utils/level.js";
+import { getTrophyAssetName } from "../../shared/constants/trophies.js";
 import { shopRepository } from "../shop/shop.repository.js";
 
 export class ProfileService {
@@ -74,6 +75,8 @@ export class ProfileService {
       totalGames: user.totalGames,
       totalWins: user.totalWins,
       totalTop3: user.totalTop3,
+      trophies: user.trophies,
+      trophyAsset: getTrophyAssetName(user.trophies),
       title: parsedTitle?.title || null,
       titleAnimated,
       titleRaridade,
@@ -104,6 +107,9 @@ export class ProfileService {
       patrimony: r.patrimony,
       xpEarned: r.xpEarned,
       coinsEarned: r.coinsEarned,
+      trophyDelta: r.trophyDelta,
+      trophyBefore: r.trophyBefore,
+      trophyAfter: r.trophyAfter,
       createdAt: r.createdAt,
     }));
   }

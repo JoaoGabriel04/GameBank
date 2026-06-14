@@ -134,6 +134,7 @@ model User {
   totalGames   Int       @default(0)
   totalWins    Int       @default(0)
   totalTop3    Int       @default(0)
+  trophies     Int       @default(0)
 
   banned       Boolean   @default(false)
   bannedAt     DateTime?
@@ -206,9 +207,11 @@ model SessionPlayer {
   messages      Message[]
   notificationsFrom Notification[] @relation("NotificationFromPlayer")
   notificationsTo   Notification[] @relation("NotificationToPlayer")
-  carta_prisao      Boolean @default(false)
-  desistiu          Boolean @default(false)
+  carta_prisao        Boolean   @default(false)
+  desistiu            Boolean   @default(false)
   patrimonyAtDesistir Int?
+  motivoDesistencia   String?   // "FALENCIA" | "VOLUNTARIA" | null (ainda em jogo)
+  desistiuEm          DateTime?
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
@@ -527,6 +530,9 @@ model GameResult {
   patrimony   Int
   xpEarned    Int      @default(0)
   coinsEarned Int      @default(0)
+  trophyDelta  Int     @default(0)
+  trophyBefore Int     @default(0)
+  trophyAfter  Int     @default(0)
 
   // Auditoria do sistema anti-farm
   activityScore    Int     @default(0)   // score de participação na partida

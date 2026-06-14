@@ -65,6 +65,7 @@ export interface Player {
   frameAnimated?: boolean;
   frameScale?: number;
   level?: number | null;
+  trophies?: number | null;
   posses: SessionPropriedade[];
   teamId?: number;
   team?: Team;
@@ -185,6 +186,10 @@ export interface RankedPlayer {
   coinsEarned: number
   penaltyReason?: string | null
   breakdown?: string[]
+  trophyDelta?: number
+  trophyBefore?: number
+  trophyAfter?: number
+  bauEarned?: "premium" | "comum" | null
 }
 
 // ========================

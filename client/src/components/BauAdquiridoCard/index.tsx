@@ -23,7 +23,7 @@ function formatTimer(ms: number): string {
   const m = Math.floor((totalSeg % 3600) / 60)
   const s = totalSeg % 60
 
-  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m`
+  if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m ${s.toString().padStart(2, "0")}s`
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
 }
 
