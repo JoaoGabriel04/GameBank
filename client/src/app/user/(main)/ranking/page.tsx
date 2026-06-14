@@ -25,7 +25,7 @@ import { Chip, Progress, Segmented, UModal, xpForLevel } from "@/components/user
 import type { RankingUser } from "@/types/shop";
 
 /* -- Metric config -- */
-type Metric = "nivel" | "xp" | "vitorias" | "partidas" | "winrate";
+type Metric = "nivel" | "vitorias" | "partidas" | "winrate";
 
 interface MetricMeta {
   label: string;
@@ -41,7 +41,6 @@ function nivelSortKey(p: RankingUser) {
 
 const METRIC_META: Record<Metric, MetricMeta> = {
   nivel:    { label: "Nível",    icon: TrendingUp, getValue: nivelSortKey,                                        format: (v) => `Lv ${Math.floor(v / 100000)}`, unit: "nível"  },
-  xp:       { label: "XP",       icon: TrendingUp, getValue: (p) => p.xp ?? 0,                                    format: (v) => v.toLocaleString("pt-BR"),      unit: "XP"       },
   vitorias: { label: "Vitórias", icon: Crown,      getValue: (p) => p.totalWins ?? 0,                             format: (v) => String(v),                      unit: "vitórias" },
   partidas: { label: "Partidas", icon: Gamepad2,   getValue: (p) => p.totalGames ?? 0,                            format: (v) => String(v),                      unit: "partidas" },
   winrate:  { label: "Win Rate", icon: TrendingUp, getValue: (p) => p.totalGames > 0 ? Math.round((p.totalWins / p.totalGames) * 100) : 0, format: (v) => v + "%",      unit: "%" },
@@ -287,7 +286,6 @@ export default function RankingPage() {
         onChange={(v) => setMetric(v as Metric)}
         options={[
           { value: "nivel",    label: "Nível"    },
-          { value: "xp",       label: "XP"        },
           { value: "vitorias", label: "Vitórias"  },
           { value: "partidas", label: "Partidas"  },
           { value: "winrate",  label: "Win Rate"  },
