@@ -63,6 +63,21 @@ export const adminRepository = {
     return Number(result);
   },
 
+  // Re-sincroniza o banner em cache (User.banner) dos usuários que têm este
+  // item de banner equipado, após o admin editar o Banner de origem.
+  resyncEquippedBannerForUsers: async (itemId: number, bannerCss: string): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET "banner" = ${bannerCss}
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'item_id')::int = ${itemId}
+          AND (item->>'equipped')::boolean = true
+      )
+    `;
+    return Number(result);
+  },
+
   // Sessions
   findAllSessions: () =>
     prisma.session.findMany({
@@ -237,6 +252,31 @@ export const adminRepository = {
         "frame" = NULL,
         "frametype" = NULL,
         "frameanimated" = false
+      WHERE EXISTS (
+        SELECT 1 FROM jsonb_array_elements(u.items) item
+        WHERE (item->>'item_id')::int = ${itemId}
+          AND (item->>'equipped')::boolean = true
+      )
+    `;
+    return Number(result);
+  },
+
+  // Re-sincroniza o frame em cache (User.frame/frametype/frameanimated/frameScale)
+  // dos usuários que têm este item de frame equipado, após o admin editar o Frame.
+  resyncEquippedFrameForUsers: async (
+    itemId: number,
+    frameValue: string | null,
+    frameType: string | null,
+    frameAnimated: boolean,
+    frameScale: number
+  ): Promise<number> => {
+    const result = await prisma.$executeRaw`
+      UPDATE "users" u
+      SET
+        "frame" = ${frameValue},
+        "frametype" = ${frameType},
+        "frameanimated" = ${frameAnimated},
+        "frameScale" = ${frameScale}
       WHERE EXISTS (
         SELECT 1 FROM jsonb_array_elements(u.items) item
         WHERE (item->>'item_id')::int = ${itemId}

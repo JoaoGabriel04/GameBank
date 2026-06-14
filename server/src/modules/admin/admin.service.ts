@@ -663,6 +663,15 @@ export class AdminService {
 
     const updated = await adminRepository.updateBanner(id, payload);
 
+    // Propaga o novo css para quem já tem este banner equipado (cache em User)
+    const bannerItems = await prisma.shopItem.findMany({
+      where: { bannerId: id, type: "banner" },
+      select: { id: true },
+    });
+    for (const it of bannerItems) {
+      await adminRepository.resyncEquippedBannerForUsers(it.id, updated.css);
+    }
+
     await auditLog({
       userId: actor?.id ?? null,
       action: "admin.banner.update",
@@ -731,6 +740,15 @@ export class AdminService {
         },
         select: { id: true, nome: true, css: true, animated: true, imagePublicId: true, imageUpdatedAt: true, disponibilidade: true, createdAt: true },
       });
+
+      // Propaga o novo css para quem já tem este banner equipado (cache em User)
+      const bannerItems = await prisma.shopItem.findMany({
+        where: { bannerId: id, type: "banner" },
+        select: { id: true },
+      });
+      for (const it of bannerItems) {
+        await adminRepository.resyncEquippedBannerForUsers(it.id, updated.css);
+      }
 
       // Delete the old image (fire-and-forget)
       if (oldPublicId && oldPublicId !== uploaded.publicId) {
@@ -806,6 +824,18 @@ export class AdminService {
 
     const updated = await adminRepository.updateFrame(id, payload);
 
+    // Propaga o novo visual para quem já tem este frame equipado (cache em User)
+    const frameItems = await prisma.shopItem.findMany({
+      where: { frameId: id, type: "frame" },
+      select: { id: true },
+    });
+    const frameValue = updated.tipo === "image" ? updated.imageUrl : updated.css;
+    for (const it of frameItems) {
+      await adminRepository.resyncEquippedFrameForUsers(
+        it.id, frameValue, updated.tipo, updated.animated, updated.scale
+      );
+    }
+
     await auditLog({
       userId: actor?.id ?? null,
       action: "admin.frame.update",
@@ -870,6 +900,18 @@ export class AdminService {
         },
         select: { id: true, nome: true, tipo: true, imageUrl: true, imagePublicId: true, css: true, animated: true, scale: true, disponibilidade: true, createdAt: true },
       });
+
+      // Propaga o novo visual para quem já tem este frame equipado (cache em User)
+      const frameItems = await prisma.shopItem.findMany({
+        where: { frameId: id, type: "frame" },
+        select: { id: true },
+      });
+      const frameValue = updated.tipo === "image" ? updated.imageUrl : updated.css;
+      for (const it of frameItems) {
+        await adminRepository.resyncEquippedFrameForUsers(
+          it.id, frameValue, updated.tipo, updated.animated, updated.scale
+        );
+      }
 
       if (oldPublicId && oldPublicId !== uploaded.publicId) {
         deleteCloudinaryFrame(oldPublicId).catch((err) =>
