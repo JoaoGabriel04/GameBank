@@ -104,11 +104,27 @@ One socket per user — on join, the server disconnects any prior socket for the
 
 ### Zod schemas
 
-Shared schemas in `server/src/shared/schemas/`: `auth.schema.ts`, `banco.schema.ts`, `player.schema.ts`, `propriedade.schema.ts`, `session.schema.ts`.
+Shared schemas in `server/src/shared/schemas/`: currently `auth.schema.ts` and `bau.schema.ts`. Most validation is inline in the controllers (`Schema.parse(req.body)`); add a shared schema only when it's reused.
 
 Avatar/banner constants (preset IDs, etc.) live in `server/src/shared/constants/`.
 
 Client-only schemas live inside `client/src/` and are not shared.
+
+### Data model conventions (read before touching `schema.prisma`)
+
+- **Money is always `Int`** (`saldo`, `valor`, `patrimony`, `saldoInicial`). Never `Float`. Legit exceptions: `rewardMultiplier` (1.0/1.5) and mission counters (`target`/`progress`).
+- **`SessionPosses` references `Propriedade` directly** via `propId`. The old `Posses` table (a 1:1 mirror) was removed — do not recreate it. Access the property via `sessionPosses.propriedade.*`.
+- **State fields use native Prisma enums** (member name = stored string, no `@map`): `Raridade`, `ShopItemType`, `NegotiationStatus`, `NotificationStatus`, `PurchaseStatus`, `AuditSeverity`, `BauStatus`, `FrameTipo`, `MissionTipo`, `MissionMetric`, `SessionModo`. When a repo receives a `string` from req/query, cast at the Prisma boundary (`status as NegotiationStatus`) rather than propagating the enum type up to callers.
+- **Intentionally NOT enums** (don't convert naively): `Session.status` (`"Em Andamento"` has a space + couples with the client), `Card.tipo`/`efeito` (accent + free-form admin content), `Coin/DiamondTransaction.tipo` (the `tipo` column name is overloaded across tables).
+- **All FKs are declared** with `@relation` + `onDelete` (optional Session/ShopItem refs use `SetNull`; `Notification.sessionPosses` uses `Cascade`). Don't leave a bare `Int` pointing at another table.
+- **Equipped cosmetics** (`User.frame/banner/frametype/frameanimated/frameScale`) are a **denormalized cache** resolved at equip time. When an admin edits a Frame/Banner, propagate the new look to equipped users via `resyncEquippedFrameForUsers`/`resyncEquippedBannerForUsers` (`admin.repository`). Same pragmatic stance as `user_items` (JSONB on `User`, no junction table).
+
+### Migrations — critical gotchas
+
+- **`server/generated/prisma` on the host is root-owned** (generated inside the container). Run `prisma generate`, `tsc`, and migrations **inside the container** or you typecheck against a stale client: `docker compose -f docker-compose.dev.yml exec server npx <cmd>`.
+- **Prisma does NOT auto-cast `text→enum`** or alter a populated column's type — it tries to drop/recreate and fails (`No cast exists, the column would be dropped`). Write those migrations **by hand**: `ALTER COLUMN ... DROP DEFAULT; ALTER COLUMN ... TYPE "Enum" USING (col::text::"Enum"); ... SET DEFAULT`. For structural FK changes: add nullable column → `UPDATE` backfill → `SET NOT NULL` → swap constraints. Name the migration folder with a timestamp that sorts **after** the previous one.
+- **Before declaring a new FK**, check for orphans (`SELECT ... WHERE NOT EXISTS`) and null/clean them inside the migration, or the constraint creation fails.
+- **Verify actual stored values** (`SELECT DISTINCT col`) before defining an enum — schema comments may be stale.
 
 ### Admin user
 

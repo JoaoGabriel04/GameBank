@@ -303,6 +303,14 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 - `updateMany` / `deleteMany` sem retorno
 - `aggregate` com `_sum` para totais
 
+#### Modelo de dados (convenções — ler antes de mexer no schema)
+- **Dinheiro é sempre `Int`** (`saldo`, `valor`, `patrimony`, `saldoInicial`). Nunca `Float`. Exceções legítimas: `rewardMultiplier` (1.0/1.5) e contadores de missão (`target`/`progress`).
+- **`SessionPosses` referencia `Propriedade` direto** via `propId` — a tabela `Posses` foi eliminada (era espelho 1:1). Acesso: `sessionPosses.propriedade.*`. Não recriar `Posses`.
+- **Campos de estado usam enum nativo do Prisma** (valor do membro = string gravada, sem `@map`): `Raridade`, `ShopItemType`, `NegotiationStatus`, `NotificationStatus`, `PurchaseStatus`, `AuditSeverity`, `BauStatus`, `FrameTipo`, `MissionTipo`, `MissionMetric`, `SessionModo`. Em repos que recebem `string` de fora (req/query), fazer cast na fronteira do prisma (`status as NegotiationStatus`), não propagar enum aos callers.
+- **NÃO são enum, de propósito** (não converter sem cuidado): `Session.status` (`"Em Andamento"` tem espaço + acopla com o client), `Card.tipo`/`efeito` (acento + conteúdo livre de admin), `Coin/DiamondTransaction.tipo` (campo `tipo` sobrecarregado entre várias tabelas).
+- **Todas as FKs são declaradas** com `@relation` + `onDelete` (Session/ShopItem opcionais usam `SetNull`; `Notification.sessionPosses` usa `Cascade`). Não deixar `Int` solto referenciando outra tabela.
+- **Cosméticos equipados** (`User.frame/banner/frametype/frameanimated/frameScale`) são **cache desnormalizado** resolvido no equip. Ao editar Frame/Banner no admin, propagar o novo visual via `resyncEquippedFrameForUsers`/`resyncEquippedBannerForUsers` (admin.repository). Mesma filosofia pragmática do `user_items` (JSONB em `User`, sem tabela de junção).
+
 #### Zod Schemas
 - Compartilhados: `server/src/shared/schemas/<modulo>.schema.ts` — `PascalCase + Schema`
 - Constantes compartilhadas: `server/src/shared/constants/` (avatar, banner, session)
@@ -319,7 +327,17 @@ Schemas usados só no client ficam em `client/src/` (sem compartilhamento).
 
 #### Deploy / Migrations
 - `make dev` — rebuild total
-- `npx prisma migrate dev --name <desc>` — nova migration
+- `make db-migrate` (`prisma migrate dev` no container) — nova migration
 - `npm run build` — prisma generate + tsc (server)
 - `npx next build --turbopack` — build client
 - Push com hook pre-push que valida TS + Prisma + migrations
+
+#### Migrations — gotchas críticos (aprendidos na refatoração do DB)
+- **`generated/prisma` no host é root-owned** (gerado dentro do container). Rodar `prisma generate`, `tsc` e `migrate` **no container**, senão typechecka contra um client desatualizado:
+  `docker compose -f docker-compose.dev.yml exec server npx <cmd>`
+- **O Prisma NÃO gera cast `text→enum`** nem lida com mudança estrutural de coluna que já tem dados — ele tenta dropar/recriar e **falha** (`No cast exists, the column would be dropped`). Nesses casos, escrever a migration **à mão**:
+  - `ALTER COLUMN ... DROP DEFAULT; ALTER COLUMN ... TYPE "Enum" USING (col::text::"Enum"); ALTER COLUMN ... SET DEFAULT '<valor>';`
+  - mudança de FK/coluna: adicionar nova coluna nullable → backfill via `UPDATE` → `SET NOT NULL` → trocar constraint → dropar antiga.
+  - o nome da pasta da migration deve ordenar **depois** da última (timestamp `YYYYMMDDHHMMSS`).
+- **Antes de declarar uma FK nova**, checar órfãos (IDs apontando para registros já deletados) e anulá-los/limpá-los na própria migration, senão a constraint falha.
+- Verificar os valores reais gravados antes de criar um enum (`SELECT DISTINCT col`) — comentários do schema podem estar desatualizados.

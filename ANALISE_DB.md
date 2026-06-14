@@ -3,7 +3,23 @@
 > Revisão completa do schema Prisma (`server/prisma/schema.prisma`) com pontos de
 > melhoria priorizados, planos de migração, SQL e pontos de código a tocar.
 >
-> Gerado em 2026-06-14. Schema atual: **27 tabelas**.
+> Gerado em 2026-06-14. Schema original: **27 tabelas**.
+
+## Status de implementação (atualizado 2026-06-14)
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Eliminar `Posses` | ✅ Feito (`SessionPosses.propId`) |
+| 2 | Dinheiro `Float`→`Int` | ✅ Feito |
+| 3 | Strings→enum | ✅ Parcial — 11 enums; `Session.status`, `Card.tipo/efeito`, `Coin/DiamondTransaction.tipo` **deferidos de propósito** |
+| 4 | Declarar FKs soltas | ✅ Feito (5 FKs + índices) |
+| 5 | Índices em FKs | ✅ Feito |
+| 6 | Unir ledgers Coin/Diamond | ❌ Descartado (mantidos separados — pagamento real isolado) |
+| 7 | Unificar Badge/Banner/Frame | ❌ **Não feito** (custo 250+ sites > benefício) |
+| 8 | Cosméticos equipados | ✅ Resolvido via **cascata na edição** (não via FK) — ver `resyncEquipped*ForUsers` |
+
+> As seções abaixo são o **plano original**. Para #7/#8, a abordagem efetiva difere
+> do texto (ver tabela acima). As convenções vigentes estão em `CLAUDE.md` e `AGENTS.md`.
 
 ---
 

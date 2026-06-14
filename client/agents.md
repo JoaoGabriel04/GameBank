@@ -293,4 +293,6 @@ npm run lint         # Verificar lint
 2. **Não usar Modal do Radix/Framer** - O projeto usa Modal customizado com GSAP
 3. **Sempre manter tema dark** - Não usar cores claras (white, gray-50, etc)
 4. **Respeitar/fonts** - Jaro para títulos, Inconsolata para textos
-5. **Use client em componentes interativos** - Todos os componentes com state/hooks precisam
+5. **Use client em componentes interativos** - Todos os componentes com state/hooks precisam `'use client'`
+6. **Estado de propriedade na sessão (`SessionPropriedade`, `types/game.ts`)** - usa `propId` (FK direta para a propriedade) e `propriedade?` achatado. Não existe mais o objeto aninhado `posses` nem o campo `possesId` (a tabela `Posses` foi eliminada no server). Ações de compra/venda mandam `propId`.
+7. **Valores monetários são inteiros** - saldo/valor/patrimônio vêm como `Int` do server; não assumir casas decimais.
