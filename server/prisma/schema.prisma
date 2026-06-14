@@ -180,6 +180,8 @@ model Session {
   notifications Notification[]
   negotiations Negotiation[]
   debts        Debt[]
+  coinTransactions CoinTransaction[]
+  bauAdquiridos    BauAdquirido[]
 
   @@index([ownerId])
   @@map("sessions")
@@ -250,6 +252,9 @@ model SessionPosses {
   hipotecada Boolean @default(false)
   negociando Boolean @default(false)
 
+  notifications    Notification[]
+  negotiationItems NegotiationItem[]
+
   @@index([sessionId])
   @@index([playerId])
   @@index([sessionId, playerId])
@@ -298,12 +303,14 @@ model Notification {
   toPlayerId      Int
   toPlayer        SessionPlayer @relation("NotificationToPlayer", fields: [toPlayerId], references: [id])
   sessionPossesId Int
+  sessionPosses   SessionPosses @relation(fields: [sessionPossesId], references: [id], onDelete: Cascade)
   status          NotificationStatus @default(pendente)
   createdAt       DateTime    @default(now()) @map("createdAt")
   respondedAt     DateTime?
 
   @@index([sessionId])
   @@index([toPlayerId])
+  @@index([sessionPossesId])
   @@map("notifications")
 }
 
@@ -334,9 +341,11 @@ model NegotiationItem {
   negotiationId   Int
   negotiation     Negotiation @relation(fields: [negotiationId], references: [id])
   sessionPossesId Int?
+  sessionPosses   SessionPosses? @relation(fields: [sessionPossesId], references: [id], onDelete: SetNull)
   fromSide        Boolean
   valor           Int?
 
+  @@index([sessionPossesId])
   @@map("negociacao_itens")
 }
 
@@ -434,6 +443,7 @@ model ShopItem {
 
   fragments    UserFragment[]
   dailyOffers  UserDailyOffer[]
+  diamondTransactions DiamondTransaction[]
 
   @@index([bannerId])
   @@index([frameId])
@@ -498,12 +508,14 @@ model BauAdquirido {
   openedAt  DateTime?
   createdAt DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  bau  Bau  @relation(fields: [bauId],  references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  bau     Bau      @relation(fields: [bauId],  references: [id])
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, status])
   @@index([userId, unlockAt])
+  @@index([sessionId])
   @@map("baus_adquiridos")
 }
 
@@ -540,10 +552,12 @@ model CoinTransaction {
   sessionId Int?     // referência à partida se tipo = PARTIDA
   createdAt DateTime @default(now()) @map("createdAt")
 
-  user User @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, createdAt])
+  @@index([sessionId])
   @@map("coin_transactions")
 }
 
@@ -560,9 +574,11 @@ model DiamondTransaction {
 
   user     User             @relation(fields: [userId], references: [id])
   purchase DiamondPurchase? @relation(fields: [purchaseId], references: [id])
+  item     ShopItem?        @relation(fields: [itemId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([purchaseId])
+  @@index([itemId])
   @@map("diamond_transactions")
 }
 
