@@ -30,9 +30,7 @@ export class SessionRepository {
         times: true,
         sessionPosses: {
           include: {
-            posses: {
-              include: { propriedade: true },
-            },
+            propriedade: true,
             player: true,
           },
         },
@@ -74,9 +72,7 @@ export class SessionRepository {
         times: true,
         sessionPosses: {
           include: {
-            posses: {
-              include: { propriedade: true },
-            },
+            propriedade: true,
             player: true,
           },
         },
@@ -114,9 +110,7 @@ export class SessionRepository {
         times: true,
         sessionPosses: {
           include: {
-            posses: {
-              include: { propriedade: true },
-            },
+            propriedade: true,
             player: true,
           },
         },
@@ -239,7 +233,7 @@ export class SessionRepository {
   }
 
   async findAllPosses() {
-    return prisma.posses.findMany();
+    return prisma.propriedade.findMany();
   }
 
   async findByPlayerUserId(userId: number) {

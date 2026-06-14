@@ -302,7 +302,7 @@ export default function NegotiationResponseModal() {
                 const resolveName = (item: typeof offer[0]) => {
                   if (item.sessionPossesId) {
                     const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
-                    const nome = sp?.posses?.propriedade?.nome ?? `Propriedade #${item.sessionPossesId}`;
+                    const nome = sp?.propriedade?.nome ?? `Propriedade #${item.sessionPossesId}`;
                     const casas = sp?.casas ?? 0;
                     return nome + (casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : "");
                   }
@@ -393,7 +393,7 @@ export default function NegotiationResponseModal() {
                   <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide">Itens</p>
                   {activeNegotiation.items.map((item) => {
                     const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
-                    const propName = sp?.posses?.propriedade?.nome ?? (item.sessionPossesId ? `Propriedade #${item.sessionPossesId}` : null);
+                    const propName = sp?.propriedade?.nome ?? (item.sessionPossesId ? `Propriedade #${item.sessionPossesId}` : null);
                     return (
                       <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700">
                         <div className="flex items-center gap-2">
@@ -475,7 +475,7 @@ export default function NegotiationResponseModal() {
                       <p className="text-xs font-inconsolata text-zinc-500 italic">Nenhuma propriedade disponível</p>
                     )}
                     {mySessionPosses.map((sp) => {
-                      const propData = sp.posses?.propriedade;
+                      const propData = sp.propriedade;
                       const casas = sp.casas ?? 0;
                       const selected = counterOfferPropIds.includes(sp.id);
                       return (
@@ -492,7 +492,7 @@ export default function NegotiationResponseModal() {
                             className="accent-purple-500"
                           />
                           <span className="text-sm font-inconsolata text-zinc-200">
-                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                            {propData?.nome ?? `Prop #${sp.propId}`}
                             {casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : ""}
                           </span>
                         </label>
@@ -519,7 +519,7 @@ export default function NegotiationResponseModal() {
                       <p className="text-xs font-inconsolata text-zinc-500 italic">Nenhuma propriedade disponível</p>
                     )}
                     {fromPlayerPosses.map((sp) => {
-                      const propData = sp.posses?.propriedade;
+                      const propData = sp.propriedade;
                       const casas = sp.casas ?? 0;
                       const selected = counterWantPropIds.includes(sp.id);
                       return (
@@ -536,7 +536,7 @@ export default function NegotiationResponseModal() {
                             className="accent-green-500"
                           />
                           <span className="text-sm font-inconsolata text-zinc-200">
-                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                            {propData?.nome ?? `Prop #${sp.propId}`}
                             {casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : ""}
                           </span>
                         </label>

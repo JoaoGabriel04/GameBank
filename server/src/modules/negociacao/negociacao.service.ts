@@ -99,12 +99,12 @@ export class NegociacaoService {
 
     for (const [, sp] of offerSpMap) {
       if (sp.casas > 0) {
-        const grupo = sp.posses.propriedade.grupo_cor;
+        const grupo = sp.propriedade.grupo_cor;
         const allInGroup = fromGroupMap.get(grupo) ?? [];
         if (!allInGroup.every((pid) => offerIds.has(pid))) {
           throw new AppError(
             400,
-            `"${sp.posses.propriedade.nome}" tem casas. Você precisa oferecer TODAS as propriedades do grupo ${grupo} ou vender as casas primeiro.`
+            `"${sp.propriedade.nome}" tem casas. Você precisa oferecer TODAS as propriedades do grupo ${grupo} ou vender as casas primeiro.`
           );
         }
       }
@@ -112,12 +112,12 @@ export class NegociacaoService {
 
     for (const [, sp] of wantSpMap) {
       if (sp.casas > 0) {
-        const grupo = sp.posses.propriedade.grupo_cor;
+        const grupo = sp.propriedade.grupo_cor;
         const allInGroup = toGroupMap.get(grupo) ?? [];
         if (!allInGroup.every((pid) => wantIds.has(pid))) {
           throw new AppError(
             400,
-            `"${sp.posses.propriedade.nome}" tem casas. Você precisa solicitar TODAS as propriedades do grupo ${grupo} ou o dono vender as casas primeiro.`
+            `"${sp.propriedade.nome}" tem casas. Você precisa solicitar TODAS as propriedades do grupo ${grupo} ou o dono vender as casas primeiro.`
           );
         }
       }
@@ -363,7 +363,7 @@ export class NegociacaoService {
   ): Map<string, number[]> {
     const map = new Map<string, number[]>();
     for (const sp of props) {
-      const grupo = sp.posses.propriedade.grupo_cor;
+      const grupo = sp.propriedade.grupo_cor;
       if (!map.has(grupo)) map.set(grupo, []);
       map.get(grupo)!.push(sp.id);
     }

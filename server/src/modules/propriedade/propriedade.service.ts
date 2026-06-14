@@ -14,16 +14,16 @@ export class PropriedadeService {
     return prop;
   }
 
-  async buyProp(possesId: number, sessionId: number, userId: number) {
-    return withLock(`prop:${possesId}`, async () => {
+  async buyProp(propId: number, sessionId: number, userId: number) {
+    return withLock(`prop:${propId}`, async () => {
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado");
 
-      const sessionPosses = await this.repo.findSessionPosses(sessionId, possesId);
+      const sessionPosses = await this.repo.findSessionPosses(sessionId, propId);
       if (!sessionPosses) throw new AppError(404, "Propriedade não encontrada nesta sessão");
       if (sessionPosses.playerId) throw new AppError(400, "Propriedade já foi comprada");
 
-      const propriedade = sessionPosses.posses.propriedade;
+      const propriedade = sessionPosses.propriedade;
       if (!propriedade) throw new AppError(404, "Dados da propriedade não encontrados");
 
       if (player.saldo < propriedade.custo_compra) {
@@ -35,7 +35,7 @@ export class PropriedadeService {
 
       await prisma.$transaction([
         prisma.sessionPosses.updateMany({
-          where: { sessionId, possesId },
+          where: { sessionId, propId },
           data: { playerId: userId },
         }),
         prisma.sessionPlayer.update({
@@ -56,7 +56,7 @@ export class PropriedadeService {
         try { await this.missionService.track(player.userId, "properties_bought", 1); } catch {}
       }
 
-      return this.repo.findSessionPosses(sessionId, possesId);
+      return this.repo.findSessionPosses(sessionId, propId);
     });
   }
 
@@ -72,7 +72,7 @@ export class PropriedadeService {
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado!");
 
-      const custoCasa = propriedade.posses.propriedade.custo_casa;
+      const custoCasa = propriedade.propriedade.custo_casa;
       if (player.saldo < custoCasa) {
         throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
       }
@@ -95,7 +95,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_CASA",
-            detalhes: `${player.nome} comprou uma casa em ${propriedade.posses.propriedade.nome} por R$ ${custoCasa}`,
+            detalhes: `${player.nome} comprou uma casa em ${propriedade.propriedade.nome} por R$ ${custoCasa}`,
           },
         }),
       ]);
@@ -117,7 +117,7 @@ export class PropriedadeService {
 
       const properties = await prisma.sessionPosses.findMany({
         where: { id: { in: sessaoPossesIds }, sessionId },
-        include: { posses: { include: { propriedade: true } } },
+        include: { propriedade: true },
       });
 
       if (properties.length !== sessaoPossesIds.length) {
@@ -128,16 +128,16 @@ export class PropriedadeService {
       const nomes: string[] = [];
       for (const prop of properties) {
         if (prop.playerId !== userId) {
-          throw new AppError(400, `Você não é dono de ${prop.posses.propriedade.nome}`);
+          throw new AppError(400, `Você não é dono de ${prop.propriedade.nome}`);
         }
         if (prop.negociando) {
-          throw new AppError(400, `${prop.posses.propriedade.nome} está em negociação`);
+          throw new AppError(400, `${prop.propriedade.nome} está em negociação`);
         }
         if (prop.casas >= 5) {
-          throw new AppError(400, `${prop.posses.propriedade.nome} já tem o máximo de casas`);
+          throw new AppError(400, `${prop.propriedade.nome} já tem o máximo de casas`);
         }
-        totalCost += prop.posses.propriedade.custo_casa;
-        nomes.push(prop.posses.propriedade.nome);
+        totalCost += prop.propriedade.custo_casa;
+        nomes.push(prop.propriedade.nome);
       }
 
       if (player.saldo < totalCost) {
@@ -185,7 +185,7 @@ export class PropriedadeService {
       const ids = items.map((i) => i.sessaoPossesId);
       const properties = await prisma.sessionPosses.findMany({
         where: { id: { in: ids }, sessionId },
-        include: { posses: { include: { propriedade: true } } },
+        include: { propriedade: true },
       });
 
       if (properties.length !== ids.length) {
@@ -200,20 +200,20 @@ export class PropriedadeService {
         const prop = propMap.get(item.sessaoPossesId);
         if (!prop) throw new AppError(404, `Propriedade #${item.sessaoPossesId} não encontrada`);
         if (prop.playerId !== userId) {
-          throw new AppError(400, `Você não é dono de ${prop.posses.propriedade.nome}`);
+          throw new AppError(400, `Você não é dono de ${prop.propriedade.nome}`);
         }
         if (prop.negociando) {
-          throw new AppError(400, `${prop.posses.propriedade.nome} está em negociação`);
+          throw new AppError(400, `${prop.propriedade.nome} está em negociação`);
         }
         if (item.quantidade <= 0) {
-          throw new AppError(400, `Quantidade inválida para ${prop.posses.propriedade.nome}`);
+          throw new AppError(400, `Quantidade inválida para ${prop.propriedade.nome}`);
         }
         if (prop.casas < item.quantidade) {
-          throw new AppError(400, `${prop.posses.propriedade.nome} tem apenas ${prop.casas} casa(s), não pode vender ${item.quantidade}`);
+          throw new AppError(400, `${prop.propriedade.nome} tem apenas ${prop.casas} casa(s), não pode vender ${item.quantidade}`);
         }
-        const valorItem = prop.posses.propriedade.custo_casa * item.quantidade;
+        const valorItem = prop.propriedade.custo_casa * item.quantidade;
         totalValue += valorItem;
-        detalhesItens.push(`${item.quantidade} casa(s) de ${prop.posses.propriedade.nome}`);
+        detalhesItens.push(`${item.quantidade} casa(s) de ${prop.propriedade.nome}`);
       }
 
       const updateQueries = items.map((item) =>
@@ -257,7 +257,7 @@ export class PropriedadeService {
         throw new AppError(400, "Esta propriedade não possui casas!");
       }
 
-      const valorVenda = propriedade.posses.propriedade.custo_casa;
+      const valorVenda = propriedade.propriedade.custo_casa;
 
       await prisma.$transaction([
         prisma.sessionPosses.update({
@@ -273,7 +273,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "VENDA_CASA",
-            detalhes: `${player.nome} vendeu uma casa em ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+            detalhes: `${player.nome} vendeu uma casa em ${propriedade.propriedade.nome} por R$ ${valorVenda}`,
           },
         }),
       ]);
@@ -300,7 +300,7 @@ export class PropriedadeService {
         throw new AppError(400, "Esta propriedade ainda possui casas!");
       }
 
-      const valorVenda = propriedade.posses.propriedade.custo_compra;
+      const valorVenda = propriedade.propriedade.custo_compra;
 
       await prisma.$transaction([
         prisma.sessionPosses.update({
@@ -316,7 +316,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "VENDA_PROPRIEDADE",
-            detalhes: `${player.nome} vendeu a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+            detalhes: `${player.nome} vendeu a propriedade ${propriedade.propriedade.nome} por R$ ${valorVenda}`,
           },
         }),
       ]);
@@ -345,7 +345,7 @@ export class PropriedadeService {
         throw new AppError(400, "Esta propriedade ainda possui casas!");
       }
 
-      const valorVenda = propriedade.posses.propriedade.hipoteca;
+      const valorVenda = propriedade.propriedade.hipoteca;
 
       await prisma.$transaction([
         prisma.sessionPosses.update({
@@ -361,7 +361,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "HIPOTECA_PROPRIEDADE",
-            detalhes: `${player.nome} hipotecou a propriedade ${propriedade.posses.propriedade.nome} por R$ ${valorVenda}`,
+            detalhes: `${player.nome} hipotecou a propriedade ${propriedade.propriedade.nome} por R$ ${valorVenda}`,
           },
         }),
       ]);
@@ -379,7 +379,7 @@ export class PropriedadeService {
     const comprador = await this.repo.findPlayerById(compradorId);
     if (!comprador) throw new AppError(404, "Jogador não encontrado");
 
-    const valor = sp.posses.propriedade.hipoteca;
+    const valor = sp.propriedade.hipoteca;
     const valorComJuros = Math.round(valor * 1.1);
 
     if (comprador.saldo < valorComJuros) {
@@ -404,7 +404,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "DESHIPOTECA",
-            detalhes: `${comprador.nome} quitou a hipoteca de ${sp.posses.propriedade.nome} por R$ ${valorComJuros}`,
+            detalhes: `${comprador.nome} quitou a hipoteca de ${sp.propriedade.nome} por R$ ${valorComJuros}`,
           },
         }),
       ]);
@@ -428,7 +428,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_HIPOTECADA",
-            detalhes: `${comprador.nome} comprou a hipoteca de ${sp.posses.propriedade.nome} por R$ ${valorComJuros}`,
+            detalhes: `${comprador.nome} comprou a hipoteca de ${sp.propriedade.nome} por R$ ${valorComJuros}`,
           },
         }),
       ]);
@@ -467,7 +467,7 @@ export class PropriedadeService {
     const comprador = await this.repo.findPlayerById(notif.fromPlayerId);
     if (!comprador) throw new AppError(404, "Comprador não encontrado");
 
-    const valor = sp.posses.propriedade.hipoteca;
+    const valor = sp.propriedade.hipoteca;
     const valorComJuros = Math.round(valor * 1.1);
 
     if (comprador.saldo < valorComJuros) {
@@ -496,7 +496,7 @@ export class PropriedadeService {
           sessionId: Number(notif.sessionId),
           data: new Date(),
           tipo: "COMPRA_HIPOTECADA",
-          detalhes: `${comprador.nome} comprou a hipoteca de ${sp.posses.propriedade.nome} de ${notif.toPlayer.nome} por R$ ${valorComJuros}`,
+          detalhes: `${comprador.nome} comprou a hipoteca de ${sp.propriedade.nome} de ${notif.toPlayer.nome} por R$ ${valorComJuros}`,
         },
       }),
       prisma.notification.update({
@@ -526,7 +526,7 @@ export class PropriedadeService {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "TROCA_PROPRIEDADE",
-            detalhes: `${player.nome} adquiriu a propriedade ${propriedade.posses.propriedade.nome}`,
+            detalhes: `${player.nome} adquiriu a propriedade ${propriedade.propriedade.nome}`,
           },
         }),
       ]);

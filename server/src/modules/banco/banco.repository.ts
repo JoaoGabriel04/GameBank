@@ -22,7 +22,7 @@ export class BancoRepository {
     return prisma.sessionPosses.findUnique({
       where: { id },
       include: {
-        posses: { include: { propriedade: true } },
+        propriedade: true,
         player: true,
       },
     });

@@ -237,7 +237,7 @@ export class SessionService {
     const possesBase = await this.repo.findAllPosses();
     const sessionPossesData = possesBase.map((p) => ({
       sessionId: session.id,
-      possesId: p.id,
+      propId: p.id,
       playerId: null,
       casas: 0,
       hipotecada: false,
@@ -434,9 +434,9 @@ export class SessionService {
     // Calcular patrimônio antes de zerar
     let patrimony = player.saldo;
     for (const sp of session.sessionPosses ?? []) {
-      if (sp.playerId === player.id && sp.posses?.propriedade) {
-        patrimony += sp.posses.propriedade.custo_compra;
-        patrimony += sp.casas * sp.posses.propriedade.custo_casa;
+      if (sp.playerId === player.id && sp.propriedade) {
+        patrimony += sp.propriedade.custo_compra;
+        patrimony += sp.casas * sp.propriedade.custo_casa;
       }
     }
 
@@ -656,9 +656,9 @@ export class SessionService {
         patrimony = p.patrimonyAtDesistir;
       } else {
         for (const sp of posses) {
-          if (sp.playerId === p.id && sp.posses?.propriedade) {
-            patrimony += sp.posses.propriedade.custo_compra;
-            patrimony += sp.casas * sp.posses.propriedade.custo_casa;
+          if (sp.playerId === p.id && sp.propriedade) {
+            patrimony += sp.propriedade.custo_compra;
+            patrimony += sp.casas * sp.propriedade.custo_casa;
           }
         }
       }

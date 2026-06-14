@@ -103,7 +103,7 @@ model Propriedade {
   custo_casa    Int
   hipoteca      Int
 
-  posses Posses[]
+  sessionPosses SessionPosses[]
 
   @@map("propriedades")
 }
@@ -231,28 +231,14 @@ model SessionTeam {
   @@map("session_teams")
 }
 
-// Posses base do jogo (globais)
-model Posses {
-  id          Int         @id @default(autoincrement())
-  id_prop     Int
-  propriedade Propriedade @relation(fields: [id_prop], references: [id])
-
-  casas      Int     @default(0)
-  hipotecada Boolean @default(false)
-
-  sessionPosses SessionPosses[]
-
-  @@map("posses")
-}
-
-// Estado das posses dentro de uma sessão
+// Estado das propriedades dentro de uma sessão (referencia Propriedade direto)
 model SessionPosses {
   id        Int     @id @default(autoincrement())
   sessionId Int
   session   Session @relation(fields: [sessionId], references: [id])
 
-  possesId Int
-  posses   Posses @relation(fields: [possesId], references: [id])
+  propId      Int
+  propriedade Propriedade @relation(fields: [propId], references: [id])
 
   playerId Int?
   player   SessionPlayer? @relation(fields: [playerId], references: [id])
@@ -267,7 +253,7 @@ model SessionPosses {
   @@index([sessionId])
   @@index([playerId])
   @@index([sessionId, playerId])
-  @@index([possesId])
+  @@index([propId])
   @@index([lastOwnerId])
   @@map("session_posses")
 }

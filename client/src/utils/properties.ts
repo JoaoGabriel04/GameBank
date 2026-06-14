@@ -1,7 +1,7 @@
 import { SessionPropriedade, Propriedade, PROPERTY_COLORS } from "@/types/game"
 
 export function getPropData(sp: SessionPropriedade): Propriedade | null {
-  return sp.posses?.propriedade ?? null
+  return sp.propriedade ?? null
 }
 
 const COLOR_ORDER = PROPERTY_COLORS.reduce<Record<string, number>>(
@@ -11,13 +11,13 @@ const COLOR_ORDER = PROPERTY_COLORS.reduce<Record<string, number>>(
 
 export function sortSessionPosses(items: SessionPropriedade[]): SessionPropriedade[] {
   return [...items].sort((a, b) => {
-    const corA = a.posses?.propriedade?.grupo_cor ?? ''
-    const corB = b.posses?.propriedade?.grupo_cor ?? ''
+    const corA = a.propriedade?.grupo_cor ?? ''
+    const corB = b.propriedade?.grupo_cor ?? ''
     const orderA = COLOR_ORDER[corA] ?? 99
     const orderB = COLOR_ORDER[corB] ?? 99
     if (orderA !== orderB) return orderA - orderB
-    const nomeA = a.posses?.propriedade?.nome ?? ''
-    const nomeB = b.posses?.propriedade?.nome ?? ''
+    const nomeA = a.propriedade?.nome ?? ''
+    const nomeB = b.propriedade?.nome ?? ''
     return nomeA.localeCompare(nomeB, 'pt-BR')
   })
 }

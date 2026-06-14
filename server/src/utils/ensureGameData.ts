@@ -29,28 +29,7 @@ export async function ensureGameData() {
     console.log("Propriedades criadas.")
   }
 
-  // 2️⃣ Popular posses se estiverem vazias
-  const countPosses = await prisma.posses.count()
-
-  if (countPosses === 0) {
-    console.log("Inserindo posses iniciais...")
-
-    const propriedadesDB = await prisma.propriedade.findMany()
-    
-    const possesData = propriedadesDB.map((prop) => ({
-      id_prop: prop.id,
-      casas: 0,
-      hipotecada: false
-    }))
-
-    await prisma.posses.createMany({
-      data: possesData
-    })
-
-    console.log("Posses criadas.")
-  }
-
-  // 3️⃣ Popular itens da loja se estiverem vazios
+  // 2️⃣ Popular itens da loja se estiverem vazios
   const countItens = await prisma.shopItem.count()
 
   if (countItens === 0) {

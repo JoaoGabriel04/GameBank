@@ -25,18 +25,12 @@ export interface Propriedade {
 export interface SessionPropriedade {
   id: number;
   sessionId: number;
-  possesId: number;
+  propId: number;
   playerId: number | null;
   casas: number;
   hipotecada: boolean;
   negociando?: boolean;
-  posses?: {
-    id: number;
-    id_prop: number;
-    casas: number;
-    hipotecada: boolean;
-    propriedade?: Propriedade;
-  };
+  propriedade?: Propriedade;
 }
 
 // ========================

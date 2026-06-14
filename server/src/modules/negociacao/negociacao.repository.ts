@@ -17,11 +17,11 @@ export class NegociacaoRepository {
     return prisma.sessionPlayer.findUnique({ where: { id } });
   }
 
-  async findSessionPosses(sessionId: number, possesId: number) {
+  async findSessionPosses(sessionId: number, propId: number) {
     return prisma.sessionPosses.findUnique({
-      where: { id: possesId },
+      where: { id: propId },
       include: {
-        posses: { include: { propriedade: true } },
+        propriedade: true,
         player: true,
       },
     });
@@ -31,7 +31,7 @@ export class NegociacaoRepository {
     return prisma.sessionPosses.findMany({
       where: { sessionId, playerId, hipotecada: false },
       include: {
-        posses: { include: { propriedade: true } },
+        propriedade: true,
       },
     });
   }
@@ -137,7 +137,7 @@ export class NegociacaoRepository {
     return prisma.sessionPosses.findMany({
       where: { sessionId, playerId },
       include: {
-        posses: { include: { propriedade: true } },
+        propriedade: true,
       },
     });
   }

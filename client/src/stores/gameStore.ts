@@ -278,7 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           j.id === userId ? { ...j } : j
         );
         const sessionPosses = state.currentSession.sessionPosses.map((sp) =>
-          sp.possesId === propriedadeId ? { ...sp, playerId: userId } : sp
+          sp.propId === propriedadeId ? { ...sp, playerId: userId } : sp
         );
         return {
           currentSession: { ...state.currentSession, jogadores, sessionPosses },

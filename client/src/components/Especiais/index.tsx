@@ -313,7 +313,7 @@ export default function Especiais() {
                     </p>
                   )}
                   {mySessionPosses.map((sp) => {
-                    const propData = sp.posses?.propriedade;
+                    const propData = sp.propriedade;
                     const casas = sp.casas ?? 0;
                     const selected = offerPropIds.includes(sp.id);
                     const accent = propData?.grupo_cor ? getAccentHex(propData.grupo_cor) : "#52525b";
@@ -343,7 +343,7 @@ export default function Especiais() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-inconsolata text-zinc-200 truncate block">
-                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                            {propData?.nome ?? `Prop #${sp.propId}`}
                           </span>
                           <span className="text-[10px] font-inconsolata text-zinc-500">
                             Aluguel base: R$ {formatCurrency(propData?.aluguel_base ?? 0)}
@@ -404,7 +404,7 @@ export default function Especiais() {
                     </p>
                   )}
                   {targetPlayerPosses.map((sp) => {
-                    const propData = sp.posses?.propriedade;
+                    const propData = sp.propriedade;
                     const casas = sp.casas ?? 0;
                     const selected = wantPropIds.includes(sp.id);
                     const accent = propData?.grupo_cor ? getAccentHex(propData.grupo_cor) : "#52525b";
@@ -434,7 +434,7 @@ export default function Especiais() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-inconsolata text-zinc-200 truncate block">
-                            {propData?.nome ?? `Prop #${sp.possesId}`}
+                            {propData?.nome ?? `Prop #${sp.propId}`}
                           </span>
                           <span className="text-[10px] font-inconsolata text-zinc-500">
                             Aluguel base: R$ {formatCurrency(propData?.aluguel_base ?? 0)}

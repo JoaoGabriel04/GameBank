@@ -111,7 +111,7 @@ export class BancoService {
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Pagador não encontrado");
 
-    const prop = poss.posses.propriedade;
+    const prop = poss.propriedade;
     if (!prop) throw new AppError(500, "Dados da propriedade indisponíveis");
 
     const casas = Number(poss.casas ?? 0);
@@ -197,12 +197,12 @@ export class BancoService {
           sessionId: Number(sessionId),
           data: new Date(),
           tipo: "PAGAMENTO_ALUGUEL",
-          detalhes: `${pagador.nome} pagou R$ ${valorAluguel} para ${poss.player.nome} em ${poss.posses.propriedade.nome}`,
+          detalhes: `${pagador.nome} pagou R$ ${valorAluguel} para ${poss.player.nome} em ${poss.propriedade.nome}`,
         },
       }),
     ]);
 
-    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, recebedorUserId: poss.player.userId, valor: valorAluguel, propriedadeNome: poss.posses.propriedade.nome };
+    return { pagadorNome: pagador.nome, recebedorNome: poss.player.nome, recebedorId: poss.player.id, recebedorUserId: poss.player.userId, valor: valorAluguel, propriedadeNome: poss.propriedade.nome };
   }
 
   async receberDeTodos(sessionId: number, userId: number) {

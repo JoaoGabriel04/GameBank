@@ -137,7 +137,7 @@ export default function Loja() {
     sessionProp,
     propBase,
   }: {
-    sessionProp: { id: number; possesId: number; playerId: number | null; hipotecada: boolean }
+    sessionProp: { id: number; propId: number; playerId: number | null; hipotecada: boolean }
     propBase: Propriedade | null
   }) {
     if (!propBase) return null
@@ -174,7 +174,7 @@ export default function Loja() {
               <p className="text-sm font-inconsolata text-zinc-300">R$ {formatCurrency(propBase.aluguel_base)}</p>
             </div>
             <button
-              onClick={() => handleBuy(sessionProp.possesId)}
+              onClick={() => handleBuy(sessionProp.propId)}
               disabled={buyingLock || !currentPlayer || !afford}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-inconsolata font-medium ${accent === '#fafafa' ? 'text-black' : 'text-white'} transition-opacity hover:opacity-80 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed`}
               style={{ backgroundColor: accent }}
