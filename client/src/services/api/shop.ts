@@ -70,6 +70,8 @@ export interface DailyOffer {
   quantidade: number
   expiresAt: string
   purchased: boolean
+  fragmentosAtuais: number
+  fragmentosTotal: number | null
   item: DailyOfferItem
 }
 

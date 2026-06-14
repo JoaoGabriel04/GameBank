@@ -9,7 +9,14 @@ export const dailyOffersRepository = {
         expiresAt: { gt: new Date() },
       },
       include: {
-        item: { include: { banner: true, frame: true, badge: true } },
+        item: {
+          include: {
+            banner: true,
+            frame: true,
+            badge: true,
+            fragments: { where: { userId }, select: { quantidade: true } },
+          },
+        },
       },
     }),
 
@@ -57,6 +64,8 @@ export function resolveDailyOffer(offer: any) {
     quantidade: offer.quantidade,
     expiresAt: offer.expiresAt,
     purchased: offer.purchased,
+    fragmentosAtuais: offer.item?.fragments?.[0]?.quantidade ?? 0,
+    fragmentosTotal: offer.item?.fragmentosTotal ?? null,
     item: resolved,
   };
 }

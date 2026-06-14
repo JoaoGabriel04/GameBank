@@ -717,14 +717,17 @@ function DailyOfferSheet({
                 <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
               </div>
             ) : item.type === "title" ? (
-              <div className="shrink-0 rounded-xl overflow-hidden border border-zinc-800" style={{ width: 170 }}>
-                <div className="h-6 bg-gradient-to-r from-zinc-800 to-zinc-900" />
-                <div className="px-3 py-1.5 flex items-center gap-2 bg-zinc-900/80">
-                  <div className="w-6 h-6 rounded-full bg-zinc-700 shrink-0 grid place-items-center text-[10px] text-zinc-500">👤</div>
-                  <span className="font-inconsolata text-[10px] text-zinc-100 truncate">
+              <div className="shrink-0 flex items-center">
+                {item.raridade === "LENDARIO" ? (
+                  <LegendaryTitle text={(() => { try { return JSON.parse(item.value ?? "{}").title } catch { return item.name } })()} />
+                ) : (
+                  <span
+                    className="font-inconsolata text-[11px] px-2 py-0.5 rounded-md border"
+                    style={item.raridade === "EPICO" ? shimmerTitleStyle : { color: accent, background: accent + "18", borderColor: accent + "40" }}
+                  >
                     {(() => { try { return JSON.parse(item.value ?? "{}").title } catch { return item.name } })()}
                   </span>
-                </div>
+                )}
               </div>
             ) : (
               <div className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
@@ -758,17 +761,51 @@ function DailyOfferSheet({
 
           <div className="border-t border-zinc-800" />
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between font-inconsolata text-xs">
-              <span className="text-zinc-500">Fragmentos</span>
-              <span style={{ color: accent }}>+{offer.quantidade}</span>
-            </div>
-            <div className="bg-zinc-900/50 rounded-xl px-4 py-3 border border-zinc-800/50">
-              <p className="font-inconsolata text-[11px] text-zinc-500 leading-relaxed">
-                🎁 Adquira <strong className="text-zinc-300">{offer.quantidade} fragmentos</strong> de <strong className="text-zinc-300">{item.name}</strong> para acelerar o desbloqueio deste item.
-              </p>
-            </div>
-          </div>
+          {/* Progresso de fragmentos */}
+          {(() => {
+            const total  = offer.fragmentosTotal ?? 0;
+            const atual  = offer.fragmentosAtuais ?? 0;
+            const ganho  = offer.quantidade;
+            const depois = Math.min(atual + ganho, total);
+            const pctAtual  = total > 0 ? Math.min((atual  / total) * 100, 100) : 0;
+            const pctDepois = total > 0 ? Math.min((depois / total) * 100, 100) : 0;
+            const pctGanho  = pctDepois - pctAtual;
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between font-inconsolata text-xs">
+                  <span className="text-zinc-400">Progresso de desbloqueio</span>
+                  <span style={{ color: accent }} className="font-semibold">+{ganho} fragmentos</span>
+                </div>
+
+                {/* Barra */}
+                <div className="relative w-full h-3 rounded-full bg-zinc-800 overflow-hidden">
+                  {/* Fragmentos atuais */}
+                  <div
+                    className="absolute left-0 top-0 h-full rounded-full bg-zinc-500 transition-all"
+                    style={{ width: `${pctAtual}%` }}
+                  />
+                  {/* Fragmentos ganhos */}
+                  {pctGanho > 0 && (
+                    <div
+                      className="absolute top-0 h-full rounded-full transition-all"
+                      style={{ left: `${pctAtual}%`, width: `${pctGanho}%`, background: accent, boxShadow: `0 0 8px ${accent}88` }}
+                    />
+                  )}
+                </div>
+
+                {/* Labels abaixo da barra */}
+                <div className="flex items-center justify-between font-inconsolata text-[10px]">
+                  <span className="text-zinc-500">
+                    {atual} <span className="text-zinc-600">atual</span>
+                  </span>
+                  <span style={{ color: accent }}>
+                    {depois}{total > 0 ? ` / ${total}` : ""}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <button
             type="button"
