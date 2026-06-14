@@ -45,27 +45,27 @@ interface DiamondPack {
 }
 
 const TYPE_META: Record<ItemType, { label: string; color: string; tone: "amber" | "violet" | "sky" | "cyan" }> = {
-  title:  { label: "Título",  color: "#f59e0b", tone: "amber"  },
-  badge:  { label: "Emblema", color: "#a78bfa", tone: "violet" },
-  banner: { label: "Banner",  color: "#38bdf8", tone: "sky"    },
-  frame:  { label: "Moldura", color: "#22d3ee", tone: "cyan"   },
+  title: { label: "Título", color: "#f59e0b", tone: "amber" },
+  badge: { label: "Emblema", color: "#a78bfa", tone: "violet" },
+  banner: { label: "Banner", color: "#38bdf8", tone: "sky" },
+  frame: { label: "Moldura", color: "#22d3ee", tone: "cyan" },
 };
 
 const COIN_PACKS: CoinPack[] = [
-  { id: "c1", name: "Punhado de Coins", coins: 300,   price: 50   },
-  { id: "c2", name: "Saco de Coins",    coins: 800,   price: 120  },
-  { id: "c3", name: "Baú de Coins",     coins: 1800,  price: 240  },
-  { id: "c4", name: "Cofre de Coins",   coins: 4000,  price: 480  },
-  { id: "c5", name: "Tesouro de Coins", coins: 9000,  price: 950  },
+  { id: "c1", name: "Punhado de Coins", coins: 300, price: 50 },
+  { id: "c2", name: "Saco de Coins", coins: 800, price: 120 },
+  { id: "c3", name: "Baú de Coins", coins: 1800, price: 240 },
+  { id: "c4", name: "Cofre de Coins", coins: 4000, price: 480 },
+  { id: "c5", name: "Tesouro de Coins", coins: 9000, price: 950 },
   { id: "c6", name: "Fortuna de Coins", coins: 20000, price: 1800 },
 ];
 
 const DIAMOND_PACKS: DiamondPack[] = [
-  { id: "d1", name: "Faísca",           diamonds: 100,  brl: "R$ 2,99"   },
-  { id: "d2", name: "Cristal",          diamonds: 250,  brl: "R$ 6,99"   },
-  { id: "d3", name: "Gema",             diamonds: 605,  brl: "R$ 14,99",  highlight: true },
-  { id: "d4", name: "Rubi",             diamonds: 1440, brl: "R$ 29,99"  },
-  { id: "d5", name: "Safira",           diamonds: 3375, brl: "R$ 59,99"  },
+  { id: "d1", name: "Faísca", diamonds: 100, brl: "R$ 2,99" },
+  { id: "d2", name: "Cristal", diamonds: 250, brl: "R$ 6,99" },
+  { id: "d3", name: "Gema", diamonds: 605, brl: "R$ 14,99", highlight: true },
+  { id: "d4", name: "Rubi", diamonds: 1440, brl: "R$ 29,99" },
+  { id: "d5", name: "Safira", diamonds: 3375, brl: "R$ 59,99" },
   { id: "d6", name: "Diamante Supremo", diamonds: 8250, brl: "R$ 119,99" },
 ];
 
@@ -120,43 +120,43 @@ function CardShell({
 }) {
   return (
     <motion.div variants={staggerItem}>
-    <button
-      type="button"
-      onClick={() => !purchased && onClick()}
-      className={`flex flex-col overflow-hidden w-full outline-none transition-all hover:-translate-y-0.5 ${purchased ? "cursor-default" : "cursor-pointer"}`}
-      style={{
-        borderRadius: 14,
-        border: `1px solid ${purchased ? "#22c55e40" : `${glow}30`}`,
-        boxShadow: !purchased && glow !== "#a1a1aa"
-          ? `0 0 16px -8px ${glow}77`
-          : "none",
-        opacity: purchased ? 0.6 : 1,
-      }}
-    >
-      <div
-        className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: topHeight, background: topBg ?? `radial-gradient(ellipse at 50% 60%, ${glow}2e 0%, #0d0d10 70%)` }}
+      <button
+        type="button"
+        onClick={() => !purchased && onClick()}
+        className={`flex flex-col overflow-hidden w-full outline-none transition-all hover:-translate-y-0.5 ${purchased ? "cursor-default" : "cursor-pointer"}`}
+        style={{
+          borderRadius: 14,
+          border: `1px solid ${purchased ? "#22c55e40" : `${glow}30`}`,
+          boxShadow: !purchased && glow !== "#a1a1aa"
+            ? `0 0 16px -8px ${glow}77`
+            : "none",
+          opacity: purchased ? 0.6 : 1,
+        }}
       >
-        {topContent}
         <div
-          className="absolute top-0 left-0 right-0 h-0.5"
-          style={{ background: `linear-gradient(90deg, transparent, ${glow}, transparent)`, opacity: 0.85 }}
-        />
-        {purchased && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[14px]">
-            <span className="font-inconsolata text-[11px] text-green-400 font-semibold uppercase tracking-wider bg-zinc-950/80 px-3 py-1 rounded-lg border border-green-500/30">
-              Comprada
-            </span>
-          </div>
-        )}
-      </div>
-      <div
-        className={footerClassName}
-        style={{ background: "#111113", borderTop: `1px solid ${glow}22` }}
-      >
-        {footerContent}
-      </div>
-    </button>
+          className="relative overflow-hidden flex items-center justify-center"
+          style={{ height: topHeight, background: topBg ?? `radial-gradient(ellipse at 50% 60%, ${glow}2e 0%, #0d0d10 70%)` }}
+        >
+          {topContent}
+          <div
+            className="absolute top-0 left-0 right-0 h-0.5"
+            style={{ background: `linear-gradient(90deg, transparent, ${glow}, transparent)`, opacity: 0.85 }}
+          />
+          {purchased && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-[14px]">
+              <span className="font-inconsolata text-[11px] text-green-400 font-semibold uppercase tracking-wider bg-zinc-950/80 px-3 py-1 rounded-lg border border-green-500/30">
+                Comprada
+              </span>
+            </div>
+          )}
+        </div>
+        <div
+          className={footerClassName}
+          style={{ background: "#111113", borderTop: `1px solid ${glow}22` }}
+        >
+          {footerContent}
+        </div>
+      </button>
     </motion.div>
   );
 }
@@ -171,12 +171,12 @@ function CosmeticCard({
   onSelect: (item: ShopItem) => void;
   fragData?: { atual: number; total: number } | null;
 }) {
-  const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
+  const meta = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta = item.raridade ? RARIDADES[item.raridade] : null;
   const glowColor = rMeta?.cor ?? meta.color;
-  const isBanner  = item.type === "banner";
-  const isFrame   = item.type === "frame";
-  const topBg     = !isBanner
+  const isBanner = item.type === "banner";
+  const isFrame = item.type === "frame";
+  const topBg = !isBanner
     ? `radial-gradient(ellipse at 50% 60%, ${glowColor}2e 0%, #0d0d10 70%)`
     : undefined;
 
@@ -230,7 +230,7 @@ function CosmeticCard({
               </div>
             ) : (
               <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
-                {item.type === "title"  && <Crown  size={40} />}
+                {item.type === "title" && <Crown size={40} />}
                 {item.type === "badge" && item.imageUrl ? (
                   <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
                 ) : item.type === "badge" ? (
@@ -303,36 +303,36 @@ function CoinPackCard({
   const coinLabel = pack.coins.toLocaleString("pt-BR");
   return (
     <motion.div variants={staggerItem}>
-    <button
-      type="button"
-      onClick={() => onBuy(pack)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
-      style={{
-        borderRadius: 14,
-        border: "1px solid rgba(251,191,36,0.25)",
-        boxShadow: "0 0 16px -8px rgba(251,191,36,0.35)",
-      }}
-    >
-      <div
-        className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(251,191,36,0.2) 0%, #0d0d10 70%)" }}
+      <button
+        type="button"
+        onClick={() => onBuy(pack)}
+        className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
+        style={{
+          borderRadius: 14,
+          border: "1px solid rgba(251,191,36,0.25)",
+          boxShadow: "0 0 16px -8px rgba(251,191,36,0.35)",
+        }}
       >
-        <div className="absolute top-0 left-0 right-0 h-0.5"
-          style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
-        {imgSrc && (
-          <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
-        )}
-      </div>
-      <div
-        className="px-2.5 pt-2.5 pb-3"
-        style={{ background: "#111113", borderTop: "1px solid rgba(251,191,36,0.15)" }}
-      >
-        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{coinLabel} Coins</p>
-        <span className="inline-flex items-center gap-1 font-jaro text-[14px] text-cyan-300">
-          <DiamondIcon size={13} /> {pack.price}
-        </span>
-      </div>
-    </button>
+        <div
+          className="relative overflow-hidden flex items-center justify-center"
+          style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(251,191,36,0.2) 0%, #0d0d10 70%)" }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-0.5"
+            style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
+          {imgSrc && (
+            <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
+          )}
+        </div>
+        <div
+          className="px-2.5 pt-2.5 pb-3"
+          style={{ background: "#111113", borderTop: "1px solid rgba(251,191,36,0.15)" }}
+        >
+          <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">{coinLabel} Coins</p>
+          <span className="inline-flex items-center gap-1 font-jaro text-[14px] text-cyan-300">
+            <DiamondIcon size={13} /> {pack.price}
+          </span>
+        </div>
+      </button>
     </motion.div>
   );
 }
@@ -357,58 +357,58 @@ function DiamondPackCard({
   const imgSrc = DIAMOND_IMGS[pack.id];
   return (
     <motion.div variants={staggerItem}>
-    <button
-      type="button"
-      onClick={() => onBuy(pack)}
-      className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 relative"
-      style={{
-        borderRadius: 14,
-        border: pack.highlight
-          ? "1.5px solid rgba(34,211,238,0.65)"
-          : "1px solid rgba(34,211,238,0.2)",
-        boxShadow: pack.highlight
-          ? "0 0 24px -6px rgba(34,211,238,0.5)"
-          : "0 0 16px -10px rgba(34,211,238,0.3)",
-      }}
-    >
-      {pack.highlight && (
-        <div className="absolute top-0 left-0 right-0 z-10 flex justify-center">
-          <span
-            className="font-inconsolata font-bold uppercase"
-            style={{
-              fontSize: 8, letterSpacing: "0.08em",
-              background: "#22d3ee", color: "#09090b",
-              padding: "2px 8px", borderRadius: "0 0 6px 6px",
-            }}
-          >
-            MAIS POPULAR
+      <button
+        type="button"
+        onClick={() => onBuy(pack)}
+        className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 relative"
+        style={{
+          borderRadius: 14,
+          border: pack.highlight
+            ? "1.5px solid rgba(34,211,238,0.65)"
+            : "1px solid rgba(34,211,238,0.2)",
+          boxShadow: pack.highlight
+            ? "0 0 24px -6px rgba(34,211,238,0.5)"
+            : "0 0 16px -10px rgba(34,211,238,0.3)",
+        }}
+      >
+        {pack.highlight && (
+          <div className="absolute top-0 left-0 right-0 z-10 flex justify-center">
+            <span
+              className="font-inconsolata font-bold uppercase"
+              style={{
+                fontSize: 8, letterSpacing: "0.08em",
+                background: "#22d3ee", color: "#09090b",
+                padding: "2px 8px", borderRadius: "0 0 6px 6px",
+              }}
+            >
+              MAIS POPULAR
+            </span>
+          </div>
+        )}
+
+        <div
+          className="relative overflow-hidden flex items-center justify-center"
+          style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(34,211,238,0.18) 0%, #0d0d10 70%)" }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-0.5"
+            style={{ background: "linear-gradient(90deg,transparent,#22d3ee,transparent)", opacity: 0.85 }} />
+          {imgSrc && (
+            <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
+          )}
+        </div>
+
+        <div
+          className="px-2.5 pt-2.5 pb-3"
+          style={{ background: "#111113", borderTop: "1px solid rgba(34,211,238,0.15)" }}
+        >
+          <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">
+            {pack.diamonds.toLocaleString("pt-BR")} Diamantes
+          </p>
+          <span className="font-inconsolata text-[12px] font-semibold text-green-400">
+            {pack.brl}
           </span>
         </div>
-      )}
-
-      <div
-        className="relative overflow-hidden flex items-center justify-center"
-        style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(34,211,238,0.18) 0%, #0d0d10 70%)" }}
-      >
-        <div className="absolute top-0 left-0 right-0 h-0.5"
-          style={{ background: "linear-gradient(90deg,transparent,#22d3ee,transparent)", opacity: 0.85 }} />
-        {imgSrc && (
-          <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
-        )}
-      </div>
-
-      <div
-        className="px-2.5 pt-2.5 pb-3"
-        style={{ background: "#111113", borderTop: "1px solid rgba(34,211,238,0.15)" }}
-      >
-        <p className="font-jaro text-[13px] text-zinc-100 leading-tight mb-1.5">
-          {pack.diamonds.toLocaleString("pt-BR")} Diamantes
-        </p>
-        <span className="font-inconsolata text-[12px] font-semibold text-green-400">
-          {pack.brl}
-        </span>
-      </div>
-    </button>
+      </button>
     </motion.div>
   );
 }
@@ -429,11 +429,11 @@ function DetailSheet({
 }) {
   if (!item) return null;
 
-  const meta      = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta     = item.raridade ? RARIDADES[item.raridade] : null;
-  const accent    = rMeta?.cor ?? meta.color;
-  const isBanner  = item.type === "banner";
-  const isFrame   = item.type === "frame";
+  const meta = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta = item.raridade ? RARIDADES[item.raridade] : null;
+  const accent = rMeta?.cor ?? meta.color;
+  const isBanner = item.type === "banner";
+  const isFrame = item.type === "frame";
   const canAfford = userCoins >= item.price;
 
   return (
@@ -507,7 +507,7 @@ function DetailSheet({
                 className="w-14 h-14 rounded-2xl grid place-items-center shrink-0"
                 style={{ background: accent + "22", color: accent, boxShadow: `0 0 32px -8px ${accent}` }}
               >
-                {item.type === "badge"  && <Shield size={26} />}
+                {item.type === "badge" && <Shield size={26} />}
                 {item.type === "banner" && <ImageIcon size={26} />}
               </div>
             )}
@@ -560,15 +560,14 @@ function DetailSheet({
             type="button"
             disabled={buying || !canAfford}
             onClick={() => onBuy(item)}
-            className={`w-full flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-              canAfford
-                ? "bg-green-500 text-zinc-950 hover:bg-green-400 shadow-[0_0_20px_-6px_rgba(74,222,128,0.55)]"
-                : "border border-zinc-700 text-zinc-500"
-            }`}
+            className={`w-full flex items-center justify-center gap-2 font-inconsolata font-semibold text-sm rounded-xl px-5 py-3 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${canAfford
+              ? "bg-green-500 text-zinc-950 hover:bg-green-400 shadow-[0_0_20px_-6px_rgba(74,222,128,0.55)]"
+              : "border border-zinc-700 text-zinc-500"
+              }`}
           >
             {buying ? <Loader2 size={16} className="animate-spin" />
               : canAfford ? <><CoinIcon size={16} />Comprar agora</>
-              : <><Ban size={16} />Coins insuficientes</>
+                : <><Ban size={16} />Coins insuficientes</>
             }
           </button>
 
@@ -606,11 +605,11 @@ function DailyOfferCard({
   offer: DailyOffer;
   onSelect: (offer: DailyOffer) => void;
 }) {
-  const item   = offer.item;
-  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
-  const glow   = rMeta?.cor ?? "#d4d4d8";
+  const item = offer.item;
+  const rMeta = item.raridade ? RARIDADES[item.raridade] : null;
+  const glow = rMeta?.cor ?? "#d4d4d8";
   const isBanner = item.type === "banner";
-  const isFrame  = item.type === "frame";
+  const isFrame = item.type === "frame";
 
   return (
     <CardShell
@@ -637,7 +636,7 @@ function DailyOfferCard({
             <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
           ) : (
             <div className="relative z-10" style={{ color: glow, filter: `drop-shadow(0 0 12px ${glow}99)`, opacity: 0.7 }}>
-              {item.type === "title" && <Crown  size={38} />}
+              {item.type === "title" && <Crown size={38} />}
               {item.type === "badge" && <Shield size={38} />}
             </div>
           )}
@@ -677,12 +676,12 @@ function DailyOfferSheet({
 }) {
   if (!offer) return null;
 
-  const item   = offer.item;
-  const meta   = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
-  const rMeta  = item.raridade ? RARIDADES[item.raridade] : null;
+  const item = offer.item;
+  const meta = TYPE_META[item.type as ItemType] ?? TYPE_META.title;
+  const rMeta = item.raridade ? RARIDADES[item.raridade] : null;
   const accent = rMeta?.cor ?? meta.color;
   const isBanner = item.type === "banner";
-  const isFrame  = item.type === "frame";
+  const isFrame = item.type === "frame";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -763,13 +762,13 @@ function DailyOfferSheet({
 
           {/* Progresso de fragmentos */}
           {(() => {
-            const total  = offer.fragmentosTotal ?? 0;
-            const atual  = offer.fragmentosAtuais ?? 0;
-            const ganho  = offer.quantidade;
+            const total = offer.fragmentosTotal ?? 0;
+            const atual = offer.fragmentosAtuais ?? 0;
+            const ganho = offer.quantidade;
             const depois = Math.min(atual + ganho, total);
-            const pctAtual  = total > 0 ? Math.min((atual  / total) * 100, 100) : 0;
+            const pctAtual = total > 0 ? Math.min((atual / total) * 100, 100) : 0;
             const pctDepois = total > 0 ? Math.min((depois / total) * 100, 100) : 0;
-            const pctGanho  = pctDepois - pctAtual;
+            const pctGanho = pctDepois - pctAtual;
 
             return (
               <div className="space-y-3">
@@ -782,13 +781,13 @@ function DailyOfferSheet({
                 <div className="relative w-full h-3 rounded-full bg-zinc-800 overflow-hidden">
                   {/* Fragmentos atuais */}
                   <div
-                    className="absolute left-0 top-0 h-full rounded-full bg-zinc-500 transition-all"
+                    className="absolute left-0 top-0 h-full rounded-l-full bg-zinc-500 transition-all"
                     style={{ width: `${pctAtual}%` }}
                   />
                   {/* Fragmentos ganhos */}
                   {pctGanho > 0 && (
                     <div
-                      className="absolute top-0 h-full rounded-full transition-all"
+                      className="absolute top-0 h-full rounded-r-full transition-all"
                       style={{ left: `${pctAtual}%`, width: `${pctGanho}%`, background: accent, boxShadow: `0 0 8px ${accent}88` }}
                     />
                   )}
@@ -1188,23 +1187,23 @@ export default function LojaPage() {
   const { profile, shopItems, loadProfile, loadShopItems, loading } = useProfileStore();
   const { success, error } = useToast();
 
-  const [selected, setSelected]             = useState<ShopItem | null>(null);
-  const [buying, setBuying]                 = useState(false);
-  const [buyingCoin, setBuyingCoin]         = useState(false);
-  const [coinConfirm, setCoinConfirm]       = useState<CoinPack | null>(null);
+  const [selected, setSelected] = useState<ShopItem | null>(null);
+  const [buying, setBuying] = useState(false);
+  const [buyingCoin, setBuyingCoin] = useState(false);
+  const [coinConfirm, setCoinConfirm] = useState<CoinPack | null>(null);
   const [diamondConfirm, setDiamondConfirm] = useState<DiamondPack | null>(null);
-  const [checkingOut, setCheckingOut]       = useState(false);
-  const [mpModal, setMpModal]               = useState<"success" | "failed" | "pending" | "expired" | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [mpModal, setMpModal] = useState<"success" | "failed" | "pending" | "expired" | null>(null);
   const [diamondsBefore, setDiamondsBefore] = useState<number>(0);
-  const [countdown, setCountdown]           = useState<string>("");
+  const [countdown, setCountdown] = useState<string>("");
 
-  const [baus, setBaus]                     = useState<any[]>([]);
-  const [abrindo, setAbrindo]               = useState<string | null>(null);
-  const [resultado, setResultado]           = useState<any>(null);
-  const [bauDetalhes, setBauDetalhes]       = useState<any>(null);
-  const [dailyOffers, setDailyOffers]       = useState<DailyOffer[]>([]);
+  const [baus, setBaus] = useState<any[]>([]);
+  const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<any>(null);
+  const [bauDetalhes, setBauDetalhes] = useState<any>(null);
+  const [dailyOffers, setDailyOffers] = useState<DailyOffer[]>([]);
   const [dailyOfferSelected, setDailyOfferSelected] = useState<DailyOffer | null>(null);
-  const [buyingOffer, setBuyingOffer]       = useState(false);
+  const [buyingOffer, setBuyingOffer] = useState(false);
 
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
   useEffect(() => {
@@ -1239,9 +1238,9 @@ export default function LojaPage() {
     }
   }
 
-  const [coins, setCoins]             = useState<number | null>(null);
-  const [diamonds, setDiamonds]       = useState<number | null>(null);
-  const userCoins    = coins    ?? profile?.coins    ?? 0;
+  const [coins, setCoins] = useState<number | null>(null);
+  const [diamonds, setDiamonds] = useState<number | null>(null);
+  const userCoins = coins ?? profile?.coins ?? 0;
   const userDiamonds = diamonds ?? profile?.diamonds ?? 0;
 
   useEffect(() => {
@@ -1319,7 +1318,7 @@ export default function LojaPage() {
     }, msUntilExpiry);
 
     return () => stopPolling();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mpModal]);
 
   function handleCancelPending() {
@@ -1615,10 +1614,10 @@ export default function LojaPage() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {mpModal === "success"  && <MPSuccessModal  onClose={handleCloseMpModal} />}
-        {mpModal === "failed"   && <MPFailedModal   onClose={handleCloseMpModal} />}
-        {mpModal === "expired"  && <MPExpiredModal  onClose={handleCloseMpModal} />}
-        {mpModal === "pending"  && <MPPendingModal  countdown={countdown} onCancel={handleCancelPending} />}
+        {mpModal === "success" && <MPSuccessModal onClose={handleCloseMpModal} />}
+        {mpModal === "failed" && <MPFailedModal onClose={handleCloseMpModal} />}
+        {mpModal === "expired" && <MPExpiredModal onClose={handleCloseMpModal} />}
+        {mpModal === "pending" && <MPPendingModal countdown={countdown} onCancel={handleCancelPending} />}
       </AnimatePresence>
 
       <BauDetailModal
