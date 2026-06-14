@@ -1,12 +1,14 @@
 import { prisma } from "../../lib/prisma.js";
+import type { MissionMetric } from "../../../generated/prisma/index.js";
 
 export const missionsRepository = {
   findUserMissions: (userId: number) =>
     prisma.userMission.findMany({ where: { userId } }),
 
+  // metric chega como string genérica de track(); cast na fronteira do prisma
   findUserMissionsByMetric: (userId: number, metric: string) =>
     prisma.userMission.findMany({
-      where: { userId, mission: { metric } },
+      where: { userId, mission: { metric: metric as MissionMetric } },
       include: { mission: true },
     }),
 

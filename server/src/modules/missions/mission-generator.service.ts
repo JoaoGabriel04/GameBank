@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js"
 import { DAILY_TEMPLATES, WEEKLY_TEMPLATES, DAILY_COUNT, WEEKLY_COUNT, type MissionTemplate } from "./mission-templates.js"
+import type { MissionMetric } from "../../../generated/prisma/index.js"
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -98,7 +99,9 @@ export async function gerarMissoesParaUsuario(userId: number) {
 
     for (const template of selected) {
       const missionData = buildMissionFromTemplate(template, tipo)
-      const mission = await prisma.mission.create({ data: missionData })
+      const mission = await prisma.mission.create({
+        data: { ...missionData, metric: missionData.metric as MissionMetric },
+      })
       await prisma.userMission.create({
         data: {
           userId,

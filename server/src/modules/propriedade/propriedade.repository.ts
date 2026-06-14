@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { NotificationStatus } from "../../../generated/prisma/index.js";
 
 export class PropriedadeRepository {
   async findPropriedadeById(id: number) {
@@ -78,6 +79,9 @@ export class PropriedadeRepository {
   }
 
   async updateNotification(id: number, data: { status: string; respondedAt: Date }) {
-    return prisma.notification.update({ where: { id }, data });
+    return prisma.notification.update({
+      where: { id },
+      data: { ...data, status: data.status as NotificationStatus },
+    });
   }
 }

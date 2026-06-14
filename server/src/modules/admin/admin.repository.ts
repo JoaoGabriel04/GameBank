@@ -1,5 +1,6 @@
 import { raridadeWeight } from "../../constants/raridade.js";
 import { prisma } from "../../lib/prisma.js";
+import type { AuditSeverity, FrameTipo } from "../../../generated/prisma/index.js";
 
 export const adminRepository = {
   // ShopItems
@@ -205,7 +206,7 @@ export const adminRepository = {
     disponibilidade: boolean;
     tipo?: string;
     scale?: number;
-  }) => prisma.frame.create({ data }),
+  }) => prisma.frame.create({ data: { ...data, tipo: data.tipo as FrameTipo | undefined } }),
 
   updateFrame: (id: number, data: Partial<{
     nome: string;
@@ -283,7 +284,7 @@ export const adminRepository = {
         action: data.action,
         ...(data.target !== null && data.target !== undefined ? { target: data.target } : {}),
         ...(data.metadata !== null && data.metadata !== undefined ? { metadata: data.metadata as any } : {}),
-        ...(data.severity ? { severity: data.severity } : {}),
+        ...(data.severity ? { severity: data.severity as AuditSeverity } : {}),
       },
     }),
 
@@ -298,7 +299,7 @@ export const adminRepository = {
       where: {
         ...(opts.userId !== undefined ? { userId: opts.userId } : {}),
         ...(opts.action ? { action: opts.action } : {}),
-        ...(opts.severity ? { severity: opts.severity } : {}),
+        ...(opts.severity ? { severity: opts.severity as AuditSeverity } : {}),
       },
       orderBy: { createdAt: "desc" },
       take: opts.limit ?? 50,

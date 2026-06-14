@@ -4,6 +4,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
 import { MissionsService } from "../missions/missions.service.js";
+import type { SessionModo } from "../../../generated/prisma/index.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { BauService } from "../bau/bau.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
@@ -45,7 +46,7 @@ export class SessionService {
 
     const novaSessao = await this.repo.create({
       nome,
-      modo,
+      modo: modo as SessionModo,
       maxJogadores,
       saldoInicial,
       ...(userId ? { ownerId: userId } : {}),

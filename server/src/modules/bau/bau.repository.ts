@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js"
 import { parseUserItems, resolveShopItem, type UserItemRef } from "../shop/shop.repository.js"
+import type { Raridade } from "../../../generated/prisma/index.js"
 
 export const bauRepository = {
   findBauByTipo: (tipo: string) =>
@@ -14,7 +15,7 @@ export const bauRepository = {
       select: { user_items: true },
     }).then(u => parseUserItems(u?.user_items)),
 
-  findItensDisponiveisPorRaridade: async (raridade: string, ownedItemIds: Set<number>) => {
+  findItensDisponiveisPorRaridade: async (raridade: Raridade, ownedItemIds: Set<number>) => {
     const items = await prisma.shopItem.findMany({
       where: {
         fragmentavel: true,

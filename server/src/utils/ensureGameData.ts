@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/index.js";
 import propriedades from "../../data/propriedades.json"
 
 const shopItems = [
@@ -56,7 +57,7 @@ export async function ensureGameData() {
     console.log("Inserindo itens da loja...")
 
     await prisma.shopItem.createMany({
-      data: shopItems
+      data: shopItems as Prisma.ShopItemCreateManyInput[]
     })
 
     console.log(`${shopItems.length} itens da loja criados.`)

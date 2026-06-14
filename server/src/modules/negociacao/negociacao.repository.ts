@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { NegotiationStatus } from "../../../generated/prisma/index.js";
 
 export class NegociacaoRepository {
   async findNegotiationById(id: number) {
@@ -54,7 +55,7 @@ export class NegociacaoRepository {
         sessionId: data.sessionId,
         fromPlayerId: data.fromPlayerId,
         toPlayerId: data.toPlayerId,
-        status: data.status ?? "pendente",
+        status: (data.status ?? "pendente") as NegotiationStatus,
         expiresAt: data.expiresAt,
         items: { create: [] },
       },
@@ -93,7 +94,7 @@ export class NegociacaoRepository {
     });
   }
 
-  async updateNegotiationStatus(id: number, status: string) {
+  async updateNegotiationStatus(id: number, status: NegotiationStatus) {
     return prisma.negotiation.update({
       where: { id },
       data: { status, respondedAt: new Date() },

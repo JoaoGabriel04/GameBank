@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/index.js";
 
 const titulos = [
   // ── COMUNS ──
@@ -57,7 +58,7 @@ async function seedTitulos() {
 
   const result = await prisma.shopItem.createMany({
     skipDuplicates: true,
-    data: titulos,
+    data: titulos as Prisma.ShopItemCreateManyInput[],
   });
 
   console.log(`[seed-titulos] ${result.count} títulos inseridos (duplicatas ignoradas).`);

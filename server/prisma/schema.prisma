@@ -13,6 +13,81 @@ datasource db {
   provider = "postgresql"
 }
 
+// ── Enums de estado (valores = exatamente o que já está gravado no DB) ──────────
+// Deferidos de propósito (legado/acoplamento): Session.status ("Em Andamento" tem
+// espaço + acoplamento com o client), Card.tipo/efeito (acento + conteúdo de admin)
+// e Coin/DiamondTransaction.tipo (campo "tipo" sobrecarregado entre tabelas).
+enum Raridade {
+  COMUM
+  INCOMUM
+  RARO
+  EPICO
+  LENDARIO
+}
+
+enum ShopItemType {
+  title
+  badge
+  banner
+  frame
+}
+
+enum NegotiationStatus {
+  pendente
+  aceita
+  recusada
+  expirada
+}
+
+enum NotificationStatus {
+  pendente
+  aceita
+  recusada
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum AuditSeverity {
+  info
+  success
+  warn
+  danger
+}
+
+enum BauStatus {
+  BLOQUEADO
+  PRONTO
+}
+
+enum FrameTipo {
+  image
+  gradient
+}
+
+enum MissionTipo {
+  daily
+  weekly
+}
+
+enum MissionMetric {
+  properties_bought
+  houses_built
+  rent_earned
+  games_played
+  wins
+  top3
+}
+
+enum SessionModo {
+  individual
+  duplas
+}
+
 model Propriedade {
   id            Int    @id
   nome          String
@@ -87,7 +162,7 @@ model Session {
   id           Int      @id @default(autoincrement())
   nome         String? // opcional
   senha        String? // bcrypt hash, null = sala pública
-  modo         String  @default("individual") // "individual" | "duplas"
+  modo         SessionModo @default(individual)
   status       String  @default("Esperando")  // "Esperando" | "Em Andamento" | "Finalizada"
   maxJogadores Int     @default(6)
   saldoInicial Int     @default(25000)
@@ -237,7 +312,7 @@ model Notification {
   toPlayerId      Int
   toPlayer        SessionPlayer @relation("NotificationToPlayer", fields: [toPlayerId], references: [id])
   sessionPossesId Int
-  status          String      @default("pendente") // "pendente" | "aceita" | "recusada"
+  status          NotificationStatus @default(pendente)
   createdAt       DateTime    @default(now()) @map("createdAt")
   respondedAt     DateTime?
 
@@ -254,7 +329,7 @@ model Negotiation {
   fromPlayer      SessionPlayer @relation("NegotiationFromPlayer", fields: [fromPlayerId], references: [id])
   toPlayerId      Int
   toPlayer        SessionPlayer @relation("NegotiationToPlayer", fields: [toPlayerId], references: [id])
-  status          String   @default("pendente")
+  status          NegotiationStatus @default(pendente)
   expiresAt       DateTime?
   createdAt       DateTime @default(now()) @map("createdAt")
   respondedAt     DateTime?
@@ -300,11 +375,11 @@ model Mission {
   id          Int      @id @default(autoincrement())
   name        String
   description String
-  metric      String   // properties_bought | houses_built | rent_earned | games_played | wins | top3
+  metric      MissionMetric
   target      Float
   xpReward    Int
   coinReward  Int
-  tipo        String   @default("daily")
+  tipo        MissionTipo @default(daily)
 
   userMissions UserMission[]
 
@@ -350,10 +425,9 @@ model ShopItem {
   price         Int
   diamondPrice  Int?
   icon          String?
-  type          String   // title | badge | banner | frame
+  type          ShopItemType
   value         String?
-  raridade      String   @default("COMUM")
-  // "COMUM" | "INCOMUM" | "RARO" | "EPICO" | "LENDARIO"
+  raridade      Raridade @default(COMUM)
   imageUrl      String?  // Cloudinary URL for badge images
   imagePublicId String?  // Cloudinary public ID for deletion
   available     Boolean  @default(true)
@@ -433,7 +507,7 @@ model BauAdquirido {
   bauId     Int
   sessionId Int?
   position  Int?
-  status    String    @default("BLOQUEADO")   // "BLOQUEADO" | "PRONTO"
+  status    BauStatus @default(BLOQUEADO)
   unlockAt  DateTime
   openedAt  DateTime?
   createdAt DateTime  @default(now())
@@ -534,7 +608,7 @@ model DiamondPurchase {
   mpPreferenceId     String?
   mpIdempotencyKey   String   @unique
   paymentMethod      String?
-  status             String   // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED"
+  status             PurchaseStatus
   createdAt          DateTime @default(now()) @map("createdAt")
   completedAt        DateTime?
 
@@ -585,7 +659,7 @@ model Banner {
 model Frame {
   id              Int      @id @default(autoincrement())
   nome            String
-  tipo            String   @default("gradient") // "image" | "gradient"
+  tipo            FrameTipo @default(gradient)
 
   // Para tipo "image":
   imageUrl        String?  @map("imageurl") // URL do PNG no Cloudinary
@@ -626,7 +700,7 @@ model AuditLog {
   action    String
   target    String?
   metadata  Json?
-  severity  String   @default("info") // info | success | warn | danger
+  severity  AuditSeverity @default(info)
   createdAt DateTime @default(now()) @map("createdAt")
 
   @@index([userId])

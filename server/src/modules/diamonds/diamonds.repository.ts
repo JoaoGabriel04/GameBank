@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js"
+import type { PurchaseStatus } from "../../../generated/prisma/index.js"
 
 export const diamondsRepository = {
   findActivePackages: () =>
@@ -46,7 +47,7 @@ export const diamondsRepository = {
     amountPaidCents: number
     mpPreferenceId: string
     mpIdempotencyKey: string
-    status: string
+    status: PurchaseStatus
   }) =>
     prisma.diamondPurchase.create({ data }),
 
@@ -55,7 +56,7 @@ export const diamondsRepository = {
       where: { mpPreferenceId: preferenceId },
     }),
 
-  updatePurchaseStatus: (preferenceId: string, status: string) =>
+  updatePurchaseStatus: (preferenceId: string, status: PurchaseStatus) =>
     prisma.diamondPurchase.updateMany({
       where: { mpPreferenceId: preferenceId },
       data: { status },
