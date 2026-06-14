@@ -90,7 +90,7 @@ model Session {
   modo         String  @default("individual") // "individual" | "duplas"
   status       String  @default("Esperando")  // "Esperando" | "Em Andamento" | "Finalizada"
   maxJogadores Int     @default(6)
-  saldoInicial Float   @default(25000)
+  saldoInicial Int     @default(25000)
   dataInicio   DateTime @default(now())
   startedAt    DateTime?            // momento em que a partida começou de fato (status -> Em Andamento)
   rewardGranted Boolean @default(false) // proteção contra duplo crédito de recompensa
@@ -106,6 +106,7 @@ model Session {
   negotiations Negotiation[]
   debts        Debt[]
 
+  @@index([ownerId])
   @@map("sessions")
 }
 
@@ -119,7 +120,7 @@ model SessionPlayer {
 
   nome   String
   cor    String
-  saldo  Float
+  saldo  Int
   teamId Int?
   team   SessionTeam? @relation(fields: [teamId], references: [id])
 
@@ -130,13 +131,14 @@ model SessionPlayer {
   notificationsTo   Notification[] @relation("NotificationToPlayer")
   carta_prisao      Boolean @default(false)
   desistiu          Boolean @default(false)
-  patrimonyAtDesistir Float?
+  patrimonyAtDesistir Int?
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
 
   @@index([userId])
   @@index([sessionId])
+  @@index([teamId])
   @@map("session_players")
 }
 
@@ -148,7 +150,7 @@ model SessionTeam {
 
   nome      String
   cor       String
-  saldo     Float     @default(25000)
+  saldo     Int       @default(25000)
   jogadores SessionPlayer[]
 
   @@map("session_teams")
@@ -190,6 +192,8 @@ model SessionPosses {
   @@index([sessionId])
   @@index([playerId])
   @@index([sessionId, playerId])
+  @@index([possesId])
+  @@index([lastOwnerId])
   @@map("session_posses")
 }
 
@@ -218,6 +222,7 @@ model Message {
   createdAt DateTime @default(now()) @map("createdAt")
 
   @@index([sessionId])
+  @@index([playerId])
   @@map("messages")
 }
 
@@ -269,7 +274,7 @@ model NegotiationItem {
   negotiation     Negotiation @relation(fields: [negotiationId], references: [id])
   sessionPossesId Int?
   fromSide        Boolean
-  valor           Float?
+  valor           Int?
 
   @@map("negociacao_itens")
 }
@@ -280,7 +285,7 @@ model Debt {
   session   Session  @relation(fields: [sessionId], references: [id])
   playerId  Int
   player    SessionPlayer @relation(fields: [playerId], references: [id])
-  valor     Float
+  valor     Int
   descricao String
   pago      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("createdAt")
@@ -370,6 +375,9 @@ model ShopItem {
   fragments    UserFragment[]
   dailyOffers  UserDailyOffer[]
 
+  @@index([bannerId])
+  @@index([frameId])
+  @@index([badgeId])
   @@map("loja_itens")
 }
 
@@ -444,7 +452,7 @@ model GameResult {
   sessionId   Int
   userId      Int
   position    Int
-  patrimony   Float
+  patrimony   Int
   xpEarned    Int      @default(0)
   coinsEarned Int      @default(0)
 
@@ -494,6 +502,7 @@ model DiamondTransaction {
   purchase DiamondPurchase? @relation(fields: [purchaseId], references: [id])
 
   @@index([userId])
+  @@index([purchaseId])
   @@map("diamond_transactions")
 }
 
