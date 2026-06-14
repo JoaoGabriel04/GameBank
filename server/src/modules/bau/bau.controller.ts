@@ -31,16 +31,6 @@ export const bauController = {
     }
   },
 
-  historico: async (req: Request, res: Response) => {
-    try {
-      const userId = req.user!.userId
-      const historico = await bauService.historico(userId)
-      res.json(historico)
-    } catch (err) {
-      parseError(res, err)
-    }
-  },
-
   adquiridos: async (req: Request, res: Response) => {
     try {
       const userId = req.user!.userId

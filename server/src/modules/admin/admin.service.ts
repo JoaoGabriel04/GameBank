@@ -235,9 +235,6 @@ export class AdminService {
       await deleteCloudinaryBadge(exists.imagePublicId);
     }
 
-    // Limpa registros de abertura de baú que referenciam este item
-    await adminRepository.deleteBauAberturaItemByItemId(id);
-
     await adminRepository.deleteItem(id);
 
     await auditLog({

@@ -48,25 +48,6 @@ export const bauRepository = {
       update: { quantidade: { increment: quantidade } },
     }),
 
-  createAbertura: (data: {
-    userId: number
-    bauId: number
-    coinsGanhos: number
-    custoPago: string
-    valorPago: number
-    itens: { itemId: number; raridade: string; fragmentos: number }[]
-  }) => prisma.bauAbertura.create({
-    data: {
-      userId:      data.userId,
-      bauId:       data.bauId,
-      coinsGanhos: data.coinsGanhos,
-      custoPago:   data.custoPago,
-      valorPago:   data.valorPago,
-      itens: { create: data.itens },
-    },
-    include: { itens: true },
-  }),
-
   findBauAdquiridos: (userId: number) =>
     prisma.bauAdquirido.findMany({
       where: { userId, openedAt: null },
@@ -109,21 +90,6 @@ export const bauRepository = {
     prisma.bauAdquirido.updateMany({
       where: { userId, status: "BLOQUEADO", unlockAt: { lte: new Date() } },
       data: { status: "PRONTO" },
-    }),
-
-  findHistoricoUsuario: (userId: number) =>
-    prisma.bauAbertura.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: {
-        bau:   { select: { nome: true, tipo: true } },
-        itens: {
-          include: {
-            item: { select: { name: true, type: true, raridade: true } },
-          },
-        },
-      },
     }),
 }
 

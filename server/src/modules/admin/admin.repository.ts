@@ -23,9 +23,6 @@ export const adminRepository = {
   deleteItem: (id: number) =>
     prisma.shopItem.delete({ where: { id } }),
 
-  deleteBauAberturaItemByItemId: (itemId: number) =>
-    prisma.bauAberturaItem.deleteMany({ where: { itemId } }),
-
   // Remove item_id from all users' user_items JSONB array
   removeItemFromAllUsers: async (itemId: number): Promise<number> => {
     const result = await prisma.$executeRaw`
@@ -398,8 +395,6 @@ export const adminRepository = {
 
   deleteUser: (id: number) =>
     prisma.$transaction(async (tx) => {
-      await tx.bauAberturaItem.deleteMany({ where: { abertura: { userId: id } } });
-      await tx.bauAbertura.deleteMany({ where: { userId: id } });
       await tx.diamondTransaction.deleteMany({ where: { userId: id } });
       await tx.diamondPurchase.deleteMany({ where: { userId: id } });
       await tx.bauAdquirido.deleteMany({ where: { userId: id } });

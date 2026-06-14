@@ -66,10 +66,6 @@ export class BauService {
     return bauRepository.findAllAtivos()
   }
 
-  async historico(userId: number) {
-    return bauRepository.findHistoricoUsuario(userId)
-  }
-
   async abrir(userId: number, tipo: TipoBau, skipPayment = false) {
     const config = BAU_CONFIG[tipo]
     if (!config) throw new AppError(400, "Tipo de baú inválido")
@@ -243,22 +239,6 @@ export class BauService {
         }
       }
 
-      await tx.bauAbertura.create({
-        data: {
-          userId,
-          bauId:       bau.id,
-          coinsGanhos,
-          custoPago:   skipPayment ? "coins" : (config.precoCoins ? "coins" : "diamonds"),
-          valorPago:   skipPayment ? 0 : (config.precoCoins ?? config.precoDiamonds ?? 0),
-          itens: {
-            create: comXp.map(item => ({
-              itemId:    item.id,
-              raridade:  item.raridade,
-              fragmentos: distribuicao.get(item.id) ?? 1,
-            })),
-          },
-        },
-      })
     })
 
     const fragmentosAtuais = await Promise.all(
