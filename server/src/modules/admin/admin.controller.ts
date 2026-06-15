@@ -97,7 +97,7 @@ export const adminController = {
     try {
       const id = z.coerce.number().int().positive().parse(req.params.id);
       const user = (req as any).user;
-      res.json(await adminService.endSession(id, { id: user?.id, email: user?.email }));
+      res.json(await adminService.endSession(id, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -107,7 +107,7 @@ export const adminController = {
       const pid = z.coerce.number().int().positive().parse(req.params.pid);
       const { delta } = z.object({ delta: z.number().finite() }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.adjustPlayerBalance(pid, delta, { id: user?.id, email: user?.email }));
+      res.json(await adminService.adjustPlayerBalance(pid, delta, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -123,7 +123,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.adjustCoins(userId, delta, { id: user?.id, email: user?.email }));
+      res.json(await adminService.adjustCoins(userId, delta, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -132,7 +132,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.adjustDiamonds(userId, delta, { id: user?.id, email: user?.email }));
+      res.json(await adminService.adjustDiamonds(userId, delta, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -141,7 +141,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { delta } = z.object({ delta: z.number().int() }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.adjustXp(userId, delta, { id: user?.id, email: user?.email }));
+      res.json(await adminService.adjustXp(userId, delta, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -150,7 +150,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { level } = z.object({ level: z.number().int().min(1).max(100) }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.setLevel(userId, level, { id: user?.id, email: user?.email }));
+      res.json(await adminService.setLevel(userId, level, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -159,7 +159,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { reason } = z.object({ reason: z.string().optional() }).parse(req.body ?? {});
       const user = (req as any).user;
-      res.json(await adminService.banUser(userId, reason, { id: user?.id, email: user?.email }));
+      res.json(await adminService.banUser(userId, reason, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -167,7 +167,7 @@ export const adminController = {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const user = (req as any).user;
-      res.json(await adminService.unbanUser(userId, { id: user?.id, email: user?.email }));
+      res.json(await adminService.unbanUser(userId, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
@@ -176,7 +176,7 @@ export const adminController = {
       const userId = z.coerce.number().int().positive().parse(req.params.id);
       const { isAdmin } = z.object({ isAdmin: z.boolean() }).parse(req.body);
       const user = (req as any).user;
-      res.json(await adminService.setUserAdmin(userId, isAdmin, { id: user?.id, email: user?.email }));
+      res.json(await adminService.setUserAdmin(userId, isAdmin, { id: user?.userId, email: user?.email }));
     } catch (err) { parseError(res, err); }
   },
 
