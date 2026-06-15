@@ -419,7 +419,6 @@ model Badge {
 model ShopItem {
   id            Int      @id @default(autoincrement())
   name          String
-  description   String
   price         Int
   diamondPrice  Int?
   icon          String?

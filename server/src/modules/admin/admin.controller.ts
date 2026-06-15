@@ -11,7 +11,6 @@ const noBlobDataUrl = (val: string | null | undefined) =>
 
 const ItemSchema = z.object({
   name: z.string().optional(),
-  description: z.string().min(1),
   price: z.number().int().min(0),
   type: z.enum(["title", "badge", "banner", "frame"]),
   value: z.string().nullable().optional().refine(noBlobDataUrl, { message: "URL blob/data não são permitidas no campo value" }),

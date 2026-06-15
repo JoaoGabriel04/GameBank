@@ -103,7 +103,6 @@ export const shopRepository = {
         return {
           id: shopItem.id,
           name: shopItem.name,
-          description: shopItem.description,
           icon: shopItem.icon,
           value: resolvedValue,
           type: shopItem.type,

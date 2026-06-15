@@ -45,7 +45,6 @@ export class AdminService {
 
   async createItem(data: {
     name?: string;
-    description: string;
     price: number;
     type: string;
     value?: string | null;
@@ -114,7 +113,6 @@ export class AdminService {
 
   async updateItem(id: number, data: Partial<{
     name: string;
-    description: string;
     price: number;
     type: string;
     value: string | null;

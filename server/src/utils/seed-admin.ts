@@ -33,7 +33,6 @@ export async function seedAdmin() {
       create: {
         id: 0,
         name: "Padrão",
-        description: "Banner padrão do jogador",
         price: 0,
         type: "banner",
         available: false,

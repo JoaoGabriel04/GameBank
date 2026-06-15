@@ -4,7 +4,6 @@ import type { Raridade, ShopItem } from '@/types/shop'
 export interface CatalogoItem {
   id: number
   name: string
-  description: string
   type: string
   value: string | null
   icon: string | null
@@ -54,7 +53,6 @@ export interface DiamondPurchaseHistory {
 export interface DailyOfferItem {
   id: number
   name: string
-  description: string
   type: string
   value: string | null
   icon: string | null

@@ -156,10 +156,6 @@ function ItemCard({
               <span className="font-inconsolata text-[9px] uppercase px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300 shrink-0">✨ anim</span>
             )}
           </div>
-          <p className="font-inconsolata text-[11px] text-zinc-400 mt-0.5 leading-snug line-clamp-2" style={{ minHeight: 32 }}>
-            {item.description}
-          </p>
-
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/80">
             <div className="flex items-center gap-1">
               <Toggle on={item.available} onChange={() => onToggle(item.id)} size="sm" />
@@ -254,11 +250,11 @@ function ItemPreview({ form, bannerCss, badgeImageUrl }: { form: Partial<ItemInp
         <h3 className="font-jaro text-xl mt-3 text-white">
           {isBanner && bannerCss ? "Banner selecionado" : (form.name || "Nome do item")}
         </h3>
-        <p className="font-inconsolata text-xs text-zinc-200/80 mt-1 leading-snug">
-          {isBanner
-            ? "Este item é um banner de perfil. Será vinculado a um banner existente no momento da criação."
-            : (form.description || "Descrição curta do item.")}
-        </p>
+        {isBanner && (
+          <p className="font-inconsolata text-xs text-zinc-200/80 mt-1 leading-snug">
+            Este item é um banner de perfil. Será vinculado a um banner existente no momento da criação.
+          </p>
+        )}
         <div className="flex items-center justify-between mt-4">
           <span className="inline-flex items-center gap-1.5 font-jaro text-lg text-amber-300">
             <CoinIcon size={15} />
@@ -272,7 +268,7 @@ function ItemPreview({ form, bannerCss, badgeImageUrl }: { form: Partial<ItemInp
 }
 
 const EMPTY: ItemInput = {
-  name: "", description: "", price: 0,
+  name: "", price: 0,
   type: "title", value: null, icon: "sparkles", raridade: "COMUM", imageUrl: null, available: true, bannerId: null, frameId: null, badgeId: null, animated: false,
   fragmentavel: false, fragmentosTotal: null,
 };
@@ -301,7 +297,6 @@ function ItemModal({
     : item
       ? {
           name: item.name,
-          description: item.description,
           price: item.price,
           type: item.type,
           value: item.value,
@@ -400,15 +395,6 @@ function ItemModal({
                     ))}
                   </AdminSelect>
                 </Field>
-                <Field label="Descrição (para a loja)">
-                  <AdminTextarea
-                    rows={2}
-                    value={form.description}
-                    onChange={(e) => set("description", e.target.value)}
-                    placeholder="Descrição do banner na vitrine da loja"
-                    required
-                  />
-                </Field>
                 <div className="grid grid-cols-2 gap-3">
                   {!form.fragmentavel && (
                   <Field label="Preço (coins)">
@@ -439,15 +425,6 @@ function ItemModal({
                     ))}
                   </AdminSelect>
                 </Field>
-                <Field label="Descrição (para a loja)">
-                  <AdminTextarea
-                    rows={2}
-                    value={form.description}
-                    onChange={(e) => set("description", e.target.value)}
-                    placeholder="Descrição da moldura na vitrine da loja"
-                    required
-                  />
-                </Field>
                 <div className="grid grid-cols-2 gap-3">
                   {!form.fragmentavel && (
                   <Field label="Preço (coins)">
@@ -466,9 +443,6 @@ function ItemModal({
               <>
                 <Field label="Nome">
                   <AdminInput value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="ex: Lendário" required />
-                </Field>
-                <Field label="Descrição">
-                  <AdminTextarea rows={2} value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Descrição curta" required />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   {!form.fragmentavel && (

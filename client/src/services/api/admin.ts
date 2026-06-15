@@ -5,7 +5,6 @@ export type ShopItemType = "title" | "badge" | "banner" | "frame";
 export interface AdminShopItem {
   id: number;
   name: string;
-  description: string;
   price: number;
   type: ShopItemType;
   value: string | null;
