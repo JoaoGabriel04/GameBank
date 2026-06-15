@@ -10,9 +10,8 @@
  * busca por nome, modal de criação redesenhado.
  */
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { useEffect, useRef, useState } from "react";
+import { animateStaggerIn } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import {
   Plus, Search, Lock, Users, ChevronRight, Eye, LogIn,
@@ -300,6 +299,7 @@ export default function SessionsPage() {
   const [filter, setFilter]   = useState("Todas");
   const [q, setQ]             = useState("");
   const [joining, setJoining] = useState<GameSession | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   /* Redirect if in active session */
   useEffect(() => {
@@ -315,6 +315,12 @@ export default function SessionsPage() {
   }, [user, router]);
 
   const all = sessions ?? [];
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [isLoading, filter, q]);
 
   const counts = {
     Todas:      all.length,
@@ -391,18 +397,13 @@ export default function SessionsPage() {
           </UBtn>
         </div>
       ) : (
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
+        <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {list.map((s) => (
-            <motion.div key={s.id} variants={staggerItem}>
+            <div key={s.id} className="stagger-item opacity-0">
               <SessionCard session={s} onJoin={setJoining} />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
       <JoinModal

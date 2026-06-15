@@ -1,15 +1,15 @@
 'use client'
 
-import { useId, useMemo } from "react"
-import { motion } from "framer-motion"
+import { useId, useMemo, useRef, useEffect } from "react"
+import gsap from "gsap"
 import { legendaryTitleStyle } from "@/lib/animations"
 
 const PARTICLE_COUNT = 12
 
 export default function LegendaryTitle({ text }: { text: string }) {
   const uid = useId()
+  const containerRef = useRef<HTMLSpanElement>(null)
 
-  // Posições estáveis — rand() no style={} executa a cada render e reposiciona as partículas
   const particles = useMemo(() =>
     Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
       key: `${uid}-${i}`,
@@ -25,13 +25,34 @@ export default function LegendaryTitle({ text }: { text: string }) {
     []
   )
 
+  useEffect(() => {
+    if (!containerRef.current) return
+    const els = containerRef.current.querySelectorAll<HTMLElement>(".particle")
+    const tweens = Array.from(els).map((el, i) => {
+      const p = particles[i]
+      return gsap.fromTo(
+        el,
+        { opacity: 0, scale: 0, x: 0, y: 0 },
+        {
+          keyframes: [
+            { opacity: 0, scale: 0, x: 0, y: 0, duration: 0 },
+            { opacity: 1, scale: 1.2, x: p.travelX * 0.5, y: p.travelY * 0.5, duration: p.duration * 0.35 },
+            { opacity: 1, scale: 1, x: p.travelX, y: p.travelY, duration: p.duration * 0.3 },
+            { opacity: 0, scale: 0, x: p.travelX, y: p.travelY, duration: p.duration * 0.35 },
+          ],
+          repeat: -1,
+          delay: p.delay,
+          ease: "none",
+        }
+      )
+    })
+    return () => { tweens.forEach((t) => t.kill()) }
+  }, [particles])
+
   return (
     <span
-      style={{
-        position: "relative",
-        display: "inline-block",
-        overflow: "hidden",
-      }}
+      ref={containerRef}
+      style={{ position: "relative", display: "inline-block", overflow: "hidden" }}
     >
       <span
         className="font-inconsolata text-xs px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10"
@@ -40,8 +61,9 @@ export default function LegendaryTitle({ text }: { text: string }) {
         {text}
       </span>
       {particles.map((p) => (
-        <motion.span
+        <span
           key={p.key}
+          className="particle"
           style={{
             position: "absolute",
             width: p.size,
@@ -52,18 +74,7 @@ export default function LegendaryTitle({ text }: { text: string }) {
             pointerEvents: "none",
             left: `${p.left}%`,
             top: `${p.top}%`,
-          }}
-          animate={{
-            opacity: [0, 1, 1, 0],
-            scale: [0, 1.2, 1, 0],
-            y: [0, p.travelY],
-            x: [0, p.travelX],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: "easeInOut",
+            opacity: 0,
           }}
         />
       ))}

@@ -12,9 +12,8 @@
  *    Quando criado, substitua o TODO abaixo por: await claimMissionApi(m.id)
  */
 
-import { useEffect, useState, useCallback } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { animateStaggerIn } from "@/lib/animations";
 import {
   Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
 } from "lucide-react";
@@ -124,6 +123,15 @@ function MissionCard({
           : "border-zinc-800 bg-zinc-900"
       }`}
     >
+      {/* Overlay de resgatada */}
+      {isClaimed && (
+        <div className="absolute inset-0 bg-zinc-950/40 flex items-center justify-center z-10">
+          <span className="font-jaro text-2xl text-zinc-500/50 -rotate-12 select-none">
+            RESGATADA
+          </span>
+        </div>
+      )}
+
       {/* Top glow stripe for completed */}
       {isDone && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500/0 via-green-400 to-green-500/0" />
@@ -198,6 +206,35 @@ function MissionCard({
   );
 }
 
+/* -- Mission list (animada via GSAP) -- */
+function MissionList({
+  list,
+  onClaim,
+  claimingIds,
+}: {
+  list: UserMission[];
+  onClaim: (id: number) => void;
+  claimingIds: Set<number>;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [list]);
+
+  return (
+    <div ref={containerRef} className="space-y-3">
+      {list.map((m) => (
+        <div key={m.id} className="stagger-item opacity-0">
+          <MissionCard m={m} onClaim={onClaim} claiming={claimingIds} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* -- Main page -- */
 export default function RecompensasPage() {
   const { missions, loading, loadMissions, claimMission, claimAllMissions } = useProfileStore();
@@ -240,9 +277,18 @@ export default function RecompensasPage() {
     }
   }
 
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const listRef    = useRef<HTMLDivElement>(null);
+
   const available    = missions.filter((m) => m.completed && !m.claimed).length;
   const inProgress   = missions.filter((m) => !m.completed).length;
   const claimedCount = missions.filter((m) => m.claimed).length;
+
+  useEffect(() => {
+    if (!summaryRef.current) return;
+    const items = summaryRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [missions.length]);
 
   const list = missions
     .filter((m) => {
@@ -265,39 +311,32 @@ export default function RecompensasPage() {
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">
 
       {/* Summary cards */}
-      <motion.div
-        className="grid grid-cols-3 gap-3"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+      <div ref={summaryRef} className="grid grid-cols-3 gap-3">
         {[
           { label: "Para resgatar", val: available,    tone: "text-green-400", bg: "bg-green-500/10 border-green-500/20" },
           { label: "Em andamento",  val: inProgress,   tone: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
           { label: "Resgatadas",    val: claimedCount, tone: "text-zinc-400",  bg: "bg-zinc-800 border-zinc-700"         },
         ].map((s) => (
-          <motion.div key={s.label} variants={staggerItem} className={`border rounded-2xl p-3 text-center ${s.bg}`}>
+          <div key={s.label} className={`stagger-item opacity-0 border rounded-2xl p-3 text-center ${s.bg}`}>
             <p className={`font-jaro text-2xl leading-none ${s.tone}`}>{s.val}</p>
             <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{s.label}</p>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
 
       {available > 0 && (
-        <motion.div variants={staggerItem} initial="hidden" animate="visible">
-          <button
-            onClick={handleClaimAll}
-            disabled={claimingAll}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-green-500/30 bg-green-500/5 font-jaro text-sm text-green-400 hover:bg-green-500/10 hover:border-green-500/50 transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {claimingAll ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles size={16} />
-            )}
-            {claimingAll ? "Resgatando…" : `Resgatar todas (${available})`}
-          </button>
-        </motion.div>
+        <button
+          onClick={handleClaimAll}
+          disabled={claimingAll}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-green-500/30 bg-green-500/5 font-jaro text-sm text-green-400 hover:bg-green-500/10 hover:border-green-500/50 transition-all disabled:opacity-50 cursor-pointer"
+        >
+          {claimingAll ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Sparkles size={16} />
+          )}
+          {claimingAll ? "Resgatando…" : `Resgatar todas (${available})`}
+        </button>
       )}
 
       {/* Tipo filter */}
@@ -324,18 +363,7 @@ export default function RecompensasPage() {
           Nenhuma missão nesta categoria.
         </p>
       ) : (
-        <motion.div
-          className="space-y-3"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
-          {list.map((m) => (
-            <motion.div key={m.id} variants={staggerItem}>
-              <MissionCard m={m} onClaim={handleClaim} claiming={claimingIds} />
-            </motion.div>
-          ))}
-        </motion.div>
+        <MissionList list={list} onClaim={handleClaim} claimingIds={claimingIds} />
       )}
     </div>
   );

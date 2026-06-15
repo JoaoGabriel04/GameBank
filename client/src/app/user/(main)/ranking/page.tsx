@@ -11,10 +11,9 @@
  * Pódio visual para top 3 + tabela clicável com modal de player.
  */
 
-import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState, useMemo } from "react";
 import UserName from "@/components/UserName";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { animateStaggerIn } from "@/lib/animations";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X, Star } from "lucide-react";
 import RankBadge from "@/components/RankBadge";
 import TrophyCount from "@/components/TrophyCount";
@@ -183,6 +182,7 @@ function Podium({
 }) {
   const { user } = useAuthStore();
   const meta = METRIC_META[metric];
+  const containerRef = useRef<HTMLDivElement>(null);
   // Display order: 2nd, 1st, 3rd
   const ordered = [top3[1], top3[0], top3[2]];
   const heights = ["h-24", "h-32", "h-20"];
@@ -193,23 +193,23 @@ function Podium({
     "bg-gradient-to-b from-amber-700/10 to-amber-700/0 border border-amber-700/30",
   ];
 
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [metric]);
+
   return (
-    <motion.div
-      className="flex items-end justify-center gap-4 py-6"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <div ref={containerRef} className="flex items-end justify-center gap-4 py-6">
       {ordered.map((p, i) => {
-        if (!p) return <motion.div key={`podium-empty-${i}`} variants={staggerItem} className="w-28" />;
+        if (!p) return <div key={`podium-empty-${i}`} className="stagger-item opacity-0 w-28" />;
         const isMe = user?.id === p.id;
         const value = meta.getValue(p);
         return (
-          <motion.div
+          <div
             key={`podium-${p.id}-${metric}`}
-            variants={staggerItem}
             onClick={() => onSelect(p)}
-            className={`flex flex-col items-center gap-2 ${scales[i]} cursor-pointer group`}
+            className={`stagger-item opacity-0 flex flex-col items-center gap-2 ${scales[i]} cursor-pointer group`}
           >
             <div className="relative">
               <UserAvatar
@@ -250,10 +250,10 @@ function Podium({
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         );
       })}
-    </motion.div>
+    </div>
   );
 }
 
@@ -264,6 +264,7 @@ export default function RankingPage() {
   const [loading, setLoading]   = useState(true);
   const [metric, setMetric]     = useState<Metric>("trofeus");
   const [selected, setSelected] = useState<RankingUser | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadRanking = async () => {
@@ -295,6 +296,12 @@ export default function RankingPage() {
   const top3  = sorted.slice(0, 3);
   const myPos = sorted.find((p) => p.id === user?.id);
   const meta  = METRIC_META[metric];
+
+  useEffect(() => {
+    if (!tableRef.current) return;
+    const items = tableRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [metric, loading]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pt-16 lg:pt-6">
@@ -353,20 +360,15 @@ export default function RankingPage() {
               <Chip tone="zinc">{sorted.length} jogadores</Chip>
             </div>
 
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-            >
+            <div ref={tableRef}>
               {sorted.map((p, i) => {
                 const isMe  = p.id === user?.id;
                 const value = meta.format(meta.getValue(p));
                 return (
-                  <motion.div
+                  <div
                     key={`rank-${metric}-${p.id}`}
-                    variants={staggerItem}
                     onClick={() => setSelected(p)}
-                    className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 cursor-pointer transition-colors ${
+                    className={`stagger-item opacity-0 flex items-center gap-3 px-4 py-3 border-b border-zinc-800/60 last:border-0 cursor-pointer transition-colors ${
                       isMe ? "bg-green-500/5 hover:bg-green-500/10" : "hover:bg-zinc-800/50"
                     }`}
                   >
@@ -418,10 +420,10 @@ frameScale={p.frameScale ?? 145}
                   </div>
 
                   <ChevronRight size={14} className="text-zinc-700 shrink-0" />
-                </motion.div>
+                </div>
               );
             })}
-            </motion.div>
+            </div>
           </div>
         </>
       )}

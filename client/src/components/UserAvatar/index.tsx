@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef, useEffect } from "react";
+import { animateGradientLoop } from "@/lib/animations";
 import { resolvePreset } from "@/constants/avatars";
 
 type UserAvatarProps = {
@@ -54,6 +55,13 @@ export default function UserAvatar({
   const dim = sizeMap[size];
   const insetValue = FRAME_INSET[size] ?? 4;
   const hasFrame = !!(frame && frameType);
+  const frameRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!frameRef.current || !frameAnimated) return;
+    const tween = animateGradientLoop(frameRef.current, 2);
+    return () => { tween.kill(); };
+  }, [frameAnimated]);
   const resolvedFrameType = frameType ||
     (frame?.startsWith("https://") ? "image" : frame ? "gradient" : null);
   const ringClass = ring && !frame ? "ring-2 ring-green-500/60 ring-offset-2 ring-offset-zinc-950" : "";
@@ -115,7 +123,8 @@ export default function UserAvatar({
       }}
     >
       {resolvedFrameType === "gradient" && (
-        <motion.div
+        <div
+          ref={frameAnimated ? frameRef : undefined}
           className="absolute"
           style={{
             inset: -insetValue,
@@ -129,16 +138,6 @@ export default function UserAvatar({
             maskComposite: "exclude",
             zIndex: 2,
           }}
-          animate={
-            frameAnimated
-              ? { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
-              : undefined
-          }
-          transition={
-            frameAnimated
-              ? { duration: 4, repeat: Infinity, ease: "easeInOut" }
-              : undefined
-          }
         />
       )}
 

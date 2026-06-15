@@ -1,5 +1,38 @@
 import type { CSSProperties } from "react";
 import type { Variants } from "framer-motion";
+import { gsap } from "gsap";
+
+// ── GSAP utilities ────────────────────────────────────────────────────────────
+
+export function animateStaggerIn(
+  els: NodeListOf<Element> | Element[],
+  delay = 0
+) {
+  gsap.killTweensOf(els);
+  return gsap.fromTo(
+    els,
+    { opacity: 0, y: 12 },
+    { opacity: 1, y: 0, duration: 0.3, ease: "power2.out", stagger: 0.04, delay }
+  );
+}
+
+export function animateGradientLoop(el: Element, duration = 3) {
+  return gsap.fromTo(
+    el,
+    { backgroundPosition: "0% 50%" },
+    { backgroundPosition: "100% 50%", duration, ease: "none", repeat: -1, yoyo: true }
+  );
+}
+
+export function animateProgressBar(el: Element, pct: number, delay = 0.2) {
+  return gsap.fromTo(
+    el,
+    { width: "0%" },
+    { width: `${pct}%`, duration: 0.8, ease: "power2.out", delay }
+  );
+}
+
+// ── Framer Motion variants (mantidos para AnimatePresence) ────────────────────
 
 export const shimmerTitleStyle: CSSProperties = {
   background: "linear-gradient(90deg, #a78bfa 0%, #ffffff 25%, #fbbf24 50%, #ffffff 75%, #a78bfa 100%)",

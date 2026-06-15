@@ -2,9 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/animations";
+import { backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle, animateStaggerIn } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -119,11 +119,10 @@ function CardShell({
   footerClassName?: string;
 }) {
   return (
-    <motion.div variants={staggerItem}>
-      <button
-        type="button"
-        onClick={() => !purchased && onClick()}
-        className={`flex flex-col overflow-hidden w-full outline-none transition-all hover:-translate-y-0.5 ${purchased ? "cursor-default" : "cursor-pointer"}`}
+    <button
+      type="button"
+      onClick={() => !purchased && onClick()}
+      className={`stagger-item opacity-0 flex flex-col overflow-hidden w-full outline-none transition-all hover:-translate-y-0.5 ${purchased ? "cursor-default" : "cursor-pointer"}`}
         style={{
           borderRadius: 14,
           border: `1px solid ${purchased ? "#22c55e40" : `${glow}30`}`,
@@ -157,7 +156,6 @@ function CardShell({
           {footerContent}
         </div>
       </button>
-    </motion.div>
   );
 }
 
@@ -302,17 +300,16 @@ function CoinPackCard({
   const imgSrc = COIN_IMGS[pack.id];
   const coinLabel = pack.coins.toLocaleString("pt-BR");
   return (
-    <motion.div variants={staggerItem}>
-      <button
-        type="button"
-        onClick={() => onBuy(pack)}
-        className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
-        style={{
-          borderRadius: 14,
-          border: "1px solid rgba(251,191,36,0.25)",
-          boxShadow: "0 0 16px -8px rgba(251,191,36,0.35)",
-        }}
-      >
+    <button
+      type="button"
+      onClick={() => onBuy(pack)}
+      className="stagger-item opacity-0 flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5"
+      style={{
+        borderRadius: 14,
+        border: "1px solid rgba(251,191,36,0.25)",
+        boxShadow: "0 0 16px -8px rgba(251,191,36,0.35)",
+      }}
+    >
         <div
           className="relative overflow-hidden flex items-center justify-center"
           style={{ height: 96, background: "radial-gradient(ellipse at 50% 60%, rgba(251,191,36,0.2) 0%, #0d0d10 70%)" }}
@@ -333,7 +330,6 @@ function CoinPackCard({
           </span>
         </div>
       </button>
-    </motion.div>
   );
 }
 
@@ -356,11 +352,10 @@ function DiamondPackCard({
 }) {
   const imgSrc = DIAMOND_IMGS[pack.id];
   return (
-    <motion.div variants={staggerItem}>
-      <button
-        type="button"
-        onClick={() => onBuy(pack)}
-        className="flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 relative"
+    <button
+      type="button"
+      onClick={() => onBuy(pack)}
+      className="stagger-item opacity-0 flex flex-col overflow-hidden w-full cursor-pointer outline-none transition-all hover:-translate-y-0.5 relative"
         style={{
           borderRadius: 14,
           border: pack.highlight
@@ -409,7 +404,6 @@ function DiamondPackCard({
           </span>
         </div>
       </button>
-    </motion.div>
   );
 }
 
@@ -584,16 +578,20 @@ function DetailSheet({
 
 /* --- 3-column animated grid ---------------------------------------------- */
 function Grid3({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const items = ref.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, []);
   return (
-    <motion.div
+    <div
+      ref={ref}
       className="grid gap-2.5"
       style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -781,8 +779,8 @@ function DailyOfferSheet({
                 <div className="relative w-full h-3 rounded-full bg-zinc-800 overflow-hidden">
                   {/* Fragmentos atuais */}
                   <div
-                    className="absolute left-0 top-0 h-full rounded-l-full bg-zinc-500 transition-all"
-                    style={{ width: `${pctAtual}%` }}
+                    className="absolute left-0 top-0 h-full rounded-full bg-zinc-500 transition-all z-10"
+                    style={{ width: `${pctAtual + 1}%` }}
                   />
                   {/* Fragmentos ganhos */}
                   {pctGanho > 0 && (

@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { backdrop, modalBox } from "@/lib/animations"
 import { BAU_CONFIG, type TipoBau } from "@/constants/baus"
@@ -39,7 +40,18 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
 
   const cor = BAU_CORES[bau.tipo] ?? "#22c55e"
 
-  return (
+  const GARANTIAS: Record<string, { raridade: string; label: string }[]> = {
+    premium:  [{ raridade: "EPICO", label: "1 Épico garantido" }],
+    lendario: [
+      { raridade: "EPICO",   label: "1 Épico garantido" },
+      { raridade: "LENDARIO", label: "1 Lendário garantido" },
+    ],
+  }
+  const garantias = GARANTIAS[bau.tipo]
+
+  if (typeof window === "undefined") return null
+
+  return createPortal(
     <AnimatePresence>
       {bau && (
         <motion.div
@@ -134,6 +146,40 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
               ))}
             </div>
 
+            {/* Garantias */}
+            {garantias && (
+              <div
+                style={{
+                  background: "#09090b",
+                  border: "1px solid #27272a",
+                  borderRadius: 12,
+                  padding: "12px 16px",
+                  marginBottom: 12,
+                }}
+              >
+                <p className="font-inconsolata text-[10px] text-zinc-600 uppercase tracking-wider mb-2">
+                  Garantias
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {garantias.map(g => (
+                    <span key={g.raridade}
+                      style={{
+                        background: `${RARIDADES[g.raridade]?.cor}18`,
+                        border: `1px solid ${RARIDADES[g.raridade]?.cor}44`,
+                        color: RARIDADES[g.raridade]?.cor,
+                        borderRadius: 20,
+                        padding: "3px 12px",
+                        fontSize: 12,
+                      }}
+                      className="font-inconsolata font-semibold"
+                    >
+                      {g.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Probabilidades */}
             <div
               style={{
@@ -183,6 +229,7 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

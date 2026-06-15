@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Lock, ChevronRight } from "lucide-react";
+import { animateProgressBar } from "@/lib/animations";
 import { TROPHY_TIERS, getTierInfo, getTrophyAssetName, getTrophyLabel, type TrophyRank } from "@/utils/trophies";
 
 interface Props {
@@ -28,6 +30,7 @@ const tiersByRank = RANK_ORDER.map((rank) => ({
 
 export default function RankProgressModal({ trophies, isOpen, onClose }: Props) {
   const current = getTierInfo(trophies);
+  const barRef = useRef<HTMLDivElement>(null);
   const currentIdx = TROPHY_TIERS.findIndex((t) => t.rank === current.rank && t.tier === current.tier);
   const nextTier = currentIdx < TROPHY_TIERS.length - 1 ? TROPHY_TIERS[currentIdx + 1] : null;
 
@@ -36,6 +39,11 @@ export default function RankProgressModal({ trophies, isOpen, onClose }: Props) 
     : 100;
 
   const trophiesToNext = nextTier ? nextTier.min - trophies : 0;
+
+  useEffect(() => {
+    if (!isOpen || !barRef.current) return;
+    animateProgressBar(barRef.current, withinProgress);
+  }, [isOpen, withinProgress]);
 
   return (
     <AnimatePresence>
@@ -122,7 +130,8 @@ export default function RankProgressModal({ trophies, isOpen, onClose }: Props) 
                     <span>{current.max !== null ? `${Math.round(withinProgress)}%` : "MAX"}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
-                    <motion.div
+                    <div
+                      ref={barRef}
                       className={`h-full rounded-full ${
                         current.rank === "BRONZE"   ? "bg-amber-600" :
                         current.rank === "PRATA"    ? "bg-zinc-400" :
@@ -131,9 +140,6 @@ export default function RankProgressModal({ trophies, isOpen, onClose }: Props) 
                         current.rank === "DIAMANTE" ? "bg-violet-400" :
                         "bg-red-400"
                       }`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${withinProgress}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
                     />
                   </div>
                 </div>

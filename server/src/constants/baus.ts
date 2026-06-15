@@ -20,14 +20,6 @@ export interface BauConfigEntry {
   probabilidadesRaridade: ProbabilidadeRaridade[]
 }
 
-export const FRAGMENTOS_PESO: Record<Raridade, number> = {
-  COMUM:    40,
-  INCOMUM:  30,
-  RARO:     20,
-  EPICO:     7,
-  LENDARIO:  3,
-}
-
 export const XP_BONUS: Record<string, { min: number; max: number }> = {
   comum:    { min: 500,  max: 1000 },
   premium:  { min: 1500, max: 3000 },
@@ -98,6 +90,30 @@ export const BAU_CONFIG: Record<string, BauConfigEntry> = {
 }
 
 export type TipoBau = keyof typeof BAU_CONFIG
+
+export const FRAGMENTOS_PESO: Record<TipoBau, Record<Raridade, number>> = {
+  comum: {
+    COMUM:    40,
+    INCOMUM:  30,
+    RARO:     20,
+    EPICO:     7,
+    LENDARIO:  3,
+  },
+  premium: {
+    COMUM:    80,
+    INCOMUM:  60,
+    RARO:     40,
+    EPICO:    14,
+    LENDARIO:  6,
+  },
+  lendario: {
+    COMUM:    160,
+    INCOMUM:  120,
+    RARO:      80,
+    EPICO:     42,
+    LENDARIO:  18,
+  },
+}
 
 export const BAU_TEMPO_ESCOLTA: Record<string, number> = {
   comum:    10,

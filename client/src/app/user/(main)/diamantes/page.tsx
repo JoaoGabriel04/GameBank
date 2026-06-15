@@ -1,9 +1,9 @@
 /* eslint-disable */
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { staggerContainer, staggerItem, backdrop, modalBox } from "@/lib/animations"
+import { backdrop, modalBox, animateStaggerIn } from "@/lib/animations"
 import { Loader2, ShoppingCart, CheckCircle, History, X } from "lucide-react"
 import { useAuthStore } from "@/stores/authStore"
 import { useToast } from "@/components/Toast"
@@ -34,6 +34,12 @@ export default function DiamantesPag() {
   const [confirmPkg, setConfirmPkg] = useState<DiamondPackage | null>(null)
   const [checkingOut, setCheckingOut] = useState(false)
   const [tab, setTab] = useState<"buy" | "history">("buy")
+  const packagesRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!packagesRef.current || !packages.length) return
+    animateStaggerIn(packagesRef.current.querySelectorAll<HTMLElement>(".stagger-item"))
+  }, [packages])
 
   useEffect(() => {
     getDiamondPackagesApi()
@@ -130,20 +136,17 @@ export default function DiamantesPag() {
                 Nenhum pacote disponível no momento.
               </div>
             ) : (
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
+              <div
+                ref={packagesRef}
                 className="grid grid-cols-1 sm:grid-cols-2 gap-4"
               >
                 {packages.map((pkg) => {
                   const total = Math.floor(pkg.diamonds * (1 + pkg.bonusPct / 100))
                   const isLoading = buying === pkg.id
                   return (
-                    <motion.div
+                    <div
                       key={pkg.id}
-                      variants={staggerItem}
-                      className="relative bg-zinc-900 border border-zinc-700 rounded-2xl p-5 flex flex-col gap-3 hover:border-cyan-600 transition-colors"
+                      className="stagger-item opacity-0 relative bg-zinc-900 border border-zinc-700 rounded-2xl p-5 flex flex-col gap-3 hover:border-cyan-600 transition-colors"
                     >
                       {pkg.bonusPct > 0 && (
                         <span className="absolute top-3 right-3 bg-cyan-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
@@ -182,10 +185,10 @@ export default function DiamantesPag() {
                           </>
                         )}
                       </button>
-                    </motion.div>
+                    </div>
                   )
                 })}
-              </motion.div>
+              </div>
             )}
             <p className="text-center text-xs text-zinc-600 mt-6">
               Pagamento processado com segurança via Mercado Pago. Pix e cartão aceitos.

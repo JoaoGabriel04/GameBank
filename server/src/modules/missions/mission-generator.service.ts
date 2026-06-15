@@ -69,7 +69,6 @@ export async function gerarMissoesParaUsuario(userId: number) {
   const existingWeekly = await prisma.userMission.findMany({
     where: {
       userId,
-      claimed: false,
       mission: { tipo: "weekly" },
       expiresAt: { gt: now },
     },

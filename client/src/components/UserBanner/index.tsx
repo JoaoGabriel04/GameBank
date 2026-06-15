@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef, useEffect } from "react";
+import { animateGradientLoop } from "@/lib/animations";
 import { resolveBannerBackground } from "@/constants/banners";
 
 type UserBannerProps = {
@@ -15,6 +16,13 @@ export default function UserBanner({ banner, imageUrl, animated = false, classNa
   const value = imageUrl ?? banner ?? null;
   const bg = resolveBannerBackground(value);
   const isGradient = !imageUrl && !value?.startsWith("http");
+  const animRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!animRef.current) return;
+    const tween = animateGradientLoop(animRef.current, 3);
+    return () => { tween.kill(); };
+  }, []);
 
   const callerPositions = /\b(absolute|fixed|sticky)\b/.test(className);
   const wrapperClass = `${callerPositions ? "" : "relative"} overflow-hidden ${className}`.trim();
@@ -23,11 +31,10 @@ export default function UserBanner({ banner, imageUrl, animated = false, classNa
     const gradientValue = (bg.style.background ?? bg.style.backgroundImage) as string;
     return (
       <div className={wrapperClass} style={style}>
-        <motion.div
+        <div
+          ref={animRef}
           className="absolute inset-0"
-          style={{ backgroundImage: gradientValue, backgroundSize: "300% 300%" }}
-          animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          style={{ backgroundImage: gradientValue, backgroundSize: "300% 300%", backgroundPosition: "0% 50%" }}
         />
       </div>
     );

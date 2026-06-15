@@ -1,9 +1,8 @@
 /* eslint-disable */
 'use client';
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import { useEffect, useRef, useState } from "react";
+import { animateStaggerIn } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
 import RankBadge from "@/components/RankBadge";
 import TrophyCount from "@/components/TrophyCount";
@@ -129,27 +128,70 @@ function StatsRow({
   totalTop3: number;
 }) {
   const winRate = totalGames > 0 ? Math.round((totalWins / totalGames) * 100) : 0;
+  const containerRef = useRef<HTMLDivElement>(null);
   const stats = [
     { Icon: Gamepad2,  value: totalGames,       label: "Partidas",  color: "text-violet-400" },
     { Icon: Crown,     value: totalWins,         label: "Vitórias",  color: "text-yellow-400" },
     { Icon: Trophy,    value: totalTop3,          label: "Top 3",     color: "text-amber-400"  },
     { Icon: TrendingUp,value: `${winRate}%`,     label: "Win Rate",  color: "text-green-400"  },
   ];
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, []);
+
   return (
-    <motion.div
-      className="grid grid-cols-4 gap-3"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <div ref={containerRef} className="grid grid-cols-4 gap-3">
       {stats.map(({ Icon, value, label, color }) => (
-        <motion.div key={label} variants={staggerItem} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+        <div key={label} className="stagger-item opacity-0 bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
           <Icon size={16} className={`mx-auto mb-1 ${color}`} />
           <p className="font-jaro text-xl text-white leading-none">{value}</p>
           <p className="font-inconsolata text-[10px] text-zinc-500 mt-1">{label}</p>
-        </motion.div>
+        </div>
       ))}
-    </motion.div>
+    </div>
+  );
+}
+
+/* --- Match history list (animada via GSAP) -------------------------------- */
+function HistoryList({ history, POS_COLOR }: { history: GameResult[]; POS_COLOR: Record<number, string> }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [history]);
+
+  return (
+    <div ref={containerRef} className="divide-y divide-zinc-800/60">
+      {history.map((r) => (
+        <div key={r.id} className="stagger-item opacity-0 flex items-center gap-3 px-4 py-3">
+          <span className={`font-jaro text-xl w-7 text-center shrink-0 ${POS_COLOR[r.position] ?? "text-zinc-500"}`}>
+            #{r.position}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-inconsolata text-sm text-zinc-100 truncate">
+              R$ {(r.patrimony ?? 0).toLocaleString("pt-BR")}
+            </p>
+            <p className="font-inconsolata text-[10px] text-zinc-500">
+              {new Date(r.createdAt).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+          <div className="text-right shrink-0 space-y-0.5">
+            <p className="font-inconsolata text-xs text-green-400">+{r.xpEarned} XP</p>
+            <p className="font-inconsolata text-[10px] text-amber-400">+{r.coinsEarned} coins</p>
+            {r.trophyDelta !== undefined && (
+              <p className={`font-inconsolata text-[10px] ${(r.trophyDelta ?? 0) >= 0 ? "text-cyan-400" : "text-rose-400"}`}>
+                {(r.trophyDelta ?? 0) >= 0 ? "+" : ""}{r.trophyDelta} 🏆
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -195,41 +237,7 @@ function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: (
           Nenhuma partida disputada ainda.
         </p>
       ) : (
-        <motion.div
-          className="divide-y divide-zinc-800/60"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
-          {history.map(r => (
-            <motion.div key={r.id} variants={staggerItem} className="flex items-center gap-3 px-4 py-3">
-              <span
-                className={`font-jaro text-xl w-7 text-center shrink-0 ${
-                  POS_COLOR[r.position] ?? "text-zinc-500"
-                }`}
-              >
-                #{r.position}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="font-inconsolata text-sm text-zinc-100 truncate">
-                  R$ {(r.patrimony ?? 0).toLocaleString("pt-BR")}
-                </p>
-                <p className="font-inconsolata text-[10px] text-zinc-500">
-                  {new Date(r.createdAt).toLocaleDateString("pt-BR")}
-                </p>
-              </div>
-              <div className="text-right shrink-0 space-y-0.5">
-                <p className="font-inconsolata text-xs text-green-400">+{r.xpEarned} XP</p>
-                <p className="font-inconsolata text-[10px] text-amber-400">+{r.coinsEarned} coins</p>
-                {r.trophyDelta !== undefined && (
-                  <p className={`font-inconsolata text-[10px] ${(r.trophyDelta ?? 0) >= 0 ? "text-cyan-400" : "text-rose-400"}`}>
-                    {(r.trophyDelta ?? 0) >= 0 ? "+" : ""}{r.trophyDelta} 🏆
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+        <HistoryList history={history} POS_COLOR={POS_COLOR} />
       )}
     </Panel>
   );

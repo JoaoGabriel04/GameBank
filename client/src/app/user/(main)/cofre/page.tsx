@@ -2,9 +2,9 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/animations";
+import { backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle, animateStaggerIn } from "@/lib/animations";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X, Coins } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -669,6 +669,12 @@ export default function CofrePage() {
     const unowned = unownedList;
     const hasOwned = owned.length > 0;
     const hasUnowned = unowned.length > 0;
+    const ownedRef   = useRef<HTMLDivElement>(null);
+    const unownedRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      if (ownedRef.current) animateStaggerIn(ownedRef.current.querySelectorAll<HTMLElement>(".stagger-item"));
+      if (unownedRef.current) animateStaggerIn(unownedRef.current.querySelectorAll<HTMLElement>(".stagger-item"));
+    }, []);
 
     if (!hasOwned && !hasUnowned) {
       return (
@@ -688,26 +694,24 @@ export default function CofrePage() {
             <p className="font-inconsolata text-[11px] text-zinc-500 uppercase tracking-wider mb-2.5 px-0.5">
               Itens Possuídos
             </p>
-            <motion.div
+            <div
+              ref={ownedRef}
               className="grid gap-2.5"
               style={{
                 gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
                 alignItems: "start",
               }}
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
             >
               {owned.map(item => (
-                <motion.div key={item.id} variants={staggerItem}>
+                <div key={item.id} className="stagger-item opacity-0">
                   <VaultItemCard
                     item={item}
                     isSelected={selected?.id === item.id}
                     onSelect={handleSelect}
                   />
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         )}
 
@@ -716,25 +720,23 @@ export default function CofrePage() {
             <p className="font-inconsolata text-[11px] text-zinc-500 uppercase tracking-wider mb-2.5 px-0.5">
               Itens não Possuídos
             </p>
-            <motion.div
+            <div
+              ref={unownedRef}
               className="grid gap-2.5"
               style={{
                 gridTemplateColumns: "repeat(auto-fill, minmax(118px, 1fr))",
                 alignItems: "start",
               }}
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
             >
               {unowned.map(item => (
-                <motion.div key={item.id} variants={staggerItem}>
+                <div key={item.id} className="stagger-item opacity-0">
                   <UnownedItemCard
                     item={item}
                     onSelect={handleSelectUnowned}
                   />
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
         )}
       </div>

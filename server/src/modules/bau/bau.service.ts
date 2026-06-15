@@ -21,7 +21,8 @@ function randInt(min: number, max: number): number {
 
 function distribuirFragmentos(
   itens: { id: number; raridade: Raridade }[],
-  fragmentosTotal: number
+  fragmentosTotal: number,
+  tipo: TipoBau
 ): Map<number, number> {
   const resultado = new Map<number, number>()
 
@@ -33,9 +34,10 @@ function distribuirFragmentos(
 
   if (restantes === 0) return resultado
 
-  const pesoTotal = itens.reduce((sum, i) => sum + FRAGMENTOS_PESO[i.raridade], 0)
+  const pesos = FRAGMENTOS_PESO[tipo]
+  const pesoTotal = itens.reduce((sum, i) => sum + pesos[i.raridade], 0)
   itens.forEach(item => {
-    const extra = Math.floor((FRAGMENTOS_PESO[item.raridade] / pesoTotal) * restantes)
+    const extra = Math.floor((pesos[item.raridade] / pesoTotal) * restantes)
     resultado.set(item.id, (resultado.get(item.id) ?? 1) + extra)
   })
 
@@ -134,8 +136,8 @@ export class BauService {
       const lendario = await pegarItem("LENDARIO")
       if (lendario) itensSorteados.push(lendario)
     } else if (tipo === "premium") {
-      const raro = await pegarItem("RARO")
-      if (raro) itensSorteados.push(raro)
+      const epic = await pegarItem("EPICO")
+      if (epic) itensSorteados.push(epic)
     }
 
     const restantes = Math.max(0, qtdItens - itensSorteados.length)
@@ -160,7 +162,8 @@ export class BauService {
     const comXp = temFragmentosPendentes ? itensSorteados : []
     const distribuicao = distribuirFragmentos(
       comXp.map(i => ({ id: i.id, raridade: i.raridade })),
-      xpBonus > 0 ? 0 : fragmentosTotal
+      xpBonus > 0 ? 0 : fragmentosTotal,
+      tipo
     )
 
     const itensCompletos: number[] = []

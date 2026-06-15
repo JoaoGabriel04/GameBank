@@ -137,7 +137,9 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   claimMission: async (missionId: number) => {
     const result = await claimMissionApi(missionId)
     set((state) => ({
-      missions: state.missions.filter((m) => m.id !== missionId),
+      missions: state.missions.map((m) =>
+        m.id === missionId ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
+      ),
       profile: state.profile
         ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
         : null,
@@ -148,7 +150,9 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   claimAllMissions: async () => {
     const result = await claimAllMissionsApi()
     set((state) => ({
-      missions: state.missions.filter((m) => !(m.completed && !m.claimed)),
+      missions: state.missions.map((m) =>
+        m.completed && !m.claimed ? { ...m, claimed: true, claimedAt: new Date().toISOString() } : m
+      ),
       profile: state.profile
         ? { ...state.profile, xp: result.newXp, coins: result.newCoins, level: result.newLevel }
         : null,

@@ -161,8 +161,8 @@ UserNav bottom nav has 5 tabs (grid-cols-5): Dashboard, Cofre, Loja, Recompensas
 
 | Library | Usage |
 |---|---|
-| Framer Motion `^12` | New animations — modals, toasts, lists, tabs, page transitions |
-| GSAP `^3` | Legacy — `Modal` and `MobileMenu` only (keep as-is) |
+| Framer Motion `^12` | `AnimatePresence` only — modals, bottom sheets, toasts, dropdowns, page transitions |
+| GSAP `^3` + `@gsap/react` | Staggers, timelines, progress bars, infinite loops, `BauAbertura` phases. Use `useGSAP` from `@gsap/react` or plain `useEffect + useRef + gsap.*` |
 | CSS / Tailwind | `animate-spin`, `hover:scale-*`, `transition-colors` |
 | `tw-animate-css` | `animate-in/out`, `fade-in-0`, `zoom-in-95` (Radix UI patterns) |
 | `canvas-confetti` | Celebration effects |

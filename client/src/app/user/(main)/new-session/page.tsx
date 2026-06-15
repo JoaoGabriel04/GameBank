@@ -1,8 +1,6 @@
 /* eslint-disable */
 "use client";
 
-import { motion } from "framer-motion";
-import { staggerContainer, staggerItem } from "@/lib/animations";
 import Loading from "@/components/Loading";
 import UserAvatar from "@/components/UserAvatar";
 import UserName from "@/components/UserName";
@@ -348,14 +346,9 @@ export default function NewSession() {
                   Crie os times da partida. Os jogadores escolherão seu time ao entrar.
                 </p>
 
-                <motion.div
-                  className="space-y-4 mb-6"
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="visible"
-                >
+                <div className="space-y-4 mb-6">
                   {times.map((team, index) => (
-                    <motion.div key={index} variants={staggerItem} layout className="p-4 border border-zinc-700 rounded-lg bg-zinc-950/50">
+                    <div key={index} className="p-4 border border-zinc-700 rounded-lg bg-zinc-950/50">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold font-jaro text-zinc-100">Time {index + 1}</h3>
                         {times.length > 2 && (
@@ -388,9 +381,9 @@ export default function NewSession() {
                           />
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
-                </motion.div>
+                </div>
 
                 {times.length < 6 && (
                   <button

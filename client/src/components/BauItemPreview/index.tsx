@@ -23,26 +23,90 @@ type BauItemPreviewProps = {
 export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps) {
   const cor = RARIDADES[item.raridade]?.cor ?? "#a1a1aa"
 
+  const ringStyle: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    border: `2px solid ${cor}66`,
+    boxShadow: `0 0 30px ${cor}44, 0 0 60px ${cor}22`,
+    animation: "bau-circle-pulse 2s ease-in-out infinite",
+    "--rarity-color": cor,
+    "--rarity-color-dim": `${cor}44`,
+  } as React.CSSProperties
+
+  // Frame: avatar placeholder + overlay fora do overflow:hidden (igual cofre/loja)
+  if (item.type === "frame") {
+    const src = item.value?.startsWith("http")
+      ? item.value
+      : item.imageUrl?.startsWith("http")
+      ? item.imageUrl
+      : null
+
+    return (
+      <div style={{ ...ringStyle, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* avatar placeholder */}
+        <div style={{
+          width: size * 0.55,
+          height: size * 0.55,
+          borderRadius: "50%",
+          background: "#27272a",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: size * 0.27,
+          color: "#71717a",
+          userSelect: "none",
+        }}>
+          👤
+        </div>
+
+        {/* frame overlay — fora do overflow:hidden, igual cofre */}
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt=""
+            style={{
+              position: "absolute",
+              top: "50%", left: "50%",
+              width: "136%", height: "136%",
+              maxWidth: "none",
+              transform: "translate(-50%, -50%)",
+              objectFit: "contain",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+        ) : item.value ? (
+          <div style={{
+            position: "absolute",
+            inset: -3,
+            borderRadius: "50%",
+            padding: 3,
+            backgroundImage: item.value,
+            WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+            zIndex: 2,
+          }} />
+        ) : null}
+      </div>
+    )
+  }
+
+  // Demais tipos: círculo com overflow:hidden
   return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        position: "relative",
-        border: `2px solid ${cor}66`,
-        boxShadow: `0 0 30px ${cor}44, 0 0 60px ${cor}22`,
-        background: "#09090b",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        animation: "bau-circle-pulse 2s ease-in-out infinite",
-        "--rarity-color": cor,
-        "--rarity-color-dim": `${cor}44`,
-      } as React.CSSProperties}
-    >
+    <div style={{
+      ...ringStyle,
+      background: "#09090b",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      position: "relative",
+    }}>
       {item.type === "badge" && item.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.imageUrl}
           alt={item.name}
@@ -53,68 +117,17 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
       {item.type === "banner" && (
         <div style={{
           position: "absolute", inset: 0,
-          background: item.value?.startsWith("https://")
-            ? `url(${item.value}) center/cover`
-            : item.value ?? "#27272a",
+          backgroundImage: item.value?.startsWith("http")
+            ? `url(${item.value})`
+            : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundColor: item.value?.startsWith("http") ? undefined : (item.value ?? "#27272a"),
         }} />
       )}
 
-      {item.type === "frame" && (
-        <>
-          <div style={{
-            width: size * 0.55,
-            height: size * 0.55,
-            borderRadius: "50%",
-            background: "#27272a",
-          }} />
-          {(() => {
-            const src = item.value?.startsWith("https://")
-              ? item.value
-              : item.imageUrl?.startsWith("https://")
-              ? item.imageUrl
-              : null
-            if (src) {
-              return (
-                <img
-                  src={src}
-                  style={{
-                    position: "absolute",
-                    inset: "-10%",
-                    width: "120%",
-                    height: "120%",
-                    objectFit: "contain",
-                    pointerEvents: "none",
-                    zIndex: 2,
-                  }}
-                />
-              )
-            }
-            if (item.value) {
-              return (
-                <div style={{
-                  position: "absolute", inset: -3,
-                  borderRadius: "50%", padding: 3,
-                  background: item.value,
-                  WebkitMask:
-                    "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-                  WebkitMaskComposite: "xor",
-                  maskComposite: "exclude",
-                  zIndex: 2,
-                }} />
-              )
-            }
-            return null
-          })()}
-        </>
-      )}
-
       {item.type === "title" && (
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 8,
-        }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: size * 0.25 }}>👑</span>
           <span style={{
             fontFamily: "var(--font-jaro)",

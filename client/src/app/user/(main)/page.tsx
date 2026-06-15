@@ -1,9 +1,9 @@
 /* eslint-disable */
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { staggerContainer, staggerItem, slideUp } from "@/lib/animations";
+import { slideUp, animateStaggerIn } from "@/lib/animations";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -169,6 +169,12 @@ function QuickActions({ activeSession }: { activeSession: GameSession | null }) 
 
 /* --- Live sessions ------------------------------------------------------- */
 function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; activeSessionId?: number | null }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [sessions]);
   const router = useRouter();
   const live = sessions.filter(s =>
     s.status === "Em Andamento" || s.status === "Esperando"
@@ -189,18 +195,16 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
           </button>
         }
       />
-      <motion.div
+      <div
+        ref={containerRef}
         className="flex gap-3 overflow-x-auto p-4 pb-3"
         style={{ scrollSnapType: "x mandatory", scrollbarWidth: "none" }}
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
       >
         {live.map(s => {
           const isLive = s.status === "Em Andamento";
           const isBlocked = !!activeSessionId && s.id !== activeSessionId;
           return (
-            <motion.div key={s.id} variants={staggerItem}>
+            <div key={s.id} className="stagger-item opacity-0">
               <button
                 onClick={() => !isBlocked && router.push(isLive ? `/user/game/${s.id}` : "/user/sessions")}
                 disabled={isBlocked}
@@ -236,10 +240,10 @@ function LiveSessions({ sessions, activeSessionId }: { sessions: GameSession[]; 
                   </span>
                 </div>
               </button>
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
     </Panel>
   );
 }
@@ -249,6 +253,12 @@ function MissionsPreview() {
   const { missions } = useProfileStore();
   const router = useRouter();
   const active = missions.filter(m => !m.claimed).slice(0, 3);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [active.length]);
   if (!active.length) return null;
 
   return (
@@ -265,15 +275,10 @@ function MissionsPreview() {
           </button>
         }
       />
-      <motion.div
-        className="divide-y divide-zinc-800/60"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+      <div ref={containerRef} className="divide-y divide-zinc-800/60">
         {active.map(m => {
           return (
-            <motion.div key={m.id} variants={staggerItem} className="px-4 py-3">
+            <div key={m.id} className="stagger-item opacity-0 px-4 py-3">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <Target size={14} className="text-green-400 shrink-0" />
@@ -289,10 +294,10 @@ function MissionsPreview() {
                 </div>
               </div>
               <Progress value={Math.min(m.progress, m.target)} max={m.target} tone="green" height={5} />
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
     </Panel>
   );
 }
@@ -302,19 +307,20 @@ function RecentGames({ history }: { history: GameResult[] }) {
   const POS_COLOR: Record<number, string> = {
     1: "text-yellow-400", 2: "text-zinc-300", 3: "text-amber-600",
   };
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const items = containerRef.current.querySelectorAll<HTMLElement>(".stagger-item");
+    animateStaggerIn(items);
+  }, [history.length]);
   if (!history.length) return null;
 
   return (
     <Panel flush>
       <PanelHead title="Partidas recentes" sub="Suas últimas sessões" />
-      <motion.div
-        className="divide-y divide-zinc-800/60"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+      <div ref={containerRef} className="divide-y divide-zinc-800/60">
         {history.slice(0, 5).map(r => (
-          <motion.div key={r.id} variants={staggerItem} className="flex items-center gap-3 px-4 py-3">
+          <div key={r.id} className="stagger-item opacity-0 flex items-center gap-3 px-4 py-3">
             <span className={`font-jaro text-xl w-7 text-center shrink-0 ${POS_COLOR[r.position] ?? "text-zinc-500"}`}>
               {r.position}º
             </span>
@@ -330,9 +336,9 @@ function RecentGames({ history }: { history: GameResult[] }) {
               <p className="font-inconsolata text-xs text-green-400">+{r.xpEarned} XP</p>
               <p className="font-inconsolata text-[10px] text-amber-400">+{r.coinsEarned} coins</p>
             </div>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </Panel>
   );
 }
