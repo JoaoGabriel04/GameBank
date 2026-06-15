@@ -55,6 +55,7 @@ export interface Player {
   avatarUpdatedAt?: string | null;
   banner?: string | null;
   bannerAnimated?: boolean;
+  bannerRaridade?: string | null;
   badge?: string | null;
   badgeImageUrl?: string | null;
   title?: string | null;
@@ -180,7 +181,7 @@ export const MIN_PLAYERS = 2;
 
 export interface RankedPlayer {
   position: number
-  player: { id: number; nome: string; cor?: string; userId?: number | null; desistiu?: boolean; avatarUrl?: string | null; avatarUpdatedAt?: string | null; banner?: string | null; bannerAnimated?: boolean; badge?: string | null; badgeImageUrl?: string | null; frame?: string | null; frameType?: "image" | "gradient" | null; frameAnimated?: boolean; frameScale?: number }
+  player: { id: number; nome: string; cor?: string; userId?: number | null; desistiu?: boolean; avatarUrl?: string | null; avatarUpdatedAt?: string | null; banner?: string | null; bannerAnimated?: boolean; bannerRaridade?: string | null; badge?: string | null; badgeImageUrl?: string | null; frame?: string | null; frameType?: "image" | "gradient" | null; frameAnimated?: boolean; frameScale?: number }
   patrimony: number
   xpEarned: number
   coinsEarned: number

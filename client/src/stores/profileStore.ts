@@ -14,6 +14,7 @@ interface ProfileData {
   avatarUpdatedAt?: string | null
   banner?: string | null
   bannerAnimated?: boolean
+  bannerRaridade?: string | null
   frame?: string | null
   frameType?: "image" | "gradient" | null
   frameAnimated?: boolean

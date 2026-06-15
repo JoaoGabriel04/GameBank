@@ -46,6 +46,7 @@ function ProfileHero() {
         <UserBanner
           banner={profile.banner ?? user.banner}
           animated={profile.bannerAnimated}
+          rarity={profile.bannerRaridade}
           className="absolute inset-0 w-full h-full"
         />
         <div

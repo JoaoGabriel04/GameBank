@@ -75,6 +75,7 @@ function PlayerModal({ player, onClose }: { player: RankingUser | null; onClose:
         <UserBanner
           banner={player.banner}
           animated={player.bannerAnimated}
+          rarity={player.bannerRaridade}
           className="absolute inset-0 w-full h-full"
         />
         <div

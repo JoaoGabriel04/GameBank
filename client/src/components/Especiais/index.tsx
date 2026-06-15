@@ -222,7 +222,7 @@ export default function Especiais() {
         onClose={() => { setModalNegociar(false); resetCreate(); }}
       >
         <div className="relative overflow-hidden rounded-xl border border-zinc-700 mb-4">
-          <UserBanner banner={currentPlayer?.banner} animated={currentPlayer?.bannerAnimated} className="absolute inset-0 w-full h-full" />
+          <UserBanner banner={currentPlayer?.banner} animated={currentPlayer?.bannerAnimated} rarity={currentPlayer?.bannerRaridade} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
           <div className="relative z-10 flex items-center gap-3 p-3">
             <UserAvatar
@@ -277,7 +277,7 @@ export default function Especiais() {
               const target = jogadores.find((p) => p.id === targetPlayer);
               return target ? (
                 <div className="relative overflow-hidden rounded-xl border border-purple-500/40 mb-2">
-                  <UserBanner banner={target.banner} animated={target.bannerAnimated} className="absolute inset-0 w-full h-full" />
+                  <UserBanner banner={target.banner} animated={target.bannerAnimated} rarity={target.bannerRaridade} className="absolute inset-0 w-full h-full" />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(0deg,rgba(9,9,11,.85) 0%,transparent 60%)" }} />
                   <div className="relative z-10 flex items-center gap-3 p-3">
                     <UserAvatar avatarUrl={target.avatarUrl} avatarUpdatedAt={target.avatarUpdatedAt} nome={target.nome} size="sm" frame={target.frame} frameType={target.frameType} frameAnimated={target.frameAnimated} frameScale={target.frameScale ?? 145} />

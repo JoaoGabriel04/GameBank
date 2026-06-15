@@ -78,7 +78,7 @@ function VaultItemCard({
         style={{ height: 104, background: isBanner ? undefined : topBg }}
       >
         {isBanner && (
-          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
+          <UserBanner banner={item.value} imageUrl={item.imageUrl} rarity={item.raridade} className="absolute inset-0 w-full h-full" />
         )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
@@ -188,6 +188,7 @@ function DetailPanel({
             banner={item.value}
             imageUrl={item.imageUrl}
             animated={item.animated}
+            rarity={item.raridade}
             className="flex-1 rounded-2xl"
             style={{ height: 64 }}
           />
@@ -287,11 +288,6 @@ function DetailPanel({
             </span>
           )}
         </div>
-        {item.description && (
-          <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">
-            {item.description}
-          </p>
-        )}
       </div>
 
       <div className="border-t border-zinc-800" />
@@ -364,7 +360,7 @@ function UnownedItemCard({
         style={{ height: 104, background: isBanner ? undefined : topBg }}
       >
         {isBanner && (
-          <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />
+          <UserBanner banner={item.value} imageUrl={item.imageUrl} rarity={item.raridade} className="absolute inset-0 w-full h-full" />
         )}
         <div
           className="absolute top-0 left-0 right-0 h-0.5"
@@ -450,6 +446,7 @@ function UnownedDetailPanel({
             banner={item.value}
             imageUrl={item.imageUrl}
             animated={item.animated}
+            rarity={item.raridade}
             className="flex-1 rounded-2xl"
             style={{ height: 64, opacity: 0.7 }}
           />
@@ -530,9 +527,6 @@ function UnownedDetailPanel({
             </span>
           )}
         </div>
-        {item.description && (
-          <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
-        )}
       </div>
 
       <div className="border-t border-zinc-800" />

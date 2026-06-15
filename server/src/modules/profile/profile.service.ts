@@ -44,6 +44,7 @@ export class ProfileService {
     const titleRaridade = equippedTitleItem?.raridade ?? null;
     const equippedBannerItem = items.find((i) => i.equipped && i.type === "banner");
     const bannerAnimated = equippedBannerItem?.animated ?? false;
+    const bannerRaridade = equippedBannerItem?.raridade ?? null;
     const equippedFrameItem = items.find((i) => i.equipped && i.type === "frame") as { value?: string | null; animated?: boolean; frameTipo?: string | null; frameAnimated?: boolean; frameScale?: number | null } | undefined;
     const frameAnimated = equippedFrameItem?.frameAnimated ?? equippedFrameItem?.animated ?? false;
     const equippedBadgeItem = items.find((i) => i.equipped && i.type === "badge");
@@ -64,6 +65,7 @@ export class ProfileService {
       avatarUpdatedAt: user.avatarUpdatedAt?.toISOString() ?? null,
       banner: user.banner ?? null,
       bannerAnimated,
+      bannerRaridade,
       frame: equippedFrameItem?.value ?? null,
       frameType: equippedFrameItem?.frameTipo ?? null,
       frameAnimated,

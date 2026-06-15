@@ -59,6 +59,7 @@ export default function PlayerCard({
         <UserBanner
           banner={player.banner}
           animated={player.bannerAnimated}
+          rarity={player.bannerRaridade}
           className="absolute inset-0 w-full h-full"
         />
 

@@ -460,7 +460,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
       {/* -- Balance Widget -- */}
       <div className="overflow-hidden border border-zinc-800 rounded-xl bg-zinc-950">
         <div className="h-24 relative">
-          <UserBanner banner={currentPlayer?.banner} animated={currentPlayer?.bannerAnimated} className="absolute inset-0 w-full h-full" />
+          <UserBanner banner={currentPlayer?.banner} animated={currentPlayer?.bannerAnimated} rarity={currentPlayer?.bannerRaridade} className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-black/30" />
         </div>
         <div className="p-6">

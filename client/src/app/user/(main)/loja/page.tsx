@@ -191,6 +191,7 @@ function CosmeticCard({
               banner={item.value}
               imageUrl={item.imageUrl}
               animated={item.animated}
+              rarity={item.raridade}
               className="absolute inset-0 w-full h-full"
             />
           )}
@@ -453,7 +454,7 @@ function DetailSheet({
 
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
-              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+              <UserBanner banner={item.value} animated={item.animated} rarity={item.raridade} className="flex-1 rounded-2xl" style={{ height: 64 }} />
             ) : isFrame ? (
               <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
                 <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>
@@ -525,11 +526,6 @@ function DetailSheet({
                 </span>
               )}
             </div>
-            {item.description && (
-              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">
-                {item.description}
-              </p>
-            )}
           </div>
 
           <div className="border-t border-zinc-800" />
@@ -619,7 +615,7 @@ function DailyOfferCard({
       footerClassName="px-2 pt-2 pb-2.5 flex flex-col gap-1"
       topContent={
         <>
-          {isBanner && <UserBanner banner={item.value} imageUrl={item.imageUrl} className="absolute inset-0 w-full h-full" />}
+          {isBanner && <UserBanner banner={item.value} imageUrl={item.imageUrl} rarity={item.raridade} className="absolute inset-0 w-full h-full" />}
           {isBanner ? null : isFrame ? (
             <div className="relative" style={{ width: 38, height: 38 }}>
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#71717a" }}>👤</div>
@@ -697,7 +693,7 @@ function DailyOfferSheet({
         <div className="flex flex-col gap-4 p-5 pb-20 lg:pb-8">
           <div className="flex items-start justify-between gap-3">
             {isBanner && item.value ? (
-              <UserBanner banner={item.value} animated={item.animated} className="flex-1 rounded-2xl" style={{ height: 64 }} />
+              <UserBanner banner={item.value} animated={item.animated} rarity={item.raridade} className="flex-1 rounded-2xl" style={{ height: 64 }} />
             ) : isFrame ? (
               <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
                 <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>👤</div>
@@ -751,9 +747,6 @@ function DailyOfferSheet({
                 </span>
               )}
             </div>
-            {item.description && (
-              <p className="font-inconsolata text-[11px] text-zinc-400 leading-relaxed mt-3">{item.description}</p>
-            )}
           </div>
 
           <div className="border-t border-zinc-800" />

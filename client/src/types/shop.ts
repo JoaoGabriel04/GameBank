@@ -5,7 +5,6 @@ export type { Raridade }
 export interface ShopItem {
   id: number
   name: string
-  description: string
   price: number
   icon?: string | null
   type: 'title' | 'badge' | 'banner' | 'frame'
@@ -24,10 +23,9 @@ export interface ShopItem {
 export interface UserItem {
   id: number
   name: string
-  description: string
   type: 'title' | 'badge' | 'banner' | 'frame'
   value?: string | null
-  icon?: string | null 
+  icon?: string | null
   raridade?: Raridade
   imageUrl?: string | null
   animated?: boolean
@@ -111,6 +109,7 @@ export interface RankingUser {
   avatarUpdatedAt?: string | null
   banner?: string | null
   bannerAnimated?: boolean
+  bannerRaridade?: string | null
   frame?: string | null
   frameType?: "image" | "gradient" | null
   frameAnimated?: boolean
