@@ -60,7 +60,6 @@ export async function gerarMissoesParaUsuario(userId: number) {
   const existingDaily = await prisma.userMission.findMany({
     where: {
       userId,
-      claimed: false,
       mission: { tipo: "daily" },
       expiresAt: { gt: now },
     },
