@@ -8,6 +8,7 @@ export function animateStaggerIn(
   els: NodeListOf<Element> | Element[],
   delay = 0
 ) {
+  if (!els.length) return;
   gsap.killTweensOf(els);
   return gsap.fromTo(
     els,

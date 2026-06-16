@@ -668,7 +668,7 @@ export default function CofrePage() {
     useEffect(() => {
       if (ownedRef.current) animateStaggerIn(ownedRef.current.querySelectorAll<HTMLElement>(".stagger-item"));
       if (unownedRef.current) animateStaggerIn(unownedRef.current.querySelectorAll<HTMLElement>(".stagger-item"));
-    }, []);
+    }, [owned.length, unowned.length]);
 
     if (!hasOwned && !hasUnowned) {
       return (

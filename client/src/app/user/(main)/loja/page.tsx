@@ -579,7 +579,7 @@ function Grid3({ children }: { children: React.ReactNode }) {
     if (!ref.current) return;
     const items = ref.current.querySelectorAll<HTMLElement>(".stagger-item");
     animateStaggerIn(items);
-  }, []);
+  }, [children]);
   return (
     <div
       ref={ref}
