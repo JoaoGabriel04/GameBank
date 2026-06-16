@@ -449,14 +449,14 @@ export default function DashboardPage() {
   useEffect(() => { loadFromStorage(); }, [loadFromStorage]);
 
   useEffect(() => {
-    if (token) {
-      if (!profile) loadProfile();
-      loadMissions();
-      getProfileHistoryApi()
-        .then(setHistory)
-        .catch(() => setHistory([]));
-    }
-  }, [token, profile, loadProfile, loadMissions]);
+    if (!token) return;
+    loadProfile();
+    loadMissions();
+    getProfileHistoryApi()
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   if (!token || loading.profile || !profile) {
     return (

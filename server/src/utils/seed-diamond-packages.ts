@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js"
+import { logger } from "../lib/logger.js"
 
 const PACKAGES = [
   { name: "Faísca",           description: "",  diamonds: 100,  bonusPct: 0,  priceInCents: 299   },
@@ -16,7 +17,7 @@ export async function seedDiamondPackages() {
     })
     if (!existing) {
       await prisma.diamondPackage.create({ data: pkg })
-      console.log(`[seed] DiamondPackage criado: ${pkg.name}`)
+      logger.info({ name: pkg.name }, "seed DiamondPackage criado")
     }
   }
 }

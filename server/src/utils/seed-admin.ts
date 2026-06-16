@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
+import { logger } from "../lib/logger.js";
 
 export async function seedAdmin() {
   const email = process.env.ADMIN_EMAIL;
@@ -20,9 +21,9 @@ export async function seedAdmin() {
         profileComplete: true,
       },
     });
-    console.log(`[seed] Admin garantido: ${admin.email} (id=${admin.id})`);
+    logger.info({ email: admin.email, id: admin.id }, "seed admin garantido");
   } catch (err) {
-    console.error("[seed] Falha ao garantir admin:", err);
+    logger.error({ err }, "seed falha ao garantir admin");
   }
 
   // Garante que o item "Padrão" (id=0, banner virtual) existe na loja_itens
@@ -38,8 +39,8 @@ export async function seedAdmin() {
         available: false,
       },
     });
-    console.log("[seed] ShopItem id=0 (Padrão) garantido.");
+    logger.info("seed ShopItem id=0 (Padrão) garantido");
   } catch (err) {
-    console.error("[seed] Falha ao garantir ShopItem id=0:", err);
+    logger.error({ err }, "seed falha ao garantir ShopItem id=0");
   }
 }

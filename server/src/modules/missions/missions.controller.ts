@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { MissionsService } from "./missions.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
+import { missionLogger } from "../../lib/logger.js";
 
 const missionsService = new MissionsService();
 
@@ -11,7 +12,7 @@ export const missionsController = {
       res.json(missions);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao listar missões:", err);
+      missionLogger.error({ err }, "erro ao listar missões");
       res.status(500).json({ message: "Erro ao listar missões" });
     }
   },
@@ -22,7 +23,7 @@ export const missionsController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao resgatar todas as missões:", err);
+      missionLogger.error({ err }, "erro ao resgatar todas as missões");
       res.status(500).json({ message: "Erro ao resgatar todas as missões" });
     }
   },
@@ -38,7 +39,7 @@ export const missionsController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao resgatar missão:", err);
+      missionLogger.error({ err }, "erro ao resgatar missão");
       res.status(500).json({ message: "Erro ao resgatar missão" });
     }
   },

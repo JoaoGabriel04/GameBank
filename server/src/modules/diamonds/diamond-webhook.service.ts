@@ -3,6 +3,7 @@ import { getMPPayment, getWebhookSecret } from "../../lib/mercadopago.js"
 import { prisma } from "../../lib/prisma.js"
 import { diamondsRepository } from "./diamonds.repository.js"
 import type { Request, Response } from "express"
+import { logger } from "../../lib/logger.js";
 
 // Comparação segura que não lança mesmo com buffers de tamanhos diferentes
 function safeEqual(a: string, b: string): boolean {
@@ -21,13 +22,13 @@ function verificarAssinatura(req: Request): boolean {
     const xSignature = req.headers["x-signature"] as string | undefined
     const xRequestId = req.headers["x-request-id"] as string | undefined
 
-    console.log("[webhook-mp] x-signature header:", xSignature)
-    console.log("[webhook-mp] x-request-id header:", xRequestId)
-    console.log("[webhook-mp] data.id (body):", req.body?.data?.id)
-    console.log("[webhook-mp] data.id (query):", req.query["data.id"])
+    logger.info({ xSignature }, "[webhook-mp] x-signature header")
+    logger.info({ xRequestId }, "[webhook-mp] x-request-id header")
+    logger.info({ dataIdBody: req.body?.data?.id }, "[webhook-mp] data.id (body)")
+    logger.info({ dataIdQuery: req.query["data.id"] }, "[webhook-mp] data.id (query)")
 
     if (!xSignature) {
-      console.error("[webhook-mp] Header x-signature ausente")
+      logger.error("[webhook-mp] Header x-signature ausente")
       return false
     }
 
@@ -36,7 +37,7 @@ function verificarAssinatura(req: Request): boolean {
     const v1 = parts.find(p => p.startsWith("v1="))?.split("=")[1]
 
     if (!ts || !v1) {
-      console.error("[webhook-mp] x-signature malformado:", xSignature)
+      logger.error({ xSignature }, "webhook-mp x-signature malformado")
       return false
     }
 
@@ -46,7 +47,7 @@ function verificarAssinatura(req: Request): boolean {
     const dataIds     = [...new Set([dataIdQuery, dataIdBody].filter(Boolean))] as string[]
 
     if (dataIds.length === 0) {
-      console.error("[webhook-mp] data.id ausente — query:", req.query, "body.data:", req.body?.data)
+      logger.error({ query: req.query, bodyData: req.body?.data }, "webhook-mp data.id ausente")
       return false
     }
 
@@ -57,25 +58,24 @@ function verificarAssinatura(req: Request): boolean {
       if (xRequestId) {
         const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
         const expected = crypto.createHmac("sha256", secret).update(manifest).digest("hex")
-        console.log("[webhook-mp] manifest (com request-id):", manifest)
-        console.log("[webhook-mp] expected:", expected)
-        console.log("[webhook-mp] received v1:", v1)
+        logger.info({ manifest }, "[webhook-mp] manifest (com request-id)")
+        logger.info({ expected }, "[webhook-mp] expected")
+        logger.info({ v1 }, "[webhook-mp] received v1")
         if (safeEqual(v1, expected)) return true
       }
 
       // Formato 2: sem x-request-id (notificação via notification_url da preferência)
       const manifestAlt = `id:${dataId};ts:${ts};`
       const expectedAlt = crypto.createHmac("sha256", secret).update(manifestAlt).digest("hex")
-      console.log("[webhook-mp] manifest (sem request-id):", manifestAlt)
-      console.log("[webhook-mp] expected:", expectedAlt)
-      console.log("[webhook-mp] received v1:", v1)
+      logger.info({ manifestAlt }, "[webhook-mp] manifest (sem request-id)")
+      logger.info({ expectedAlt }, "[webhook-mp] expected")
+      logger.info({ v1 }, "[webhook-mp] received v1")
       if (safeEqual(v1, expectedAlt)) return true
     }
 
-    console.error(
-      "[webhook-mp] Assinatura inválida — x-signature:", xSignature,
-      "| x-request-id:", xRequestId ?? "(ausente)",
-      "| query:", req.query,
+    logger.error(
+      { xSignature, xRequestId: xRequestId ?? "(ausente)", query: req.query },
+      "webhook-mp assinatura inválida"
     )
     return false
   } catch {
@@ -85,7 +85,7 @@ function verificarAssinatura(req: Request): boolean {
 
 export async function handleMercadoPagoWebhook(req: Request, res: Response) {
   if (!verificarAssinatura(req)) {
-    console.error("[webhook-mp] Assinatura inválida")
+    logger.error("[webhook-mp] Assinatura inválida")
     return res.status(400).json({ error: "Assinatura inválida" })
   }
 
@@ -99,7 +99,7 @@ export async function handleMercadoPagoWebhook(req: Request, res: Response) {
   try {
     await processarNotificacaoPagamento(String(dataId))
   } catch (err) {
-    console.error("[webhook-mp] Erro ao processar pagamento:", dataId, err)
+    logger.error({ err, dataId }, "webhook-mp erro ao processar pagamento")
   }
 }
 
@@ -122,7 +122,7 @@ async function processarNotificacaoPagamento(mpPaymentId: string) {
   const idempotencyKey = payment.metadata?.idempotency_key as string
 
   if (!userId || !packageId || !diamondsTotal || !idempotencyKey) {
-    console.error("[webhook-mp] Metadata inválida no pagamento:", mpPaymentId)
+    logger.error({ mpPaymentId }, "webhook-mp metadata inválida no pagamento")
     return
   }
 
@@ -130,7 +130,7 @@ async function processarNotificacaoPagamento(mpPaymentId: string) {
   const jaProcessado = await diamondsRepository.findCompletedPurchase(mpPaymentId, idempotencyKey)
 
   if (jaProcessado) {
-    console.log("[webhook-mp] Pagamento já processado — ignorando:", mpPaymentId)
+    logger.info({ mpPaymentId }, "[webhook-mp] Pagamento já processado — ignorando")
     return
   }
 
@@ -161,7 +161,7 @@ async function processarNotificacaoPagamento(mpPaymentId: string) {
     })
   })
 
-  console.log(`[webhook-mp] ${diamondsTotal} diamantes creditados — user ${userId}`)
+  logger.info({ diamondsTotal, userId }, "webhook-mp diamantes creditados")
 }
 
 async function marcarComoFalhou(mpPaymentId: string) {

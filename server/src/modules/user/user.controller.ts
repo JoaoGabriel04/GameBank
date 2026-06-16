@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { UserService } from "./user.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
+import { logger } from "../../lib/logger.js";
 
 const userService = new UserService();
 
@@ -16,7 +17,7 @@ export const userController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao buscar jogador:", err);
+      logger.error({ err }, "Erro ao buscar jogador");
       res.status(500).json({ message: "Erro ao buscar jogador" });
     }
   },
@@ -34,7 +35,7 @@ export const userController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao editar jogador:", err);
+      logger.error({ err }, "Erro ao editar jogador");
       res.status(500).json({ message: "Erro ao editar jogador" });
     }
   },
@@ -51,7 +52,7 @@ export const userController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao remover jogador:", err);
+      logger.error({ err }, "Erro ao remover jogador");
       res.status(500).json({ message: "Erro ao remover jogador" });
     }
   },

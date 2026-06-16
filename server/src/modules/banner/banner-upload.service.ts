@@ -1,4 +1,5 @@
 import { getBannerFolder, getCloudinary } from "../../lib/cloudinary.js";
+import { logger } from "../../lib/logger.js";
 
 const BANNER_OUTPUT_WIDTH = Number(process.env.BANNER_OUTPUT_WIDTH || 1200);
 const BANNER_OUTPUT_HEIGHT = Number(process.env.BANNER_OUTPUT_HEIGHT || 400);
@@ -24,10 +25,10 @@ export async function uploadBannerToCloudinary(
       },
       (error: Error | undefined, result: Record<string, any> | undefined) => {
         if (error || !result?.secure_url || !result.public_id) {
-          console.error("[banner] Upload falhou:", error);
+          logger.error({ err: error }, "[banner] Upload falhou");
           return reject(error ?? new Error("Upload Cloudinary falhou"));
         }
-        console.log("[banner] Upload concluído:", result.public_id);
+        logger.info({ publicId: result.public_id }, "banner upload concluído");
         resolve({ url: result.secure_url, publicId: result.public_id });
       }
     );
@@ -39,9 +40,9 @@ export async function deleteCloudinaryBanner(publicId: string): Promise<void> {
   const cloudinary = getCloudinary();
   try {
     const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
-    console.log("[banner] Exclusão:", publicId, result.result);
+    logger.info({ publicId, result: result.result }, "banner exclusão cloudinary");
   } catch (err) {
-    console.error("[banner] Exclusão falhou:", publicId, err);
+    logger.error({ err, publicId }, "banner exclusão falhou");
     throw err;
   }
 }
@@ -49,8 +50,8 @@ export async function deleteCloudinaryBanner(publicId: string): Promise<void> {
 export async function rollbackBannerUpload(publicId: string) {
   try {
     await deleteCloudinaryBanner(publicId);
-    console.log("[banner] Rollback órfão removido:", publicId);
+    logger.info({ publicId }, "[banner] Rollback órfão removido");
   } catch (err) {
-    console.error("[banner] Rollback falhou — marcar para limpeza:", publicId, err);
+    logger.error({ err, publicId }, "banner rollback falhou — marcar para limpeza");
   }
 }

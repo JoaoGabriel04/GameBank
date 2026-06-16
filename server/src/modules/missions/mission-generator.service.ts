@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma.js"
 import { DAILY_TEMPLATES, WEEKLY_TEMPLATES, DAILY_COUNT, WEEKLY_COUNT, type MissionTemplate } from "./mission-templates.js"
 import type { MissionMetric } from "../../../generated/prisma/index.js"
+import { missionLogger } from "../../lib/logger.js"
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -133,5 +134,5 @@ export async function limparMissoesExpiradas() {
     },
   })
 
-  console.log(`[missions] Limpeza: missões expiradas removidas`)
+  missionLogger.info("limpeza de missões expiradas concluída")
 }

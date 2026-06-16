@@ -65,6 +65,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   error: null,
 
   loadProfile: async () => {
+    if (get().loading.profile) return;
     set({ loading: { ...get().loading, profile: true }, error: null })
     try {
       const profile = await getProfileApi()
@@ -88,6 +89,7 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   },
 
   loadMissions: async () => {
+    if (get().loading.missions) return;
     set({ loading: { ...get().loading, missions: true }, error: null })
     try {
       const missions = await getMissionsApi()

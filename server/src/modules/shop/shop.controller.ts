@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { ShopService } from "./shop.service.js";
 import { DailyOffersService } from "./daily-offers.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
+import { shopLogger } from "../../lib/logger.js";
 
 const shopService = new ShopService();
 const dailyOffersService = new DailyOffersService();
@@ -13,7 +14,7 @@ export const shopController = {
       res.json(items);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao listar itens:", err);
+      shopLogger.error({ err }, "Erro ao listar itens");
       res.status(500).json({ message: "Erro ao listar itens" });
     }
   },
@@ -28,7 +29,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao comprar item:", err);
+      shopLogger.error({ err }, "Erro ao comprar item");
       res.status(500).json({ message: "Erro ao comprar item" });
     }
   },
@@ -43,7 +44,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao equipar item:", err);
+      shopLogger.error({ err }, "Erro ao equipar item");
       res.status(500).json({ message: "Erro ao equipar item" });
     }
   },
@@ -58,7 +59,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao vender item:", err);
+      shopLogger.error({ err }, "Erro ao vender item");
       res.status(500).json({ message: "Erro ao vender item" });
     }
   },
@@ -69,7 +70,7 @@ export const shopController = {
       res.json({ message: "Banner sincronizado" });
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao sincronizar banner:", err);
+      shopLogger.error({ err }, "Erro ao sincronizar banner");
       res.status(500).json({ message: "Erro ao sincronizar banner" });
     }
   },
@@ -82,7 +83,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao comprar coins com diamantes:", err);
+      shopLogger.error({ err }, "Erro ao comprar coins com diamantes");
       res.status(500).json({ message: "Erro ao comprar coins." });
     }
   },
@@ -95,7 +96,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao comprar diamantes:", err);
+      shopLogger.error({ err }, "Erro ao comprar diamantes");
       res.status(500).json({ message: "Erro ao comprar diamantes." });
     }
   },
@@ -110,7 +111,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao comprar item com diamantes:", err);
+      shopLogger.error({ err }, "Erro ao comprar item com diamantes");
       res.status(500).json({ message: "Erro ao comprar item com diamantes." });
     }
   },
@@ -121,7 +122,7 @@ export const shopController = {
       res.json(items);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao listar catálogo:", err);
+      shopLogger.error({ err }, "Erro ao listar catálogo");
       res.status(500).json({ message: "Erro ao listar catálogo" });
     }
   },
@@ -132,7 +133,7 @@ export const shopController = {
       res.json(offers);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao listar ofertas diárias:", err);
+      shopLogger.error({ err }, "Erro ao listar ofertas diárias");
       res.status(500).json({ message: "Erro ao listar ofertas diárias" });
     }
   },
@@ -147,7 +148,7 @@ export const shopController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao comprar oferta diária:", err);
+      shopLogger.error({ err }, "Erro ao comprar oferta diária");
       res.status(500).json({ message: "Erro ao comprar oferta diária" });
     }
   },

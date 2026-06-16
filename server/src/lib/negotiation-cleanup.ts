@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { logger } from "./logger.js";
 
 const CLEANUP_INTERVAL_MS = 10_000; // verifica a cada 10s
 
@@ -48,7 +49,7 @@ async function expireNegotiations() {
         if (fromUserId) await emitToUser(fromUserId, "negotiation:expired", payload).catch(() => {});
         if (toUserId)   await emitToUser(toUserId,   "negotiation:expired", payload).catch(() => {});
       } catch {
-        console.error("[Negociação] Erro ao emitir negotiation:expired:", negotiation.id);
+        logger.error({ negotiationId: negotiation.id }, "negociação erro ao emitir expired");
       }
 
       // Sincroniza estado da sessão com todos os clientes
@@ -61,18 +62,18 @@ async function expireNegotiations() {
         const { emitSessionUpdated } = await import("../modules/socket/socket.handler.js");
         emitSessionUpdated(negotiation.sessionId, session);
       } catch (err) {
-        console.error("[Negociação] Erro ao sincronizar sessão após expiração:", err);
+        logger.error({ err }, "negociação erro ao sincronizar sessão após expiração");
       }
     }
 
-    console.log(`[Negociação] ${expired.length} negociação(ões) expirada(s).`);
+    logger.info({ count: expired.length }, "negociações expiradas processadas");
   } catch (err) {
-    console.error("[Negociação] Erro no cleanup de expiradas:", err);
+    logger.error({ err }, "negociação erro no cleanup de expiradas");
   }
 }
 
 export function startNegotiationCleanup() {
   setInterval(expireNegotiations, CLEANUP_INTERVAL_MS);
   expireNegotiations();
-  console.log("[Negociação] Cleanup de expiradas ativo (intervalo: 10s)");
+  logger.info("negociação cleanup ativo");
 }

@@ -3,6 +3,7 @@ import { SessionRepository } from "./session.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
+import { sessionLogger } from "../../lib/logger.js";
 import { MissionsService } from "../missions/missions.service.js";
 import type { SessionModo } from "../../../generated/prisma/index.js";
 import { RankingService } from "../ranking/ranking.service.js";
@@ -294,7 +295,7 @@ export class SessionService {
       }
 
       if (orphaned.length > 0) {
-        console.log(`[Cleanup] ${orphaned.length} sessões órfãs removidas.`);
+        sessionLogger.info({ count: orphaned.length }, "sessões órfãs removidas");
       }
     } catch {
       // Non-critical
@@ -630,7 +631,7 @@ export class SessionService {
           await this.bauService.concederBauPartida(p.userId, "comum", undefined, 2);
         }
       } catch (e) {
-        console.error("Erro ao conceder baú:", e);
+        sessionLogger.error({ err: e }, "erro ao conceder baú");
       }
     }
 
@@ -643,7 +644,7 @@ export class SessionService {
         if (entry.position === 1) await this.missionService.track(p.userId, "wins", 1);
         if (entry.position <= 3) await this.missionService.track(p.userId, "top3", 1);
       } catch (e) {
-        console.error("Erro ao atualizar missoes:", e);
+        sessionLogger.error({ err: e }, "erro ao atualizar missões");
       }
     }
 

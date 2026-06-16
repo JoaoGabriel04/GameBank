@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { HistoricoService } from "./historico.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
+import { logger } from "../../lib/logger.js";
 
 const historicoService = new HistoricoService();
 
@@ -19,7 +20,7 @@ export const historicoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao buscar históricos!", err);
+      logger.error({ err }, "Erro ao buscar históricos!");
       res.status(500).json({ message: "Erro ao buscar históricos" });
     }
   },

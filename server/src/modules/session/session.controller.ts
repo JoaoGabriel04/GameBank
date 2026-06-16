@@ -3,6 +3,7 @@ import { SessionService } from "./session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { setRoomCookie } from "../../middleware/room-auth.middleware.js";
 import { emitSessionUpdated, emitSessionClosed } from "../socket/socket.handler.js";
+import { sessionLogger } from "../../lib/logger.js";
 
 const sessionService = new SessionService();
 
@@ -27,7 +28,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error(err);
+      sessionLogger.error({ err });
       return res.status(500).json({ message: "Erro ao criar a sessão." });
     }
   },
@@ -48,7 +49,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error(err);
+      sessionLogger.error({ err });
       return res.status(500).json({ message: "Erro ao entrar na sessão." });
     }
   },
@@ -65,7 +66,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error(err);
+      sessionLogger.error({ err });
       return res.status(500).json({ message: "Erro ao iniciar a sessão." });
     }
   },
@@ -75,7 +76,7 @@ export const sessionController = {
       const sessions = await sessionService.listSessions();
       res.json(sessions);
     } catch (error) {
-      console.error("Erro ao buscar sessões:", error);
+      sessionLogger.error({ err: error }, "Erro ao buscar sessões");
       res.status(500).json({ message: "Erro ao buscar sessões" });
     }
   },
@@ -103,7 +104,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao buscar sessão:", err);
+      sessionLogger.error({ err }, "Erro ao buscar sessão");
       res.status(500).json({ message: "Erro ao buscar sessão" });
     }
   },
@@ -117,7 +118,7 @@ export const sessionController = {
       const session = await sessionService.findMyActiveSession(userId);
       res.status(200).json({ session });
     } catch (err) {
-      console.error("Erro ao buscar sessão ativa:", err);
+      sessionLogger.error({ err }, "Erro ao buscar sessão ativa");
       res.status(500).json({ session: null });
     }
   },
@@ -146,7 +147,7 @@ export const sessionController = {
       } catch {}
       res.status(200).json({ ok: true });
     } catch (err) {
-      console.error("Erro ao backfill userId:", err);
+      sessionLogger.error({ err }, "Erro ao backfill userId");
       res.status(500).json({ message: "Erro ao associar usuário ao jogador" });
     }
   },
@@ -171,7 +172,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error(err);
+      sessionLogger.error({ err });
       return res.status(500).json({ message: "Erro ao sair da sala." });
     }
   },
@@ -185,7 +186,7 @@ export const sessionController = {
       const player = await sessionService.getPlayerByUser(Number(sessionId), userId);
       res.status(200).json({ player });
     } catch (err) {
-      console.error(err);
+      sessionLogger.error({ err });
       res.status(500).json({ message: "Erro ao buscar seu jogador." });
     }
   },
@@ -209,7 +210,7 @@ export const sessionController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error(err);
+      sessionLogger.error({ err });
       return res.status(500).json({ message: "Erro ao desistir da partida." });
     }
   },
@@ -231,7 +232,7 @@ export const sessionController = {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message });
       }
-      console.error("Erro ao encerrar sessão:", error);
+      sessionLogger.error({ err: error }, "Erro ao encerrar sessão");
       res.status(500).json({ message: "Erro ao encerrar sessão" });
     }
   },

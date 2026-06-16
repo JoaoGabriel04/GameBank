@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { DividaService } from "./divida.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
+import { logger } from "../../lib/logger.js";
 
 const dividaService = new DividaService();
 
@@ -16,7 +17,7 @@ export const dividaController = {
       return res.status(200).json(dividas);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao listar dívidas!", err);
+      logger.error({ err }, "Erro ao listar dívidas!");
       return res.status(500).json({ message: "Erro interno ao listar dívidas." });
     }
   },
@@ -30,7 +31,7 @@ export const dividaController = {
       return res.status(200).json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao pagar dívida!", err);
+      logger.error({ err }, "Erro ao pagar dívida!");
       return res.status(500).json({ message: "Erro interno ao pagar dívida." });
     }
   },

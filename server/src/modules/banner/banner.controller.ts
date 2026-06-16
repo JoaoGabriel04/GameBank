@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { adminRepository } from "../admin/admin.repository.js";
+import { logger } from "../../lib/logger.js";
 
 export const bannerController = {
   listPublic: async (_req: Request, res: Response) => {
@@ -17,7 +18,7 @@ export const bannerController = {
         }))
       );
     } catch (err) {
-      console.error("Erro ao listar banners públicos:", err);
+      logger.error({ err }, "Erro ao listar banners públicos");
       res.status(500).json({ message: "Erro ao listar banners" });
     }
   },

@@ -1,4 +1,5 @@
 import { createClient, type RedisClientType } from "redis";
+import { logger } from "./logger.js";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
@@ -10,21 +11,21 @@ export async function connectRedis(): Promise<RedisClientType> {
   redisClient = createClient({ url: REDIS_URL });
 
   redisClient.on("error", (err) => {
-    console.error("[Redis] Erro:", err.message);
+    logger.error({ err: err.message }, "redis erro");
   });
 
   redisClient.on("connect", () => {
-    console.log("[Redis] Conectado");
+    logger.info("redis conectado");
   });
 
   redisClient.on("end", () => {
-    console.warn("[Redis] Conexão encerrada");
+    logger.warn("redis conexão encerrada");
   });
 
   try {
     await redisClient.connect();
   } catch (err) {
-    console.error("[Redis] Falha ao conectar:", err);
+    logger.error({ err }, "redis falha ao conectar");
     redisClient = null;
     throw err;
   }

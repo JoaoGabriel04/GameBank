@@ -3,6 +3,8 @@ import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { verifyToken, verifyRoomToken } from "./jwt.js";
 import { connectRedis, getRedis } from "./redis.js";
+import { socketLogger } from "./logger.js";
+import { socketRateLimit } from "../middleware/socket-rate-limit.js";
 
 let io: Server | null = null;
 let gameNsp: ReturnType<Server["of"]> | null = null;
@@ -43,7 +45,7 @@ export async function emitToUser(userId: number, event: string, data: unknown) {
   }
 
   if (!socketId) {
-    console.warn(`[Socket] emitToUser falhou: usuário ${userId} não tem socket registrado para evento "${event}"`);
+    socketLogger.warn({ userId, event }, "emitToUser falhou: usuário sem socket");
     return false;
   }
   nsp.to(socketId).emit(event, data);
@@ -78,7 +80,7 @@ export async function emitToUserWithRetry(userId: number, event: string, data: u
         await new Promise(resolve => setTimeout(resolve, 50));
         continue;
       }
-      console.warn(`[Socket] emitToUserWithRetry exauriu tentativas: usuário ${userId} não tem socket para "${event}"`);
+      socketLogger.warn({ userId, event }, "emitToUserWithRetry exauriu tentativas");
       return false;
     }
 
@@ -104,6 +106,12 @@ export async function initSocket(httpServer: HttpServer) {
         }
       },
       credentials: true,
+    },
+    perMessageDeflate: {
+      zlibDeflateOptions: { level: 6 },
+      threshold: 1024,
+      clientNoContextTakeover: true,
+      serverNoContextTakeover: true,
     },
   });
 
@@ -212,7 +220,7 @@ export async function initSocket(httpServer: HttpServer) {
           createdAt: m.createdAt.toISOString(),
         })));
       } catch (err) {
-        console.error("[Chat] Erro ao carregar histórico:", err);
+        socketLogger.error({ err }, "chat erro ao carregar histórico");
       }
     }
 
@@ -224,6 +232,14 @@ export async function initSocket(httpServer: HttpServer) {
       const sessionId = socket.data.sessionId;
       const userId = socket.data.userId;
       if (!sessionId || !userId || !texto || !texto.trim()) return;
+
+      const permitido = await socketRateLimit(socket, {
+        evento: "chat",
+        limite: 20,
+        janela: 10,
+        mensagem: "Aguarde um momento antes de enviar mais mensagens.",
+      });
+      if (!permitido) return;
 
       try {
         const { prisma } = await import("../lib/prisma.js");
@@ -251,7 +267,7 @@ export async function initSocket(httpServer: HttpServer) {
           createdAt: message.createdAt.toISOString(),
         });
       } catch (err) {
-        console.error("[Chat] Erro ao enviar mensagem:", err);
+        socketLogger.error({ err }, "chat erro ao enviar mensagem");
       }
     });
 
@@ -267,7 +283,7 @@ async function setupRedisAdapter(io: Server) {
   try {
     const redis = await connectRedis();
     if (!redis) {
-      console.warn("[Socket.IO] Redis não disponível — rodando sem adapter (single-instância)");
+      socketLogger.warn("redis não disponível — socket.io sem adapter (single-instância)");
       return;
     }
 
@@ -277,9 +293,9 @@ async function setupRedisAdapter(io: Server) {
     await Promise.all([pubClient.connect(), subClient.connect()]);
 
     io.adapter(createAdapter(pubClient, subClient));
-    console.log("[Socket.IO] Redis adapter configurado");
+    socketLogger.info("redis adapter configurado");
   } catch {
-    console.warn("[Socket.IO] Redis adapter não configurado — modo single-instância");
+    socketLogger.warn("redis adapter não configurado — modo single-instância");
   }
 }
 
@@ -322,7 +338,7 @@ async function registerActiveSocket(socket: Socket) {
 async function setSocketPlayerId(socket: Socket, sessionId: number) {
   const userId = socket.data.userId;
   if (!userId) {
-    console.warn("[socket] setSocketPlayerId: socket sem userId — playerId não será definido");
+    socketLogger.warn("setSocketPlayerId: socket sem userId — playerId não será definido");
     return;
   }
   try {
@@ -335,8 +351,7 @@ async function setSocketPlayerId(socket: Socket, sessionId: number) {
       socket.data.playerId = player.id;
     }
   } catch (err) {
-    console.warn("[socket] setSocketPlayerId falhou para userId", userId, "sessionId", sessionId, err);
-    // playerId fica undefined — emitToPlayer não encontrará este socket
+    socketLogger.warn({ err, userId, sessionId }, "setSocketPlayerId falhou — playerId ficará undefined");
   }
 }
 
@@ -351,9 +366,9 @@ async function queueUndeliveredMessage(userId: number, event: string, data: unkn
     // Mantém apenas últimas 100 mensagens por usuário (TTL de 24h)
     await redis.rPush(queueKey, JSON.stringify(message));
     await redis.expire(queueKey, 86400);
-    console.log(`[Socket] Mensagem enfileirada para usuário ${userId}: "${event}"`);
+    socketLogger.debug({ userId, event }, "mensagem enfileirada");
   } catch (err) {
-    console.error("[Socket] Erro ao enfileirar mensagem:", err);
+    socketLogger.error({ err, userId, event }, "erro ao enfileirar mensagem");
   }
 }
 
@@ -386,10 +401,10 @@ async function deliverQueuedMessages(socket: Socket) {
     await redis.del(queueKey);
 
     if (delivered > 0) {
-      console.log(`[Socket] ${delivered} mensagem(ns) enfileirada(s) entregue(s) para usuário ${userId}`);
+      socketLogger.debug({ userId, delivered }, "mensagens enfileiradas entregues");
     }
   } catch (err) {
-    console.error("[Socket] Erro ao entregar mensagens enfileiradas:", err);
+    socketLogger.error({ err, userId }, "erro ao entregar mensagens enfileiradas");
   }
 }
 

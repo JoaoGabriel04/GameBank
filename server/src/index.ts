@@ -2,6 +2,7 @@ import "dotenv/config";
 import { initSentry } from "./lib/sentry.js";
 initSentry();
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -14,12 +15,16 @@ import { seedAdmin } from "./utils/seed-admin.js";
 import { seedDiamondPackages } from "./utils/seed-diamond-packages.js";
 import { seedBaus } from "./utils/seed-baus.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
-import { initSocket } from "./lib/socket.js";
+import { initSocket, getIO } from "./lib/socket.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
+import { logger } from "./lib/logger.js";
+import pinoHttp from "pino-http";
+import { prisma } from "./lib/prisma.js";
+import { getRedis } from "./lib/redis.js";
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[UNHANDLED_REJECTION]", reason);
+  logger.error({ reason }, "unhandled promise rejection");
 });
 
 const PORT = process.env.PORT || 7000;
@@ -35,6 +40,24 @@ const corsOriginsEnv = process.env.CORS_ORIGIN?.trim() || "";
 const allowedOrigins = corsOriginsEnv
   ? corsOriginsEnv.split(",").map(s => s.trim())
   : ["http://localhost:3000"];
+
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+}));
+
+app.use(pinoHttp({
+  logger,
+  autoLogging: {
+    ignore: (req) => req.method === "OPTIONS" || req.url === "/health",
+  },
+  customLogLevel: (_req, res, err) => {
+    if (res.statusCode === 304) return "silent";
+    if (err || res.statusCode >= 500) return "error";
+    if (res.statusCode >= 400) return "warn";
+    return "info";
+  },
+}));
 
 app.use(
   helmet({
@@ -117,8 +140,94 @@ async function start() {
   startCronJobs();
 
   httpServer.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}!`)
+    logger.info({ port: PORT }, "servidor iniciado");
   })
 }
 
 start()
+
+// ── Graceful Shutdown ─────────────────────────────────────────────────────────
+
+const SHUTDOWN_TIMEOUT = 30_000;
+
+async function contarPartidasAtivas(): Promise<number> {
+  try {
+    return await prisma.session.count({
+      where: { status: "Em Andamento" },
+    });
+  } catch {
+    return 0;
+  }
+}
+
+async function gracefulShutdown(signal: string) {
+  logger.info({ signal }, "iniciando graceful shutdown");
+
+  // 1. Parar de aceitar novas conexões HTTP
+  httpServer.close(() => {
+    logger.info("servidor HTTP encerrado — sem novas conexões");
+  });
+
+  // 2. Avisar todos os jogadores conectados via Socket.IO
+  try {
+    getIO().emit("servidor:reiniciando", {
+      mensagem: "Servidor reiniciando em breve. Sua sessão será preservada.",
+      em: 10_000,
+    });
+  } catch {
+    // io pode não estar inicializado se o boot falhou
+  }
+
+  // 3. Aguardar partidas ativas terminarem (até SHUTDOWN_TIMEOUT)
+  const inicio = Date.now();
+  let partidasAtivas = await contarPartidasAtivas();
+  logger.info({ partidasAtivas }, "aguardando partidas ativas");
+
+  while (partidasAtivas > 0 && Date.now() - inicio < SHUTDOWN_TIMEOUT) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    partidasAtivas = await contarPartidasAtivas();
+    logger.info({ partidasAtivas, elapsed: Date.now() - inicio }, "shutdown aguardando...");
+  }
+
+  if (partidasAtivas > 0) {
+    logger.warn({ partidasAtivas }, "timeout atingido com partidas ativas — encerrando forçado");
+  }
+
+  // 4. Encerrar conexões Socket.IO
+  try {
+    await new Promise<void>(resolve => getIO().close(() => resolve()));
+    logger.info("socket.io encerrado");
+  } catch {
+    // io pode não estar inicializado
+  }
+
+  // 5. Fechar conexão Redis
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.quit();
+      logger.info("redis desconectado");
+    } catch (err) {
+      logger.warn({ err }, "erro ao desconectar redis");
+    }
+  }
+
+  // 6. Fechar conexão com banco de dados
+  try {
+    await prisma.$disconnect();
+    logger.info("banco de dados desconectado");
+  } catch (err) {
+    logger.warn({ err }, "erro ao desconectar banco");
+  }
+
+  logger.info("graceful shutdown concluído");
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
+
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "uncaught exception — encerrando");
+  process.exit(1);
+});

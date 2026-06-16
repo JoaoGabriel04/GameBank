@@ -5,6 +5,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { authRepository } from "./auth.repository.js";
 import { CompleteProfileSchema } from "../../shared/schemas/auth.schema.js";
 import { toAuthUserPayload } from "../../utils/auth-user.js";
+import { authLogger } from "../../lib/logger.js";
 
 const authService = new AuthService();
 
@@ -17,7 +18,7 @@ const senhaMin6 = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
   if (err instanceof z.ZodError) return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });
-  console.error(err);
+  authLogger.error({ err });
   res.status(500).json({ error: "Erro interno" });
 }
 
@@ -126,7 +127,7 @@ export const authController = {
       if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
       res.json(toAuthUserPayload(user));
     } catch (err) {
-      console.error(err);
+      authLogger.error({ err });
       res.status(500).json({ error: "Erro interno" });
     }
   },

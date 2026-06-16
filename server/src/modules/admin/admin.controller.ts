@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { AdminService } from "./admin.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
+import { logger } from "../../lib/logger.js";
 
 const adminService = new AdminService();
 
@@ -28,15 +29,15 @@ const ItemSchema = z.object({
 
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) {
-    if (err.statusCode >= 500) console.error("[admin]", err);
-    else console.warn("[admin]", err.statusCode, err.message);
+    if (err.statusCode >= 500) logger.error({ err }, "admin erro");
+    else logger.warn({ statusCode: err.statusCode, message: err.message }, "admin erro de negócio");
     return res.status(err.statusCode).json({ error: err.message });
   }
   if (err instanceof z.ZodError) {
-    console.warn("[admin] ZodError", err.flatten().fieldErrors);
+    logger.warn({ fields: err.flatten().fieldErrors }, "admin zod erro");
     return res.status(400).json({ error: "Dados inválidos", details: err.flatten().fieldErrors });
   }
-  console.error("[admin]", err);
+  logger.error({ err }, "admin erro interno");
   return res.status(500).json({ error: "Erro interno." });
 }
 
@@ -532,7 +533,7 @@ export const adminController = {
         weeklyRetention,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err }, "admin erro ao carregar dashboard");
       res.status(500).json({ message: "Erro ao carregar dashboard" });
     }
   },

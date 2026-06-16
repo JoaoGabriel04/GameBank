@@ -10,6 +10,7 @@ import { validateAndProcessBadge } from "../../lib/badge-validation.js";
 import { uploadBadgeToCloudinary, deleteCloudinaryBadge, rollbackBadgeUpload } from "../badge/badge-upload.service.js";
 import { uploadFrameToCloudinary, deleteCloudinaryFrame, rollbackFrameUpload } from "../frames/frame-upload.service.js";
 import { RankingService } from "../ranking/ranking.service.js";
+import { logger } from "../../lib/logger.js";
 
 interface Actor {
   id?: number | null;
@@ -266,7 +267,7 @@ export class AdminService {
     // Delete image from Cloudinary if exists
     if (exists.imagePublicId) {
       deleteCloudinaryBadge(exists.imagePublicId).catch((err) =>
-        console.error("[badge] Falha ao remover imagem do Cloudinary:", err)
+        logger.error({ err }, "[badge] Falha ao remover imagem do Cloudinary")
       );
     }
     return adminRepository.deleteBadge(id);
@@ -649,7 +650,7 @@ export class AdminService {
       if (!isUrl && exists.imagePublicId) {
         // Admin switched the banner back to a CSS gradient/preset: delete old image
         deleteCloudinaryBanner(exists.imagePublicId).catch((err) =>
-          console.error("[banner] Falha ao remover imagem antiga do Cloudinary:", err)
+          logger.error({ err }, "[banner] Falha ao remover imagem antiga do Cloudinary")
         );
         payload.imagePublicId = null;
         payload.imageUpdatedAt = null;
@@ -704,7 +705,7 @@ export class AdminService {
     // Delete image from Cloudinary (fire-and-forget — don't block on Cloudinary failure)
     if (exists.imagePublicId) {
       deleteCloudinaryBanner(exists.imagePublicId).catch((err) =>
-        console.error("[banner] Falha ao deletar imagem do Cloudinary:", err)
+        logger.error({ err }, "[banner] Falha ao deletar imagem do Cloudinary")
       );
     }
 
@@ -751,7 +752,7 @@ export class AdminService {
       // Delete the old image (fire-and-forget)
       if (oldPublicId && oldPublicId !== uploaded.publicId) {
         deleteCloudinaryBanner(oldPublicId).catch((err) =>
-          console.error("[banner] Falha ao deletar imagem antiga do Cloudinary:", err)
+          logger.error({ err }, "[banner] Falha ao deletar imagem antiga do Cloudinary")
         );
       }
 
@@ -765,9 +766,7 @@ export class AdminService {
 
       return updated;
     } catch (dbError: any) {
-      console.error("[banner] ERRO NO BANCO:", JSON.stringify(dbError, null, 2));
-      console.error("[banner] ERRO MENSAGEM:", dbError?.message);
-      console.error("[banner] ERRO CODE:", dbError?.code);
+      logger.error({ err: dbError, message: dbError?.message, code: dbError?.code }, "banner erro no banco");
       await rollbackBannerUpload(uploaded.publicId);
       throw dbError;
     }
@@ -812,7 +811,7 @@ export class AdminService {
       const isUrl = data.css.startsWith("http://") || data.css.startsWith("https://");
       if (!isUrl && exists.imagePublicId) {
         deleteCloudinaryFrame(exists.imagePublicId).catch((err) =>
-          console.error("[frame] Falha ao remover imagem antiga do Cloudinary:", err)
+          logger.error({ err }, "[frame] Falha ao remover imagem antiga do Cloudinary")
         );
         payload.imagePublicId = null;
       } else if (isUrl && !data.css.includes("res.cloudinary.com")) {
@@ -865,7 +864,7 @@ export class AdminService {
 
     if (exists.imagePublicId) {
       deleteCloudinaryFrame(exists.imagePublicId).catch((err) =>
-        console.error("[frame] Falha ao deletar imagem do Cloudinary:", err)
+        logger.error({ err }, "[frame] Falha ao deletar imagem do Cloudinary")
       );
     }
 
@@ -913,7 +912,7 @@ export class AdminService {
 
       if (oldPublicId && oldPublicId !== uploaded.publicId) {
         deleteCloudinaryFrame(oldPublicId).catch((err) =>
-          console.error("[frame] Falha ao deletar imagem antiga do Cloudinary:", err)
+          logger.error({ err }, "[frame] Falha ao deletar imagem antiga do Cloudinary")
         );
       }
 

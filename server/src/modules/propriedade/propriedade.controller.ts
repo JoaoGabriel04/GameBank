@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { PropriedadeService } from "./propriedade.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitNotificationNew, emitUpdatedSession } from "../socket/socket.handler.js";
+import { logger } from "../../lib/logger.js";
 
 const propriedadeService = new PropriedadeService();
 
@@ -18,7 +19,7 @@ const PropBody = SessionPlayerBody.extend({
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
   if (err instanceof z.ZodError) return res.status(400).json({ message: "Dados inválidos", details: err.flatten().fieldErrors });
-  console.error(err);
+  logger.error({ err });
   return res.status(500).json({ message: "Erro interno." });
 }
 

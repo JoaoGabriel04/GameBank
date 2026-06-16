@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 import { verifyRoomToken, signRoomToken, getRoomTokenRefreshThreshold, type RoomJwtPayload } from "../lib/jwt.js";
+import { logger } from "../lib/logger.js";
 
 declare global {
   namespace Express {
@@ -84,7 +85,7 @@ export function authenticateRoom(sessionIdParam: "params" | "body" | "query" = "
         return res.status(401).json({ message: "Token de sala inválido ou expirado" });
       }
     } catch (err) {
-      console.error("[authenticateRoom] Erro inesperado:", err);
+      logger.error({ err }, "authenticateRoom erro inesperado");
       res.status(500).json({ message: "Erro interno ao verificar acesso à sala" });
     }
   };

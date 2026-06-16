@@ -1,4 +1,5 @@
 import { getFrameFolder, getCloudinary } from "../../lib/cloudinary.js";
+import { logger } from "../../lib/logger.js";
 
 export async function uploadFrameToCloudinary(
   frameId: number | string,
@@ -21,10 +22,10 @@ export async function uploadFrameToCloudinary(
       },
       (error: Error | undefined, result: Record<string, any> | undefined) => {
         if (error || !result?.secure_url || !result.public_id) {
-          console.error("[frame] Upload falhou:", error);
+          logger.error({ err: error }, "[frame] Upload falhou");
           return reject(error ?? new Error("Upload Cloudinary falhou"));
         }
-        console.log("[frame] Upload concluído:", result.public_id);
+        logger.info({ publicId: result.public_id }, "frame upload concluído");
         resolve({ url: result.secure_url, publicId: result.public_id });
       }
     );
@@ -36,9 +37,9 @@ export async function deleteCloudinaryFrame(publicId: string): Promise<void> {
   const cloudinary = getCloudinary();
   try {
     const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
-    console.log("[frame] Exclusão:", publicId, result.result);
+    logger.info({ publicId, result: result.result }, "frame exclusão cloudinary");
   } catch (err) {
-    console.error("[frame] Exclusão falhou:", publicId, err);
+    logger.error({ err, publicId }, "frame exclusão falhou");
     throw err;
   }
 }
@@ -46,8 +47,8 @@ export async function deleteCloudinaryFrame(publicId: string): Promise<void> {
 export async function rollbackFrameUpload(publicId: string) {
   try {
     await deleteCloudinaryFrame(publicId);
-    console.log("[frame] Rollback órfão removido:", publicId);
+    logger.info({ publicId }, "[frame] Rollback órfão removido");
   } catch (err) {
-    console.error("[frame] Rollback falhou — marcar para limpeza:", publicId, err);
+    logger.error({ err, publicId }, "frame rollback falhou — marcar para limpeza");
   }
 }

@@ -3,6 +3,7 @@ import { BancoService } from "./banco.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
 import { emitToRoom, emitToUserWithRetry } from "../../lib/socket.js";
+import { logger } from "../../lib/logger.js";
 
 const bancoService = new BancoService();
 
@@ -25,7 +26,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro no depósito!", err);
+      logger.error({ err }, "Erro no depósito!");
       return res.status(500).json({ message: "Erro interno no depósito." });
     }
   },
@@ -44,7 +45,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro no saque!", err);
+      logger.error({ err }, "Erro no saque!");
       return res.status(500).json({ message: "Erro interno no saque." });
     }
   },
@@ -70,7 +71,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro na transferência!", err);
+      logger.error({ err }, "Erro na transferência!");
       return res.status(500).json({ message: "Erro interno na transferência." });
     }
   },
@@ -96,7 +97,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao pagar aluguel:", err);
+      logger.error({ err }, "Erro ao pagar aluguel");
       return res.status(500).json({ message: "Erro interno" });
     }
   },
@@ -124,7 +125,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao pagar aluguel de ação:", err);
+      logger.error({ err }, "Erro ao pagar aluguel de ação");
       return res.status(500).json({ message: "Erro interno" });
     }
   },
@@ -145,7 +146,7 @@ export const bancoController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro na transferência!", err);
+      logger.error({ err }, "Erro na transferência!");
       return res.status(500).json({ message: "Erro interno" });
     }
   },

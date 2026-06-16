@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { ProfileService } from "./profile.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
+import { logger } from "../../lib/logger.js";
 
 const profileService = new ProfileService();
 
@@ -12,7 +13,7 @@ export const profileController = {
       res.json(profile);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
-      console.error("Erro ao buscar perfil:", err);
+      logger.error({ err }, "Erro ao buscar perfil");
       res.status(500).json({ message: "Erro ao buscar perfil" });
     }
   },
@@ -23,7 +24,7 @@ export const profileController = {
       const history = await profileService.getHistory(req.user!.userId, limit);
       res.json(history);
     } catch (err) {
-      console.error("Erro ao buscar histórico:", err);
+      logger.error({ err }, "Erro ao buscar histórico");
       res.status(500).json({ message: "Erro ao buscar histórico" });
     }
   },
@@ -46,7 +47,7 @@ export const profileController = {
       res.json(result);
     } catch (err) {
       if (err instanceof AppError) return res.status(err.statusCode).json({ error: err.message });
-      console.error("Erro ao atualizar perfil:", err);
+      logger.error({ err }, "Erro ao atualizar perfil");
       res.status(500).json({ error: "Erro ao atualizar perfil" });
     }
   },
@@ -56,7 +57,7 @@ export const profileController = {
       const result = await profileService.clearHistory(req.user!.userId);
       res.json(result);
     } catch (err) {
-      console.error("Erro ao limpar histórico:", err);
+      logger.error({ err }, "Erro ao limpar histórico");
       res.status(500).json({ message: "Erro ao limpar histórico" });
     }
   },
@@ -75,7 +76,7 @@ export const profileController = {
       });
       res.json(notifications);
     } catch (err) {
-      console.error("Erro ao buscar notificações:", err);
+      logger.error({ err }, "Erro ao buscar notificações");
       res.status(500).json({ message: "Erro ao buscar notificações" });
     }
   },
@@ -89,7 +90,7 @@ export const profileController = {
       });
       res.json({ ok: true });
     } catch (err) {
-      console.error("Erro ao marcar notificações:", err);
+      logger.error({ err }, "Erro ao marcar notificações");
       res.status(500).json({ message: "Erro ao marcar notificações" });
     }
   },

@@ -91,6 +91,14 @@ export function connectSocket(sessionId: number) {
     console.error("Socket error:", message);
   });
 
+  socket.on("erro:rate-limit", (data: { evento: string; mensagem: string; aguardar: number }) => {
+    toast.error(data.mensagem);
+  });
+
+  socket.on("servidor:reiniciando", (data: { mensagem: string; em: number }) => {
+    toast.warning(data.mensagem);
+  });
+
   // Chat — histórico ao entrar na sala
   socket.on("chat:history", (data: ChatMessage[]) => {
     useChatStore.setState({ messages: data });

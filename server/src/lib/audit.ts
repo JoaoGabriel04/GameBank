@@ -1,4 +1,5 @@
 import { prisma } from "./prisma.js";
+import { logger } from "./logger.js";
 
 export type AuditSeverity = "info" | "success" | "warn" | "danger";
 
@@ -30,6 +31,6 @@ export async function auditLog(input: AuditLogInput): Promise<void> {
         // fall through to error log
       }
     }
-    console.error("[audit] failed to write log:", err);
+    logger.error({ err }, "audit falha ao gravar log");
   }
 }

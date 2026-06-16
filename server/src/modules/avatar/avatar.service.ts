@@ -1,4 +1,5 @@
 import { getAvatarFolder, getCloudinary } from "../../lib/cloudinary.js";
+import { logger } from "../../lib/logger.js";
 
 export async function uploadAvatarToCloudinary(
   userId: number,
@@ -21,10 +22,10 @@ export async function uploadAvatarToCloudinary(
       },
       (error: Error | undefined, result: Record<string, any> | undefined) => {
         if (error || !result?.secure_url || !result.public_id) {
-          console.error("[avatar] Upload falhou:", error);
+          logger.error({ err: error }, "[avatar] Upload falhou");
           return reject(error ?? new Error("Upload Cloudinary falhou"));
         }
-        console.log("[avatar] Upload concluído:", result.public_id);
+        logger.info({ publicId: result.public_id }, "avatar upload concluído");
         resolve({ url: result.secure_url, publicId: result.public_id });
       }
     );
@@ -36,9 +37,9 @@ export async function deleteCloudinaryAvatar(publicId: string): Promise<void> {
   const cloudinary = getCloudinary();
   try {
     const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
-    console.log("[avatar] Exclusão:", publicId, result.result);
+    logger.info({ publicId, result: result.result }, "avatar exclusão cloudinary");
   } catch (err) {
-    console.error("[avatar] Exclusão falhou:", publicId, err);
+    logger.error({ err, publicId }, "avatar exclusão falhou");
     throw err;
   }
 }
@@ -47,8 +48,8 @@ export async function deleteCloudinaryAvatar(publicId: string): Promise<void> {
 export async function rollbackCloudinaryUpload(publicId: string) {
   try {
     await deleteCloudinaryAvatar(publicId);
-    console.log("[avatar] Rollback órfão removido:", publicId);
+    logger.info({ publicId }, "[avatar] Rollback órfão removido");
   } catch (err) {
-    console.error("[avatar] Rollback falhou — marcar para limpeza:", publicId, err);
+    logger.error({ err, publicId }, "avatar rollback falhou — marcar para limpeza");
   }
 }

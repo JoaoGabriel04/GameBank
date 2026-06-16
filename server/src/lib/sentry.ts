@@ -5,6 +5,7 @@ export function initSentry() {
   if (process.env.NODE_ENV === "development") return
 
   if (!process.env.SENTRY_DSN) {
+    // logger ainda não está disponível neste ponto do boot — console.warn intencional
     console.warn("[sentry] SENTRY_DSN não configurado — Sentry desabilitado")
     return
   }
@@ -26,6 +27,7 @@ export function initSentry() {
     },
   })
 
+  // logger ainda não está disponível neste ponto do boot — console.log intencional
   console.log("[sentry] Inicializado")
 }
 

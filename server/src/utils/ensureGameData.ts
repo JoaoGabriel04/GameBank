@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import type { Prisma } from "../../generated/prisma/index.js";
 import propriedades from "../../data/propriedades.json"
+import { logger } from "../lib/logger.js";
 
 const shopItems = [
   { name: "Título Investidor",    description: "Mostre que você investe bem",          price: 200,  icon: "faChartLine",   type: "title", value: '{"title":"Investidor"}',  raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 5  },
@@ -20,25 +21,25 @@ export async function ensureGameData() {
   const countPropriedades = await prisma.propriedade.count()
 
   if (countPropriedades === 0) {
-    console.log("Inserindo propriedades iniciais...")
+    logger.info("seed inserindo propriedades iniciais")
 
     await prisma.propriedade.createMany({
       data: propriedades
     })
 
-    console.log("Propriedades criadas.")
+    logger.info("seed propriedades criadas")
   }
 
   // 2️⃣ Popular itens da loja se estiverem vazios
   const countItens = await prisma.shopItem.count()
 
   if (countItens === 0) {
-    console.log("Inserindo itens da loja...")
+    logger.info("seed inserindo itens da loja")
 
     await prisma.shopItem.createMany({
       data: shopItems as Prisma.ShopItemCreateManyInput[]
     })
 
-    console.log(`${shopItems.length} itens da loja criados.`)
+    logger.info({ count: shopItems.length }, "seed itens da loja criados")
   }
 }

@@ -3,6 +3,7 @@ import { shopRepository, resolveShopItem, parseUserItems, type UserItemRef } fro
 import { prisma } from "../../lib/prisma.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { getRedis } from "../../lib/redis.js";
+import { shopLogger } from "../../lib/logger.js";
 import { getIO } from "../../lib/socket.js";
 import { raridadeWeight } from "../../constants/raridade.js";
 
@@ -179,7 +180,7 @@ export class ShopService {
         }
       }
     } catch (err) {
-      console.error("[Shop] Erro ao emitir player:updated:", err);
+      shopLogger.error({ err }, "erro ao emitir player:updated");
     }
   }
 

@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { Sentry } from "../lib/sentry.js";
+import { logger } from "../lib/logger.js";
 
 export class AppError extends Error {
   constructor(
@@ -19,7 +20,7 @@ export function parseError(res: Response, err: unknown) {
   if (err instanceof ZodError) {
     return res.status(400).json({ message: "Dados inválidos", details: err.flatten().fieldErrors });
   }
-  console.error(err);
+  logger.error({ err }, "erro interno");
   return res.status(500).json({ message: "Erro interno." });
 }
 
@@ -44,6 +45,6 @@ export function errorHandler(
     });
   }
 
-  console.error("Erro interno:", err);
+  logger.error({ err, url: req.url, method: req.method }, "erro interno do servidor");
   return res.status(500).json({ message: "Erro interno do servidor" });
 }

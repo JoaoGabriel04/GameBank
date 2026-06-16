@@ -1,6 +1,7 @@
 import { rankingRepository } from "./ranking.repository.js";
 import { getRedis } from "../../lib/redis.js";
 import { shopRepository } from "../shop/shop.repository.js";
+import { logger } from "../../lib/logger.js";
 
 const CACHE_KEY = "ranking:global";
 const CACHE_TTL_S = 5 * 60;
@@ -12,12 +13,16 @@ export class RankingService {
     if (redis) {
       try {
         const cached = await redis.get(CACHE_KEY);
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          logger.debug("ranking servido do cache");
+          return JSON.parse(cached);
+        }
       } catch {
         // fallback to DB
       }
     }
 
+    logger.debug("ranking cache miss — buscando do banco");
     const users = await rankingRepository.findTopUsers(limit);
 
     // Batch resolve all user items
@@ -87,8 +92,9 @@ export class RankingService {
     if (redis) {
       try {
         await redis.setEx(CACHE_KEY, CACHE_TTL_S, JSON.stringify(result));
+        logger.debug("ranking salvo no cache");
       } catch {
-        // non-critical
+        logger.warn("ranking falha ao salvar no cache");
       }
     }
 
@@ -100,8 +106,9 @@ export class RankingService {
     if (!redis) return;
     try {
       await redis.del(CACHE_KEY);
-    } catch {
-      // non-critical
+      logger.info("cache de ranking invalidado");
+    } catch (err) {
+      logger.warn({ err }, "ranking falha ao invalidar cache");
     }
   }
 }

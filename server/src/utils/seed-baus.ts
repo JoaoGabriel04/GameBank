@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js"
 import { BAU_CONFIG } from "../constants/baus.js"
+import { logger } from "../lib/logger.js"
 
 export async function seedBaus() {
   for (const config of Object.values(BAU_CONFIG)) {
@@ -20,5 +21,5 @@ export async function seedBaus() {
       },
     })
   }
-  console.log("[seed] Baús garantidos")
+  logger.info("seed baús garantidos")
 }

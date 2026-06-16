@@ -4,6 +4,7 @@ import { CartaRepository, carregarBaralho } from "./carta.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
 import { getIO } from "../../lib/socket.js";
+import { logger } from "../../lib/logger.js";
 
 const cartaService = new CartaService();
 const cartaRepo = new CartaRepository();
@@ -45,7 +46,7 @@ export const cartaController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao sortear carta!", err);
+      logger.error({ err }, "Erro ao sortear carta!");
       return res.status(500).json({ message: "Erro interno ao sortear carta." });
     }
   },
@@ -77,7 +78,7 @@ export const cartaController = {
       if (err instanceof AppError) {
         return res.status(err.statusCode).json({ message: err.message });
       }
-      console.error("Erro ao usar carta prisão!", err);
+      logger.error({ err }, "Erro ao usar carta prisão!");
       return res.status(500).json({ message: "Erro interno ao usar carta prisão." });
     }
   },
@@ -87,7 +88,7 @@ export const cartaController = {
       const baralho = carregarBaralho();
       return res.status(200).json(baralho);
     } catch (err) {
-      console.error("Erro ao listar cartas!", err);
+      logger.error({ err }, "Erro ao listar cartas!");
       return res.status(500).json({ message: "Erro ao listar cartas." });
     }
   },

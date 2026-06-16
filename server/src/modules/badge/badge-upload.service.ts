@@ -1,4 +1,5 @@
 import { getBadgeFolder, getCloudinary } from "../../lib/cloudinary.js";
+import { logger } from "../../lib/logger.js";
 
 export async function uploadBadgeToCloudinary(
   itemId: number | string,
@@ -21,10 +22,10 @@ export async function uploadBadgeToCloudinary(
       },
       (error: Error | undefined, result: Record<string, any> | undefined) => {
         if (error || !result?.secure_url || !result.public_id) {
-          console.error("[badge] Upload falhou:", error);
+          logger.error({ err: error }, "[badge] Upload falhou");
           return reject(error ?? new Error("Upload Cloudinary falhou"));
         }
-        console.log("[badge] Upload concluído:", result.public_id);
+        logger.info({ publicId: result.public_id }, "badge upload concluído");
         resolve({ url: result.secure_url, publicId: result.public_id });
       }
     );
@@ -36,9 +37,9 @@ export async function deleteCloudinaryBadge(publicId: string): Promise<void> {
   const cloudinary = getCloudinary();
   try {
     const result = await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
-    console.log("[badge] Exclusão:", publicId, result.result);
+    logger.info({ publicId, result: result.result }, "badge exclusão cloudinary");
   } catch (err) {
-    console.error("[badge] Exclusão falhou:", publicId, err);
+    logger.error({ err, publicId }, "badge exclusão falhou");
     throw err;
   }
 }
@@ -46,8 +47,8 @@ export async function deleteCloudinaryBadge(publicId: string): Promise<void> {
 export async function rollbackBadgeUpload(publicId: string) {
   try {
     await deleteCloudinaryBadge(publicId);
-    console.log("[badge] Rollback órfão removido:", publicId);
+    logger.info({ publicId }, "[badge] Rollback órfão removido");
   } catch {
-    console.log("[badge] Rollback falhou — marcar para limpeza:", publicId);
+    logger.info({ publicId }, "[badge] Rollback falhou — marcar para limpeza");
   }
 }

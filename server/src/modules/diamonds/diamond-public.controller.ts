@@ -2,6 +2,7 @@ import type { Request, Response } from "express"
 import { listarPacotesAtivos } from "./diamond-packages.service.js"
 import { criarCheckout } from "./diamond-checkout.service.js"
 import { diamondsRepository } from "./diamonds.repository.js"
+import { logger } from "../../lib/logger.js";
 
 export const diamondPublicController = {
   listPackages: async (_req: Request, res: Response) => {
@@ -25,7 +26,7 @@ export const diamondPublicController = {
       const result = await criarCheckout(userId, packageId)
       res.json(result)
     } catch (err: any) {
-      console.error("[diamonds] Erro no checkout:", err)
+      logger.error({ err }, "[diamonds] Erro no checkout")
       res.status(500).json({ error: err.message ?? "Erro ao criar checkout" })
     }
   },

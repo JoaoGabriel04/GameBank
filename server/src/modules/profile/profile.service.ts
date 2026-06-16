@@ -13,6 +13,7 @@ import { profileRepository } from "./profile.repository.js";
 import { getLevelFromXp, xpForLevel, totalXpForLevels } from "../../utils/level.js";
 import { getTrophyAssetName } from "../../shared/constants/trophies.js";
 import { shopRepository } from "../shop/shop.repository.js";
+import { logger } from "../../lib/logger.js";
 
 export class ProfileService {
   async getProfile(userId: number) {
@@ -167,7 +168,7 @@ export class ProfileService {
 
       if (oldPublicId && oldPublicId !== newPublicId && updateData.avatarUrl !== undefined) {
         deleteCloudinaryAvatar(oldPublicId).catch((err) =>
-          console.error("[avatar] Exclusão antiga falhou:", oldPublicId, err)
+          logger.error({ err, publicId: oldPublicId }, "avatar exclusão antiga falhou")
         );
       }
 

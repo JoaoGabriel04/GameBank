@@ -14,6 +14,7 @@ import { authRepository } from "./auth.repository.js";
 import { prisma } from "../../lib/prisma.js";
 import { type UserItemRef } from "../shop/shop.repository.js";
 import { RankingService } from "../ranking/ranking.service.js";
+import { authLogger } from "../../lib/logger.js";
 
 type OAuthProvider = "google" | "discord";
 
@@ -145,7 +146,7 @@ export class AuthService {
       }
       newAvatarUrl = presetAvatarValue(options.avatarPreset);
     } else if (options.fileBuffer) {
-      console.log("[avatar] Upload iniciado — userId:", userId);
+      authLogger.info({ userId }, "[avatar] Upload iniciado — userId");
       const processed = await validateAndProcessAvatar(options.fileBuffer, options.fileMime);
       const uploaded = await uploadAvatarToCloudinary(userId, processed.buffer);
       newAvatarUrl = uploaded.url;
@@ -167,11 +168,11 @@ export class AuthService {
 
       if (oldPublicId && oldPublicId !== newPublicId) {
         deleteCloudinaryAvatar(oldPublicId).catch((err) => {
-          console.error("[avatar] Exclusão antiga falhou — reagendar limpeza:", oldPublicId, err);
+          authLogger.error({ err, publicId: oldPublicId }, "avatar exclusão antiga falhou — reagendar limpeza");
         });
       }
 
-      console.log("[avatar] Perfil atualizado — userId:", userId);
+      authLogger.info({ userId }, "[avatar] Perfil atualizado — userId");
       return { user: toAuthUserPayload(user) };
     } catch (err) {
       if (newPublicId) {

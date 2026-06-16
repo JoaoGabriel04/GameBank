@@ -11,12 +11,13 @@ interface UserNotificationStore {
   markAllRead: () => Promise<void>;
 }
 
-export const useUserNotificationStore = create<UserNotificationStore>((set) => ({
+export const useUserNotificationStore = create<UserNotificationStore>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
 
   load: async () => {
+    if (get().loading) return;
     set({ loading: true });
     try {
       const notifications = await notificationsApi.getMyNotifications();

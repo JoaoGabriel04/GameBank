@@ -4,6 +4,7 @@ import { NegociacaoService } from "./negociacao.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
 import { emitToRoom, emitToUserWithRetry } from "../../lib/socket.js";
+import { logger } from "../../lib/logger.js";
 
 const negociacaoService = new NegociacaoService();
 
@@ -34,7 +35,7 @@ const ContraOfertarSchema = z.object({
 function parseError(res: Response, err: unknown) {
   if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
   if (err instanceof z.ZodError) return res.status(400).json({ message: "Dados inválidos", details: err.flatten().fieldErrors });
-  console.error(err);
+  logger.error({ err });
   return res.status(500).json({ message: "Erro interno." });
 }
 
