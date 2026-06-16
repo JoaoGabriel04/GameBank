@@ -23,18 +23,19 @@ type BauItemPreviewProps = {
 export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps) {
   const cor = RARIDADES[item.raridade]?.cor ?? "#a1a1aa"
 
+  const insetValue = Math.max(3, Math.round(size * 0.09))
+
   const ringStyle: React.CSSProperties = {
     width: size,
     height: size,
     borderRadius: "50%",
     border: `2px solid ${cor}66`,
     boxShadow: `0 0 30px ${cor}44, 0 0 60px ${cor}22`,
-    animation: "bau-circle-pulse 2s ease-in-out infinite",
     "--rarity-color": cor,
     "--rarity-color-dim": `${cor}44`,
   } as React.CSSProperties
 
-  // Frame: avatar placeholder + overlay fora do overflow:hidden (igual cofre/loja)
+  // Frame: avatar placeholder + overlay (mesmo padrão do UserAvatar)
   if (item.type === "frame") {
     const src = item.value?.startsWith("http")
       ? item.value
@@ -43,8 +44,15 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
       : null
 
     return (
-      <div style={{ ...ringStyle, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* avatar placeholder */}
+      <div style={{
+        ...ringStyle,
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "clip",
+      }}>
+        {/* avatar placeholder (central, menor) */}
         <div style={{
           width: size * 0.55,
           height: size * 0.55,
@@ -56,22 +64,22 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
           fontSize: size * 0.27,
           color: "#71717a",
           userSelect: "none",
+          zIndex: 0,
         }}>
           👤
         </div>
 
-        {/* frame overlay — fora do overflow:hidden, igual cofre */}
+        {/* frame overlay — anel sobre o avatar */}
         {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt=""
             style={{
               position: "absolute",
-              top: "50%", left: "50%",
-              width: "136%", height: "136%",
+              inset: -insetValue,
+              width: `calc(100% + ${insetValue * 2}px)`,
+              height: `calc(100% + ${insetValue * 2}px)`,
               maxWidth: "none",
-              transform: "translate(-50%, -50%)",
               objectFit: "contain",
               pointerEvents: "none",
               zIndex: 2,
@@ -80,9 +88,9 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
         ) : item.value ? (
           <div style={{
             position: "absolute",
-            inset: -3,
+            inset: -insetValue,
             borderRadius: "50%",
-            padding: 3,
+            padding: insetValue,
             backgroundImage: item.value,
             WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
             WebkitMaskComposite: "xor",
@@ -119,10 +127,10 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
           position: "absolute", inset: 0,
           backgroundImage: item.value?.startsWith("http")
             ? `url(${item.value})`
-            : undefined,
+            : item.value || undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          backgroundColor: item.value?.startsWith("http") ? undefined : (item.value ?? "#27272a"),
+          backgroundColor: item.value ? undefined : "#27272a",
         }} />
       )}
 
