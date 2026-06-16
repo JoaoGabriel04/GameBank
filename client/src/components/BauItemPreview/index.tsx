@@ -23,8 +23,6 @@ type BauItemPreviewProps = {
 export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps) {
   const cor = RARIDADES[item.raridade]?.cor ?? "#a1a1aa"
 
-  const insetValue = Math.max(3, Math.round(size * 0.09))
-
   const ringStyle: React.CSSProperties = {
     width: size,
     height: size,
@@ -35,7 +33,7 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
     "--rarity-color-dim": `${cor}44`,
   } as React.CSSProperties
 
-  // Frame: avatar placeholder + overlay (mesmo padrão do UserAvatar)
+  // Frame: igual ao modelo da loja/cofre (Opção 1)
   if (item.type === "frame") {
     const src = item.value?.startsWith("http")
       ? item.value
@@ -44,58 +42,41 @@ export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps
       : null
 
     return (
-      <div style={{
-        ...ringStyle,
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "clip",
-      }}>
-        {/* avatar placeholder (central, menor) */}
+      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
         <div style={{
-          width: size * 0.55,
-          height: size * 0.55,
+          width: size, height: size,
           borderRadius: "50%",
-          background: "#27272a",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: size * 0.27,
+          background: "#3f3f46",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: size * 0.4,
           color: "#71717a",
-          userSelect: "none",
-          zIndex: 0,
         }}>
           👤
         </div>
-
-        {/* frame overlay — anel sobre o avatar */}
         {src ? (
           <img
             src={src}
             alt=""
             style={{
               position: "absolute",
-              inset: -insetValue,
-              width: `calc(100% + ${insetValue * 2}px)`,
-              height: `calc(100% + ${insetValue * 2}px)`,
+              top: "50%", left: "50%",
+              width: "136%", height: "136%",
               maxWidth: "none",
+              transform: "translate(-50%, -50%)",
               objectFit: "contain",
               pointerEvents: "none",
-              zIndex: 2,
             }}
           />
         ) : item.value ? (
           <div style={{
             position: "absolute",
-            inset: -insetValue,
+            inset: -3,
             borderRadius: "50%",
-            padding: insetValue,
+            padding: 3,
             backgroundImage: item.value,
             WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
             WebkitMaskComposite: "xor",
             maskComposite: "exclude",
-            zIndex: 2,
           }} />
         ) : null}
       </div>
