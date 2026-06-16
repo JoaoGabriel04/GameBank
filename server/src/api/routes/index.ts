@@ -37,9 +37,4 @@ apiRouter.use("/admin", adminRouter)
 apiRouter.use("/diamonds", diamondsRouter)
 apiRouter.use("/baus", bauRouter)
 
-// ROTA TEMPORÁRIA — remover após validar Sentry em produção
-apiRouter.get("/test-sentry", (_req, _res) => {
-  throw new Error("Teste Sentry — pode remover")
-})
-
 export default apiRouter
