@@ -35,14 +35,15 @@ type BauDetailModalProps = {
 }
 
 export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDetailModalProps) {
+  const [quantidade, setQuantidade] = useState(1)
+  const tipo = bau?.tipo
+  useEffect(() => { setQuantidade(1) }, [tipo])
+
   if (!bau) return null
   const config = BAU_CONFIG[bau.tipo as TipoBau]
   if (!config) return null
 
-  const [quantidade, setQuantidade] = useState(1)
   const cor = BAU_CORES[bau.tipo] ?? "#22c55e"
-
-  useEffect(() => { setQuantidade(1) }, [bau.tipo])
 
   const GARANTIAS: Record<string, { raridade: string; label: string }[]> = {
     premium:  [{ raridade: "EPICO", label: "1 Épico garantido" }],
