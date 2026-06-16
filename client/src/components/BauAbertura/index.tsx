@@ -28,6 +28,16 @@ export type BauResultado = {
   fragmentosTotal: number
   xpBonus?: number
   itens: ItemResultado[]
+  // multi-open
+  quantidade?: number
+  totalCoinsGanhos?: number
+  totalXpBonus?: number
+  batches?: {
+    coinsGanhos: number
+    fragmentosTotal: number
+    xpBonus?: number
+    itens: ItemResultado[]
+  }[]
 }
 
 type Fase = "luz" | "coins" | "itens" | "suspense" | "resumo"
@@ -426,6 +436,92 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   }, [fase, itemIdx, resultado, bloqueado, resumoVisiveis, onClose])
 
   if (!resultado) return null
+
+  // ── MULTI-OPEN: summary direto ─────────────────────────────────────
+  if (resultado.batches) {
+    return createPortal(
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "#09090b", overflowY: "auto",
+        padding: "48px 24px 100px",
+      }}>
+        <p className="font-jaro text-xl text-zinc-100 text-center mb-2">
+          Baús abertos!
+        </p>
+        <p className="font-inconsolata text-xs text-zinc-500 text-center mb-6">
+          {resultado.quantidade} × {resultado.tipoBau}
+        </p>
+
+        {/* Total coins/XP */}
+        <div className="flex justify-center gap-4 mb-6">
+          {resultado.totalXpBonus ? (
+            <div style={{
+              background: "#09090b", border: "1px solid #22d3ee22",
+              borderRadius: 12, padding: "10px 20px",
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span className="font-inconsolata text-sm text-cyan-400">+{resultado.totalXpBonus} XP</span>
+            </div>
+          ) : (
+            <div style={{
+              background: "#09090b", border: "1px solid #fbbf2422",
+              borderRadius: 12, padding: "10px 20px",
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <CoinIcon size={20} />
+              <span className="font-inconsolata text-sm text-amber-400 font-semibold">
+                +{resultado.totalCoinsGanhos?.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Items grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full max-w-sm sm:max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto">
+          {resultado.itens.map((i, idx) => {
+            const cor = RARIDADES[i.raridade]?.cor ?? "#a1a1aa"
+            return (
+              <div key={`${i.id}-${idx}`}
+                className="flex flex-col items-center gap-2 text-center p-3 sm:p-4"
+                style={{
+                  background: "#09090b",
+                  border: `1px solid ${cor}22`,
+                  borderTop: `2px solid ${cor}66`,
+                  borderRadius: 12,
+                }}
+              >
+                <div style={{ width: 56, height: 56 }}>
+                  <BauItemPreview item={i} size={56} />
+                </div>
+                <p className="font-inconsolata text-[11px] text-zinc-400 leading-tight" style={{ margin: 0 }}>
+                  {i.name}
+                </p>
+                <p className="font-inconsolata text-[11px]" style={{ color: cor, margin: 0 }}>
+                  +{i.fragmentosGanhos} 🧩
+                </p>
+                {i.itemCompleto && (
+                  <span style={{ fontSize: 10, color: "#4ade80" }}>✨</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <button onClick={(e) => { e.stopPropagation(); onClose() }}
+          style={{
+            display: "block", margin: "32px auto 0",
+            background: "#18181b", border: "1px solid #27272a",
+            borderRadius: 16, padding: "12px 40px",
+            fontFamily: "var(--font-inconsolata)", fontSize: 14,
+            color: "#d4d4d8", cursor: "pointer",
+          }}
+        >
+          Fechar
+        </button>
+      </div>,
+      document.body
+    )
+  }
 
   return createPortal(
     <div

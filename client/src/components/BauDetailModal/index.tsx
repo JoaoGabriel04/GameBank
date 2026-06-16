@@ -7,6 +7,7 @@ import { BAU_CONFIG, type TipoBau } from "@/constants/baus"
 import { RARIDADES } from "@/constants/raridade"
 import CoinIcon from "@/components/CoinIcon"
 import DiamondIcon from "@/components/DiamondIcon"
+import { useState, useEffect } from "react"
 
 const IMAGENS: Record<string, string> = {
   comum:    "/images/Cofrinho.png",
@@ -29,7 +30,7 @@ type BauDetailModalProps = {
     precoDiamonds?: number | null
   } | null
   onClose: () => void
-  onAbrir: (tipo: string) => void
+  onAbrir: (tipo: string, quantidade: number) => void
   abrindo: boolean
 }
 
@@ -38,7 +39,10 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
   const config = BAU_CONFIG[bau.tipo as TipoBau]
   if (!config) return null
 
+  const [quantidade, setQuantidade] = useState(1)
   const cor = BAU_CORES[bau.tipo] ?? "#22c55e"
+
+  useEffect(() => { setQuantidade(1) }, [bau.tipo])
 
   const GARANTIAS: Record<string, { raridade: string; label: string }[]> = {
     premium:  [{ raridade: "EPICO", label: "1 Épico garantido" }],
@@ -119,6 +123,13 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
                   ? <><CoinIcon size={14} /> {bau.precoCoins.toLocaleString("pt-BR")}</>
                   : <><DiamondIcon size={14} /> {bau.precoDiamonds}</>}
               </span>
+              {quantidade > 1 && (
+                <span className="text-zinc-500 font-inconsolata text-sm ml-2">
+                  × {quantidade} = {bau.precoCoins
+                    ? (bau.precoCoins * quantidade).toLocaleString("pt-BR")
+                    : (bau.precoDiamonds! * quantidade).toLocaleString("pt-BR")}
+                </span>
+              )}
             </div>
 
             {/* Stats: Itens / Coins / Fragmentos */}
@@ -204,6 +215,57 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
               ))}
             </div>
 
+            {/* Quantidade */}
+            <div
+              style={{
+                background: "#09090b",
+                border: "1px solid #27272a",
+                borderRadius: 12,
+                padding: "8px 16px",
+                marginBottom: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span className="font-inconsolata text-xs text-zinc-500">Quantidade</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantidade(q => Math.max(1, q - 1))}
+                  disabled={quantidade <= 1}
+                  style={{
+                    width: 28, height: 28,
+                    borderRadius: 8,
+                    background: "#18181b",
+                    border: "1px solid #27272a",
+                    color: quantidade <= 1 ? "#52525b" : "#d4d4d8",
+                    cursor: quantidade <= 1 ? "not-allowed" : "pointer",
+                  }}
+                  className="flex items-center justify-center text-sm font-medium"
+                >
+                  −
+                </button>
+                <span className="font-jaro text-base text-zinc-100 min-w-[24px] text-center">
+                  {quantidade}
+                </span>
+                <button
+                  onClick={() => setQuantidade(q => Math.min(50, q + 1))}
+                  disabled={quantidade >= 50}
+                  style={{
+                    width: 28, height: 28,
+                    borderRadius: 8,
+                    background: "#18181b",
+                    border: "1px solid #27272a",
+                    color: quantidade >= 50 ? "#52525b" : "#d4d4d8",
+                    cursor: quantidade >= 50 ? "not-allowed" : "pointer",
+                  }}
+                  className="flex items-center justify-center text-sm font-medium"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
             {/* Botões */}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={onClose}
@@ -215,7 +277,7 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
                 className="font-inconsolata text-sm py-2.5 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors">
                 Cancelar
               </button>
-              <button onClick={() => onAbrir(bau.tipo)} disabled={abrindo}
+              <button onClick={() => onAbrir(bau.tipo, quantidade)} disabled={abrindo}
                 style={{
                   background: `linear-gradient(135deg, ${cor}44, ${cor}22)`,
                   border: `1px solid ${cor}66`,
@@ -223,7 +285,7 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
                   boxShadow: `0 0 16px ${cor}22`,
                 }}
                 className="font-inconsolata text-sm font-semibold py-2.5 rounded-xl cursor-pointer hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                {abrindo ? "Abrindo..." : "Abrir agora"}
+                {abrindo ? "Abrindo..." : quantidade > 1 ? `Abrir ${quantidade}x` : "Abrir agora"}
               </button>
             </div>
           </motion.div>

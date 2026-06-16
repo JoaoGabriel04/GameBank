@@ -7,6 +7,7 @@ const router = Router()
 router.get("/", bauController.listar)
 
 router.post("/:tipo/abrir", authenticate, bauController.abrir)
+router.post("/:tipo/abrir-multiplo", authenticate, bauController.abrirMultiplo)
 
 router.get("/adquiridos", authenticate, bauController.adquiridos)
 router.post("/adquiridos/:id/abrir", authenticate, bauController.abrirAdquirido)

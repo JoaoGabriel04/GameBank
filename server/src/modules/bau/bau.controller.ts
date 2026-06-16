@@ -1,8 +1,8 @@
 import type { Request, Response } from "express"
-import { BauService }       from "./bau.service.js"
-import { AbrirBauSchema }   from "../../shared/schemas/bau.schema.js"
-import { parseError }       from "../../middleware/error-handler.middleware.js"
-import { emitToUser }       from "../../lib/socket.js"
+import { BauService }            from "./bau.service.js"
+import { AbrirBauSchema, AbrirMultiploBauSchema }   from "../../shared/schemas/bau.schema.js"
+import { parseError }            from "../../middleware/error-handler.middleware.js"
+import { emitToUser }            from "../../lib/socket.js"
 
 const bauService = new BauService()
 
@@ -24,6 +24,21 @@ export const bauController = {
       const resultado = await bauService.abrir(userId, tipo)
 
       emitToUser(userId, "bau:aberto", resultado)
+
+      res.json(resultado)
+    } catch (err) {
+      parseError(res, err)
+    }
+  },
+
+  abrirMultiplo: async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId
+      const { tipo, quantidade } = AbrirMultiploBauSchema.parse({ ...req.params, ...req.body })
+
+      const resultado = await bauService.abrirMultiplo(userId, tipo, quantidade)
+
+      emitToUser(userId, "bau:aberto-multiplo", resultado)
 
       res.json(resultado)
     } catch (err) {

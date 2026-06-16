@@ -19,7 +19,7 @@ import { Chip } from "@/components/user/UserUI";
 import type { ShopItem } from "@/types/shop";
 import { RARIDADES, raridadeWeight } from "@/constants/raridade";
 import { apiErrMsg } from "@/lib/api-error";
-import { getBausApi, abrirBauApi } from "@/services/api/baus";
+import { getBausApi, abrirBauApi, abrirBauMultiploApi } from "@/services/api/baus";
 import { getDailyOffersApi, buyDailyOfferApi } from "@/services/api/shop";
 import type { DailyOffer } from "@/services/api/shop";
 import BauCard from "@/components/BauCard";
@@ -1214,12 +1214,14 @@ export default function LojaPage() {
     }
   }, [token]);
 
-  async function handleAbrirBau(tipo: string) {
+  async function handleAbrirBau(tipo: string, quantidade = 1) {
     if (abrindo) return;
     setAbrindo(tipo);
     setBauDetalhes(null);
     try {
-      const res = await abrirBauApi(tipo);
+      const res = quantidade > 1
+        ? await abrirBauMultiploApi(tipo, quantidade)
+        : await abrirBauApi(tipo);
       setResultado(res);
       loadProfile();
     } catch (err) {

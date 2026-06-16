@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { slideUp } from "@/lib/animations";
 import { useChatStore, sendChatMessage } from "@/stores/socketStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useAuthStore } from "@/stores/authStore";
 import { MessageCircle, Send, X } from "lucide-react";
 import UserBadge from "@/components/UserBadge";
 
@@ -13,6 +14,10 @@ export default function Chat() {
   const [texto, setTexto] = useState("");
   const messages = useChatStore((s) => s.messages);
   const currentSession = useGameStore((s) => s.currentSession);
+  const authUser = useAuthStore((s) => s.user);
+  const currentPlayerId = currentSession?.jogadores?.find(
+    (p) => p.userId === authUser?.id
+  )?.id;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,53 +69,86 @@ export default function Chat() {
             exit="exit"
             className="fixed bottom-40 lg:bottom-24 left-6 z-50 w-80 h-96 bg-zinc-900/95 backdrop-blur-sm border border-zinc-700 rounded-xl flex flex-col shadow-xl"
           >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
-            <span className="text-zinc-100 font-jaro text-sm">Chat</span>
-            <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
+              <span className="text-zinc-100 font-jaro text-sm">Chat</span>
+              <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-zinc-300 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-            {messages.length === 0 && (
-              <p className="text-zinc-600 text-xs text-center font-inconsolata mt-8">
-                Nenhuma mensagem ainda
-              </p>
-            )}
-            {messages.map((msg) => (
-              <div key={msg.id} className="text-sm">
-                <span className="inline-flex items-center gap-1">
-                  <UserBadge badge={playerBadges.get(msg.playerId)} imageUrl={playerBadgeImages.get(msg.playerId)} className="w-3 h-3 text-[7px]" />
-                  <span
-                    className="font-bold text-xs"
-                    style={{ color: getPlayerColor(msg.playerId, currentSession) }}
+            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
+              {messages.length === 0 && (
+                <p className="text-zinc-600 text-xs text-center font-inconsolata mt-8">
+                  Nenhuma mensagem ainda
+                </p>
+              )}
+              {messages.map((msg) => {
+                const isMe = msg.playerId === currentPlayerId;
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`text-sm flex items-center gap-1 ${isMe ? "justify-end" : "justify-start"
+                      }`}
                   >
-                    {playerNames.get(msg.playerId) || msg.playerNome}
-                  </span>
-                  <span className="text-zinc-500 text-xs mr-1">:</span>
-                </span>
-                <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>
-              </div>
-            ))}
-            <div ref={bottomRef} />
-          </div>
+                    {isMe ? (
+                      <>
+                        <span className="text-zinc-300 text-xs font-inconsolata">
+                          {msg.texto}
+                        </span>
 
-          <div className="px-4 py-3 border-t border-zinc-700 flex gap-2">
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 border border-zinc-600 focus:outline-none focus:border-green-500 font-inconsolata"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!texto.trim()}
-              className="bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg px-3 py-2 transition-colors cursor-pointer"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+                        <span className="text-green-400 font-bold text-xs">
+                         :Você
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <UserBadge
+                          badge={playerBadges.get(msg.playerId)}
+                          imageUrl={playerBadgeImages.get(msg.playerId)}
+                          className="w-3 h-3 text-[7px] shrink-0"
+                        />
+
+                        <span
+                          className="font-bold text-xs"
+                          style={{
+                            color: getPlayerColor(msg.playerId, currentSession),
+                          }}
+                        >
+                          {playerNames.get(msg.playerId) || msg.playerNome}
+                        </span>
+
+                        <span className="text-zinc-500 text-xs mr-1">
+                          :
+                        </span>
+
+                        <span className="text-zinc-300 text-xs font-inconsolata">
+                          {msg.texto}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="px-4 py-3 border-t border-zinc-700 flex gap-2">
+              <input
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite sua mensagem..."
+                className="flex-1 bg-zinc-800 text-zinc-100 text-sm rounded-lg px-3 py-2 border border-zinc-600 focus:outline-none focus:border-green-500 font-inconsolata"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!texto.trim()}
+                className="bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg px-3 py-2 transition-colors cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
