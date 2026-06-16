@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+import { Sentry } from "../lib/sentry.js";
 
 export class AppError extends Error {
   constructor(
@@ -24,12 +25,23 @@ export function parseError(res: Response, err: unknown) {
 
 export function errorHandler(
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ) {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ message: err.message });
+  }
+
+  if (process.env.NODE_ENV !== "development") {
+    const user = (req as any).user;
+    Sentry.captureException(err, {
+      user: user ? { id: String(user.userId) } : undefined,
+      extra: {
+        url: req.url,
+        method: req.method,
+      },
+    });
   }
 
   console.error("Erro interno:", err);
