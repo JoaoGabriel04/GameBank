@@ -180,7 +180,7 @@ export function connectSocket(sessionId: number) {
           toast.success("Negociação concluída com sucesso!");
         }
       }
-      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+      // session:updated chega em seguida via emitUpdatedSession — não chamar loadSession aqui
     } else if (data.type === "rejected") {
       // Todos removem a negociação pendente
       if (data.negotiationId) {
@@ -189,7 +189,7 @@ export function connectSocket(sessionId: number) {
       negStore.setMinhaNegociacao(null);
       negStore.setMinhaNegociacaoAberto(false);
       if (isMyToast) toast.error("Sua negociação foi recusada.");
-      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+      // session:updated chega em seguida via emitUpdatedSession — não chamar loadSession aqui
     } else if (data.type === "expired") {
       // Todos removem a negociação pendente
       if (data.negotiationId) {
@@ -198,7 +198,7 @@ export function connectSocket(sessionId: number) {
       negStore.setMinhaNegociacao(null);
       negStore.setMinhaNegociacaoAberto(false);
       if (isMyToast) toast.warning("Negociação expirada por tempo limite.");
-      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+      // session:updated chega em seguida via emitSessionUpdated — não chamar loadSession aqui
     } else if (data.type === "counter" && data.negotiation) {
       // Contra-oferta: o proponente original vira alvo
       negStore.setMinhaNegociacao(null);
@@ -208,7 +208,7 @@ export function connectSocket(sessionId: number) {
         negStore.setActive(data.negotiation);
       }
       if (isMyToast) toast.info("Você recebeu uma contra-oferta!");
-      if (currentSessionId) useGameStore.getState().loadSession(currentSessionId);
+      // session:updated chega em seguida via emitUpdatedSession — não chamar loadSession aqui
     }
   });
 

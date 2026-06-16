@@ -217,13 +217,14 @@ export default function NegotiationResponseModal() {
       if (left <= 0 && activeNegotiation.status === "pendente") {
         removePendente(activeNegotiation.id);
         setActive(null);
-        if (activeNegotiation.sessionId) loadSession(activeNegotiation.sessionId);
+        // Não chamar loadSession aqui: o servidor ainda não processou a expiração
+        // (cleanup roda a cada 10s). O session:updated chega quando o servidor confirma.
       }
     };
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [activeNegotiation, activeNegotiation?.id, activeNegotiation?.expiresAt, activeNegotiation?.status, removePendente, setActive, loadSession]);
+  }, [activeNegotiation, activeNegotiation?.id, activeNegotiation?.expiresAt, activeNegotiation?.status, removePendente, setActive]);
 
   // Timer countdown — negociação pendente (minhaNegociacaoPendente)
   const [pendingTimeLeft, setPendingTimeLeft] = useState<number | null>(null);

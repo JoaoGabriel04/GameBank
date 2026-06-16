@@ -198,65 +198,65 @@ export class NegociacaoService {
       throw new AppError(400, "Alvo não tem saldo suficiente!");
     }
 
-    const operacoes: PrismaOp[] = [];
-
-    for (const item of offerProps) {
-      operacoes.push(
-        prisma.sessionPosses.update({
-          where: { id: item.sessionPossesId! },
+    await prisma.$transaction(async (tx) => {
+      // Transfere propriedades oferecidas (proponente → alvo)
+      // Verifica posse atual dentro da transação para detectar transferências concorrentes
+      for (const item of offerProps) {
+        const result = await tx.sessionPosses.updateMany({
+          where: { id: item.sessionPossesId!, playerId: negotiation.fromPlayerId },
           data: { playerId: negotiation.toPlayerId, negociando: false, casas: 0 },
-        })
-      );
-    }
-    for (const item of wantProps) {
-      operacoes.push(
-        prisma.sessionPosses.update({
-          where: { id: item.sessionPossesId! },
-          data: { playerId: negotiation.fromPlayerId, negociando: false, casas: 0 },
-        })
-      );
-    }
+        });
+        if (result.count === 0) {
+          throw new AppError(409, "Uma propriedade oferecida já não pertence ao proponente. A negociação foi cancelada.");
+        }
+      }
 
-    if (netMoney > 0) {
-      operacoes.push(
-        prisma.sessionPlayer.update({
+      // Transfere propriedades solicitadas (alvo → proponente)
+      // Verifica posse atual dentro da transação para detectar transferências concorrentes
+      for (const item of wantProps) {
+        const result = await tx.sessionPosses.updateMany({
+          where: { id: item.sessionPossesId!, playerId: negotiation.toPlayerId },
+          data: { playerId: negotiation.fromPlayerId, negociando: false, casas: 0 },
+        });
+        if (result.count === 0) {
+          throw new AppError(409, "Uma propriedade solicitada já não pertence ao alvo. A negociação foi cancelada.");
+        }
+      }
+
+      if (netMoney > 0) {
+        await tx.sessionPlayer.update({
           where: { id: negotiation.fromPlayerId },
           data: { saldo: { decrement: netMoney } },
-        }),
-        prisma.sessionPlayer.update({
+        });
+        await tx.sessionPlayer.update({
           where: { id: negotiation.toPlayerId },
           data: { saldo: { increment: netMoney } },
-        })
-      );
-    } else if (netMoney < 0) {
-      operacoes.push(
-        prisma.sessionPlayer.update({
+        });
+      } else if (netMoney < 0) {
+        await tx.sessionPlayer.update({
           where: { id: negotiation.toPlayerId },
           data: { saldo: { decrement: Math.abs(netMoney) } },
-        }),
-        prisma.sessionPlayer.update({
+        });
+        await tx.sessionPlayer.update({
           where: { id: negotiation.fromPlayerId },
           data: { saldo: { increment: Math.abs(netMoney) } },
-        })
-      );
-    }
+        });
+      }
 
-    operacoes.push(
-      prisma.negotiation.update({
+      await tx.negotiation.update({
         where: { id: negotiationId },
         data: { status: "aceita", respondedAt: new Date() },
-      }),
-      prisma.historico.create({
+      });
+      await tx.historico.create({
         data: {
           sessionId: negotiation.sessionId,
           data: new Date(),
           tipo: "NEGOCIACAO_ACEITA",
           detalhes: `Negociação entre ${fromPlayer.nome} e ${toPlayer.nome} foi aceita.`,
         },
-      })
-    );
+      });
+    });
 
-    await prisma.$transaction(operacoes);
     return this.repo.findNegotiationById(negotiationId);
   }
 
