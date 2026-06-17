@@ -19,6 +19,9 @@ import { initSocket, getIO } from "./lib/socket.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
 import { logger } from "./lib/logger.js";
+import { initQueueMonitoring, recompensasQueue, missoesQueue, cacheQueue } from "./lib/queues.js";
+import { createRecompensasWorker } from "./workers/recompensas.worker.js";
+import { createMissoesWorker } from "./workers/missoes.worker.js";
 import pinoHttp from "pino-http";
 import { prisma } from "./lib/prisma.js";
 import { getRedis } from "./lib/redis.js";
@@ -117,6 +120,10 @@ function createApiLimiter() {
 
 const httpServer = createServer(app);
 
+// Workers ficam no escopo do módulo para serem acessíveis no graceful shutdown
+let recompensasWorker: ReturnType<typeof createRecompensasWorker> | null = null;
+let missoesWorker: ReturnType<typeof createMissoesWorker> | null = null;
+
 async function start() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -138,6 +145,11 @@ async function start() {
   await seedBaus();
   startNegotiationCleanup();
   startCronJobs();
+  initQueueMonitoring();
+
+  recompensasWorker = createRecompensasWorker();
+  missoesWorker = createMissoesWorker();
+  logger.info("workers de recompensas e missões iniciados");
 
   httpServer.listen(PORT, () => {
     logger.info({ port: PORT }, "servidor iniciado");
@@ -201,7 +213,21 @@ async function gracefulShutdown(signal: string) {
     // io pode não estar inicializado
   }
 
-  // 5. Fechar conexão Redis
+  // 5. Encerrar workers e filas BullMQ
+  try {
+    await Promise.all([
+      recompensasWorker?.close(),
+      missoesWorker?.close(),
+      recompensasQueue.close(),
+      missoesQueue.close(),
+      cacheQueue.close(),
+    ]);
+    logger.info("workers e filas BullMQ encerrados");
+  } catch (err) {
+    logger.warn({ err }, "erro ao encerrar workers/filas BullMQ");
+  }
+
+  // 7. Fechar conexão Redis
   const redis = getRedis();
   if (redis) {
     try {
@@ -212,7 +238,7 @@ async function gracefulShutdown(signal: string) {
     }
   }
 
-  // 6. Fechar conexão com banco de dados
+  // 8. Fechar conexão com banco de dados
   try {
     await prisma.$disconnect();
     logger.info("banco de dados desconectado");
