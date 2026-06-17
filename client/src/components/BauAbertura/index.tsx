@@ -396,7 +396,8 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     }
 
     if (fase === "coins") {
-      setFase("itens")
+      // Sem itens (usuário já tem tudo) — pular direto para resumo
+      setFase(resultado.itens.length === 0 ? "resumo" : "itens")
       return
     }
 
@@ -404,7 +405,8 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
       const proximo = itemIdx + 1
 
       if (proximo >= resultado.itens.length) {
-        if (!itemCardRef.current) return
+        // itemCardRef pode ser null se não há itens — ir para resumo mesmo assim
+        if (!itemCardRef.current) { setFase("resumo"); return }
         gsap.to(itemCardRef.current, {
           x: "-100%", opacity: 0, duration: 0.2, ease: "power2.in",
           onComplete: () => setFase("resumo"),
@@ -454,6 +456,16 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
 
         {/* Total coins/XP */}
         <div className="flex justify-center gap-4 mb-6">
+          <div style={{
+            background: "#09090b", border: "1px solid #fbbf2422",
+            borderRadius: 12, padding: "10px 20px",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            <CoinIcon size={20} />
+            <span className="font-inconsolata text-sm text-amber-400 font-semibold">
+              +{resultado.totalCoinsGanhos?.toLocaleString("pt-BR")}
+            </span>
+          </div>
           {resultado.totalXpBonus ? (
             <div style={{
               background: "#09090b", border: "1px solid #22d3ee22",
@@ -462,18 +474,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             }}>
               <span className="font-inconsolata text-sm text-cyan-400">+{resultado.totalXpBonus} XP</span>
             </div>
-          ) : (
-            <div style={{
-              background: "#09090b", border: "1px solid #fbbf2422",
-              borderRadius: 12, padding: "10px 20px",
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <CoinIcon size={20} />
-              <span className="font-inconsolata text-sm text-amber-400 font-semibold">
-                +{resultado.totalCoinsGanhos?.toLocaleString("pt-BR")}
-              </span>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Items grid */}
@@ -609,9 +610,12 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             {resultado.xpBonus ? (
               <>
                 <p style={{ fontFamily: "var(--font-jaro)", fontSize: 32, color: "#fbbf24", margin: 0 }}>
+                  +{resultado.coinsGanhos.toLocaleString("pt-BR")} coins
+                </p>
+                <p style={{ fontFamily: "var(--font-jaro)", fontSize: 24, color: "#22d3ee", margin: "4px 0 0" }}>
                   +{resultado.xpBonus} XP
                 </p>
-                <p style={{ fontFamily: "var(--font-inconsolata)", fontSize: 13, color: "#22d3ee", marginTop: 4 }}>
+                <p style={{ fontFamily: "var(--font-inconsolata)", fontSize: 13, color: "#52525b", marginTop: 4 }}>
                   Bônus por baú vazio
                 </p>
               </>
@@ -797,48 +801,34 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             Resumo do baú
           </p>
 
-          {resultado.xpBonus ? (
-            <div
-              className="resumo-card w-full max-w-sm sm:max-w-xl md:max-w-2xl lg:max-w-4xl"
-              data-idx="-1"
-              style={{
-                opacity: 0,
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: "#09090b",
-                border: "1px solid #22d3ee22",
-                borderLeft: "3px solid #22d3ee",
-                borderRadius: "0 10px 10px 0",
-                padding: "10px 16px", marginBottom: 8,
-              }}
-            >
-              <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 13, color: "#d4d4d8" }}>XP Bônus</span>
-              <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 14, color: "#22d3ee", fontWeight: 600 }}>
-                +{resultado.xpBonus}
-              </span>
+          <div
+            className="resumo-card w-full max-w-sm sm:max-w-xl md:max-w-2xl lg:max-w-4xl"
+            data-idx="-1"
+            style={{
+              opacity: 0,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "#09090b",
+              border: "1px solid #fbbf2422",
+              borderLeft: "3px solid #fbbf24",
+              borderRadius: "0 10px 10px 0",
+              padding: "10px 16px", marginBottom: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <CoinIcon size={20} />
+              <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 13, color: "#d4d4d8" }}>Coins</span>
             </div>
-          ) : (
-            <div
-              className="resumo-card w-full max-w-sm sm:max-w-xl md:max-w-2xl lg:max-w-4xl"
-              data-idx="-1"
-              style={{
-                opacity: 0,
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                background: "#09090b",
-                border: "1px solid #fbbf2422",
-                borderLeft: "3px solid #fbbf24",
-                borderRadius: "0 10px 10px 0",
-                padding: "10px 16px", marginBottom: 8,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <CoinIcon size={20} />
-                <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 13, color: "#d4d4d8" }}>Coins</span>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {resultado.xpBonus && (
+                <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 14, color: "#22d3ee", fontWeight: 600 }}>
+                  +{resultado.xpBonus} XP
+                </span>
+              )}
               <span style={{ fontFamily: "var(--font-inconsolata)", fontSize: 14, color: "#fbbf24", fontWeight: 600 }}>
                 +{resultado.coinsGanhos.toLocaleString("pt-BR")}
               </span>
             </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full max-w-sm sm:max-w-xl md:max-w-2xl lg:max-w-4xl">
             {resultado.itens.map((i, idx) => {

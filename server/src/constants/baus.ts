@@ -21,9 +21,9 @@ export interface BauConfigEntry {
 }
 
 export const XP_BONUS: Record<string, { min: number; max: number }> = {
-  comum:    { min: 500,  max: 1000 },
-  premium:  { min: 1500, max: 3000 },
-  lendario: { min: 3000, max: 5000 },
+  comum:    { min: 500, max: 1000 },
+  premium:  { min: 500, max: 1000 },
+  lendario: { min: 500, max: 1000 },
 }
 
 export const BAU_CONFIG: Record<string, BauConfigEntry> = {
