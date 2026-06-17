@@ -26,7 +26,7 @@ interface GameBottomNavProps {
 
 export default function GameBottomNav({ linksNav, abaAtual, onSelect }: GameBottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
+    <nav className="bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
       <ul className="w-full grid grid-cols-5">
         {linksNav.map((link) => (
           <li

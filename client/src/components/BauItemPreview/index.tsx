@@ -20,7 +20,7 @@ type BauItemPreviewProps = {
   size?: number
 }
 
-export default function BauItemPreview({ item, size = 200 }: BauItemPreviewProps) {
+export default function BauItemPreview({ item, size = 100 }: BauItemPreviewProps) {
   const cor = RARIDADES[item.raridade]?.cor ?? "#a1a1aa"
 
   const ringStyle: React.CSSProperties = {
