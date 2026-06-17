@@ -431,7 +431,9 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     }
 
     if (fase === "resumo") {
-      if (resumoVisiveis.length >= (resultado?.itens.length ?? 0)) {
+      // Exige que o card de coins/XP (idx -1) já tenha animado E todos os itens visíveis
+      const coinsCardVisivel = resumoVisiveis.includes(-1);
+      if (coinsCardVisivel && resumoVisiveis.length >= (resultado?.itens.length ?? 0) + 1) {
         onClose()
       }
     }
@@ -863,7 +865,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             })}
           </div>
 
-          {resumoVisiveis.length >= resultado.itens.length && (
+          {resumoVisiveis.includes(-1) && resumoVisiveis.length >= resultado.itens.length + 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); onClose() }}
               style={{
