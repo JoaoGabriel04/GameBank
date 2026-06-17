@@ -8,8 +8,6 @@
  * Visual do protótipo: cards com glow, ícone por métrica, barra de progresso
  * colorida por tipo, chip de status, botão "Resgatar" com estado otimista.
  *
- * ⚠️  Claim: não existe endpoint /missions/:id/claim ainda.
- *    Quando criado, substitua o TODO abaixo por: await claimMissionApi(m.id)
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";

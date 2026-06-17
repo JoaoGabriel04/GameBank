@@ -648,35 +648,6 @@ export class SessionService {
       .add(`missoes-${sessionId}`, { sessionId, players: missaoPlayers }, { jobId: `missoes-${sessionId}` })
       .catch((e) => sessionLogger.warn({ err: e, sessionId }, "falha ao enfileirar missões — progresso não será atualizado"));
 
-    // CÓDIGO ANTIGO (mantido 48h para rollback) — remover após validação em produção
-    // for (const entry of ranked) {
-    //   const p = entry.player;
-    //   if (!p.userId) continue;
-    //   const reward = rewardByPlayer.get(p.id);
-    //   const teveRecompensa = (reward?.coins ?? 0) > 0 || (reward?.xp ?? 0) > 0;
-    //   if (!teveRecompensa) continue;
-    //   try {
-    //     if (entry.position === 1) {
-    //       await this.bauService.concederBauPartida(p.userId, "premium", undefined, 1);
-    //     } else if (entry.position === 2) {
-    //       await this.bauService.concederBauPartida(p.userId, "comum", undefined, 2);
-    //     }
-    //   } catch (e) {
-    //     sessionLogger.error({ err: e }, "erro ao conceder baú");
-    //   }
-    // }
-    // for (const entry of ranked) {
-    //   const p = entry.player;
-    //   if (!p.userId) continue;
-    //   try {
-    //     await this.missionService.track(p.userId, "games_played", 1);
-    //     if (entry.position === 1) await this.missionService.track(p.userId, "wins", 1);
-    //     if (entry.position <= 3) await this.missionService.track(p.userId, "top3", 1);
-    //   } catch (e) {
-    //     sessionLogger.error({ err: e }, "erro ao atualizar missões");
-    //   }
-    // }
-
     // Enriquece o retorno com as recompensas calculadas + motivo de penalidade + troféus + baú
     return ranked.map((entry: any) => {
       const reward  = entry.player.userId ? rewardByPlayer.get(entry.player.id) : null;

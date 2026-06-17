@@ -53,12 +53,6 @@ const BAU_IMAGENS: Record<string, string> = {
   lendario: "/images/Cofre Lendário.png",
 }
 
-const BAU_CORES: Record<string, string> = {
-  comum:    "#22c55e",
-  premium:  "#22d3ee",
-  lendario: "#f4f4f5",
-}
-
 export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const [fase, setFase]           = useState<Fase>("luz")
   const [itemIdx, setItemIdx]     = useState(0)
@@ -92,8 +86,6 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const item    = resultado?.itens[itemIdx] ?? null
   const corItem = RARIDADES[item?.raridade ?? "COMUM"]?.cor ?? "#a1a1aa"
   const isLend  = item?.raridade === "LENDARIO"
-  const corBau  = BAU_CORES[resultado?.tipoBau ?? "comum"] ?? "#22c55e"
-
   // Reset ao receber novo resultado
   useEffect(() => {
     if (!resultado) return

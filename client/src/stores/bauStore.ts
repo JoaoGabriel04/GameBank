@@ -24,7 +24,7 @@ interface BauStore {
   ultimoResultado: BauResultado | null
 
   loadAdquiridos: () => Promise<void>
-  abrirAdquirido: (id: number) => Promise<any>
+  abrirAdquirido: (id: number) => Promise<BauResultado>
   limparUltimoResultado: () => void
   clearError: () => void
 }
