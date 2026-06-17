@@ -5,6 +5,7 @@ import { useAuthStore } from "./authStore";
 import { getRoomToken } from "./roomTokenStore";
 import { toast } from "@/lib/toast";
 import type { ChatMessage, GameNotification, Negotiation } from "@/types/game";
+import { nextSeq, resetSeq } from "@/lib/socket-sequence";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== ""
@@ -68,6 +69,7 @@ export function connectSocket(sessionId: number) {
 
   socket.on("reconnect", () => {
     if (sessionEnded) return;
+    resetSeq(sessionId); // seq 0 no próximo chat:send sinaliza reconexão ao servidor
     socket?.emit("session:join", { sessionId });
     reconnectCallbacks.forEach((cb) => cb());
   });
@@ -92,6 +94,12 @@ export function connectSocket(sessionId: number) {
   });
 
   socket.on("erro:rate-limit", (data: { evento: string; mensagem: string; aguardar: number }) => {
+    toast.error(data.mensagem);
+  });
+
+  socket.on("erro:sequencia", (data: { esperado: number; recebido: number; mensagem: string }) => {
+    // Sincronizar contador local com o esperado pelo servidor
+    resetSeq(sessionId);
     toast.error(data.mensagem);
   });
 
@@ -250,8 +258,8 @@ export const useChatStore = create<ChatStore>((set) => ({
 }));
 
 export function sendChatMessage(texto: string) {
-  if (socket?.connected) {
-    socket.emit("chat:send", { texto });
+  if (socket?.connected && currentSessionId !== null) {
+    socket.emit("chat:send", { texto, seq: nextSeq(currentSessionId) });
   }
 }
 

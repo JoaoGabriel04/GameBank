@@ -5,6 +5,7 @@ import { verifyToken, verifyRoomToken } from "./jwt.js";
 import { connectRedis, getRedis } from "./redis.js";
 import { socketLogger } from "./logger.js";
 import { socketRateLimit } from "../middleware/socket-rate-limit.js";
+import { validateSequence } from "../middleware/sequence-validator.js";
 
 let io: Server | null = null;
 let gameNsp: ReturnType<Server["of"]> | null = null;
@@ -228,7 +229,7 @@ export async function initSocket(httpServer: HttpServer) {
       socket.leave(`session:${sessionId}`);
     });
 
-    socket.on("chat:send", async ({ texto }: { texto: string }) => {
+    socket.on("chat:send", async ({ texto, seq }: { texto: string; seq?: number }) => {
       const sessionId = socket.data.sessionId;
       const userId = socket.data.userId;
       if (!sessionId || !userId || !texto || !texto.trim()) return;
@@ -240,6 +241,14 @@ export async function initSocket(httpServer: HttpServer) {
         mensagem: "Aguarde um momento antes de enviar mais mensagens.",
       });
       if (!permitido) return;
+
+      // Período de transição: clientes sem seq são aceitos com warning
+      if (seq === undefined) {
+        socketLogger.warn({ userId, sessionId }, "chat:send sem seq — cliente desatualizado");
+      } else {
+        const valido = await validateSequence(socket, sessionId, seq);
+        if (!valido) return;
+      }
 
       try {
         const { prisma } = await import("../lib/prisma.js");
