@@ -1,7 +1,7 @@
 import { prisma } from "./prisma.js";
 import { logger } from "./logger.js";
 
-const CLEANUP_INTERVAL_MS = 10_000; // verifica a cada 10s
+const CLEANUP_INTERVAL_MS = 2_000; // verifica a cada 2s — minimiza janela de propriedades bloqueadas pós-expiração
 
 async function expireNegotiations() {
   try {

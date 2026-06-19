@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { BancoService } from "./banco.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { emitUpdatedSession } from "../socket/socket.handler.js";
-import { emitToRoom, emitToUserWithRetry } from "../../lib/socket.js";
+import { emitToRoom } from "../../lib/socket.js";
 import { logger } from "../../lib/logger.js";
 
 const bancoService = new BancoService();
@@ -20,7 +20,7 @@ export const bancoController = {
 
     try {
       await bancoService.deposito(Number(userId), Number(sessionId), Number(valor));
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({ message: "Depósito realizado com sucesso!" });
     } catch (err) {
       if (err instanceof AppError) {
@@ -39,7 +39,7 @@ export const bancoController = {
 
     try {
       await bancoService.saque(Number(userId), Number(sessionId), Number(valor));
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({ message: "Saque realizado com sucesso!" });
     } catch (err) {
       if (err instanceof AppError) {
@@ -58,14 +58,13 @@ export const bancoController = {
 
     try {
       const result = await bancoService.transferencia(Number(pagadorId), Number(recebedorId), Number(sessionId), Number(valor));
-      // Broadcast na sala é mais confiável que emitToUserWithRetry individual
       emitToRoom(Number(sessionId), "transferencia:toast", {
         fromPlayerNome: result.pagadorNome,
         toPlayerId: result.recebedorId,
         toUserId: result.recebedorUserId,
         valor: result.valor,
       });
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({ message: "Transferência realizada com sucesso!" });
     } catch (err) {
       if (err instanceof AppError) {
@@ -91,7 +90,7 @@ export const bancoController = {
         valor: result.valor,
         propriedadeNome: result.propriedadeNome,
       });
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({ message: "Aluguel pago", valor: result.valor });
     } catch (err) {
       if (err instanceof AppError) {
@@ -117,7 +116,7 @@ export const bancoController = {
         valor: result.valor,
         propriedadeNome: result.propriedadeNome,
       });
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({
         message: `${result.pagadorNome} pagou R$ ${result.valor} para ${result.recebedorNome}`,
       });
@@ -138,7 +137,7 @@ export const bancoController = {
 
     try {
       const result = await bancoService.receberDeTodos(Number(sessionId), Number(userId));
-      await emitUpdatedSession(Number(sessionId));
+      emitUpdatedSession(Number(sessionId)).catch(() => {});
       return res.status(200).json({
         message: `O jogador ${result.jogador} recebeu R$ 500 de todos os jogadores, um total de ${result.total}!`,
       });
@@ -151,4 +150,3 @@ export const bancoController = {
     }
   },
 };
-

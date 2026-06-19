@@ -41,7 +41,10 @@ export class MissionsService {
   }
 
   async track(userId: number, metric: string, amount: number, sessionId?: number) {
-    // Find user's own missions with this metric (all missions are per-user)
+    // Garante que missões diárias/semanais existam antes de rastrear progresso.
+    // Sem isso, track() é no-op para usuários que nunca abriram a aba de missões.
+    await gerarMissoesParaUsuario(userId);
+
     const userMissions = await missionsRepository.findUserMissionsByMetric(userId, metric);
 
     for (const um of userMissions) {

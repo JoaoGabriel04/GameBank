@@ -9,6 +9,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 
 import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore } from "@/stores/socketStore";
+import { useNegotiationStore } from "@/stores/negotiationStore";
+import { listarPendentesApi } from "@/services/api/negotiations";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { setRoomToken } from "@/stores/roomTokenStore";
 import { useSession } from "@/hooks/useApi";
@@ -126,6 +128,23 @@ export default function Game() {
       useGameStore.setState({ currentSession: swrSession });
     }
   }, [swrSession]);
+
+  // Hidrata o store de negociações ao carregar/reconectar — evita desaparecer após refresh
+  useEffect(() => {
+    if (!sessionId || !swrSession || !authUser?.id) return;
+    const me = swrSession.jogadores?.find((p: Player) => p.userId === authUser.id);
+    if (!me?.id) return;
+    listarPendentesApi(sessionId, me.id)
+      .then((list: unknown[]) => {
+        const negStore = useNegotiationStore.getState();
+        const typed = list as import("@/types/game").Negotiation[];
+        const received = typed.filter((n) => n.toPlayerId === me.id);
+        const sent = typed.find((n) => n.fromPlayerId === me.id) ?? null;
+        negStore.setPendentes(received);
+        negStore.setMinhaNegociacao(sent);
+      })
+      .catch(() => {});
+  }, [sessionId, swrSession, authUser?.id]);
 
   // Restaura a aba salva no localStorage
   useEffect(() => {

@@ -58,7 +58,7 @@ export const negociacaoController = {
         targetUserId: toUserId,
         negotiation,
       });
-      await emitUpdatedSession(body.sessionId);
+      emitUpdatedSession(body.sessionId).catch(() => {});
       return res.status(201).json(negotiation);
     } catch (err) {
       return parseError(res, err);
@@ -86,7 +86,7 @@ export const negociacaoController = {
         targetUserId: toUserId,
         negotiation,
       });
-      await emitUpdatedSession(negotiation.sessionId);
+      emitUpdatedSession(negotiation.sessionId).catch(() => {});
       return res.status(200).json(negotiation);
     } catch (err) {
       return parseError(res, err);
@@ -106,7 +106,7 @@ export const negociacaoController = {
         targetUserId: fromUserId,
         negotiationId: negotiation.id,
       });
-      await emitUpdatedSession(negotiation.sessionId);
+      emitUpdatedSession(negotiation.sessionId).catch(() => {});
       return res.status(200).json(negotiation);
     } catch (err) {
       return parseError(res, err);
@@ -131,7 +131,7 @@ export const negociacaoController = {
         targetUserId: toUserId,
         negotiation: newNegotiation,
       });
-      await emitUpdatedSession(newNegotiation.sessionId);
+      emitUpdatedSession(newNegotiation.sessionId).catch(() => {});
       return res.status(201).json(newNegotiation);
     } catch (err) {
       return parseError(res, err);

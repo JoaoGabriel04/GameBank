@@ -632,9 +632,15 @@ export class SessionService {
         };
       });
 
-    recompensasQueue
-      .add(`bau-${sessionId}`, { sessionId, players: bauPlayers }, { jobId: `bau-${sessionId}` })
-      .catch((e) => sessionLogger.warn({ err: e, sessionId }, "falha ao enfileirar baús — baús não serão concedidos"));
+    try {
+      await recompensasQueue.add(
+        `bau-${sessionId}`,
+        { sessionId, players: bauPlayers },
+        { jobId: `bau-${sessionId}` }
+      );
+    } catch (e) {
+      sessionLogger.error({ err: e, sessionId }, "falha ao enfileirar baús — baús não serão concedidos");
+    }
 
     // Enfileira tracking de missões pós-partida com retry automático
     const missaoPlayers: MissoesJob["players"] = ranked
@@ -644,9 +650,15 @@ export class SessionService {
         position: entry.position,
       }));
 
-    missoesQueue
-      .add(`missoes-${sessionId}`, { sessionId, players: missaoPlayers }, { jobId: `missoes-${sessionId}` })
-      .catch((e) => sessionLogger.warn({ err: e, sessionId }, "falha ao enfileirar missões — progresso não será atualizado"));
+    try {
+      await missoesQueue.add(
+        `missoes-${sessionId}`,
+        { sessionId, players: missaoPlayers },
+        { jobId: `missoes-${sessionId}` }
+      );
+    } catch (e) {
+      sessionLogger.error({ err: e, sessionId }, "falha ao enfileirar missões — progresso não será atualizado");
+    }
 
     // Enriquece o retorno com as recompensas calculadas + motivo de penalidade + troféus + baú
     return ranked.map((entry: any) => {

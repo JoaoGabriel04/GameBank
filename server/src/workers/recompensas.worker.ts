@@ -24,10 +24,11 @@ function createRecompensasWorker(connection = bullMQConnection) {
 
       for (const p of players) {
         if (!p.teveRecompensa) continue;
-        if (p.position === 1) {
-          await bauService.concederBauPartida(p.userId, "premium", undefined, 1);
-        } else if (p.position === 2) {
-          await bauService.concederBauPartida(p.userId, "comum", undefined, 2);
+        const tipo = p.position === 1 ? "premium" : p.position === 2 ? "comum" : null;
+        if (!tipo) continue;
+        const bau = await bauService.concederBauPartida(p.userId, tipo, sessionId, p.position);
+        if (!bau) {
+          logger.warn({ userId: p.userId, sessionId, tipo }, "baú pós-partida não concedido (cap diário ou tipo inválido)");
         }
       }
 
