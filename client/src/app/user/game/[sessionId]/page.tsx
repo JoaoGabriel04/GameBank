@@ -175,8 +175,23 @@ export default function Game() {
     if (!window.confirm("Tem certeza que deseja finalizar este jogo? Esta ação não pode ser desfeita."))
       return;
     setEndLoading(true);
-    await endSession(currentSession.id);
-    setEndLoading(false);
+    try {
+      await endSession(currentSession.id);
+      setRoomToken(null);
+      disconnectSocket();
+      toastInfo(
+        currentSession.status === "Esperando"
+          ? "Sala encerrada com sucesso."
+          : "Partida finalizada com sucesso."
+      );
+      router.push("/user/sessions");
+    } catch (err) {
+      const e = toApiErr(err);
+      const msg = e?.response?.data?.message ?? e?.response?.data?.error ?? "Erro ao finalizar a partida";
+      if ((e?.response?.status ?? 0) >= 500) { toastError(msg); } else { toastWarning(msg); }
+    } finally {
+      setEndLoading(false);
+    }
   };
 
   const handleQuit = async () => {
