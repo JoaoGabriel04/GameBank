@@ -18,17 +18,22 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBadge from "@/components/UserBadge";
 import UserBanner from "@/components/UserBanner";
 import type { Negotiation } from "@/types/game";
+import { PROPERTY_COLORS } from "@/types/game";
 import { sortSessionPosses } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
 import { toApiErr } from "@/lib/api-error";
 
-const PROP_COLOR_HEX: Record<string, string> = {
+const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16", green: "#15803d", red: "#dc2626", blue: "#2563eb",
   amber: "#fcd34d", orange: "#ea580c", pink: "#db2777", purple: "#7e22ce", zinc: "#fafafa",
 };
 function getPropColorHex(grupoCor: string | null | undefined): string {
   if (!grupoCor) return "#52525b";
-  return PROP_COLOR_HEX[grupoCor] ?? "#52525b";
+  const found = PROPERTY_COLORS.find((c) => c.value === grupoCor);
+  if (!found) return COLOR_HEX[grupoCor] ?? "#52525b";
+  const match = found.bg?.match(/bg-(\w+)/);
+  if (match) return COLOR_HEX[match[1]] ?? "#52525b";
+  return "#52525b";
 }
 
 export default function NegotiationResponseModal() {

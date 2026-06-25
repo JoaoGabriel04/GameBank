@@ -62,7 +62,7 @@ services:
       migration:
         condition: service_completed_successfully
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:?}@db:5432/${DB_NAME:-supermaquina}
       NODE_ENV: production

@@ -236,5 +236,21 @@ export const sessionController = {
       res.status(500).json({ message: "Erro ao encerrar sessão" });
     }
   },
+
+  get_resultado: async (req: Request, res: Response) => {
+    const { sessionId } = req.params;
+    const sessionIdNum = Number(sessionId);
+    if (isNaN(sessionIdNum)) {
+      return res.status(400).json({ message: "ID de sessão inválido" });
+    }
+    try {
+      const ranking = await sessionService.getGameResults(sessionIdNum);
+      if (!ranking) return res.status(404).json({ message: "Resultado não encontrado" });
+      res.status(200).json({ ranking });
+    } catch (error) {
+      sessionLogger.error({ err: error }, "Erro ao buscar resultado da sessão");
+      res.status(500).json({ message: "Erro ao buscar resultado" });
+    }
+  },
 };
 

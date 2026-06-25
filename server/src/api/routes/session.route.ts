@@ -22,5 +22,6 @@ sessionRouter.post("/:sessionId/quit", authenticate, authenticateRoom("params", 
 sessionRouter.get("/:sessionId/my-player", authenticate, sessionController.my_player)
 
 sessionRouter.delete("/delete/:sessionId", authenticate, authenticateRoom("params", "sessionId"), sessionController.end_session)
+sessionRouter.get("/:sessionId/resultado", authenticate, sessionController.get_resultado)
 
 export default sessionRouter;

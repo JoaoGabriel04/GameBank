@@ -1,5 +1,5 @@
 import api from './index'
-import { GameSession } from '@/types/game'
+import { GameSession, RankedPlayer } from '@/types/game'
 
 export interface TeamInput {
   nome: string;
@@ -47,6 +47,9 @@ export const sessionsApi = {
 
   getMyActive: () =>
     api.get<{ session: { id: number; nome: string; modo: string; status: string } | null }>('/sessions/my-active'),
+
+  getResultado: (sessionId: number) =>
+    api.get<{ ranking: RankedPlayer[] }>(`/sessions/${sessionId}/resultado`),
 }
 
 export const getSessionsApi = () => sessionsApi.getAll().then(res => res.data)

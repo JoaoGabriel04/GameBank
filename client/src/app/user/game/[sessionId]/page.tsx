@@ -179,9 +179,18 @@ export default function Game() {
       disconnectSocket();
 
       // 404 → sessão deletada (partida encerrada enquanto desconectado).
-      // Mostra "Sala Finalizada" em vez de redirecionar — podiumData pode ser restaurado pelo sessionStorage.
+      // Tenta buscar o resultado salvo em GameResult para exibir o pódio.
       if (status === 404) {
         setSessionEnded(true);
+        if (sessionId) {
+          sessionsApi.getResultado(sessionId)
+            .then((res) => {
+              if (res.data?.ranking?.length) {
+                setPodiumData(res.data.ranking);
+              }
+            })
+            .catch(() => {});
+        }
         return;
       }
 

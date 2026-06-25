@@ -685,6 +685,52 @@ export class SessionService {
     });
   }
 
+  async getGameResults(sessionId: number) {
+    const results = await this.repo.findGameResults(sessionId);
+    if (!results.length) return null;
+
+    // Enriquece com badge/banner usando a mesma lógica do session-mapper
+    const enriched = await mapSessionPlayers(
+      results.map((r: any) => ({
+        ...r,
+        user: r.user
+          ? { ...r.user, trophies: 0, level: 1 }
+          : null,
+      }))
+    );
+
+    return enriched.map((entry: any, i: number) => {
+      const r = results[i];
+      return {
+        position: r.position,
+        player: {
+          id: 0,
+          nome: r.user?.nome ?? "Jogador",
+          userId: r.userId,
+          avatarUrl: entry.avatarUrl ?? null,
+          avatarUpdatedAt: entry.avatarUpdatedAt ?? null,
+          banner: entry.banner ?? null,
+          bannerAnimated: entry.bannerAnimated ?? false,
+          bannerRaridade: entry.bannerRaridade ?? null,
+          badge: entry.badge ?? null,
+          badgeImageUrl: entry.badgeImageUrl ?? null,
+          frame: entry.frame ?? null,
+          frameType: entry.frameType ?? null,
+          frameAnimated: entry.frameAnimated ?? false,
+          frameScale: entry.frameScale ?? 145,
+        },
+        patrimony: r.patrimony,
+        xpEarned: r.xpEarned,
+        coinsEarned: r.coinsEarned,
+        penaltyReason: r.penaltyReason ?? null,
+        trophyDelta: r.trophyDelta,
+        trophyBefore: r.trophyBefore,
+        trophyAfter: r.trophyAfter,
+        bauEarned: null,
+      };
+    });
+  }
+
   private async calculateRankings(session: any) {
     const players = await mapSessionPlayers(session.jogadores ?? []);
     const posses = session.sessionPosses ?? [];

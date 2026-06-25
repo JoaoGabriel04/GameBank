@@ -302,4 +302,27 @@ export class SessionRepository {
       select: { id: true },
     });
   }
+
+  async findGameResults(sessionId: number) {
+    return prisma.gameResult.findMany({
+      where: { sessionId },
+      orderBy: { position: "asc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            nome: true,
+            avatarUrl: true,
+            avatarUpdatedAt: true,
+            banner: true,
+            frame: true,
+            frameType: true,
+            frameAnimated: true,
+            frameScale: true,
+            user_items: true,
+          },
+        },
+      },
+    });
+  }
 }
