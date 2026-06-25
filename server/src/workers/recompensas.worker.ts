@@ -26,7 +26,8 @@ function createRecompensasWorker(connection = bullMQConnection) {
       for (const p of players) {
         const tipo = p.position === 1 ? "premium" : p.position === 2 ? "comum" : null;
         if (!tipo) continue;
-        const bau = await bauService.concederBauPartida(p.userId, tipo, sessionId, p.position);
+        // sessionId não é passado aqui — a sessão já foi deletada antes do worker rodar
+        const bau = await bauService.concederBauPartida(p.userId, tipo, undefined, p.position);
         if (!bau) {
           logger.warn({ userId: p.userId, sessionId, tipo }, "baú pós-partida não concedido (cap diário ou tipo inválido)");
         } else {
