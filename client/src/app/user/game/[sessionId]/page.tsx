@@ -86,11 +86,26 @@ export default function Game() {
   // --- WebSocket ------------------------------------------------------------
   useEffect(() => {
     if (!sessionId) return;
+
+    // Restaura podium cacheado caso o usuário tenha perdido o evento (reconexão pós-fim)
+    const cachedPodium = sessionStorage.getItem(`podium_${sessionId}`);
+    if (cachedPodium) {
+      try {
+        setPodiumData(JSON.parse(cachedPodium));
+        setSessionEnded(true);
+      } catch {
+        sessionStorage.removeItem(`podium_${sessionId}`);
+      }
+    }
+
     connectSocket(sessionId);
     onReconnect(() => mutate());
     onSessionClosed((ranking) => {
       setSessionEnded(true);
-      if (ranking) setPodiumData(ranking);
+      if (ranking) {
+        setPodiumData(ranking);
+        sessionStorage.setItem(`podium_${sessionId}`, JSON.stringify(ranking));
+      }
       setRoomToken(null);
       mutate(undefined, { revalidate: false });
       useProfileStore.getState().clearProfile();
@@ -151,7 +166,7 @@ export default function Game() {
     setAbaAtual(localStorage.getItem("abaAtual") || "Início");
   }, []);
 
-  // Redireciona se não conseguir carregar a sessão (404, 401, 403), não em erro de rede
+  // Lida com erros de carregamento da sessão
   useEffect(() => {
     if (isLoading || sessionEnded) return;
     if (!swrSession && isError) {
@@ -159,12 +174,20 @@ export default function Game() {
       const axiosError = isError as { response?: { status?: number } };
       const status = axiosError?.response?.status;
       if (!status || (status !== 404 && status !== 401 && status !== 403)) return;
+
       setRoomToken(null);
       disconnectSocket();
+
+      // 404 → sessão deletada (partida encerrada enquanto desconectado).
+      // Mostra "Sala Finalizada" em vez de redirecionar — podiumData pode ser restaurado pelo sessionStorage.
+      if (status === 404) {
+        setSessionEnded(true);
+        return;
+      }
+
       const msg =
         status === 401 ? "Acesso não autorizado a esta sala" :
-        status === 403 ? "Você não tem permissão para acessar esta sala" :
-        "Sessão não encontrada";
+        "Você não tem permissão para acessar esta sala";
       toastError(msg);
       router.push("/user/sessions");
     }
@@ -507,7 +530,10 @@ export default function Game() {
           <PodiumModal
             ranking={podiumData}
             userId={authUser?.id}
-            onClose={() => router.push("/user/sessions")}
+            onClose={() => {
+              sessionStorage.removeItem(`podium_${sessionId}`);
+              router.push("/user/sessions");
+            }}
           />
         ) : (
           <div className="min-h-screen bg-zinc-950 flex items-center justify-center">

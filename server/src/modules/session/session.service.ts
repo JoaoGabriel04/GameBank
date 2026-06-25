@@ -666,7 +666,7 @@ export class SessionService {
       const trophies = entry.player.userId ? trophyByPlayer.get(entry.player.id) : null;
       const teveRecompensa = (reward?.coins ?? 0) > 0 || (reward?.xp ?? 0) > 0;
       const bauEarned: "premium" | "comum" | null =
-        teveRecompensa && entry.player.userId
+        entry.player.userId
           ? entry.position === 1 ? "premium"
           : entry.position === 2 ? "comum"
           : null

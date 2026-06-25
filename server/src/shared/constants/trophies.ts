@@ -28,13 +28,15 @@ export const TROPHY_TIERS: TierInfo[] = [
   { rank: "MESTRE",   tier: 1, min: 4100, max: null },
 ];
 
+// Posições 1–4 são fixas para todos os ranks.
+// Posições 5–6 (último e penúltimo) perdem baseado no rank — mais leve para ranks baixos.
 export const TROPHY_DELTAS: Record<TrophyRank, Record<number, number>> = {
-  BRONZE:   { 1: 30,  2: 20,  3: 10,  4: 0, 5: -10, 6: -20 },
-  PRATA:    { 1: 28,  2: 18,  3: 8,   4: 0, 5: -12, 6: -22 },
-  OURO:     { 1: 25,  2: 15,  3: 7,   4: 0, 5: -15, 6: -25 },
-  PLATINA:  { 1: 22,  2: 13,  3: 6,   4: 0, 5: -16, 6: -26 },
-  DIAMANTE: { 1: 20,  2: 11,  3: 5,   4: 0, 5: -20, 6: -32 },
-  MESTRE:   { 1: 18,  2: 10,  3: 4,   4: 0, 5: -24, 6: -40 },
+  BRONZE:   { 1: 40, 2: 25, 3: 10, 4: 0, 5: -8,  6: -14 },
+  PRATA:    { 1: 40, 2: 25, 3: 10, 4: 0, 5: -10, 6: -18 },
+  OURO:     { 1: 40, 2: 25, 3: 10, 4: 0, 5: -13, 6: -22 },
+  PLATINA:  { 1: 40, 2: 25, 3: 10, 4: 0, 5: -16, 6: -26 },
+  DIAMANTE: { 1: 40, 2: 25, 3: 10, 4: 0, 5: -20, 6: -32 },
+  MESTRE:   { 1: 40, 2: 25, 3: 10, 4: 0, 5: -25, 6: -40 },
 };
 
 export function getTierInfo(trophies: number): TierInfo {

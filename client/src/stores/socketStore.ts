@@ -228,6 +228,12 @@ export function connectSocket(sessionId: number) {
     }
   });
 
+  // Báu recebido após fim de partida (emitido pelo worker async)
+  socket.on("bau:recebido", (data: { tipo: "premium" | "comum"; bauId: number }) => {
+    const label = data.tipo === "premium" ? "Cofre Premium" : "Cofrinho";
+    toast.success(`Você ganhou um ${label}! Abra no Cofre.`);
+  });
+
   // Fallback: negotiation:expired via emitToUser individual (negotiation-cleanup.ts)
   socket.on("negotiation:expired", ({ negotiationId }: { negotiationId: number }) => {
     if (!currentSessionId) return;

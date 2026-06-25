@@ -22,6 +22,15 @@ import { sortSessionPosses } from "@/utils/properties";
 import { formatCurrency } from "@/utils/format";
 import { toApiErr } from "@/lib/api-error";
 
+const PROP_COLOR_HEX: Record<string, string> = {
+  lime: "#84cc16", green: "#15803d", red: "#dc2626", blue: "#2563eb",
+  amber: "#fcd34d", orange: "#ea580c", pink: "#db2777", purple: "#7e22ce", zinc: "#fafafa",
+};
+function getPropColorHex(grupoCor: string | null | undefined): string {
+  if (!grupoCor) return "#52525b";
+  return PROP_COLOR_HEX[grupoCor] ?? "#52525b";
+}
+
 export default function NegotiationResponseModal() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const { currentSession, loadSession } = useGameStore();
@@ -300,14 +309,16 @@ export default function NegotiationResponseModal() {
               {(() => {
                 const offer = minhaNegociacaoPendente.items.filter((i) => i.fromSide);
                 const want  = minhaNegociacaoPendente.items.filter((i) => !i.fromSide);
-                const resolveName = (item: typeof offer[0]) => {
+                const resolveItem = (item: typeof offer[0]) => {
                   if (item.sessionPossesId) {
                     const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
                     const nome = sp?.propriedade?.nome ?? `Propriedade #${item.sessionPossesId}`;
                     const casas = sp?.casas ?? 0;
-                    return nome + (casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : "");
+                    const color = getPropColorHex(sp?.propriedade?.grupo_cor);
+                    const label = nome + (casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : "");
+                    return { label, color, isMoney: false };
                   }
-                  return item.valor ? `R$ ${item.valor.toLocaleString("pt-BR")}` : "—";
+                  return { label: item.valor ? `R$ ${item.valor.toLocaleString("pt-BR")}` : "—", color: null, isMoney: true };
                 };
                 return (
                   <>
@@ -315,11 +326,15 @@ export default function NegotiationResponseModal() {
                       <div>
                         <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-1">Você oferece</p>
                         <div className="space-y-1">
-                          {offer.map((item) => (
-                            <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200">
-                              {resolveName(item)}
-                            </div>
-                          ))}
+                          {offer.map((item) => {
+                            const { label, color } = resolveItem(item);
+                            return (
+                              <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200 flex items-center gap-2">
+                                {color && <span className="shrink-0 w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />}
+                                {label}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -327,11 +342,15 @@ export default function NegotiationResponseModal() {
                       <div>
                         <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-1">Você quer</p>
                         <div className="space-y-1">
-                          {want.map((item) => (
-                            <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200">
-                              {resolveName(item)}
-                            </div>
-                          ))}
+                          {want.map((item) => {
+                            const { label, color } = resolveItem(item);
+                            return (
+                              <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700 text-sm font-inconsolata text-zinc-200 flex items-center gap-2">
+                                {color && <span className="shrink-0 w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />}
+                                {label}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -395,12 +414,14 @@ export default function NegotiationResponseModal() {
                   {activeNegotiation.items.map((item) => {
                     const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
                     const propName = sp?.propriedade?.nome ?? (item.sessionPossesId ? `Propriedade #${item.sessionPossesId}` : null);
+                    const propColor = sp ? getPropColorHex(sp.propriedade?.grupo_cor) : null;
                     return (
                       <div key={item.id} className="p-2 bg-zinc-800 rounded-lg border border-zinc-700">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-inconsolata text-zinc-400">
                             {item.fromSide ? "➡ Oferece" : "⬅ Quer"}
                           </span>
+                          {propColor && <span className="shrink-0 w-3 h-3 rounded-sm" style={{ backgroundColor: propColor }} />}
                           <span className="text-sm font-inconsolata text-zinc-200">
                             {propName
                               ? `${propName}${(sp?.casas ?? 0) > 0 ? ` (${sp!.casas} casa${sp!.casas > 1 ? "s" : ""})` : ""}`
@@ -479,6 +500,7 @@ export default function NegotiationResponseModal() {
                       const propData = sp.propriedade;
                       const casas = sp.casas ?? 0;
                       const selected = counterOfferPropIds.includes(sp.id);
+                      const color = getPropColorHex(propData?.grupo_cor);
                       return (
                         <label
                           key={sp.id}
@@ -492,6 +514,7 @@ export default function NegotiationResponseModal() {
                             onChange={() => toggleCounterOfferProp(sp.id)}
                             className="accent-purple-500"
                           />
+                          <span className="shrink-0 w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
                           <span className="text-sm font-inconsolata text-zinc-200">
                             {propData?.nome ?? `Prop #${sp.propId}`}
                             {casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : ""}
@@ -523,6 +546,7 @@ export default function NegotiationResponseModal() {
                       const propData = sp.propriedade;
                       const casas = sp.casas ?? 0;
                       const selected = counterWantPropIds.includes(sp.id);
+                      const color = getPropColorHex(propData?.grupo_cor);
                       return (
                         <label
                           key={sp.id}
@@ -536,6 +560,7 @@ export default function NegotiationResponseModal() {
                             onChange={() => toggleCounterWantProp(sp.id)}
                             className="accent-green-500"
                           />
+                          <span className="shrink-0 w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
                           <span className="text-sm font-inconsolata text-zinc-200">
                             {propData?.nome ?? `Prop #${sp.propId}`}
                             {casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : ""}

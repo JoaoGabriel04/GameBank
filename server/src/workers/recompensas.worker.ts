@@ -2,6 +2,7 @@ import { Worker, type Job } from "bullmq";
 import { BauService } from "../modules/bau/bau.service.js";
 import { logger } from "../lib/logger.js";
 import { bullMQConnection } from "../lib/queues.js";
+import { emitToUser } from "../lib/socket.js";
 
 export type RecompensasBauJob = {
   sessionId: number;
@@ -23,12 +24,13 @@ function createRecompensasWorker(connection = bullMQConnection) {
       logger.info({ sessionId, qtdJogadores: players.length }, "processando baús pós-partida");
 
       for (const p of players) {
-        if (!p.teveRecompensa) continue;
         const tipo = p.position === 1 ? "premium" : p.position === 2 ? "comum" : null;
         if (!tipo) continue;
         const bau = await bauService.concederBauPartida(p.userId, tipo, sessionId, p.position);
         if (!bau) {
           logger.warn({ userId: p.userId, sessionId, tipo }, "baú pós-partida não concedido (cap diário ou tipo inválido)");
+        } else {
+          await emitToUser(p.userId, "bau:recebido", { tipo, bauId: bau.id }).catch(() => {});
         }
       }
 
