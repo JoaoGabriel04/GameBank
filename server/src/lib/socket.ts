@@ -121,6 +121,11 @@ export async function initSocket(httpServer: HttpServer) {
   gameNsp = io.of("/game");
 
   gameNsp.on("connection", (socket: Socket) => {
+    socket.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "ECONNRESET") return;
+      socketLogger.error({ err, socketId: socket.id }, "socket error");
+    });
+
     const token = socket.handshake.auth?.token;
 
     if (token) {
