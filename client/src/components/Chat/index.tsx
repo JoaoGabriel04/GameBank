@@ -285,7 +285,7 @@ export default function Chat() {
                     </div>
 
                     {/* Botões para elegíveis que ainda não votaram */}
-                    {isEligible && !alreadyVoted && myUserId !== undefined && votes[myUserId] === undefined && (
+                    {isEligible && !alreadyVoted && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleKickVote("no")}
@@ -297,9 +297,12 @@ export default function Chat() {
                           onClick={() => handleKickVote("yes")}
                           className="flex-1 py-1.5 bg-red-900/50 hover:bg-red-800/70 border border-red-700/50 text-red-300 rounded font-inconsolata text-[11px] font-semibold transition-colors cursor-pointer"
                         >
-                          Expulsar
+                          Sim, expulsar
                         </button>
                       </div>
+                    )}
+                    {!isEligible && !alreadyVoted && (
+                      <p className="font-inconsolata text-[10px] text-zinc-600 text-center">Aguardando votos...</p>
                     )}
                     {alreadyVoted && (
                       <p className="font-inconsolata text-[10px] text-zinc-600 text-center">

@@ -134,7 +134,7 @@ export async function initiateKickVote(
     initiatorNome,
     requiredUserIds,
     playerNames,
-    votes: { [initiatorUserId]: "yes" }, // iniciador já vota SIM automaticamente
+    votes: {},
     startedAt: now.toISOString(),
     expiresAt: expiresAt.toISOString(),
   };
