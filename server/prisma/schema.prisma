@@ -500,19 +500,21 @@ model Bau {
 }
 
 model BauAdquirido {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  bauId     Int
-  sessionId Int?
-  position  Int?
-  status    BauStatus @default(BLOQUEADO)
-  unlockAt  DateTime
-  openedAt  DateTime?
-  createdAt DateTime  @default(now())
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  bauId        Int
+  sessionId    Int?
+  gameResultId Int?
+  position     Int?
+  status       BauStatus @default(BLOQUEADO)
+  unlockAt     DateTime
+  openedAt     DateTime?
+  createdAt    DateTime  @default(now())
 
-  user    User     @relation(fields: [userId], references: [id])
-  bau     Bau      @relation(fields: [bauId],  references: [id])
-  session Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  user       User        @relation(fields: [userId], references: [id])
+  bau        Bau         @relation(fields: [bauId],  references: [id])
+  session    Session?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  gameResult GameResult? @relation(fields: [gameResultId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, status])
@@ -533,6 +535,10 @@ model GameResult {
   trophyBefore Int     @default(0)
   trophyAfter  Int     @default(0)
 
+  // Estatísticas da partida
+  propertiesCount  Int     @default(0)   // propriedades em posse ao fim
+  monopoliesCount  Int     @default(0)   // monopólios completos ao fim
+
   // Auditoria do sistema anti-farm
   activityScore    Int     @default(0)   // score de participação na partida
   rewardMultiplier Float   @default(1.0) // multiplicador aplicado
@@ -540,7 +546,8 @@ model GameResult {
 
   createdAt   DateTime @default(now()) @map("createdAt")
 
-  user User @relation(fields: [userId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
+  bauAdquirido BauAdquirido[]
 
   @@unique([userId, sessionId]) // um resultado por jogador por partida
   @@index([userId])

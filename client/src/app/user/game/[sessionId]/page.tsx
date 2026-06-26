@@ -8,7 +8,7 @@ import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 
-import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore } from "@/stores/socketStore";
+import { connectSocket, disconnectSocket, onReconnect, clearReconnectCallbacks, onSessionClosed, clearSessionClosedCallbacks, useCardStore, onVoteRequest, onVoteUpdate, onVoteCancelled, clearVoteCallbacks, emitRequestEnd, emitVote, type VoteRequestData, type VoteUpdateData } from "@/stores/socketStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { listarPendentesApi } from "@/services/api/negotiations";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
@@ -29,6 +29,7 @@ import Historico from "@/components/Historico";
 import Ranking from "@/components/Ranking";
 import { formatCurrency } from "@/utils/format";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import EndGameVoteModal from "@/components/EndGameVoteModal";
 import Chat from "@/components/Chat";
 import NegotiationResponseModal from "@/components/NegotiationResponseModal";
 import PodiumModal from "@/components/PodiumModal";
@@ -66,6 +67,9 @@ export default function Game() {
   const [showSaldo, setShowSaldo] = useState(true);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [podiumData, setPodiumData] = useState<RankedPlayer[] | null>(null);
+  const [voteData, setVoteData] = useState<VoteRequestData | null>(null);
+  const [voteUpdate, setVoteUpdate] = useState<VoteUpdateData | null>(null);
+  const [votingLoading, setVotingLoading] = useState(false);
 
   const params = useParams();
   const router = useRouter();
@@ -97,11 +101,21 @@ export default function Game() {
         sessionStorage.removeItem(`podium_${sessionId}`);
       }
     }
+    // Restaura votação ativa (o servidor também reenvia via socket:join, mas isso garante
+    // que o modal aparece antes mesmo da reconexão ser confirmada)
+    const cachedVote = sessionStorage.getItem(`endVote_${sessionId}`);
+    if (cachedVote) {
+      try { setVoteData(JSON.parse(cachedVote)); } catch {
+        sessionStorage.removeItem(`endVote_${sessionId}`);
+      }
+    }
 
     connectSocket(sessionId);
     onReconnect(() => mutate());
     onSessionClosed((ranking) => {
       setSessionEnded(true);
+      setVoteData(null);
+      setVoteUpdate(null);
       if (ranking) {
         setPodiumData(ranking);
         sessionStorage.setItem(`podium_${sessionId}`, JSON.stringify(ranking));
@@ -112,9 +126,26 @@ export default function Game() {
       clearReconnectCallbacks();
       disconnectSocket();
     });
+    onVoteRequest((data) => {
+      setVoteData(data);
+      setVoteUpdate(null);
+      sessionStorage.setItem(`endVote_${sessionId}`, JSON.stringify(data));
+    });
+    onVoteUpdate((data) => {
+      setVoteUpdate(data);
+    });
+    onVoteCancelled((data) => {
+      setVoteData(null);
+      setVoteUpdate(null);
+      sessionStorage.removeItem(`endVote_${sessionId}`);
+      if (data.cancellerNome) {
+        toastWarning(`${data.cancellerNome} recusou o encerramento da partida.`);
+      }
+    });
     return () => {
       clearReconnectCallbacks();
       clearSessionClosedCallbacks();
+      clearVoteCallbacks();
       disconnectSocket();
     };
   }, [sessionId, mutate]);
@@ -204,33 +235,35 @@ export default function Game() {
 
   const handleEndGame = async () => {
     if (!currentSession) return;
-    if (!window.confirm("Tem certeza que deseja finalizar este jogo? Esta ação não pode ser desfeita."))
+    if (currentSession.status === "Em Andamento") {
+      // Partida em andamento: inicia votação dos jogadores via socket
+      emitRequestEnd();
       return;
-    const wasInProgress = currentSession.status === "Em Andamento";
+    }
+    // Sala ainda não iniciada — encerra diretamente
+    if (!window.confirm("Tem certeza que deseja fechar a sala?")) return;
     setEndLoading(true);
     try {
       await endSession(currentSession.id);
-      if (!wasInProgress) {
-        // Sala que ainda não começou — apenas fechar e redirecionar
-        setRoomToken(null);
-        disconnectSocket();
-        toastInfo("Sala encerrada com sucesso.");
-        router.push("/user/sessions");
-      } else {
-        // Partida finalizada — o evento session:closed já foi emitido pelo servidor
-        // antes da resposta HTTP, portanto sessionEnded e podiumData já devem estar
-        // setados. Garantimos que sessionEnded está ativo para evitar o spinner caso
-        // haja atraso mínimo no socket.
-        setSessionEnded(true);
-        setRoomToken(null);
-      }
+      setRoomToken(null);
+      disconnectSocket();
+      toastInfo("Sala encerrada com sucesso.");
+      router.push("/user/sessions");
     } catch (err) {
       const e = toApiErr(err);
-      const msg = e?.response?.data?.message ?? e?.response?.data?.error ?? "Erro ao finalizar a partida";
+      const msg = e?.response?.data?.message ?? e?.response?.data?.error ?? "Erro ao fechar a sala";
       if ((e?.response?.status ?? 0) >= 500) { toastError(msg); } else { toastWarning(msg); }
     } finally {
       setEndLoading(false);
     }
+  };
+
+  const handleVote = (vote: "yes" | "no") => {
+    setVotingLoading(true);
+    emitVote(vote);
+    // O servidor vai responder via game:vote_update ou game:vote_cancelled
+    // Aguarda 3 segundos como fallback para liberar o botão
+    setTimeout(() => setVotingLoading(false), 3000);
   };
 
   const handleQuit = async () => {
@@ -762,6 +795,16 @@ export default function Game() {
       <NegotiationResponseModal />
 
       <Chat />
+
+      <EndGameVoteModal
+        isOpen={!!voteData}
+        isOwner={isOwner}
+        voteData={voteData}
+        voteUpdate={voteUpdate}
+        onVote={handleVote}
+        myUserId={authUser?.id}
+        votingLoading={votingLoading}
+      />
 
       <ConfirmationModal
         isOpen={showQuitModal}

@@ -159,6 +159,8 @@ export async function initSocket(httpServer: HttpServer) {
           await loadChatHistory(socket, sessionId);
           // Entrega mensagens que não foram entregues na reconexão
           await deliverQueuedMessages(socket);
+          // Reenvia votação ativa para este socket (persistência após refresh)
+          await deliverActiveVote(socket, sessionId);
           // Notifica cliente que está pronto para receber eventos
           socket.emit("socket:ready", { sessionId });
           return;
@@ -178,6 +180,7 @@ export async function initSocket(httpServer: HttpServer) {
             await setSocketPlayerId(socket, sessionId);
             await loadChatHistory(socket, sessionId);
             await deliverQueuedMessages(socket);
+            await deliverActiveVote(socket, sessionId);
             socket.emit("socket:ready", { sessionId });
             return;
           }
@@ -200,12 +203,100 @@ export async function initSocket(httpServer: HttpServer) {
           await setSocketPlayerId(socket, sessionId);
           await loadChatHistory(socket, sessionId);
           await deliverQueuedMessages(socket);
+          await deliverActiveVote(socket, sessionId);
           socket.emit("socket:ready", { sessionId });
         } else {
           socket.emit("error", { message: "Token não pertence a esta sala" });
         }
       } catch {
         socket.emit("error", { message: "Token de sala inválido ou expirado" });
+      }
+    });
+
+    // --- Votação para encerrar partida ---
+    socket.on("game:request_end", async () => {
+      const sessionId = socket.data.sessionId;
+      const userId = socket.data.userId;
+      if (!sessionId || !userId) return;
+
+      try {
+        const { prisma } = await import("../lib/prisma.js");
+        const session = await prisma.session.findUnique({
+          where: { id: sessionId },
+          select: {
+            id: true, status: true, ownerId: true,
+            jogadores: { where: { desistiu: false }, select: { userId: true, nome: true } },
+          },
+        });
+        if (!session || session.status !== "Em Andamento") return;
+        if (session.ownerId !== userId) return;
+
+        const owner = session.jogadores.find((j: any) => j.userId === userId);
+        const ownerNome = owner?.nome ?? "Dono";
+        const otherPlayers = session.jogadores.filter((j: any) => j.userId !== userId && j.userId != null);
+        const requiredUserIds = otherPlayers.map((j: any) => j.userId as number);
+        const playerNames: Record<number, string> = {};
+        for (const j of otherPlayers) {
+          if (j.userId) playerNames[j.userId as number] = j.nome;
+        }
+
+        // Se não há outros jogadores ativos, encerra direto
+        if (requiredUserIds.length === 0) {
+          const { SessionService } = await import("../modules/session/session.service.js");
+          const svc = new SessionService();
+          const ranking = await svc.endSession(sessionId, userId);
+          const { emitSessionClosed } = await import("../modules/socket/socket.handler.js");
+          emitSessionClosed(sessionId, ranking);
+          return;
+        }
+
+        const { initiateVote } = await import("../modules/session/vote.service.js");
+        await initiateVote(sessionId, userId, ownerNome, requiredUserIds);
+
+        const { emitVoteRequest } = await import("../modules/socket/socket.handler.js");
+        emitVoteRequest(sessionId, { ownerId: userId, ownerNome, requiredUserIds, playerNames });
+      } catch (err) {
+        socketLogger.error({ err, sessionId, userId }, "game:request_end falhou");
+      }
+    });
+
+    socket.on("game:vote", async ({ vote }: { vote: "yes" | "no" }) => {
+      const sessionId = socket.data.sessionId;
+      const userId = socket.data.userId;
+      if (!sessionId || !userId || (vote !== "yes" && vote !== "no")) return;
+
+      try {
+        const { castVote } = await import("../modules/session/vote.service.js");
+        const result = await castVote(sessionId, userId, vote);
+        if (!result) return;
+
+        const { emitVoteUpdate, emitVoteCancelled, emitSessionClosed } =
+          await import("../modules/socket/socket.handler.js");
+
+        if (result.cancelled) {
+          // Alguém votou NÃO — cancela a votação
+          const { prisma } = await import("../lib/prisma.js");
+          const player = await prisma.sessionPlayer.findFirst({
+            where: { sessionId, userId },
+            select: { nome: true },
+          });
+          emitVoteCancelled(sessionId, player?.nome ?? undefined);
+          return;
+        }
+
+        if (result.resolved) {
+          // Todos votaram SIM — encerra a partida
+          const { SessionService } = await import("../modules/session/session.service.js");
+          const svc = new SessionService();
+          const ranking = await svc.endSession(sessionId);
+          emitSessionClosed(sessionId, ranking);
+          return;
+        }
+
+        // Atualiza contagem de votos para todos
+        emitVoteUpdate(sessionId, { votes: result.votes, requiredUserIds: result.requiredUserIds });
+      } catch (err) {
+        socketLogger.error({ err, sessionId, userId }, "game:vote falhou");
       }
     });
 
@@ -419,6 +510,34 @@ async function deliverQueuedMessages(socket: Socket) {
     }
   } catch (err) {
     socketLogger.error({ err, userId }, "erro ao entregar mensagens enfileiradas");
+  }
+}
+
+async function deliverActiveVote(socket: Socket, sessionId: number) {
+  try {
+    const { getActiveVote } = await import("../modules/session/vote.service.js");
+    const vote = await getActiveVote(sessionId);
+    if (!vote) return;
+    // Busca nomes dos jogadores que precisam votar
+    const { prisma } = await import("../lib/prisma.js");
+    const players = await prisma.sessionPlayer.findMany({
+      where: { sessionId, userId: { in: vote.requiredUserIds } },
+      select: { userId: true, nome: true },
+    });
+    const playerNames: Record<number, string> = {};
+    for (const p of players) {
+      if (p.userId) playerNames[p.userId] = p.nome;
+    }
+    socket.emit("game:vote_request", {
+      sessionId: vote.sessionId,
+      ownerId: vote.ownerId,
+      ownerNome: vote.ownerNome,
+      requiredUserIds: vote.requiredUserIds,
+      playerNames,
+      currentVotes: vote.votes,
+    });
+  } catch {
+    // silently fail — não bloqueia a conexão
   }
 }
 

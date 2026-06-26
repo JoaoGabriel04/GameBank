@@ -52,6 +52,10 @@ export interface GameResult {
   trophyDelta?: number
   trophyBefore?: number
   trophyAfter?: number
+  propertiesCount?: number
+  monopoliesCount?: number
+  penaltyReason?: string | null
+  bauAdquirido?: Array<{ id: number; bau: { tipo: string } }>
   createdAt: string
 }
 

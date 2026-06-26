@@ -17,6 +17,12 @@ export const profileRepository = {
       where: { userId },
       orderBy: { createdAt: "desc" },
       take: limit,
+      include: {
+        bauAdquirido: {
+          select: { id: true, bau: { select: { tipo: true } } },
+          take: 1,
+        },
+      },
     }),
 
   clearHistory: (userId: number) =>

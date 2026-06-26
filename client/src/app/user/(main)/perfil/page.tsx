@@ -18,6 +18,7 @@ import UserName from "@/components/UserName";
 import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel } from "@/components/user/UserUI";
 import type { GameResult } from "@/types/shop";
+import GameResultDetailModal from "@/components/GameResultDetailModal";
 
 /* --- Hero ---------------------------------------------------------------- */
 function ProfileHero({ onEdit, onOpenRank }: { onEdit: () => void; onOpenRank: () => void }) {
@@ -157,7 +158,7 @@ function StatsRow({
 }
 
 /* --- Match history list (animada via GSAP) -------------------------------- */
-function HistoryList({ history, POS_COLOR }: { history: GameResult[]; POS_COLOR: Record<number, string> }) {
+function HistoryList({ history, POS_COLOR, onSelect }: { history: GameResult[]; POS_COLOR: Record<number, string>; onSelect: (r: GameResult) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -169,7 +170,11 @@ function HistoryList({ history, POS_COLOR }: { history: GameResult[]; POS_COLOR:
   return (
     <div ref={containerRef} className="divide-y divide-zinc-800/60">
       {history.map((r) => (
-        <div key={r.id} className="stagger-item opacity-0 flex items-center gap-3 px-4 py-3">
+        <button
+          key={r.id}
+          onClick={() => onSelect(r)}
+          className="stagger-item opacity-0 w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/50 active:bg-zinc-800 transition-colors text-left cursor-pointer"
+        >
           <span className={`font-jaro text-xl w-7 text-center shrink-0 ${POS_COLOR[r.position] ?? "text-zinc-500"}`}>
             #{r.position}
           </span>
@@ -190,7 +195,7 @@ function HistoryList({ history, POS_COLOR }: { history: GameResult[]; POS_COLOR:
               </p>
             )}
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -205,6 +210,7 @@ function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: (
   };
   const [clearing, setClearing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [selectedResult, setSelectedResult] = useState<GameResult | null>(null);
 
   return (
     <Panel flush>
@@ -238,8 +244,9 @@ function MatchHistory({ history, onClear }: { history: GameResult[]; onClear?: (
           Nenhuma partida disputada ainda.
         </p>
       ) : (
-        <HistoryList history={history} POS_COLOR={POS_COLOR} />
+        <HistoryList history={history} POS_COLOR={POS_COLOR} onSelect={setSelectedResult} />
       )}
+      <GameResultDetailModal result={selectedResult} onClose={() => setSelectedResult(null)} />
     </Panel>
   );
 }

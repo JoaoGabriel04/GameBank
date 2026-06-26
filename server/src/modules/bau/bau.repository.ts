@@ -71,7 +71,7 @@ export const bauRepository = {
   },
 
   createBauAdquirido: (data: {
-    userId: number; bauId: number; sessionId?: number; position?: number; unlockAt: Date
+    userId: number; bauId: number; sessionId?: number; gameResultId?: number; position?: number; unlockAt: Date
   }) => prisma.bauAdquirido.create({ data }),
 
   updateBauAdquiridoOpened: (id: number) =>

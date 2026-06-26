@@ -23,6 +23,45 @@ let reconnectCallbacks: (() => void)[] = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sessionClosedCallbacks: ((ranking?: any[]) => void)[] = [];
 
+export interface VoteRequestData {
+  sessionId: number;
+  ownerId: number;
+  ownerNome: string;
+  requiredUserIds: number[];
+  playerNames?: Record<number, string>;
+  currentVotes?: Record<number, "yes" | "no">;
+}
+export interface VoteUpdateData {
+  sessionId: number;
+  votes: Record<number, "yes" | "no">;
+  requiredUserIds: number[];
+}
+export interface VoteCancelledData {
+  sessionId: number;
+  cancellerNome?: string;
+}
+
+let voteRequestCallbacks: ((data: VoteRequestData) => void)[] = [];
+let voteUpdateCallbacks: ((data: VoteUpdateData) => void)[] = [];
+let voteCancelledCallbacks: ((data: VoteCancelledData) => void)[] = [];
+
+export function onVoteRequest(cb: (data: VoteRequestData) => void) { voteRequestCallbacks.push(cb); }
+export function onVoteUpdate(cb: (data: VoteUpdateData) => void) { voteUpdateCallbacks.push(cb); }
+export function onVoteCancelled(cb: (data: VoteCancelledData) => void) { voteCancelledCallbacks.push(cb); }
+export function clearVoteCallbacks() {
+  voteRequestCallbacks = [];
+  voteUpdateCallbacks = [];
+  voteCancelledCallbacks = [];
+}
+
+export function emitRequestEnd() {
+  socket?.emit("game:request_end");
+}
+
+export function emitVote(vote: "yes" | "no") {
+  socket?.emit("game:vote", { vote });
+}
+
 function getToken(): string {
   return typeof window !== "undefined"
     ? localStorage.getItem("jwt_token") || ""
@@ -228,6 +267,17 @@ export function connectSocket(sessionId: number) {
     }
   });
 
+  // Votação para encerrar partida
+  socket.on("game:vote_request", (data: VoteRequestData) => {
+    voteRequestCallbacks.forEach((cb) => cb(data));
+  });
+  socket.on("game:vote_update", (data: VoteUpdateData) => {
+    voteUpdateCallbacks.forEach((cb) => cb(data));
+  });
+  socket.on("game:vote_cancelled", (data: VoteCancelledData) => {
+    voteCancelledCallbacks.forEach((cb) => cb(data));
+  });
+
   // Báu recebido após fim de partida (emitido pelo worker async)
   socket.on("bau:recebido", (data: { tipo: "premium" | "comum"; bauId: number }) => {
     const label = data.tipo === "premium" ? "Cofre Premium" : "Cofrinho";
@@ -321,6 +371,7 @@ export function disconnectSocket() {
   }
   reconnectCallbacks = [];
   sessionClosedCallbacks = [];
+  clearVoteCallbacks();
   clearChatAndNotifications();
 }
 

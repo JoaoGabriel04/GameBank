@@ -275,7 +275,7 @@ export class BauService {
   }
 
   async concederBauPartida(
-    userId: number, tipo: TipoBau, sessionId: number | undefined, position: number
+    userId: number, tipo: TipoBau, sessionId: number | undefined, position: number, gameResultId?: number
   ) {
     const config = BAU_CONFIG[tipo]
     if (!config) throw new AppError(400, "Tipo de baú inválido")
@@ -293,7 +293,7 @@ export class BauService {
     const unlockAt = new Date(Date.now() + timerMin * 60_000)
 
     return bauRepository.createBauAdquirido({
-      userId, bauId: bau.id, sessionId, position, unlockAt,
+      userId, bauId: bau.id, sessionId, gameResultId, position, unlockAt,
     })
   }
 

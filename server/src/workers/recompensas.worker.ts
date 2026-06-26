@@ -10,6 +10,7 @@ export type RecompensasBauJob = {
     userId: number;
     position: number;
     teveRecompensa: boolean;
+    gameResultId?: number;
   }>;
 };
 
@@ -27,7 +28,7 @@ function createRecompensasWorker(connection = bullMQConnection) {
         const tipo = p.position === 1 ? "premium" : p.position === 2 ? "comum" : null;
         if (!tipo) continue;
         // sessionId não é passado aqui — a sessão já foi deletada antes do worker rodar
-        const bau = await bauService.concederBauPartida(p.userId, tipo, undefined, p.position);
+        const bau = await bauService.concederBauPartida(p.userId, tipo, undefined, p.position, p.gameResultId);
         if (!bau) {
           logger.warn({ userId: p.userId, sessionId, tipo }, "baú pós-partida não concedido (cap diário ou tipo inválido)");
         } else {

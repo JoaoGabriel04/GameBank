@@ -39,3 +39,15 @@ export async function emitUpdatedSession(sessionId: number) {
 export function emitPlayerUpdated(sessionId: number, data: PlayerUpdateData) {
   getIO().of("/game").to(`session:${sessionId}`).emit("player:updated", data);
 }
+
+export function emitVoteRequest(sessionId: number, data: { ownerId: number; ownerNome: string; requiredUserIds: number[]; playerNames?: Record<number, string> }) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_request", { sessionId, ...data });
+}
+
+export function emitVoteUpdate(sessionId: number, data: { votes: Record<number, "yes" | "no">; requiredUserIds: number[] }) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_update", { sessionId, ...data });
+}
+
+export function emitVoteCancelled(sessionId: number, cancellerNome?: string) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_cancelled", { sessionId, cancellerNome });
+}

@@ -521,6 +521,34 @@ export class SessionService {
 
     const ranked = await this.calculateRankings(session);
 
+    // Calcula propriedades e monopólios por jogador a partir das posses atuais
+    // (deve ocorrer ANTES da deleção da sessão)
+    const posses = session.sessionPosses ?? [];
+    const statsPerPlayer = new Map<number, { propertiesCount: number; monopoliesCount: number }>();
+    for (const entry of ranked) {
+      const playerId = entry.player.id;
+      const myPosses = posses.filter((sp: any) => sp.playerId === playerId && sp.propriedade);
+      const propertiesCount = myPosses.length;
+
+      // Monopólio = jogador possui TODAS as posses de um grupo de cor
+      const groupTotals = new Map<string, number>();
+      const playerGroupCounts = new Map<string, number>();
+      for (const sp of posses) {
+        if (!sp.propriedade?.grupo_cor) continue;
+        const cor = sp.propriedade.grupo_cor as string;
+        groupTotals.set(cor, (groupTotals.get(cor) ?? 0) + 1);
+        if (sp.playerId === playerId) {
+          playerGroupCounts.set(cor, (playerGroupCounts.get(cor) ?? 0) + 1);
+        }
+      }
+      let monopoliesCount = 0;
+      for (const [cor, total] of groupTotals) {
+        if (total >= 2 && playerGroupCounts.get(cor) === total) monopoliesCount++;
+      }
+
+      statsPerPlayer.set(playerId, { propertiesCount, monopoliesCount });
+    }
+
     // Início real da partida — fallback para dataInicio em sessões antigas sem startedAt
     const sessionStartedAt: Date = session.startedAt ?? session.dataInicio;
 
@@ -542,6 +570,7 @@ export class SessionService {
     }
 
     const trophyByPlayer = new Map<number, { trophyDelta: number; trophyBefore: number; trophyAfter: number }>();
+    const gameResultIdByPlayer = new Map<number, number>(); // playerId → gameResultId
 
     await prisma.$transaction(async (tx) => {
       // Marca rewardGranted antes de creditar (lock contra race condition)
@@ -555,7 +584,8 @@ export class SessionService {
         const coins = reward?.coins ?? 0;
         const xp = reward?.xp ?? 0;
 
-        await tx.gameResult.create({
+        const stats = statsPerPlayer.get(p.id);
+        const gr = await tx.gameResult.create({
           data: {
             sessionId,
             userId: p.userId,
@@ -566,8 +596,11 @@ export class SessionService {
             activityScore: reward?.activityScore ?? 0,
             rewardMultiplier: reward?.multiplier ?? 0,
             penaltyReason: reward?.penaltyReason ?? null,
+            propertiesCount: stats?.propertiesCount ?? 0,
+            monopoliesCount: stats?.monopoliesCount ?? 0,
           },
         });
+        gameResultIdByPlayer.set(p.id, gr.id);
 
         const user = await tx.user.findUnique({ where: { id: p.userId } });
         if (!user) continue;
@@ -629,6 +662,7 @@ export class SessionService {
           userId: entry.player.userId as number,
           position: entry.position,
           teveRecompensa: (reward?.coins ?? 0) > 0 || (reward?.xp ?? 0) > 0,
+          gameResultId: gameResultIdByPlayer.get(entry.player.id),
         };
       });
 
@@ -726,6 +760,8 @@ export class SessionService {
         trophyDelta: r.trophyDelta,
         trophyBefore: r.trophyBefore,
         trophyAfter: r.trophyAfter,
+        propertiesCount: r.propertiesCount ?? 0,
+        monopoliesCount: r.monopoliesCount ?? 0,
         bauEarned: null,
       };
     });
