@@ -36,9 +36,9 @@ export const REWARD_CONFIG = {
     lowActivityMultiplier: 0.0,
 
     // Cap diário de coins ganhos via partidas.
-    dailyCapCoins: 1500,
+    dailyCapCoins: 3000,
 
     // Cap diário de XP ganho via partidas.
-    dailyCapXp: 500,
+    dailyCapXp: 1500,
   },
 } as const;
