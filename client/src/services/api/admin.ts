@@ -183,6 +183,10 @@ export const adminApi = {
 
   // Users
   listUsers: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
+  giftBau: (userId: number, tipo: "comum" | "premium" | "lendario", quantidade: number) =>
+    api.post<{ userId: number; nome: string; tipo: string; quantidade: number }>(`/admin/users/${userId}/gift/bau`, { tipo, quantidade }).then((r) => r.data),
+  giftDiamonds: (userId: number, quantidade: number) =>
+    api.post<{ id: number; nome: string; diamonds: number }>(`/admin/users/${userId}/gift/diamonds`, { quantidade }).then((r) => r.data),
   adjustCoins: (userId: number, delta: number) =>
     api.patch<{ id: number; nome: string; coins: number }>(`/admin/users/${userId}/coins`, { delta }).then((r) => r.data),
   adjustDiamonds: (userId: number, delta: number) =>

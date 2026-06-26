@@ -119,6 +119,27 @@ export const adminController = {
     } catch (err) { parseError(res, err); }
   },
 
+  giftBau: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { tipo, quantidade } = z.object({
+        tipo: z.enum(["comum", "premium", "lendario"]),
+        quantidade: z.number().int().min(1).max(100),
+      }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.giftBau(userId, tipo, quantidade, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
+  giftDiamonds: async (req: Request, res: Response) => {
+    try {
+      const userId = z.coerce.number().int().positive().parse(req.params.id);
+      const { quantidade } = z.object({ quantidade: z.number().int().min(1).max(100000) }).parse(req.body);
+      const user = (req as any).user;
+      res.json(await adminService.giftDiamonds(userId, quantidade, { id: user?.userId, email: user?.email }));
+    } catch (err) { parseError(res, err); }
+  },
+
   adjustCoins: async (req: Request, res: Response) => {
     try {
       const userId = z.coerce.number().int().positive().parse(req.params.id);

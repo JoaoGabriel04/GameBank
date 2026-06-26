@@ -408,6 +408,62 @@ export class AdminService {
     return result;
   }
 
+  async giftBau(userId: number, tipo: string, quantidade: number, actor: Actor) {
+    const validTipos = ["comum", "premium", "lendario"];
+    if (!validTipos.includes(tipo)) throw new AppError(400, "Tipo de baú inválido.");
+    if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 100) {
+      throw new AppError(400, "Quantidade deve ser entre 1 e 100.");
+    }
+    const user = await adminRepository.findUserById(userId);
+    if (!user) throw new AppError(404, "Usuário não encontrado.");
+
+    const { BauService } = await import("../bau/bau.service.js");
+    const bauService = new BauService();
+
+    const bausConcedidos: string[] = [];
+    for (let i = 0; i < quantidade; i++) {
+      await bauService.concederBauPartidaAdmin(userId, tipo as "comum" | "premium" | "lendario");
+      bausConcedidos.push(tipo);
+    }
+
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "user.gift_bau",
+      target: `user:${userId}`,
+      metadata: { tipo, quantidade, giftedBy: actor.email },
+      severity: "info",
+    });
+
+    return { userId, nome: user.nome, tipo, quantidade };
+  }
+
+  async giftDiamonds(userId: number, quantidade: number, actor: Actor) {
+    if (!Number.isInteger(quantidade) || quantidade <= 0 || quantidade > 100000) {
+      throw new AppError(400, "Quantidade deve ser entre 1 e 100.000.");
+    }
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: userId }, select: { nome: true, diamonds: true } });
+      if (!user) throw new AppError(404, "Usuário não encontrado.");
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { diamonds: { increment: quantidade } },
+        select: { id: true, nome: true, diamonds: true },
+      });
+      await tx.diamondTransaction.create({
+        data: { userId, quantidade, tipo: "ADMIN" },
+      });
+      return updated;
+    });
+    await auditLog({
+      userId: actor.id ?? null,
+      action: "user.gift_diamonds",
+      target: `user:${userId}`,
+      metadata: { quantidade, giftedBy: actor.email, resultingDiamonds: result.diamonds },
+      severity: "info",
+    });
+    return result;
+  }
+
   async adjustDiamonds(userId: number, delta: number, actor: Actor) {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new AppError(400, "Delta de diamantes deve ser um inteiro não-zero.");

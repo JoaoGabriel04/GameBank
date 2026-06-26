@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import {
   Users, Pencil, Download, Search, Shield, Ban, Trash2,
-  Check, Coins, MessageSquare, X, AlertTriangle,
+  Check, Coins, MessageSquare, X, AlertTriangle, Gift, Plus, Minus,
 } from "lucide-react";
 import { useAdminStore } from "@/stores/adminStore";
 import { adminApi } from "@/services/api/admin";
@@ -169,6 +169,9 @@ function UserEditDrawer({
   onRequestDelete: (u: AdminUser) => void;
 }) {
   const { adjustCoins, adjustDiamonds, adjustXp, setLevel, setUserAdmin, banUser, unbanUser } = useAdminStore();
+  const [giftBauQtd, setGiftBauQtd] = useState<Record<string, number>>({ comum: 0, premium: 0, lendario: 0 });
+  const [giftDiamondsQtd, setGiftDiamondsQtd] = useState(0);
+  const [gifting, setGifting] = useState(false);
   const { success: ok, error: err } = useToast();
 
   const isDev = process.env.NODE_ENV === "development";
@@ -188,6 +191,8 @@ function UserEditDrawer({
       setLevelState(user.level);
       setIsAdmin(user.isAdmin);
       setBanned(!!user.banned);
+      setGiftBauQtd({ comum: 0, premium: 0, lendario: 0 });
+      setGiftDiamondsQtd(0);
     }
   }, [user]);
 
@@ -223,6 +228,30 @@ function UserEditDrawer({
       err(msg);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleGift() {
+    if (!user) return;
+    const hasBau = Object.values(giftBauQtd).some((q) => q > 0);
+    const hasDiamonds = giftDiamondsQtd > 0;
+    if (!hasBau && !hasDiamonds) return;
+    setGifting(true);
+    try {
+      for (const [tipo, qtd] of Object.entries(giftBauQtd)) {
+        if (qtd > 0) await adminApi.giftBau(user.id, tipo as "comum" | "premium" | "lendario", qtd);
+      }
+      if (hasDiamonds) await adminApi.giftDiamonds(user.id, giftDiamondsQtd);
+      ok(`Presente enviado para ${user.nome}!`);
+      setGiftBauQtd({ comum: 0, premium: 0, lendario: 0 });
+      setGiftDiamondsQtd(0);
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        (e as Error)?.message ?? "Erro ao presentear.";
+      err(msg);
+    } finally {
+      setGifting(false);
     }
   }
 
@@ -367,6 +396,90 @@ function UserEditDrawer({
             <span>{Math.min(xp, xpForLevel(level)).toLocaleString("pt-BR")} / {xpForLevel(level).toLocaleString("pt-BR")} XP</span>
           </div>
           <Progress value={Math.min(xp, xpForLevel(level))} max={xpForLevel(level)} tone="cyan" />
+        </div>
+
+        {/* ── Presentear ────────────────────────────────────────────── */}
+        <div className="pt-2 border-t border-zinc-800">
+          <div className="flex items-center gap-2 mb-3">
+            <Gift size={14} className="text-amber-400" />
+            <p className="font-inconsolata text-[10px] uppercase tracking-wider text-zinc-400">Presentear</p>
+          </div>
+
+          {/* Baús */}
+          <div className="space-y-2 mb-3">
+            {(["comum", "premium", "lendario"] as const).map((tipo) => {
+              const labels: Record<string, string> = { comum: "Cofrinho", premium: "Cofre Premium", lendario: "Cofre Lendário" };
+              const colors: Record<string, string> = { comum: "#00BE03", premium: "#9D00FF", lendario: "#FFC800" };
+              const qtd = giftBauQtd[tipo] ?? 0;
+              return (
+                <div key={tipo} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ background: colors[tipo] }} />
+                    <span className="font-inconsolata text-sm text-zinc-300">{labels[tipo]}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setGiftBauQtd((p) => ({ ...p, [tipo]: Math.max(0, (p[tipo] ?? 0) - 1) }))}
+                      disabled={qtd <= 0}
+                      className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span className="font-jaro text-base text-zinc-100 min-w-[28px] text-center">{qtd}</span>
+                    <button
+                      onClick={() => setGiftBauQtd((p) => ({ ...p, [tipo]: Math.min(100, (p[tipo] ?? 0) + 1) }))}
+                      disabled={qtd >= 100}
+                      className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Diamantes */}
+          <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 mb-3">
+            <div className="flex items-center gap-2">
+              <DiamondIcon size={14} />
+              <span className="font-inconsolata text-sm text-zinc-300">Diamantes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setGiftDiamondsQtd((q) => Math.max(0, q - 10))}
+                disabled={giftDiamondsQtd <= 0}
+                className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                <Minus size={12} />
+              </button>
+              <input
+                type="number"
+                min={0}
+                max={100000}
+                value={giftDiamondsQtd}
+                onChange={(e) => setGiftDiamondsQtd(Math.max(0, Math.min(100000, Number(e.target.value) || 0)))}
+                className="w-20 bg-zinc-800 border border-zinc-700 rounded-lg text-center font-jaro text-sm text-zinc-100 py-1 focus:outline-none focus:border-sky-500"
+              />
+              <button
+                onClick={() => setGiftDiamondsQtd((q) => Math.min(100000, q + 10))}
+                disabled={giftDiamondsQtd >= 100000}
+                className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          </div>
+
+          <Btn
+            variant="primary"
+            icon={Gift}
+            className="w-full justify-center"
+            onClick={handleGift}
+            disabled={gifting || (Object.values(giftBauQtd).every((q) => q === 0) && giftDiamondsQtd === 0)}
+          >
+            {gifting ? "Enviando presente…" : "Enviar presente"}
+          </Btn>
         </div>
 
         {/* Role toggles */}

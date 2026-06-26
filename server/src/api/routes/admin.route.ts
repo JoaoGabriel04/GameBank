@@ -30,6 +30,8 @@ adminRouter.patch("/sessions/:id/players/:pid/balance", adminController.adjustPl
 // Users
 adminRouter.post("/users/notify", adminController.notifyUsers);
 adminRouter.get("/users", adminController.listUsers);
+adminRouter.post("/users/:id/gift/bau", adminController.giftBau);
+adminRouter.post("/users/:id/gift/diamonds", adminController.giftDiamonds);
 adminRouter.patch("/users/:id/coins", adminController.adjustCoins);
 adminRouter.patch("/users/:id/diamonds", adminController.adjustDiamonds);
 adminRouter.patch("/users/:id/xp", adminController.adjustXp);
