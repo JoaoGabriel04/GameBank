@@ -206,17 +206,24 @@ export default function Game() {
     if (!currentSession) return;
     if (!window.confirm("Tem certeza que deseja finalizar este jogo? Esta ação não pode ser desfeita."))
       return;
+    const wasInProgress = currentSession.status === "Em Andamento";
     setEndLoading(true);
     try {
       await endSession(currentSession.id);
-      setRoomToken(null);
-      disconnectSocket();
-      toastInfo(
-        currentSession.status === "Esperando"
-          ? "Sala encerrada com sucesso."
-          : "Partida finalizada com sucesso."
-      );
-      router.push("/user/sessions");
+      if (!wasInProgress) {
+        // Sala que ainda não começou — apenas fechar e redirecionar
+        setRoomToken(null);
+        disconnectSocket();
+        toastInfo("Sala encerrada com sucesso.");
+        router.push("/user/sessions");
+      } else {
+        // Partida finalizada — o evento session:closed já foi emitido pelo servidor
+        // antes da resposta HTTP, portanto sessionEnded e podiumData já devem estar
+        // setados. Garantimos que sessionEnded está ativo para evitar o spinner caso
+        // haja atraso mínimo no socket.
+        setSessionEnded(true);
+        setRoomToken(null);
+      }
     } catch (err) {
       const e = toApiErr(err);
       const msg = e?.response?.data?.message ?? e?.response?.data?.error ?? "Erro ao finalizar a partida";

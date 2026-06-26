@@ -72,9 +72,9 @@ export async function calcularRecompensa(input: RewardInput): Promise<RewardResu
     }
   }
 
-  // 6. Cooldown desde a última partida recompensada
+  // 6. Cooldown desde a última partida recompensada (coins OU xp)
   const ultimaRecompensa = await prisma.gameResult.findFirst({
-    where: { userId, coinsEarned: { gt: 0 } },
+    where: { userId, OR: [{ coinsEarned: { gt: 0 } }, { xpEarned: { gt: 0 } }] },
     orderBy: { createdAt: "desc" },
   });
   if (ultimaRecompensa) {
@@ -102,11 +102,11 @@ export async function calcularRecompensa(input: RewardInput): Promise<RewardResu
     }
   }
 
-  // 8. Cap diário acumulado
+  // 8. Cap diário acumulado (todas as partidas do dia, inclusive as com rewards zerados)
   const inicioDia = new Date();
   inicioDia.setHours(0, 0, 0, 0);
   const acumuladoHoje = await prisma.gameResult.aggregate({
-    where: { userId, createdAt: { gte: inicioDia }, coinsEarned: { gt: 0 } },
+    where: { userId, createdAt: { gte: inicioDia } },
     _sum: { coinsEarned: true, xpEarned: true },
   });
   const coinsHoje = acumuladoHoje._sum.coinsEarned ?? 0;
