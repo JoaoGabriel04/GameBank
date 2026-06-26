@@ -445,8 +445,8 @@ export class SessionService {
       }
     }
 
-    if (patrimony >= 30000) {
-      throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ 29.999).`);
+    if (patrimony >= 15000) {
+      throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ 14.999).`);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -719,11 +719,14 @@ export class SessionService {
     }
 
     // Enfileira tracking de missões pós-partida com retry automático
+    // Espectadores têm desistiu=true desde o início (desistiuEm=null); não contam missões.
+    // Desistentes/falidos (desistiuEm definido) recebem games_played mas não top3/wins.
     const missaoPlayers: MissoesJob["players"] = ranked
-      .filter((entry: any) => !!entry.player.userId)
+      .filter((entry: any) => !!entry.player.userId && !(entry.player.desistiu && !entry.desistiuEm))
       .map((entry: any) => ({
         userId: entry.player.userId as number,
         position: entry.position,
+        isActive: !entry.player.desistiu,
       }));
 
     try {

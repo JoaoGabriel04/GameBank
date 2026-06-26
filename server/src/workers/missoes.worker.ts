@@ -8,6 +8,7 @@ export type MissoesJob = {
   players: Array<{
     userId: number;
     position: number;
+    isActive: boolean; // false = desistente/falido; não recebe top3/wins
   }>;
 };
 
@@ -23,8 +24,8 @@ function createMissoesWorker(connection = bullMQConnection) {
 
       for (const p of players) {
         await missionService.track(p.userId, "games_played", 1);
-        if (p.position === 1) await missionService.track(p.userId, "wins", 1);
-        if (p.position <= 3) await missionService.track(p.userId, "top3", 1);
+        if (p.isActive && p.position === 1) await missionService.track(p.userId, "wins", 1);
+        if (p.isActive && p.position <= 3) await missionService.track(p.userId, "top3", 1);
       }
 
       logger.info({ sessionId }, "missões pós-partida atualizadas com sucesso");

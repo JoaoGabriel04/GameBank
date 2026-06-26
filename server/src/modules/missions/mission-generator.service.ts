@@ -33,13 +33,17 @@ function buildMissionFromTemplate(
   }
 }
 
+const MIN_EXPIRY_BUFFER_MS = 60 * 60 * 1000 // 1 hora — evita missões com vida < 1h
+
 function getExpiresAt(tipo: "daily" | "weekly"): Date {
   const now = new Date()
   if (tipo === "daily") {
-    const tomorrow = new Date(now)
-    tomorrow.setUTCHours(3, 0, 0, 0) // 00:00 BRT = 03:00 UTC
-    if (tomorrow <= now) tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-    return tomorrow
+    const candidate = new Date(now)
+    candidate.setUTCHours(3, 0, 0, 0) // 00:00 BRT = 03:00 UTC
+    if (candidate.getTime() - now.getTime() < MIN_EXPIRY_BUFFER_MS) {
+      candidate.setUTCDate(candidate.getUTCDate() + 1)
+    }
+    return candidate
   } else {
     const next = new Date(now)
     const daysUntilMonday = (8 - next.getUTCDay()) % 7 || 7
@@ -64,6 +68,7 @@ export async function gerarMissoesParaUsuario(userId: number) {
       mission: { tipo: "daily" },
       expiresAt: { gt: now },
     },
+    include: { mission: { select: { metric: true } } },
   })
 
   const existingWeekly = await prisma.userMission.findMany({
@@ -72,24 +77,27 @@ export async function gerarMissoesParaUsuario(userId: number) {
       mission: { tipo: "weekly" },
       expiresAt: { gt: now },
     },
+    include: { mission: { select: { metric: true } } },
   })
 
   const toGenerate: { tipo: "daily" | "weekly"; count: number; templates: MissionTemplate[] }[] = []
 
   if (existingDaily.length < DAILY_COUNT) {
-    toGenerate.push({
-      tipo: "daily",
-      count: DAILY_COUNT - existingDaily.length,
-      templates: DAILY_TEMPLATES,
-    })
+    const coveredMetrics = new Set(existingDaily.map((um) => um.mission.metric))
+    const available = DAILY_TEMPLATES.filter((t) => !coveredMetrics.has(t.metric as MissionMetric))
+    const count = Math.min(DAILY_COUNT - existingDaily.length, available.length)
+    if (count > 0) {
+      toGenerate.push({ tipo: "daily", count, templates: available })
+    }
   }
 
   if (existingWeekly.length < WEEKLY_COUNT) {
-    toGenerate.push({
-      tipo: "weekly",
-      count: WEEKLY_COUNT - existingWeekly.length,
-      templates: WEEKLY_TEMPLATES,
-    })
+    const coveredMetrics = new Set(existingWeekly.map((um) => um.mission.metric))
+    const available = WEEKLY_TEMPLATES.filter((t) => !coveredMetrics.has(t.metric as MissionMetric))
+    const count = Math.min(WEEKLY_COUNT - existingWeekly.length, available.length)
+    if (count > 0) {
+      toGenerate.push({ tipo: "weekly", count, templates: available })
+    }
   }
 
   for (const { tipo, count, templates } of toGenerate) {

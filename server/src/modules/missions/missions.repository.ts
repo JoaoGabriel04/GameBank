@@ -8,7 +8,11 @@ export const missionsRepository = {
   // metric chega como string genérica de track(); cast na fronteira do prisma
   findUserMissionsByMetric: (userId: number, metric: string) =>
     prisma.userMission.findMany({
-      where: { userId, mission: { metric: metric as MissionMetric } },
+      where: {
+        userId,
+        mission: { metric: metric as MissionMetric },
+        expiresAt: { gt: new Date() },
+      },
       include: { mission: true },
     }),
 
@@ -31,8 +35,12 @@ export const missionsRepository = {
     }),
 
   findUserMissionForClaim: (userId: number, missionId: number) =>
-    prisma.userMission.findUnique({
-      where: { userId_missionId: { userId, missionId } },
+    prisma.userMission.findFirst({
+      where: {
+        userId,
+        missionId,
+        expiresAt: { gt: new Date() },
+      },
       include: {
         mission: { select: { xpReward: true, coinReward: true, tipo: true } },
       },
