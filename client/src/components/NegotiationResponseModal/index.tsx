@@ -319,7 +319,7 @@ export default function NegotiationResponseModal() {
                     const sp = currentSession?.sessionPosses.find((p) => p.id === item.sessionPossesId);
                     const nome = sp?.propriedade?.nome ?? `Propriedade #${item.sessionPossesId}`;
                     const casas = sp?.casas ?? 0;
-                    const color = getPropColorHex(sp?.propriedade?.grupo_cor);
+                    const color = sp ? getPropColorHex(sp.propriedade?.grupo_cor) : null;
                     const label = nome + (casas > 0 ? ` (${casas} casa${casas > 1 ? "s" : ""})` : "");
                     return { label, color, isMoney: false };
                   }
