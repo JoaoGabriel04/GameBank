@@ -485,6 +485,48 @@ export class SessionService {
     return this.repo.findPlayerByUserAndSession(userId, sessionId);
   }
 
+  async kickPlayer(sessionId: number, targetPlayerId: number) {
+    const player = await this.repo.findPlayerById(targetPlayerId);
+    if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+    if (player.desistiu) throw new AppError(400, "Jogador já saiu da partida");
+
+    const session = await this.repo.findByIdSimple(sessionId);
+    if (!session || session.status !== "Em Andamento") throw new AppError(400, "Partida não está em andamento");
+
+    // Calcula patrimônio antes de zerar
+    let patrimony = player.saldo;
+    for (const sp of session.sessionPosses ?? []) {
+      if (sp.playerId === player.id && sp.propriedade) {
+        patrimony += sp.propriedade.custo_compra;
+        patrimony += sp.casas * sp.propriedade.custo_casa;
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.sessionPlayer.update({
+        where: { id: player.id },
+        data: { patrimonyAtDesistir: patrimony },
+      });
+      await tx.sessionPosses.updateMany({
+        where: { sessionId, playerId: player.id },
+        data: { playerId: null, casas: 0, hipotecada: false, negociando: false },
+      });
+      await tx.sessionPlayer.update({
+        where: { id: player.id },
+        data: { saldo: 0, desistiu: true, motivoDesistencia: "EXPULSAO", desistiuEm: new Date() },
+      });
+    });
+
+    await this.invalidateCache(sessionId);
+
+    const activeCount = await this.repo.countActivePlayers(sessionId);
+    if (activeCount <= 1) {
+      const ranking = await this.endSession(sessionId);
+      return { autoEnded: true as const, ranking };
+    }
+    return { autoEnded: false as const };
+  }
+
   private missionService = new MissionsService();
   private rankingService = new RankingService();
   private bauService = new BauService();

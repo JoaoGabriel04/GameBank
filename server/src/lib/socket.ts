@@ -300,6 +300,115 @@ export async function initSocket(httpServer: HttpServer) {
       }
     });
 
+    // --- Votação de expulsão ---
+    socket.on("game:kick_vote_init", async ({ targetPlayerId }: { targetPlayerId: number }) => {
+      const sessionId = socket.data.sessionId;
+      const userId = socket.data.userId;
+      if (!sessionId || !userId || !targetPlayerId) return;
+
+      try {
+        const { prisma } = await import("../lib/prisma.js");
+
+        // Verifica que não há outra votação de expulsão ativa
+        const { getActiveKickVote } = await import("../modules/session/vote.service.js");
+        const existing = await getActiveKickVote(sessionId);
+        if (existing) return; // só uma votação por vez
+
+        const session = await prisma.session.findUnique({
+          where: { id: sessionId },
+          select: {
+            id: true, status: true,
+            // Jogadores ativos: desistiu:false exclui espectadores e desistentes
+            jogadores: { where: { desistiu: false }, select: { id: true, userId: true, nome: true } },
+          },
+        });
+        if (!session || session.status !== "Em Andamento") return;
+
+        // Iniciador deve ser jogador ativo
+        const initiator = session.jogadores.find((j: any) => j.userId === userId);
+        if (!initiator) return;
+
+        // Alvo deve ser jogador ativo diferente do iniciador
+        const target = session.jogadores.find((j: any) => j.id === targetPlayerId);
+        if (!target || target.userId === userId) return;
+
+        // Elegíveis = todos ativos exceto o alvo (iniciador já vota SIM automaticamente)
+        const eligible = session.jogadores.filter((j: any) => j.id !== targetPlayerId && j.userId != null);
+        const requiredUserIds = eligible.map((j: any) => j.userId as number);
+        const playerNames: Record<number, string> = {};
+        for (const j of eligible) { if (j.userId) playerNames[j.userId as number] = j.nome; }
+
+        const { initiateKickVote } = await import("../modules/session/vote.service.js");
+        const state = await initiateKickVote(
+          sessionId, userId, initiator.nome,
+          targetPlayerId, target.userId, target.nome,
+          requiredUserIds, playerNames
+        );
+
+        const { emitKickVoteRequest } = await import("../modules/socket/socket.handler.js");
+        emitKickVoteRequest(sessionId, {
+          targetPlayerId, targetNome: target.nome,
+          initiatorNome: initiator.nome,
+          requiredUserIds, playerNames,
+          votes: state.votes,
+          expiresAt: state.expiresAt,
+        });
+
+        // Expira após 60s se não resolvida antes
+        setTimeout(async () => {
+          const { getActiveKickVote: stillActive, cancelKickVote } =
+            await import("../modules/session/vote.service.js");
+          const stillState = await stillActive(sessionId);
+          if (!stillState || stillState.targetPlayerId !== targetPlayerId) return;
+          await cancelKickVote(sessionId);
+          const { emitKickVoteResult } = await import("../modules/socket/socket.handler.js");
+          emitKickVoteResult(sessionId, { passed: false, targetNome: target.nome, targetPlayerId });
+        }, 60_000);
+      } catch (err) {
+        socketLogger.error({ err, sessionId, userId }, "game:kick_vote_init falhou");
+      }
+    });
+
+    socket.on("game:kick_vote", async ({ vote }: { vote: "yes" | "no" }) => {
+      const sessionId = socket.data.sessionId;
+      const userId = socket.data.userId;
+      if (!sessionId || !userId || (vote !== "yes" && vote !== "no")) return;
+
+      try {
+        const { castKickVote } = await import("../modules/session/vote.service.js");
+        const result = await castKickVote(sessionId, userId, vote);
+        if (!result) return;
+
+        const { emitKickVoteUpdate, emitKickVoteResult, emitUpdatedSession } =
+          await import("../modules/socket/socket.handler.js");
+
+        if (!result.finished) {
+          emitKickVoteUpdate(sessionId, { votes: result.votes, requiredUserIds: result.requiredUserIds });
+          return;
+        }
+
+        emitKickVoteResult(sessionId, {
+          passed: result.passed,
+          targetNome: result.targetNome,
+          targetPlayerId: result.targetPlayerId,
+        });
+
+        if (result.passed) {
+          const { SessionService } = await import("../modules/session/session.service.js");
+          const svc = new SessionService();
+          const kickResult = await svc.kickPlayer(sessionId, result.targetPlayerId);
+          if (kickResult.autoEnded) {
+            const { emitSessionClosed } = await import("../modules/socket/socket.handler.js");
+            emitSessionClosed(sessionId, kickResult.ranking);
+          } else {
+            await emitUpdatedSession(sessionId);
+          }
+        }
+      } catch (err) {
+        socketLogger.error({ err, sessionId, userId }, "game:kick_vote falhou");
+      }
+    });
+
     async function loadChatHistory(socket: Socket, sessionId: number) {
       try {
         const { prisma } = await import("../lib/prisma.js");
@@ -515,27 +624,42 @@ async function deliverQueuedMessages(socket: Socket) {
 
 async function deliverActiveVote(socket: Socket, sessionId: number) {
   try {
-    const { getActiveVote } = await import("../modules/session/vote.service.js");
+    const { getActiveVote, getActiveKickVote } = await import("../modules/session/vote.service.js");
+
+    // Voto de encerramento
     const vote = await getActiveVote(sessionId);
-    if (!vote) return;
-    // Busca nomes dos jogadores que precisam votar
-    const { prisma } = await import("../lib/prisma.js");
-    const players = await prisma.sessionPlayer.findMany({
-      where: { sessionId, userId: { in: vote.requiredUserIds } },
-      select: { userId: true, nome: true },
-    });
-    const playerNames: Record<number, string> = {};
-    for (const p of players) {
-      if (p.userId) playerNames[p.userId] = p.nome;
+    if (vote) {
+      const { prisma } = await import("../lib/prisma.js");
+      const players = await prisma.sessionPlayer.findMany({
+        where: { sessionId, userId: { in: vote.requiredUserIds } },
+        select: { userId: true, nome: true },
+      });
+      const playerNames: Record<number, string> = {};
+      for (const p of players) { if (p.userId) playerNames[p.userId] = p.nome; }
+      socket.emit("game:vote_request", {
+        sessionId: vote.sessionId,
+        ownerId: vote.ownerId,
+        ownerNome: vote.ownerNome,
+        requiredUserIds: vote.requiredUserIds,
+        playerNames,
+        currentVotes: vote.votes,
+      });
     }
-    socket.emit("game:vote_request", {
-      sessionId: vote.sessionId,
-      ownerId: vote.ownerId,
-      ownerNome: vote.ownerNome,
-      requiredUserIds: vote.requiredUserIds,
-      playerNames,
-      currentVotes: vote.votes,
-    });
+
+    // Voto de expulsão
+    const kick = await getActiveKickVote(sessionId);
+    if (kick) {
+      socket.emit("game:kick_vote_request", {
+        sessionId: kick.sessionId,
+        targetPlayerId: kick.targetPlayerId,
+        targetNome: kick.targetNome,
+        initiatorNome: kick.initiatorNome,
+        requiredUserIds: kick.requiredUserIds,
+        playerNames: kick.playerNames,
+        votes: kick.votes,
+        expiresAt: kick.expiresAt,
+      });
+    }
   } catch {
     // silently fail — não bloqueia a conexão
   }

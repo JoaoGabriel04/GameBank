@@ -51,3 +51,25 @@ export function emitVoteUpdate(sessionId: number, data: { votes: Record<number, 
 export function emitVoteCancelled(sessionId: number, cancellerNome?: string) {
   getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_cancelled", { sessionId, cancellerNome });
 }
+
+export function emitKickVoteRequest(sessionId: number, data: {
+  targetPlayerId: number; targetNome: string;
+  initiatorNome: string; requiredUserIds: number[];
+  playerNames: Record<number, string>;
+  votes: Record<number, "yes" | "no">;
+  expiresAt: string;
+}) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_request", { sessionId, ...data });
+}
+
+export function emitKickVoteUpdate(sessionId: number, data: {
+  votes: Record<number, "yes" | "no">; requiredUserIds: number[];
+}) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_update", { sessionId, ...data });
+}
+
+export function emitKickVoteResult(sessionId: number, data: {
+  passed: boolean; targetNome: string; targetPlayerId: number;
+}) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_result", { sessionId, ...data });
+}

@@ -62,6 +62,50 @@ export function emitVote(vote: "yes" | "no") {
   socket?.emit("game:vote", { vote });
 }
 
+// ─── Kick vote ─────────────────────────────────────────────────────────────
+
+export interface KickVoteRequestData {
+  sessionId: number;
+  targetPlayerId: number;
+  targetNome: string;
+  initiatorNome: string;
+  requiredUserIds: number[];
+  playerNames: Record<number, string>;
+  votes: Record<number, "yes" | "no">;
+  expiresAt: string;
+}
+export interface KickVoteUpdateData {
+  sessionId: number;
+  votes: Record<number, "yes" | "no">;
+  requiredUserIds: number[];
+}
+export interface KickVoteResultData {
+  sessionId: number;
+  passed: boolean;
+  targetNome: string;
+  targetPlayerId: number;
+}
+
+let kickVoteRequestCallbacks: ((data: KickVoteRequestData) => void)[] = [];
+let kickVoteUpdateCallbacks:  ((data: KickVoteUpdateData)  => void)[] = [];
+let kickVoteResultCallbacks:  ((data: KickVoteResultData)  => void)[] = [];
+
+export function onKickVoteRequest(cb: (data: KickVoteRequestData) => void) { kickVoteRequestCallbacks.push(cb); }
+export function onKickVoteUpdate (cb: (data: KickVoteUpdateData)  => void) { kickVoteUpdateCallbacks.push(cb); }
+export function onKickVoteResult (cb: (data: KickVoteResultData)  => void) { kickVoteResultCallbacks.push(cb); }
+export function clearKickVoteCallbacks() {
+  kickVoteRequestCallbacks = [];
+  kickVoteUpdateCallbacks  = [];
+  kickVoteResultCallbacks  = [];
+}
+
+export function emitKickVoteInit(targetPlayerId: number) {
+  socket?.emit("game:kick_vote_init", { targetPlayerId });
+}
+export function emitKickVote(vote: "yes" | "no") {
+  socket?.emit("game:kick_vote", { vote });
+}
+
 function getToken(): string {
   return typeof window !== "undefined"
     ? localStorage.getItem("jwt_token") || ""
@@ -278,6 +322,17 @@ export function connectSocket(sessionId: number) {
     voteCancelledCallbacks.forEach((cb) => cb(data));
   });
 
+  // Votação de expulsão
+  socket.on("game:kick_vote_request", (data: KickVoteRequestData) => {
+    kickVoteRequestCallbacks.forEach((cb) => cb(data));
+  });
+  socket.on("game:kick_vote_update", (data: KickVoteUpdateData) => {
+    kickVoteUpdateCallbacks.forEach((cb) => cb(data));
+  });
+  socket.on("game:kick_vote_result", (data: KickVoteResultData) => {
+    kickVoteResultCallbacks.forEach((cb) => cb(data));
+  });
+
   // Báu recebido após fim de partida (emitido pelo worker async)
   socket.on("bau:recebido", (data: { tipo: "premium" | "comum"; bauId: number }) => {
     const label = data.tipo === "premium" ? "Cofre Premium" : "Cofrinho";
@@ -372,6 +427,7 @@ export function disconnectSocket() {
   reconnectCallbacks = [];
   sessionClosedCallbacks = [];
   clearVoteCallbacks();
+  clearKickVoteCallbacks();
   clearChatAndNotifications();
 }
 

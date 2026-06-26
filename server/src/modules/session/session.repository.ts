@@ -181,6 +181,10 @@ export class SessionRepository {
     });
   }
 
+  async findPlayerById(id: number) {
+    return prisma.sessionPlayer.findUnique({ where: { id } });
+  }
+
   async findPlayerByUserInWaiting(userId: number, excludeSessionId?: number) {
     return prisma.sessionPlayer.findFirst({
       where: {

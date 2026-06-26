@@ -1,6 +1,7 @@
 import { getRedis } from "../../lib/redis.js";
 
 const VOTE_TTL_SECONDS = 120;
+const KICK_VOTE_TTL_SECONDS = 60;
 
 interface VoteState {
   sessionId: number;
@@ -90,4 +91,105 @@ export async function castVote(
   // Salva estado atualizado
   await redis.set(key(sessionId), JSON.stringify(state), { EX: VOTE_TTL_SECONDS });
   return { ...state, resolved: false, cancelled: false };
+}
+
+// ─── Votação de expulsão ────────────────────────────────────────────────────
+
+interface KickVoteState {
+  sessionId: number;
+  targetPlayerId: number;   // SessionPlayer.id
+  targetUserId: number | null;
+  targetNome: string;
+  initiatorUserId: number;
+  initiatorNome: string;
+  requiredUserIds: number[]; // userId de cada elegível (ativo, exceto alvo)
+  playerNames: Record<number, string>;
+  votes: Record<number, "yes" | "no">;
+  startedAt: string;
+  expiresAt: string;
+}
+
+function kickKey(sessionId: number) {
+  return `vote:kick:${sessionId}`;
+}
+
+export async function initiateKickVote(
+  sessionId: number,
+  initiatorUserId: number,
+  initiatorNome: string,
+  targetPlayerId: number,
+  targetUserId: number | null,
+  targetNome: string,
+  requiredUserIds: number[],
+  playerNames: Record<number, string>
+): Promise<KickVoteState> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + KICK_VOTE_TTL_SECONDS * 1000);
+  const state: KickVoteState = {
+    sessionId,
+    targetPlayerId,
+    targetUserId,
+    targetNome,
+    initiatorUserId,
+    initiatorNome,
+    requiredUserIds,
+    playerNames,
+    votes: { [initiatorUserId]: "yes" }, // iniciador já vota SIM automaticamente
+    startedAt: now.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+  };
+  const redis = getRedis();
+  if (redis) {
+    await redis.set(kickKey(sessionId), JSON.stringify(state), { EX: KICK_VOTE_TTL_SECONDS });
+  }
+  return state;
+}
+
+export async function getActiveKickVote(sessionId: number): Promise<KickVoteState | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  const raw = await redis.get(kickKey(sessionId));
+  if (!raw) return null;
+  try { return JSON.parse(raw) as KickVoteState; } catch { return null; }
+}
+
+export async function cancelKickVote(sessionId: number): Promise<void> {
+  const redis = getRedis();
+  if (redis) await redis.del(kickKey(sessionId));
+}
+
+export async function castKickVote(
+  sessionId: number,
+  userId: number,
+  vote: "yes" | "no"
+): Promise<(KickVoteState & { passed: boolean; finished: boolean }) | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+
+  const state = await getActiveKickVote(sessionId);
+  if (!state) return null;
+  if (!state.requiredUserIds.includes(userId)) return null;
+
+  state.votes[userId] = vote;
+
+  const eligible = state.requiredUserIds.length;
+  const yesCount = state.requiredUserIds.filter((uid) => state.votes[uid] === "yes").length;
+  const noCount  = state.requiredUserIds.filter((uid) => state.votes[uid] === "no").length;
+  const majority = Math.ceil(eligible / 2);
+
+  // Maioria a favor → expulsão aprovada
+  if (yesCount >= majority) {
+    await redis.del(kickKey(sessionId));
+    return { ...state, passed: true, finished: true };
+  }
+
+  // Maioria contra → expulsão reprovada
+  if (noCount > eligible - majority) {
+    await redis.del(kickKey(sessionId));
+    return { ...state, passed: false, finished: true };
+  }
+
+  // Ainda aguardando votos
+  await redis.set(kickKey(sessionId), JSON.stringify(state), { EX: KICK_VOTE_TTL_SECONDS });
+  return { ...state, passed: false, finished: false };
 }
