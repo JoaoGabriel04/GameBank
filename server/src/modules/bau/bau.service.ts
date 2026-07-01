@@ -509,7 +509,7 @@ export class BauService {
       })
     }
 
-    const totalCoinsGanhos = batches.reduce((s, b) => s + (b.xpBonus ? 0 : b.coinsGanhos), 0)
+    const totalCoinsGanhos = batches.reduce((s, b) => s + b.coinsGanhos, 0)
     const totalXpBonus = batches.reduce((s, b) => s + (b.xpBonus ?? 0), 0)
 
     return {
