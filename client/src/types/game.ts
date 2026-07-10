@@ -98,11 +98,25 @@ export interface Transacao {
 // Sessão do jogo
 // ========================
 
+export type CasaTipo =
+  | 'inicio' | 'propriedade' | 'acao' | 'noticias'
+  | 'prisao_visita' | 'restituicao' | 'imposto'
+  | 'feriado' | 'va_para_prisao';
+
+export interface Casa {
+  pos: number;
+  nome: string;
+  tipo: CasaTipo;
+  propId?: number;
+  valor?: number;
+}
+
 export interface GameSession {
   id: number;
   nome?: string;
   modo?: 'individual' | 'duplas';
   tipoJogo?: 'banca' | 'tabuleiro';
+  tabuleiro?: Casa[]; // presente apenas quando tipoJogo === 'tabuleiro'
   status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
   protegida?: boolean;
   maxJogadores?: number;

@@ -16,6 +16,7 @@ import { getMinPlayersToStart } from "../../shared/constants/session.js";
 import { calcularRecompensa, type RewardResult } from "./reward.service.js";
 import { calcularDeltaTrofeus } from "../../shared/constants/trophies.js";
 import { recompensasQueue, missoesQueue } from "../../lib/queues.js";
+import { getTabuleiro } from "../tabuleiro/tabuleiro.data.js";
 import type { RecompensasBauJob } from "../../workers/recompensas.worker.js";
 import type { MissoesJob } from "../../workers/missoes.worker.js";
 
@@ -325,7 +326,13 @@ export class SessionService {
     const session = await this.repo.findByIdSimple(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
 
-    const enriched = await mapSessionWithAvatars(session);
+    const enriched: any = await mapSessionWithAvatars(session);
+
+    // Modo Tabuleiro: inclui o mapa estático das 40 casas no payload
+    // para evitar uma request extra do cliente.
+    if (session.tipoJogo === "tabuleiro") {
+      enriched.tabuleiro = getTabuleiro();
+    }
 
     if (redis) {
       try {
