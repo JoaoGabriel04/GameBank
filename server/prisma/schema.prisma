@@ -179,6 +179,14 @@ model Session {
   ownerId      Int?
   owner        User?    @relation(fields: [ownerId], references: [id])
 
+  // --- Modo Tabuleiro (turnos) ---
+  turnoAtualPlayerId Int?      // de quem é a vez
+  ordemTurnos        String?   // JSON: array de playerIds na ordem de jogo
+  ultimoDado1        Int?      // último resultado (para exibição)
+  ultimoDado2        Int?
+  aguardandoAcao     Boolean   @default(false) // esperando decisão do jogador
+  turnoIniciadoEm    DateTime? // para timeout de 60s
+
   sessionPosses SessionPosses[]
   historico     Historico[]
   jogadores     SessionPlayer[]
@@ -221,6 +229,15 @@ model SessionPlayer {
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
+
+  // --- Modo Tabuleiro ---
+  posicao            Int      @default(0)   // casa atual (0 = Início)
+  emPrisao           Boolean  @default(false)
+  turnosPrisao       Int      @default(0)   // rodadas restantes preso (max 3)
+  tentativasPrisao   Int      @default(0)   // tentativas de duplo na rodada atual
+  pularProximaRodada Boolean  @default(false) // feriado
+  rodadasDevendo     Int      @default(0)   // contador de falência
+  dividaBanco        Int      @default(0)   // valor devido ao banco
 
   @@index([userId])
   @@index([sessionId])
