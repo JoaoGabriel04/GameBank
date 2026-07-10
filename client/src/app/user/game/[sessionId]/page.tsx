@@ -4,6 +4,7 @@
 import Especiais from "@/components/Especiais";
 import Inicio from "@/components/Inicio";
 import Loja from "@/components/Loja";
+import Board from "@/components/Board";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -38,15 +39,17 @@ import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faStar, faTrophy } from "@fortawesome/free-solid-svg-icons";
+import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faStar, faTrophy, faChessBoard } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { RankedPlayer, Player } from "@/types/game";
 import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
-const linksNav = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
+const linksNavBanca = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
+const linksNavTabuleiro = ["Tabuleiro", "Início", "Loja", "Especiais", "Ranking", "Histórico"];
 
 const tabIcons: Record<string, IconDefinition> = {
+  "Tabuleiro": faChessBoard,
   "Início":    faHouse,
   "Loja":      faStore,
   "Especiais": faStar,
@@ -563,6 +566,9 @@ export default function Game() {
     }
 
     switch (abaAtual) {
+      case "Tabuleiro":    return currentSession.tabuleiro
+        ? <Board tabuleiro={currentSession.tabuleiro} session={currentSession} meuPlayerId={currentPlayer?.id} />
+        : null;
       case "Início":       return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
       case "Loja":         return <Loja />;
       case "Especiais":    return <Especiais />;
@@ -616,6 +622,7 @@ export default function Game() {
   }
 
   const isWaiting = currentSession.status === "Esperando";
+  const linksNav = currentSession.tipoJogo === "tabuleiro" ? linksNavTabuleiro : linksNavBanca;
   const currentPlayer = currentSession?.jogadores?.find(
     (p) => p.userId === authUser?.id
   );
@@ -680,7 +687,7 @@ export default function Game() {
           {/* Abas desktop com ícones (apenas quando em jogo) */}
           {!isWaiting && (
             <nav className="hidden lg:block border-t border-zinc-800/50">
-              <ul className="grid grid-cols-5">
+              <ul className="grid" style={{ gridTemplateColumns: `repeat(${linksNav.length}, minmax(0, 1fr))` }}>
                 {linksNav.map((link) => (
                   <li
                     key={link}

@@ -73,6 +73,7 @@ export interface Player {
   carta_prisao?: boolean;
   desistiu?: boolean;
   patrimonyAtDesistir?: number | null;
+  posicao?: number; // Modo Tabuleiro: casa atual (0-39)
 }
 
 export interface SorteRevesCard {

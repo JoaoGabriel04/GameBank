@@ -7,10 +7,12 @@ import {
   faStar,
   faTrophy,
   faClock,
+  faChessBoard,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 const tabIcons: Record<string, IconDefinition> = {
+  "Tabuleiro": faChessBoard,
   "Início": faHouse,
   "Loja": faStore,
   "Especiais": faStar,
@@ -27,7 +29,7 @@ interface GameBottomNavProps {
 export default function GameBottomNav({ linksNav, abaAtual, onSelect }: GameBottomNavProps) {
   return (
     <nav className="bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
-      <ul className="w-full grid grid-cols-5">
+      <ul className="w-full grid" style={{ gridTemplateColumns: `repeat(${linksNav.length}, minmax(0, 1fr))` }}>
         {linksNav.map((link) => (
           <li
             key={link}
