@@ -38,4 +38,16 @@ export const turnoRepository = {
       where: { id: playerId },
       data: { pularProximaRodada: false },
     }),
+
+  findPlayerParaJogada: (playerId: number) =>
+    prisma.sessionPlayer.findUnique({
+      where: { id: playerId },
+      select: { id: true, sessionId: true, posicao: true, saldo: true, emPrisao: true, desistiu: true },
+    }),
+
+  moverPlayer: (playerId: number, data: { posicao: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number }) =>
+    prisma.sessionPlayer.update({ where: { id: playerId }, data }),
+
+  registrarDados: (sessionId: number, data: { ultimoDado1: number; ultimoDado2: number; aguardandoAcao: boolean }) =>
+    prisma.session.update({ where: { id: sessionId }, data }),
 };

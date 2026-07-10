@@ -2,6 +2,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { turnoRepository } from "./turno.repository.js";
 import { sessionLogger } from "../../lib/logger.js";
+import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO } from "../tabuleiro/tabuleiro.data.js";
 
 const TURNO_TIMEOUT_MS = 60_000;
 
@@ -10,6 +11,10 @@ const TURNO_TIMEOUT_MS = 60_000;
 // única no Render, não precisa de Redis — mesmo padrão de fallback em
 // memória já usado em socket.ts (activeSockets).
 const turnoTimers = new Map<number, NodeJS.Timeout>();
+
+// Duplos consecutivos do jogador na vez atual — reseta a cada troca de
+// turno. Em memória (mesmo racional dos timers): só importa "agora".
+const duplosConsecutivos = new Map<number, number>();
 
 function cancelTurnoTimer(sessionId: number) {
   const timer = turnoTimers.get(sessionId);
@@ -67,6 +72,61 @@ class TurnoService {
     });
   }
 
+  async rolarDados(sessionId: number, playerId: number) {
+    return withLock(`turno:${sessionId}`, async () => {
+      const session = await this.validarESessaoAtiva(sessionId);
+
+      if (session.turnoAtualPlayerId !== playerId) {
+        throw new AppError(403, "Não é sua vez de jogar.");
+      }
+      if (session.aguardandoAcao) {
+        throw new AppError(400, "Resolva a ação pendente antes de rolar os dados.");
+      }
+
+      const player = await turnoRepository.findPlayerParaJogada(playerId);
+      if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+
+      if (player.emPrisao) {
+        // TODO(Fase 7): tentativas de duplo pra sair da prisão
+        throw new AppError(400, "Lógica de prisão ainda não implementada (Fase 7).");
+      }
+
+      const dado1 = Math.floor(Math.random() * 6) + 1;
+      const dado2 = Math.floor(Math.random() * 6) + 1;
+      const duplo = dado1 === dado2;
+
+      const contagemAnterior = duplosConsecutivos.get(playerId) ?? 0;
+      const contagemAtual = duplo ? contagemAnterior + 1 : 0;
+      duplosConsecutivos.set(playerId, contagemAtual);
+
+      // 3 duplos seguidos → prisão direta, sem completar o movimento e
+      // sem jogar de novo.
+      if (contagemAtual >= 3) {
+        duplosConsecutivos.set(playerId, 0);
+        await turnoRepository.moverPlayer(playerId, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
+        await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: false });
+
+        const avanco = await this.avancarTurno(sessionId, session);
+        return { dado1, dado2, duplo: true, foiPreso: true, novaPosicao: POS_PRISAO, passouInicio: false, ...avanco };
+      }
+
+      const total = dado1 + dado2;
+      const novaPosicao = (player.posicao + total) % TOTAL_CASAS;
+      const passouInicio = (player.posicao + total) >= TOTAL_CASAS;
+
+      await turnoRepository.moverPlayer(playerId, {
+        posicao: novaPosicao,
+        ...(passouInicio ? { saldo: player.saldo + CREDITO_INICIO } : {}),
+      });
+      await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
+
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
+      return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio };
+    });
+  }
+
   // Disparado pelo timeout de 60s — não valida "de quem é a vez" pois é
   // o próprio servidor avançando o turno atual.
   async avancarPorTimeout(sessionId: number) {
@@ -119,6 +179,11 @@ class TurnoService {
 
       proximo = candidato;
       break;
+    }
+
+    // Turno de quem estava jogando terminou — zera contagem de duplos dele
+    if (session.turnoAtualPlayerId != null) {
+      duplosConsecutivos.delete(session.turnoAtualPlayerId);
     }
 
     // Ninguém mais ativo para jogar (edge case — o fluxo normal já

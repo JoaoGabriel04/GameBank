@@ -14,7 +14,7 @@ import {
   loadSessionApi,
   startSessionApi,
 } from "@/services/api/sessions";
-import { passarVezApi } from "@/services/api/turno";
+import { passarVezApi, rolarDadosApi, type RolarDadosResult } from "@/services/api/turno";
 import {
   editPlayerApi,
   getPlayerByIdApi,
@@ -66,6 +66,7 @@ interface GameStore {
   loadSession: (sessionId: number) => Promise<void>;
   startSession: (sessionId: number) => Promise<void>;
   passarVez: (sessionId: number) => Promise<void>;
+  rolarDados: (sessionId: number) => Promise<RolarDadosResult | undefined>;
   endSession: (sessionId: number) => Promise<void>;
   getPlayerById: (playerId: number) => Promise<Player | undefined>;
   editPlayer: (playerId: number, nome: string, cor: PlayerColor) => Promise<void>;
@@ -187,6 +188,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Estado atualizado via socket "session:updated" (emitUpdatedSession no backend)
     } catch (err) {
       handleError(set, err);
+    }
+  },
+
+  rolarDados: async (sessionId) => {
+    try {
+      return await rolarDadosApi(sessionId);
+      // Estado atualizado via socket "session:updated" (emitUpdatedSession no backend)
+    } catch (err) {
+      handleError(set, err);
+      return undefined;
     }
   },
 

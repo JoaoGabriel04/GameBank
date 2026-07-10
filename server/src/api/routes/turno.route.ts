@@ -12,4 +12,11 @@ turnoRouter.post(
   turnoController.passarVez
 );
 
+turnoRouter.post(
+  "/:sessionId/rolar-dados",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.rolarDados
+);
+
 export default turnoRouter;
