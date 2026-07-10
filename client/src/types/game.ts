@@ -118,6 +118,11 @@ export interface GameSession {
   modo?: 'individual' | 'duplas';
   tipoJogo?: 'banca' | 'tabuleiro';
   tabuleiro?: Casa[]; // presente apenas quando tipoJogo === 'tabuleiro'
+  turnoAtualPlayerId?: number | null;
+  turnoIniciadoEm?: string | null;
+  aguardandoAcao?: boolean;
+  ultimoDado1?: number | null;
+  ultimoDado2?: number | null;
   status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
   protegida?: boolean;
   maxJogadores?: number;

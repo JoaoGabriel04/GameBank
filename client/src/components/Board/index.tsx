@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCrosshairs } from "@fortawesome/free-solid-svg-icons"
 import BoardTile from "./BoardTile"
+import TurnoBanner from "./TurnoBanner"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import type { Casa, GameSession } from "@/types/game"
 
@@ -108,7 +109,11 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const jogadoresAtivos = (session.jogadores ?? []).filter(p => !p.desistiu)
 
   return (
-    <div className="relative w-full h-[70vh] min-h-[320px] bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none">
+    <div>
+      {session.turnoAtualPlayerId != null && (
+        <TurnoBanner session={session} meuPlayerId={meuPlayerId} />
+      )}
+      <div className="relative w-full h-[70vh] min-h-[320px] bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none">
       <div
         ref={viewportRef}
         className="w-full h-full cursor-grab active:cursor-grabbing"
@@ -164,6 +169,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
           <FontAwesomeIcon icon={faCrosshairs} />
         </button>
       )}
+      </div>
     </div>
   )
 }

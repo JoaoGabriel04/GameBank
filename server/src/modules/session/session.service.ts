@@ -268,6 +268,11 @@ export class SessionService {
 
     await this.repo.updateStatus(session.id, "Em Andamento");
 
+    if (session.tipoJogo === "tabuleiro") {
+      const { turnoService } = await import("../turno/turno.service.js");
+      await turnoService.iniciarTurnos(session.id, activePlayers.map((p) => p.id));
+    }
+
     await this.invalidateCache(session.id);
     return this.repo.findById(session.id);
   }
@@ -541,6 +546,9 @@ export class SessionService {
   private bauService = new BauService();
 
   async endSession(sessionId: number, userId?: number, isAdmin = false) {
+    const { turnoService } = await import("../turno/turno.service.js");
+    turnoService.cancelarTimeout(sessionId);
+
     if (userId && !isAdmin) {
       const session = await this.repo.findByIdSimple(sessionId);
       if (session?.ownerId && session.ownerId !== userId) {

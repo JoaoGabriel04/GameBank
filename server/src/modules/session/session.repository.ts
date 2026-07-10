@@ -98,6 +98,11 @@ export class SessionRepository {
         startedAt: true,
         rewardGranted: true,
         ownerId: true,
+        turnoAtualPlayerId: true,
+        turnoIniciadoEm: true,
+        aguardandoAcao: true,
+        ultimoDado1: true,
+        ultimoDado2: true,
         jogadores: {
           include: {
             team: true,

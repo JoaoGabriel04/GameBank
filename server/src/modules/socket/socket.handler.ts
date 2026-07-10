@@ -40,6 +40,10 @@ export function emitPlayerUpdated(sessionId: number, data: PlayerUpdateData) {
   getIO().of("/game").to(`session:${sessionId}`).emit("player:updated", data);
 }
 
+export function emitTurnoTimeout(sessionId: number, data: { jogadorAnteriorId: number | null }) {
+  getIO().of("/game").to(`session:${sessionId}`).emit("turno:timeout", { sessionId, ...data });
+}
+
 export function emitVoteRequest(sessionId: number, data: { ownerId: number; ownerNome: string; requiredUserIds: number[]; playerNames?: Record<number, string> }) {
   getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_request", { sessionId, ...data });
 }

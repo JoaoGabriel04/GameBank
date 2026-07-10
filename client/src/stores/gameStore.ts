@@ -14,6 +14,7 @@ import {
   loadSessionApi,
   startSessionApi,
 } from "@/services/api/sessions";
+import { passarVezApi } from "@/services/api/turno";
 import {
   editPlayerApi,
   getPlayerByIdApi,
@@ -64,6 +65,7 @@ interface GameStore {
   createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number, tipoJogo?: 'banca' | 'tabuleiro') => Promise<number | undefined>;
   loadSession: (sessionId: number) => Promise<void>;
   startSession: (sessionId: number) => Promise<void>;
+  passarVez: (sessionId: number) => Promise<void>;
   endSession: (sessionId: number) => Promise<void>;
   getPlayerById: (playerId: number) => Promise<Player | undefined>;
   editPlayer: (playerId: number, nome: string, cor: PlayerColor) => Promise<void>;
@@ -174,6 +176,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         sessions: state.sessions.map((s) => s.id === sessionId ? session : s),
         loading: false,
       }));
+    } catch (err) {
+      handleError(set, err);
+    }
+  },
+
+  passarVez: async (sessionId) => {
+    try {
+      await passarVezApi(sessionId);
+      // Estado atualizado via socket "session:updated" (emitUpdatedSession no backend)
     } catch (err) {
       handleError(set, err);
     }
