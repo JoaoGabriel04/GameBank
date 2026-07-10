@@ -102,6 +102,7 @@ export interface GameSession {
   id: number;
   nome?: string;
   modo?: 'individual' | 'duplas';
+  tipoJogo?: 'banca' | 'tabuleiro';
   status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
   protegida?: boolean;
   maxJogadores?: number;

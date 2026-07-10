@@ -16,6 +16,7 @@ export interface CreateSessionOptions {
   criadorNome?: string;
   criadorCor?: string;
   criadorTeamIndex?: number;
+  tipoJogo?: 'banca' | 'tabuleiro';
 }
 
 export const sessionsApi = {
@@ -54,8 +55,8 @@ export const sessionsApi = {
 
 export const getSessionsApi = () => sessionsApi.getAll().then(res => res.data)
 
-export const createSessionApi = (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: TeamInput[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number): Promise<GameSession> =>
-  sessionsApi.create({ nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex }).then(res => res.data)
+export const createSessionApi = (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: TeamInput[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number, tipoJogo?: 'banca' | 'tabuleiro'): Promise<GameSession> =>
+  sessionsApi.create({ nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo }).then(res => res.data)
 
 export const joinSessionApi = (sessionId: number, data: { senha?: string; nome: string; cor: string; teamId?: number }): Promise<GameSession> =>
   sessionsApi.join(sessionId, data).then(res => res.data)

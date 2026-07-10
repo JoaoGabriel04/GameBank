@@ -61,7 +61,7 @@ interface GameStore {
   error: string | null;
   propertiesCache: Record<number, Propriedade>;
 
-  createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number) => Promise<number | undefined>;
+  createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number, tipoJogo?: 'banca' | 'tabuleiro') => Promise<number | undefined>;
   loadSession: (sessionId: number) => Promise<void>;
   startSession: (sessionId: number) => Promise<void>;
   endSession: (sessionId: number) => Promise<void>;
@@ -128,10 +128,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // -- Sessões --------------------------------------------------------------
 
-  createSession: async (nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex) => {
+  createSession: async (nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo) => {
     set({ loading: true, error: null });
     try {
-      const newSession = await createSessionApi(nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex);
+      const newSession = await createSessionApi(nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo);
       if (!newSession) return;
 
       set((state) => ({

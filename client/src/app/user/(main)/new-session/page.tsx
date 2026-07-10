@@ -33,6 +33,7 @@ export default function NewSession() {
   const [reqLoading, setReqLoading] = useState(false);
   const { loadFromStorage } = useAuthStore();
   const [modo, setModo] = useState<'individual' | 'duplas'>('individual');
+  const [tipoJogo, setTipoJogo] = useState<'banca' | 'tabuleiro'>('banca');
   const [sessionName, setSessionName] = useState("");
   const [senha, setSenha] = useState("");
   const [maxJogadores, setMaxJogadores] = useState(6);
@@ -152,7 +153,8 @@ export default function NewSession() {
         modo === 'duplas' ? times : undefined,
         undefined,
         undefined,
-        modo === 'duplas' ? criadorTeamIndex : undefined
+        modo === 'duplas' ? criadorTeamIndex : undefined,
+        tipoJogo
       );
       if (sessionId) {
         toastSuccess("Sala criada com sucesso!");
@@ -185,6 +187,36 @@ export default function NewSession() {
               <p className="text-zinc-500 text-sm lg:text-base font-inconsolata">
                 Configure a sala para começar uma nova partida
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto mb-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+            <h2 className="text-xl font-semibold font-jaro text-zinc-100 mb-4">
+              Tipo de Jogo
+            </h2>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setTipoJogo('banca')}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${tipoJogo === 'banca'
+                  ? 'border-green-500 bg-green-500/10'
+                  : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
+                  }`}
+              >
+                <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Modo Banca</div>
+                <p className="text-sm text-zinc-500 font-inconsolata">Você usa o tabuleiro físico, o app cuida do dinheiro</p>
+              </button>
+              <button
+                disabled
+                className="flex-1 p-4 rounded-lg border-2 transition-all cursor-not-allowed border-zinc-800 bg-zinc-950/30 opacity-60 relative"
+              >
+                <div className="text-lg font-semibold font-jaro text-zinc-500 mb-1">Modo Tabuleiro</div>
+                <p className="text-sm text-zinc-600 font-inconsolata">Jogue tudo no app, com tabuleiro digital</p>
+                <span className="absolute top-2 right-2 text-xs font-inconsolata text-amber-500 border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                  Em breve
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -403,6 +435,13 @@ export default function NewSession() {
             </h2>
 
             <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 font-inconsolata">Tipo:</span>
+                <span className="text-lg font-semibold text-zinc-100 font-inconsolata">
+                  {tipoJogo === 'banca' ? 'Modo Banca' : 'Modo Tabuleiro'}
+                </span>
+              </div>
+
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 font-inconsolata">Modo:</span>
                 <span className="text-lg font-semibold text-zinc-100 font-inconsolata capitalize">{modo}</span>

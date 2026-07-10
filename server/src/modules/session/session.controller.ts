@@ -14,9 +14,9 @@ export const sessionController = {
 
   new_session: async (req: Request, res: Response) => {
     try {
-      const { nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex } = req.body;
+      const { nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo } = req.body;
       const userId = req.user?.userId;
-      const result = await sessionService.createSession(nome, senha, modo, maxJogadores, saldoInicial, userId, times, criadorNome, criadorCor, criadorTeamIndex);
+      const result = await sessionService.createSession(nome, senha, modo, maxJogadores, saldoInicial, userId, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo);
       if (result?.session?.id) {
         const token = setRoomCookie(res, result.session.id, result.playerId);
         const session = await sessionService.loadSession(result.session.id);

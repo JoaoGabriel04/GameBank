@@ -88,6 +88,11 @@ enum SessionModo {
   duplas
 }
 
+enum TipoJogo {
+  banca     // modo atual — só gerencia dinheiro (tabuleiro físico)
+  tabuleiro // jogo completo com tabuleiro digital
+}
+
 model Propriedade {
   id            Int    @id
   nome          String
@@ -164,6 +169,7 @@ model Session {
   nome         String? // opcional
   senha        String? // bcrypt hash, null = sala pública
   modo         SessionModo @default(individual)
+  tipoJogo     TipoJogo    @default(banca)
   status       String  @default("Esperando")  // "Esperando" | "Em Andamento" | "Finalizada"
   maxJogadores Int     @default(6)
   saldoInicial Int     @default(25000)

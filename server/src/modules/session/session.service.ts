@@ -5,7 +5,7 @@ import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
 import { sessionLogger } from "../../lib/logger.js";
 import { MissionsService } from "../missions/missions.service.js";
-import type { SessionModo } from "../../../generated/prisma/index.js";
+import type { SessionModo, TipoJogo } from "../../../generated/prisma/index.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { BauService } from "../bau/bau.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
@@ -35,7 +35,8 @@ export class SessionService {
     times?: { nome: string; cor: string }[],
     criadorNome?: string,
     criadorCor?: string,
-    criadorTeamIndex?: number
+    criadorTeamIndex?: number,
+    tipoJogo: string = "banca"
   ) {
     if (modo === "duplas" && (!times || times.length < 2)) {
       throw new AppError(400, "Modo duplas requer pelo menos 2 times.");
@@ -52,6 +53,7 @@ export class SessionService {
     const novaSessao = await this.repo.create({
       nome,
       modo: modo as SessionModo,
+      tipoJogo: tipoJogo as TipoJogo,
       maxJogadores,
       saldoInicial,
       ...(userId ? { ownerId: userId } : {}),
