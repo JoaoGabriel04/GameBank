@@ -504,6 +504,11 @@ async function setupRedisAdapter(io: Server) {
     const pubClient = redis.duplicate();
     const subClient = redis.duplicate();
 
+    // duplicate() cria clientes novos sem os listeners do cliente original —
+    // sem isso, um ECONNRESET nesses sockets é lançado como exceção não tratada.
+    pubClient.on("error", (err) => socketLogger.warn({ err: err.message }, "redis pubClient erro"));
+    subClient.on("error", (err) => socketLogger.warn({ err: err.message }, "redis subClient erro"));
+
     await Promise.all([pubClient.connect(), subClient.connect()]);
 
     io.adapter(createAdapter(pubClient, subClient));

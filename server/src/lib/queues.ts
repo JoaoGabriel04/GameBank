@@ -2,6 +2,12 @@ import { Queue, QueueEvents } from "bullmq";
 import { logger } from "./logger.js";
 
 // BullMQ usa ioredis internamente — conexão separada do cliente principal
+//
+// maxRetriesPerRequest: null e enableReadyCheck: false são exigidos pelo BullMQ
+// para Worker/QueueEvents (usam comandos bloqueantes tipo BRPOPLPUSH). Sem isso,
+// uma instabilidade momentânea no Redis do Render (ECONNRESET) esgota as 20
+// tentativas padrão do ioredis e lança MaxRetriesPerRequestError sem parar —
+// poluindo os logs. O retryStrategy customizado evita reconexões agressivas.
 function parseBullMQConnection() {
   const url = process.env.REDIS_URL ?? "redis://localhost:6379";
   try {
@@ -11,9 +17,18 @@ function parseBullMQConnection() {
       port: parseInt(parsed.port || "6379"),
       password: parsed.password || undefined,
       db: parsed.pathname ? parseInt(parsed.pathname.slice(1)) || 0 : 0,
+      maxRetriesPerRequest: null as null,
+      enableReadyCheck: false,
+      retryStrategy: (times: number) => Math.min(times * 500, 10_000),
     };
   } catch {
-    return { host: "localhost", port: 6379 };
+    return {
+      host: "localhost",
+      port: 6379,
+      maxRetriesPerRequest: null as null,
+      enableReadyCheck: false,
+      retryStrategy: (times: number) => Math.min(times * 500, 10_000),
+    };
   }
 }
 
@@ -50,6 +65,14 @@ export const cacheQueue = new Queue("cache-invalidation", {
   defaultJobOptions: { ...defaultJobOptions, attempts: 5 },
 });
 
+// Sem listener de "error", uma queda de conexão do ioredis (ECONNRESET) é
+// lançada como exceção não tratada e polui o stdout — aqui é roteada pro logger.
+[recompensasQueue, missoesQueue, cacheQueue].forEach((fila) => {
+  fila.on("error", (err) => {
+    logger.warn({ fila: fila.name, err: err.message }, "erro de conexão na fila (redis)");
+  });
+});
+
 export function initQueueMonitoring() {
   const filas = [
     { nome: "recompensas-partida", fila: recompensasQueue },
@@ -59,6 +82,10 @@ export function initQueueMonitoring() {
 
   filas.forEach(({ nome }) => {
     const events = new QueueEvents(nome, { connection });
+
+    events.on("error", (err) => {
+      logger.warn({ fila: nome, err: err.message }, "erro de conexão no QueueEvents (redis)");
+    });
 
     events.on("completed", ({ jobId }) => {
       logger.info({ fila: nome, jobId }, "job concluído");

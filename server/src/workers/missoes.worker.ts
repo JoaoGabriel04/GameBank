@@ -40,6 +40,10 @@ function createMissoesWorker(connection = bullMQConnection) {
     );
   });
 
+  worker.on("error", (err) => {
+    logger.warn({ err: err.message }, "erro de conexão no worker de missões (redis)");
+  });
+
   return worker;
 }
 

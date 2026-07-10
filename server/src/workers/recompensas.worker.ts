@@ -48,6 +48,10 @@ function createRecompensasWorker(connection = bullMQConnection) {
     );
   });
 
+  worker.on("error", (err) => {
+    logger.warn({ err: err.message }, "erro de conexão no worker de recompensas (redis)");
+  });
+
   return worker;
 }
 
