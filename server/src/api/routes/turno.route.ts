@@ -33,4 +33,11 @@ turnoRouter.post(
   turnoController.recusarCompra
 );
 
+turnoRouter.post(
+  "/:sessionId/usar-carta-prisao",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.usarCartaPrisao
+);
+
 export default turnoRouter;

@@ -12,13 +12,18 @@ export interface RolarDadosResult {
   dado2: number
   duplo: boolean
   foiPreso: boolean
-  novaPosicao: number
-  passouInicio: boolean
+  novaPosicao?: number
+  passouInicio?: boolean
   turnoAtualPlayerId?: number | null
   avancou?: boolean
   aguardandoAcao?: boolean
   compraDisponivel?: CompraDisponivel
   mensagem?: string
+  escapouPrisao?: boolean
+  aindaPreso?: boolean
+  pagouMulta?: boolean
+  tentativasPrisao?: number
+  falido?: boolean
 }
 
 export const turnoApi = {
@@ -33,6 +38,9 @@ export const turnoApi = {
 
   recusarCompra: (sessionId: number) =>
     api.post(`/turno/${sessionId}/recusar-compra`),
+
+  sairPrisaoComCarta: (sessionId: number) =>
+    api.post<{ mensagem: string }>(`/turno/${sessionId}/usar-carta-prisao`),
 }
 
 export const passarVezApi = (sessionId: number) =>
@@ -46,3 +54,6 @@ export const comprarCasaAtualApi = (sessionId: number) =>
 
 export const recusarCompraApi = (sessionId: number) =>
   turnoApi.recusarCompra(sessionId).then(res => res.data)
+
+export const sairPrisaoComCartaApi = (sessionId: number) =>
+  turnoApi.sairPrisaoComCarta(sessionId).then(res => res.data)

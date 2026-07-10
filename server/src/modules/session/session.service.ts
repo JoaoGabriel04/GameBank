@@ -463,6 +463,15 @@ export class SessionService {
       throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ 14.999).`);
     }
 
+    // Modo Tabuleiro: dívida ativa com o banco bloqueia desistência voluntária
+    // até ser quitada (regra específica do tabuleiro — não afeta Modo Banca).
+    if (session.tipoJogo === "tabuleiro") {
+      const dividaAtiva = await prisma.debt.findFirst({ where: { sessionId, playerId: player.id, pago: false } });
+      if (dividaAtiva) {
+        throw new AppError(400, "Você não pode desistir com dívidas pendentes. Quite-as primeiro.");
+      }
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.sessionPlayer.update({
         where: { id: player.id },

@@ -2,7 +2,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { turnoRepository } from "./turno.repository.js";
 import { sessionLogger } from "../../lib/logger.js";
-import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO, getCasa, type Casa } from "../tabuleiro/tabuleiro.data.js";
+import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO, MULTA_PRISAO, getCasa, type Casa } from "../tabuleiro/tabuleiro.data.js";
 import { PropriedadeRepository } from "../propriedade/propriedade.repository.js";
 import { PropriedadeService } from "../propriedade/propriedade.service.js";
 import { CartaService } from "../carta/carta.service.js";
@@ -93,9 +93,11 @@ class TurnoService {
       const player = await turnoRepository.findPlayerParaJogada(playerId);
       if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
 
+      const falencia = await this.verificarFalencia(sessionId, session, player);
+      if (falencia) return falencia;
+
       if (player.emPrisao) {
-        // TODO(Fase 7): tentativas de duplo pra sair da prisão
-        throw new AppError(400, "Lógica de prisão ainda não implementada (Fase 7).");
+        return this.rolarDadosEmPrisao(sessionId, session, player);
       }
 
       const dado1 = Math.floor(Math.random() * 6) + 1;
@@ -117,28 +119,129 @@ class TurnoService {
         return { dado1, dado2, duplo: true, foiPreso: true, novaPosicao: POS_PRISAO, passouInicio: false, ...avanco };
       }
 
-      const total = dado1 + dado2;
-      const novaPosicao = (player.posicao + total) % TOTAL_CASAS;
-      const passouInicio = (player.posicao + total) >= TOTAL_CASAS;
-      const saldoAposInicio = passouInicio ? player.saldo + CREDITO_INICIO : player.saldo;
-
-      await turnoRepository.moverPlayer(playerId, {
-        posicao: novaPosicao,
-        ...(passouInicio ? { saldo: saldoAposInicio } : {}),
-      });
       await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
-
-      const resolucao = await this.resolverCasa(sessionId, {
-        ...player,
-        posicao: novaPosicao,
-        saldo: saldoAposInicio,
-      }, dado1 + dado2);
-
-      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-      await emitUpdatedSession(sessionId);
+      const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
 
       return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao };
     });
+  }
+
+  // Move o jogador `total` casas (com crédito de início se aplicável) e
+  // dispara resolverCasa — compartilhado entre a rolagem normal e a saída
+  // (com sucesso ou forçada) da prisão.
+  private async moverEResolver(
+    sessionId: number,
+    player: { id: number; nome: string; posicao: number; saldo: number },
+    total: number
+  ) {
+    const novaPosicao = (player.posicao + total) % TOTAL_CASAS;
+    const passouInicio = (player.posicao + total) >= TOTAL_CASAS;
+    const saldoAposInicio = passouInicio ? player.saldo + CREDITO_INICIO : player.saldo;
+
+    await turnoRepository.moverPlayer(player.id, {
+      posicao: novaPosicao,
+      ...(passouInicio ? { saldo: saldoAposInicio } : {}),
+    });
+
+    const resolucao = await this.resolverCasa(sessionId, { ...player, posicao: novaPosicao, saldo: saldoAposInicio }, total);
+
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
+
+    return { novaPosicao, passouInicio, resolucao };
+  }
+
+  // Rodadas 1-2 presas: 1 tentativa de duplo (falhou → turnosPrisao--,
+  // permanece preso, turno acaba). Rodada 3 (turnosPrisao===1): até 3
+  // tentativas na mesma vez; se as 3 falharem, paga a multa e sai.
+  private async rolarDadosEmPrisao(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>,
+    player: { id: number; nome: string; posicao: number; saldo: number; turnosPrisao: number; tentativasPrisao: number }
+  ) {
+    const dado1 = Math.floor(Math.random() * 6) + 1;
+    const dado2 = Math.floor(Math.random() * 6) + 1;
+    const duplo = dado1 === dado2;
+    await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: false });
+
+    if (duplo) {
+      await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
+      const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
+        return { dado1, dado2, duplo: true, escapouPrisao: true, novaPosicao, passouInicio, ...resolucao };
+    }
+
+    const ultimaRodada = player.turnosPrisao <= 1;
+
+    if (!ultimaRodada) {
+      await turnoRepository.moverPlayer(player.id, { turnosPrisao: player.turnosPrisao - 1 });
+      const avanco = await this.avancarTurno(sessionId, session);
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+      return { dado1, dado2, duplo: false, escapouPrisao: false, aindaPreso: true, ...avanco };
+    }
+
+    const tentativas = player.tentativasPrisao + 1;
+    if (tentativas < 3) {
+      await turnoRepository.moverPlayer(player.id, { tentativasPrisao: tentativas });
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+      return { dado1, dado2, duplo: false, escapouPrisao: false, aindaPreso: true, tentativasPrisao: tentativas };
+    }
+
+    // 3ª tentativa falhou — paga a multa (com fallback de dívida) e sai
+    // obrigatoriamente, movendo pela última rolagem.
+    const cobranca = await this.cobrarComFallbackDivida(
+      sessionId, player, MULTA_PRISAO, null, `Multa de R$ ${MULTA_PRISAO} — não conseguiu sair da prisão`
+    );
+    await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
+    const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(
+      sessionId, { ...player, saldo: player.saldo - cobranca.pago }, dado1 + dado2
+    );
+
+    return {
+      dado1, dado2, duplo: false, escapouPrisao: true, pagouMulta: true,
+      novaPosicao, passouInicio, ...resolucao,
+    };
+  }
+
+  private async verificarFalencia(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>,
+    player: { id: number; nome: string }
+  ) {
+    const { prisma } = await import("../../lib/prisma.js");
+    const dividaAtiva = await prisma.debt.findFirst({ where: { sessionId, playerId: player.id, pago: false } });
+    if (!dividaAtiva) return null;
+
+    const atual = await prisma.sessionPlayer.findUnique({ where: { id: player.id }, select: { rodadasDevendo: true } });
+    const rodadas = (atual?.rodadasDevendo ?? 0) + 1;
+
+    if (rodadas < 3) {
+      await prisma.sessionPlayer.update({ where: { id: player.id }, data: { rodadasDevendo: rodadas } });
+      return null;
+    }
+
+    // Falência: propriedades voltam ao banco (sem dono, sem leilão),
+    // jogador marcado como falido e removido dos turnos.
+    await prisma.$transaction([
+      prisma.sessionPosses.updateMany({
+        where: { sessionId, playerId: player.id },
+        data: { playerId: null, casas: 0, hipotecada: false },
+      }),
+      prisma.sessionPlayer.update({
+        where: { id: player.id },
+        data: { saldo: 0, desistiu: true, motivoDesistencia: "FALENCIA", desistiuEm: new Date(), rodadasDevendo: 0 },
+      }),
+      prisma.historico.create({
+        data: { sessionId, data: new Date(), tipo: "FALENCIA", detalhes: `${player.nome} faliu — 3 rodadas sem quitar dívidas.` },
+      }),
+    ]);
+
+    const avanco = await this.avancarTurno(sessionId, session);
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
+
+    return { falido: true, ...avanco };
   }
 
   // Dispara automaticamente após o movimento (Fase 6). Resolve o que
@@ -300,6 +403,25 @@ class TurnoService {
       await emitUpdatedSession(sessionId);
 
       return { recusado: true };
+    });
+  }
+
+  async usarCartaPrisao(sessionId: number, playerId: number) {
+    return withLock(`turno:${sessionId}`, async () => {
+      const session = await this.validarESessaoAtiva(sessionId);
+      if (session.turnoAtualPlayerId !== playerId) throw new AppError(403, "Não é sua vez de jogar.");
+
+      const player = await turnoRepository.findPlayerParaJogada(playerId);
+      if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+      if (!player.emPrisao) throw new AppError(400, "Você não está na prisão.");
+
+      const mensagem = await cartaService.usarCartaPrisao(sessionId, playerId);
+      await turnoRepository.moverPlayer(playerId, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
+
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
+      return { mensagem };
     });
   }
 

@@ -42,10 +42,17 @@ export const turnoRepository = {
   findPlayerParaJogada: (playerId: number) =>
     prisma.sessionPlayer.findUnique({
       where: { id: playerId },
-      select: { id: true, sessionId: true, nome: true, posicao: true, saldo: true, emPrisao: true, desistiu: true, pularProximaRodada: true },
+      select: {
+        id: true, sessionId: true, nome: true, posicao: true, saldo: true,
+        emPrisao: true, desistiu: true, pularProximaRodada: true,
+        turnosPrisao: true, tentativasPrisao: true,
+      },
     }),
 
-  moverPlayer: (playerId: number, data: { posicao?: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number; pularProximaRodada?: boolean }) =>
+  moverPlayer: (playerId: number, data: {
+    posicao?: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number;
+    tentativasPrisao?: number; pularProximaRodada?: boolean;
+  }) =>
     prisma.sessionPlayer.update({ where: { id: playerId }, data }),
 
   registrarDados: (sessionId: number, data: { ultimoDado1: number; ultimoDado2: number; aguardandoAcao: boolean }) =>

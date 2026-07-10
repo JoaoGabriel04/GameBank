@@ -74,6 +74,9 @@ export interface Player {
   desistiu?: boolean;
   patrimonyAtDesistir?: number | null;
   posicao?: number; // Modo Tabuleiro: casa atual (0-39)
+  emPrisao?: boolean;
+  turnosPrisao?: number;
+  rodadasDevendo?: number;
 }
 
 export interface SorteRevesCard {

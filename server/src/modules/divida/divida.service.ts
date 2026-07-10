@@ -38,6 +38,13 @@ export class DividaService {
       }),
     ]);
 
+    // Modo Tabuleiro: quitar a última dívida pendente zera o contador de
+    // falência. Campo não é usado pelo Modo Banca — reset é inofensivo lá.
+    const aindaDeve = await prisma.debt.findFirst({ where: { playerId, pago: false } });
+    if (!aindaDeve) {
+      await prisma.sessionPlayer.update({ where: { id: playerId }, data: { rodadasDevendo: 0 } });
+    }
+
     return { message: `Dívida de R$ ${debt.valor} paga com sucesso!` };
   }
 }
