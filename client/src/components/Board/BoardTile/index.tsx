@@ -22,20 +22,21 @@ const TIPO_ICON: Partial<Record<Casa["tipo"], typeof faHouse>> = {
 type Props = {
   casa: Casa
   sessionPosse?: SessionPropriedade
-  players: Player[]
+  donoJogador?: Player
+  destaque?: boolean
 }
 
-export default function BoardTile({ casa, sessionPosse, players }: Props) {
+export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
   const isPropriedade = casa.tipo === "propriedade" || casa.tipo === "acao"
   const cor = isPropriedade ? getGroupColorHex(sessionPosse?.propriedade?.grupo_cor) : null
-  const donoCor = sessionPosse?.playerId
-    ? PLAYER_COLORS.find(p => p.value === players.find(pl => pl.id === sessionPosse.playerId)?.cor)
-    : null
+  const donoCor = donoJogador ? PLAYER_COLORS.find(p => p.value === donoJogador.cor) : null
   const icon = TIPO_ICON[casa.tipo]
 
   return (
     <div
-      className="relative w-full h-full bg-zinc-900 border border-zinc-800 flex flex-col overflow-hidden select-none"
+      className={`relative w-full h-full bg-zinc-900 border flex flex-col overflow-hidden select-none transition-shadow ${
+        destaque ? "border-green-400 shadow-[0_0_10px_2px_rgba(74,222,128,0.5)] z-10" : "border-zinc-800"
+      }`}
       title={casa.nome}
     >
       {isPropriedade && (
@@ -65,21 +66,6 @@ export default function BoardTile({ casa, sessionPosse, players }: Props) {
         <div
           className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${donoCor.bg} ${sessionPosse?.hipotecada ? "opacity-40" : ""}`}
         />
-      )}
-
-      {players.length > 0 && (
-        <div className="absolute bottom-0.5 left-0.5 flex -space-x-1">
-          {players.slice(0, 4).map((p) => {
-            const c = PLAYER_COLORS.find(pc => pc.value === p.cor)
-            return (
-              <div
-                key={p.id}
-                className={`w-2.5 h-2.5 rounded-full border border-zinc-950 ${c?.bg ?? "bg-zinc-500"}`}
-                title={p.nome}
-              />
-            )
-          })}
-        </div>
       )}
     </div>
   )

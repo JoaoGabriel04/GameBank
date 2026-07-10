@@ -8,6 +8,7 @@ export function posToGrid(pos: number): { row: number; col: number } {
   return { row: (pos - 30) + 1, col: 11 }                   // direito
 }
 
+export const TOTAL_CASAS = 40
 export const GRID_SIZE = 11
 export const TILE_SIZE = 76 // px, tamanho base de cada casa (antes do zoom)
 export const BOARD_SIZE = GRID_SIZE * TILE_SIZE
