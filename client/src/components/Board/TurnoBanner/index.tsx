@@ -56,6 +56,7 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
         toastInfo(`Deu ${r.dado1} e ${r.dado2} — 3 duplos seguidos! Direto pra prisão.`)
       } else {
         toastSuccess(`Deu ${r.dado1} e ${r.dado2}${r.duplo ? " (duplo — jogue de novo depois)" : ""}${r.passouInicio ? " · +R$ 2.000 (passou pelo Início)" : ""}`)
+        if (r.mensagem) toastInfo(r.mensagem)
       }
     } finally {
       setRolando(false)

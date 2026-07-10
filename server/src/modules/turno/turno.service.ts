@@ -2,7 +2,14 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { turnoRepository } from "./turno.repository.js";
 import { sessionLogger } from "../../lib/logger.js";
-import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO } from "../tabuleiro/tabuleiro.data.js";
+import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO, getCasa, type Casa } from "../tabuleiro/tabuleiro.data.js";
+import { PropriedadeRepository } from "../propriedade/propriedade.repository.js";
+import { PropriedadeService } from "../propriedade/propriedade.service.js";
+import { CartaService } from "../carta/carta.service.js";
+
+const propriedadeRepository = new PropriedadeRepository();
+const propriedadeService = new PropriedadeService();
+const cartaService = new CartaService();
 
 const TURNO_TIMEOUT_MS = 60_000;
 
@@ -113,18 +120,198 @@ class TurnoService {
       const total = dado1 + dado2;
       const novaPosicao = (player.posicao + total) % TOTAL_CASAS;
       const passouInicio = (player.posicao + total) >= TOTAL_CASAS;
+      const saldoAposInicio = passouInicio ? player.saldo + CREDITO_INICIO : player.saldo;
 
       await turnoRepository.moverPlayer(playerId, {
         posicao: novaPosicao,
-        ...(passouInicio ? { saldo: player.saldo + CREDITO_INICIO } : {}),
+        ...(passouInicio ? { saldo: saldoAposInicio } : {}),
       });
       await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
+
+      const resolucao = await this.resolverCasa(sessionId, {
+        ...player,
+        posicao: novaPosicao,
+        saldo: saldoAposInicio,
+      }, dado1 + dado2);
 
       const { emitUpdatedSession } = await import("../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
 
-      return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio };
+      return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao };
     });
+  }
+
+  // Dispara automaticamente após o movimento (Fase 6). Resolve o que
+  // acontece ao parar na casa; casas que exigem decisão do jogador
+  // (comprar propriedade sem dono) deixam aguardandoAcao=true.
+  private async resolverCasa(
+    sessionId: number,
+    player: { id: number; nome: string; posicao: number; saldo: number },
+    numDados: number
+  ) {
+    const casa = getCasa(player.posicao);
+    let aguardandoAcao = false;
+    let compraDisponivel: { propId: number; sessionPossesId: number; nome: string; preco: number } | undefined;
+    let mensagem = "";
+
+    switch (casa.tipo) {
+      case "propriedade":
+      case "acao": {
+        if (casa.propId == null) break;
+        const posse = await propriedadeRepository.findSessionPosses(sessionId, casa.propId);
+        if (!posse || !posse.propriedade) break;
+
+        if (!posse.playerId) {
+          aguardandoAcao = true;
+          compraDisponivel = {
+            propId: casa.propId,
+            sessionPossesId: posse.id,
+            nome: posse.propriedade.nome,
+            preco: posse.propriedade.custo_compra,
+          };
+        } else if (posse.playerId !== player.id && !posse.hipotecada && posse.player) {
+          const valor = casa.tipo === "acao"
+            ? 500 * numDados
+            : this.calcularAluguel(posse.propriedade, posse.casas);
+          const r = await this.cobrarComFallbackDivida(
+            sessionId, player, valor, posse.player,
+            `Aluguel de R$ ${valor} em ${posse.propriedade.nome}`
+          );
+          mensagem = r.debtCriada
+            ? `${player.nome} pagou R$ ${r.pago} e ficou devendo R$ ${r.debtValor} de aluguel em ${posse.propriedade.nome}.`
+            : `${player.nome} pagou R$ ${valor} de aluguel em ${posse.propriedade.nome}.`;
+        }
+        break;
+      }
+
+      case "noticias": {
+        const sorteio = await cartaService.sortearCarta(sessionId, player.id);
+        mensagem = sorteio.effectDescription;
+        if (sorteio.carta.tipo === "prisao") {
+          await turnoRepository.moverPlayer(player.id, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
+        }
+        break;
+      }
+
+      case "restituicao": {
+        const valor = casa.valor ?? 2000;
+        await turnoRepository.moverPlayer(player.id, { saldo: player.saldo + valor });
+        await turnoRepository.criarHistorico({ sessionId, tipo: "RESTITUICAO", detalhes: `${player.nome} recebeu R$ ${valor} de restituição do IR.` });
+        mensagem = `${player.nome} recebeu R$ ${valor} de restituição.`;
+        break;
+      }
+
+      case "imposto": {
+        const valor = casa.valor ?? 2000;
+        const r = await this.cobrarComFallbackDivida(sessionId, player, valor, null, `Imposto de R$ ${valor} (Receita Federal)`);
+        mensagem = r.debtCriada
+          ? `${player.nome} pagou R$ ${r.pago} de imposto e ficou devendo R$ ${r.debtValor}.`
+          : `${player.nome} pagou R$ ${valor} de imposto.`;
+        break;
+      }
+
+      case "feriado": {
+        await turnoRepository.moverPlayer(player.id, { pularProximaRodada: true });
+        mensagem = `${player.nome} caiu no Feriado e vai pular a próxima rodada.`;
+        break;
+      }
+
+      case "va_para_prisao": {
+        await turnoRepository.moverPlayer(player.id, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
+        mensagem = `${player.nome} foi direto para a prisão.`;
+        break;
+      }
+
+      case "prisao_visita":
+      case "inicio":
+      default:
+        break;
+    }
+
+    await turnoRepository.setAguardandoAcao(sessionId, aguardandoAcao);
+
+    return { casa, aguardandoAcao, compraDisponivel, mensagem: mensagem || undefined };
+  }
+
+  private calcularAluguel(prop: { aluguel_base: number; aluguel_1c: number; aluguel_2c: number; aluguel_3c: number; aluguel_4c: number; aluguel_hotel: number }, casas: number) {
+    switch (casas) {
+      case 0: return prop.aluguel_base ?? 0;
+      case 1: return prop.aluguel_1c ?? prop.aluguel_base ?? 0;
+      case 2: return prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
+      case 3: return prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
+      case 4: return prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_base ?? 0;
+      default: return prop.aluguel_hotel ?? prop.aluguel_4c ?? prop.aluguel_base ?? 0;
+    }
+  }
+
+  // Cobra valor do pagador; se saldo insuficiente, paga o que dá e cria
+  // Debt pelo restante (mesmo padrão já usado em carta.service.ts pra
+  // pagamentos automáticos do banco). credor=null → dinheiro vai pro banco.
+  private async cobrarComFallbackDivida(
+    sessionId: number,
+    pagador: { id: number; nome: string; saldo: number },
+    valor: number,
+    credor: { id: number; nome: string; saldo: number } | null,
+    descricao: string
+  ) {
+    const pago = Math.min(pagador.saldo, valor);
+    const debtValor = valor - pago;
+
+    await turnoRepository.moverPlayer(pagador.id, { saldo: pagador.saldo - pago });
+    if (credor && pago > 0) {
+      await turnoRepository.moverPlayer(credor.id, { saldo: credor.saldo + pago });
+    }
+
+    if (debtValor > 0) {
+      await turnoRepository.criarDivida({ sessionId, playerId: pagador.id, valor: debtValor, descricao: `${descricao} (dívida)` });
+    }
+
+    await turnoRepository.criarHistorico({
+      sessionId,
+      tipo: credor ? "PAGAMENTO_ALUGUEL" : "IMPOSTO",
+      detalhes: `${pagador.nome} pagou R$ ${pago}${debtValor > 0 ? ` e ficou devendo R$ ${debtValor}` : ""} — ${descricao}.`,
+    });
+
+    return { pago, debtCriada: debtValor > 0, debtValor };
+  }
+
+  async comprarCasaAtual(sessionId: number, playerId: number) {
+    return withLock(`turno:${sessionId}`, async () => {
+      const session = await this.validarPendenciaDeCompra(sessionId, playerId);
+      const casa = getCasa(session.posicaoJogador);
+      if (casa.propId == null) throw new AppError(400, "Não há nada pra comprar nesta casa.");
+
+      const resultado = await propriedadeService.buyProp(casa.propId, sessionId, playerId);
+      await turnoRepository.setAguardandoAcao(sessionId, false);
+
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
+      return resultado;
+    });
+  }
+
+  async recusarCompra(sessionId: number, playerId: number) {
+    return withLock(`turno:${sessionId}`, async () => {
+      await this.validarPendenciaDeCompra(sessionId, playerId);
+      await turnoRepository.setAguardandoAcao(sessionId, false);
+
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
+      return { recusado: true };
+    });
+  }
+
+  private async validarPendenciaDeCompra(sessionId: number, playerId: number) {
+    const session = await this.validarESessaoAtiva(sessionId);
+    if (session.turnoAtualPlayerId !== playerId) throw new AppError(403, "Não é sua vez de jogar.");
+    if (!session.aguardandoAcao) throw new AppError(400, "Não há nenhuma compra pendente.");
+
+    const player = await turnoRepository.findPlayerParaJogada(playerId);
+    if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+
+    return { ...session, posicaoJogador: player.posicao };
   }
 
   // Disparado pelo timeout de 60s — não valida "de quem é a vez" pois é

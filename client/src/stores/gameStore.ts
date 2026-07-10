@@ -14,7 +14,7 @@ import {
   loadSessionApi,
   startSessionApi,
 } from "@/services/api/sessions";
-import { passarVezApi, rolarDadosApi, type RolarDadosResult } from "@/services/api/turno";
+import { passarVezApi, rolarDadosApi, comprarCasaAtualApi, recusarCompraApi, type RolarDadosResult } from "@/services/api/turno";
 import {
   editPlayerApi,
   getPlayerByIdApi,
@@ -67,6 +67,8 @@ interface GameStore {
   startSession: (sessionId: number) => Promise<void>;
   passarVez: (sessionId: number) => Promise<void>;
   rolarDados: (sessionId: number) => Promise<RolarDadosResult | undefined>;
+  comprarCasaAtual: (sessionId: number) => Promise<boolean>;
+  recusarCompra: (sessionId: number) => Promise<boolean>;
   endSession: (sessionId: number) => Promise<void>;
   getPlayerById: (playerId: number) => Promise<Player | undefined>;
   editPlayer: (playerId: number, nome: string, cor: PlayerColor) => Promise<void>;
@@ -198,6 +200,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } catch (err) {
       handleError(set, err);
       return undefined;
+    }
+  },
+
+  comprarCasaAtual: async (sessionId) => {
+    try {
+      await comprarCasaAtualApi(sessionId);
+      return true;
+    } catch (err) {
+      handleError(set, err);
+      return false;
+    }
+  },
+
+  recusarCompra: async (sessionId) => {
+    try {
+      await recusarCompraApi(sessionId);
+      return true;
+    } catch (err) {
+      handleError(set, err);
+      return false;
     }
   },
 

@@ -19,4 +19,18 @@ turnoRouter.post(
   turnoController.rolarDados
 );
 
+turnoRouter.post(
+  "/:sessionId/comprar-casa-atual",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.comprarCasaAtual
+);
+
+turnoRouter.post(
+  "/:sessionId/recusar-compra",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.recusarCompra
+);
+
 export default turnoRouter;

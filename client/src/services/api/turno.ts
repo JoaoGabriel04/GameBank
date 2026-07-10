@@ -1,5 +1,12 @@
 import api from './index'
 
+export interface CompraDisponivel {
+  propId: number
+  sessionPossesId: number
+  nome: string
+  preco: number
+}
+
 export interface RolarDadosResult {
   dado1: number
   dado2: number
@@ -9,6 +16,9 @@ export interface RolarDadosResult {
   passouInicio: boolean
   turnoAtualPlayerId?: number | null
   avancou?: boolean
+  aguardandoAcao?: boolean
+  compraDisponivel?: CompraDisponivel
+  mensagem?: string
 }
 
 export const turnoApi = {
@@ -17,6 +27,12 @@ export const turnoApi = {
 
   rolarDados: (sessionId: number) =>
     api.post<RolarDadosResult>(`/turno/${sessionId}/rolar-dados`),
+
+  comprarCasaAtual: (sessionId: number) =>
+    api.post(`/turno/${sessionId}/comprar-casa-atual`),
+
+  recusarCompra: (sessionId: number) =>
+    api.post(`/turno/${sessionId}/recusar-compra`),
 }
 
 export const passarVezApi = (sessionId: number) =>
@@ -24,3 +40,9 @@ export const passarVezApi = (sessionId: number) =>
 
 export const rolarDadosApi = (sessionId: number) =>
   turnoApi.rolarDados(sessionId).then(res => res.data)
+
+export const comprarCasaAtualApi = (sessionId: number) =>
+  turnoApi.comprarCasaAtual(sessionId).then(res => res.data)
+
+export const recusarCompraApi = (sessionId: number) =>
+  turnoApi.recusarCompra(sessionId).then(res => res.data)

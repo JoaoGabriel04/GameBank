@@ -42,12 +42,21 @@ export const turnoRepository = {
   findPlayerParaJogada: (playerId: number) =>
     prisma.sessionPlayer.findUnique({
       where: { id: playerId },
-      select: { id: true, sessionId: true, posicao: true, saldo: true, emPrisao: true, desistiu: true },
+      select: { id: true, sessionId: true, nome: true, posicao: true, saldo: true, emPrisao: true, desistiu: true, pularProximaRodada: true },
     }),
 
-  moverPlayer: (playerId: number, data: { posicao: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number }) =>
+  moverPlayer: (playerId: number, data: { posicao?: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number; pularProximaRodada?: boolean }) =>
     prisma.sessionPlayer.update({ where: { id: playerId }, data }),
 
   registrarDados: (sessionId: number, data: { ultimoDado1: number; ultimoDado2: number; aguardandoAcao: boolean }) =>
     prisma.session.update({ where: { id: sessionId }, data }),
+
+  setAguardandoAcao: (sessionId: number, aguardandoAcao: boolean) =>
+    prisma.session.update({ where: { id: sessionId }, data: { aguardandoAcao } }),
+
+  criarDivida: (data: { sessionId: number; playerId: number; valor: number; descricao: string }) =>
+    prisma.debt.create({ data }),
+
+  criarHistorico: (data: { sessionId: number; tipo: string; detalhes: string }) =>
+    prisma.historico.create({ data: { ...data, data: new Date() } }),
 };

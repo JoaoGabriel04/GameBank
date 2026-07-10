@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCrosshairs } from "@fortawesome/free-solid-svg-icons"
 import BoardTile from "./BoardTile"
 import TurnoBanner from "./TurnoBanner"
+import CompraCasaModal from "./CompraCasaModal"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import type { Casa, GameSession } from "@/types/game"
 
@@ -108,10 +109,28 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
 
   const jogadoresAtivos = (session.jogadores ?? []).filter(p => !p.desistiu)
 
+  // Derivado do estado da sessão (não da resposta transitória de rolar-dados)
+  // pra sobreviver a um refresh de página enquanto a decisão está pendente.
+  const jogadorDaVez = jogadoresAtivos.find(p => p.id === session.turnoAtualPlayerId)
+  const minhaVez = !!meuPlayerId && jogadorDaVez?.id === meuPlayerId
+  let compraPendente: { nome: string; preco: number } | null = null
+  if (minhaVez && session.aguardandoAcao && jogadorDaVez) {
+    const casaAtual = tabuleiro.find(c => c.pos === (jogadorDaVez.posicao ?? 0))
+    if (casaAtual && (casaAtual.tipo === "propriedade" || casaAtual.tipo === "acao") && casaAtual.propId != null) {
+      const posse = session.sessionPosses?.find(sp => sp.propId === casaAtual.propId)
+      if (posse && !posse.playerId && posse.propriedade) {
+        compraPendente = { nome: posse.propriedade.nome, preco: posse.propriedade.custo_compra }
+      }
+    }
+  }
+
   return (
     <div>
       {session.turnoAtualPlayerId != null && (
         <TurnoBanner session={session} meuPlayerId={meuPlayerId} />
+      )}
+      {compraPendente && (
+        <CompraCasaModal sessionId={session.id} nome={compraPendente.nome} preco={compraPendente.preco} />
       )}
       <div className="relative w-full h-[70vh] min-h-[320px] bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none">
       <div
