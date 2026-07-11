@@ -236,6 +236,24 @@ export default function Game() {
     }
   }, [isLoading, sessionEnded, swrSession, isError, router, endLoading, toastError]);
 
+  // Exibe ordem de turno ao iniciar a partida (tabuleiro)
+  const [ordemExibida, setOrdemExibida] = useState(false);
+  useEffect(() => {
+    if (!currentSession || ordemExibida) return;
+    if (currentSession.status !== "Em Andamento" || !currentSession.ordemTurnos || !authUser?.id) return;
+
+    const player = currentSession.jogadores?.find(p => p.userId === authUser.id);
+    if (!player) return;
+
+    const ordem: number[] = JSON.parse(currentSession.ordemTurnos);
+    const idx = ordem.indexOf(player.id);
+    if (idx === -1) return;
+
+    setOrdemExibida(true);
+    const pos = idx + 1;
+    toastInfo(`Você é o ${pos}° a jogar (${ordem.length} jogadores)`);
+  }, [currentSession, ordemExibida, authUser, toastInfo]);
+
   const handleEndGame = async () => {
     if (!currentSession) return;
     if (currentSession.status === "Em Andamento") {

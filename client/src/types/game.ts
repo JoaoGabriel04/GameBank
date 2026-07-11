@@ -126,6 +126,7 @@ export interface GameSession {
   aguardandoAcao?: boolean;
   ultimoDado1?: number | null;
   ultimoDado2?: number | null;
+  ordemTurnos?: string | null; // JSON array de playerIds
   status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
   protegida?: boolean;
   maxJogadores?: number;

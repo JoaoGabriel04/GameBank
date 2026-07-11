@@ -59,6 +59,12 @@ export class SessionRepository {
         saldoInicial: true,
         dataInicio: true,
         ownerId: true,
+        turnoAtualPlayerId: true,
+        turnoIniciadoEm: true,
+        aguardandoAcao: true,
+        ultimoDado1: true,
+        ultimoDado2: true,
+        ordemTurnos: true,
         jogadores: {
           include: {
             team: true,
