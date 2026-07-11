@@ -444,9 +444,10 @@ export class SessionService {
 
     await this.invalidateCache(sessionId);
 
-    // Auto-end: se sobrar 0 ou 1 jogador ativo, finaliza a partida
+    // Auto-end: quando restam metade ou menos dos jogadores, finaliza
+    const totalPlayers = session.jogadores.length;
     const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount <= 1) {
+    if (activeCount <= Math.floor(totalPlayers / 2)) {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
@@ -515,9 +516,10 @@ export class SessionService {
 
     await this.invalidateCache(sessionId);
 
-    // Auto-end: se sobrar 0 ou 1 jogador ativo, finaliza a partida
+    // Auto-end: quando restam metade ou menos dos jogadores, finaliza
+    const totalPlayers = session.jogadores.length;
     const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount <= 1) {
+    if (activeCount <= Math.floor(totalPlayers / 2)) {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
@@ -563,8 +565,9 @@ export class SessionService {
 
     await this.invalidateCache(sessionId);
 
+    const totalPlayers = session.jogadores.length;
     const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount <= 1) {
+    if (activeCount <= Math.floor(totalPlayers / 2)) {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
