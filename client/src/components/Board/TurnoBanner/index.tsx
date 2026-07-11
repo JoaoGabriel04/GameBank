@@ -53,6 +53,14 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
         setDadosAberto(false)
         return
       }
+
+      // Falência: dispara antes de rolar os dados (nenhum dado foi jogado)
+      if (r.falido) {
+        setDadosAberto(false)
+        toastError(r.mensagem ?? "Você faliu por não quitar suas dívidas a tempo.")
+        return
+      }
+
       setDado1(r.dado1)
       setDado2(r.dado2)
       if (r.foiPreso) {

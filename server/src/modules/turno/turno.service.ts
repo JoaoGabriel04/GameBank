@@ -268,7 +268,11 @@ class TurnoService {
 
     const avanco = await this.avancarTurno(sessionId, session);
 
-    return { falido: true, ...avanco };
+    return {
+      falido: true,
+      mensagem: `${player.nome} faliu após 3 rodadas sem quitar as dívidas — propriedades voltaram ao banco.`,
+      ...avanco,
+    };
   }
 
   // Dispara automaticamente após o movimento (Fase 6). Resolve o que
