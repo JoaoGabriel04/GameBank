@@ -6,6 +6,7 @@ import { getRoomToken } from "./roomTokenStore";
 import { toast } from "@/lib/toast";
 import type { ChatMessage, GameNotification, Negotiation } from "@/types/game";
 import { nextSeq, resetSeq } from "@/lib/socket-sequence";
+import { playSfx } from "@/utils/sfx";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== ""
@@ -226,6 +227,7 @@ export function connectSocket(sessionId: number) {
     const myId = useAuthStore.getState().user?.id;
     if (data.toUserId && data.toUserId === myId) {
       toast.success(`Você recebeu R$ ${data.valor.toLocaleString("pt-BR")} de ${data.fromPlayerNome} (${data.propriedadeNome})`);
+      playSfx("pagou-aluguel")
     }
   });
 

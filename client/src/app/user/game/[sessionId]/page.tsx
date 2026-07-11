@@ -32,6 +32,8 @@ import { formatCurrency } from "@/utils/format";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import EndGameVoteModal from "@/components/EndGameVoteModal";
 import Chat from "@/components/Chat";
+import { preloadSfx } from "@/utils/sfx";
+import GameSfxLayer from "@/components/GameSfxLayer";
 import NegotiationResponseModal from "@/components/NegotiationResponseModal";
 import PodiumModal from "@/components/PodiumModal";
 import Link from "next/link";
@@ -87,6 +89,9 @@ export default function Game() {
 
   // Carrega authUser do localStorage (substitui o auto-load removido do authStore)
   useEffect(() => { loadAuth(); }, [loadAuth]);
+
+  // Pré-carrega os SFX do Modo Tabuleiro para evitar latência no primeiro toque
+  useEffect(() => { preloadSfx(); }, []);
 
   const isOwner = !!currentSession?.ownerId && !!authUser?.id && currentSession.ownerId === authUser.id;
 
@@ -400,6 +405,38 @@ export default function Game() {
     "Finalizada": "text-red-400 bg-red-500/10 border-red-500/30",
   };
 
+
+  // ── Mini turn timer (exibido em todas as abas exceto Tabuleiro) ─────────
+  function TurnTimerStrip({ session: s, meuPlayerId: m }: { session: NonNullable<typeof currentSession>; meuPlayerId?: number }) {
+    const [restante, setRestante] = useState(60)
+    const jogadorDaVez = s.jogadores?.find(p => p.id === s.turnoAtualPlayerId)
+    const minhaVez = !!m && s.turnoAtualPlayerId === m
+
+    useEffect(() => {
+      if (!s.turnoIniciadoEm) return
+      const inicio = new Date(s.turnoIniciadoEm).getTime()
+      const tick = () => {
+        const passado = Math.floor((Date.now() - inicio) / 1000)
+        setRestante(Math.max(0, 60 - passado))
+      }
+      tick()
+      const id = setInterval(tick, 1000)
+      return () => clearInterval(id)
+    }, [s.turnoIniciadoEm])
+
+    return (
+      <div className={`shrink-0 flex items-center justify-between gap-3 px-4 py-1.5 border-b font-inconsolata text-xs ${
+        minhaVez ? "border-green-500/30 bg-green-500/5 text-green-300" : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
+      }`}>
+        <span>
+          {minhaVez ? "Sua vez!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
+        </span>
+        <span className="flex items-center gap-1.5">
+          ⏱ {restante}s
+        </span>
+      </div>
+    )
+  }
 
   // -- Waiting Room --------------------------------------------------------
   function renderWaitingRoom() {
@@ -746,6 +783,19 @@ export default function Game() {
             </nav>
           )}
         </header>
+
+        {/* GameSfxLayer — sons de turno audíveis de qualquer aba */}
+        {!isWaiting && currentSession.turnoAtualPlayerId != null && (
+          <GameSfxLayer
+            session={currentSession}
+            meuPlayerId={currentPlayer?.id}
+          />
+        )}
+
+        {/* Mini turn timer — visível de qualquer aba (menos na Tabuleiro, que já tem o TurnoBanner) */}
+        {!isWaiting && !isTabuleiro && currentSession.turnoAtualPlayerId != null && (
+          <TurnTimerStrip session={currentSession} meuPlayerId={currentPlayer?.id} />
+        )}
 
         {/* LINHA 2 — Conteúdo */}
         {isTabuleiro ? (

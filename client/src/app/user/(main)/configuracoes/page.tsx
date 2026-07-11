@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Music, Volume2, VolumeX, Play, Pause, LogOut } from "lucide-react";
+import { ArrowLeft, Music, Volume2, VolumeX, Play, Pause, LogOut, Bell, BellOff } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faInstagram,
@@ -14,6 +14,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { useAuthStore } from "@/stores/authStore";
 import { useMusicStore } from "@/stores/musicStore";
+import { useSfxStore } from "@/stores/sfxStore";
 import { userMenuOptions as menuOptions } from "@/utils/menuOptions";
 
 
@@ -23,6 +24,7 @@ const VERSION = process.env.NEXT_PUBLIC_GAME_VERSION ?? "1.0.0";
 export default function ConfiguracoesPage() {
   const { loadFromStorage, logout } = useAuthStore();
   const { volume, isPlaying, setVolume, togglePlaying } = useMusicStore();
+  const { volume: sfxVolume, muted: sfxMuted, setVolume: setSfxVolume, toggleMuted: toggleSfxMuted } = useSfxStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export default function ConfiguracoesPage() {
   }, [loadFromStorage]);
 
   const volumePct = Math.round(volume * 100);
+  const sfxVolumePct = Math.round(sfxVolume * 100);
 
   return (
     <div className="min-h-screen bg-zinc-900 text-white pb-24">
@@ -100,6 +103,66 @@ export default function ConfiguracoesPage() {
               value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
               className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-green-500 bg-zinc-700"
+            />
+            <div className="flex justify-between font-inconsolata text-[10px] text-zinc-600">
+              <span>0%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        </section>
+
+        {/* -- Efeitos Sonoros -- */}
+        <section className="bg-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-4 h-4 text-green-400" />
+            <h2 className="font-jaro text-base text-zinc-100">Efeitos Sonoros</h2>
+          </div>
+
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <p className="font-inconsolata text-sm text-zinc-300">Modo Tabuleiro</p>
+              <p className="font-inconsolata text-xs text-zinc-600 mt-0.5">Dados, compras, aluguel e turnos</p>
+            </div>
+            <button
+              onClick={toggleSfxMuted}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                !sfxMuted
+                  ? "bg-green-500/20 border-2 border-green-500"
+                  : "bg-zinc-700 border-2 border-zinc-600 hover:border-zinc-400"
+              }`}
+              title={sfxMuted ? "Ativar efeitos" : "Silenciar efeitos"}
+            >
+              {sfxMuted ? (
+                <BellOff className="w-4 h-4 text-zinc-300" />
+              ) : (
+                <Bell className="w-4 h-4 text-green-400" />
+              )}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-zinc-400">
+                {sfxMuted || sfxVolume === 0 ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+                <span className="font-inconsolata text-xs uppercase tracking-wide">Volume</span>
+              </div>
+              <span className="font-inconsolata text-sm text-zinc-300 tabular-nums w-10 text-right">
+                {sfxVolumePct}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={sfxVolume}
+              onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
+              disabled={sfxMuted}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-green-500 bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="flex justify-between font-inconsolata text-[10px] text-zinc-600">
               <span>0%</span>

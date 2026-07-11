@@ -1,81 +1,71 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faHourglassHalf, faDice, faLock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
 import type { GameSession } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
-import DadosRoll from "@/components/Board/DadosRoll"
+import { playSfx } from "@/utils/sfx"
 
 const TURNO_TIMEOUT_S = 60
+const AVISO_TEMPO_S = 10
 
 type Props = {
   session: GameSession
   meuPlayerId?: number
+  rolando: boolean
+  onRolarDados: () => void
 }
 
-export default function TurnoBanner({ session, meuPlayerId }: Props) {
-  const { rolarDados, sairPrisaoComCarta } = useGameStore()
-  const { info: toastInfo, success: toastSuccess, error: toastError } = useToast()
+export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDados }: Props) {
+  const { sairPrisaoComCarta } = useGameStore()
+  const { success: toastSuccess, error: toastError } = useToast()
   const [restante, setRestante] = useState(TURNO_TIMEOUT_S)
-  const [rolando, setRolando] = useState(false)
   const [usandoCarta, setUsandoCarta] = useState(false)
-  const [dado1, setDado1] = useState<number | undefined>()
-  const [dado2, setDado2] = useState<number | undefined>()
-  const [dadosAberto, setDadosAberto] = useState(false)
 
   const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
   const meuJogador = session.jogadores?.find(p => p.id === meuPlayerId)
+
+  // Guarda anti-repetição: só toca "chegou-sua-vez" na transição
+  // (não era minha vez → agora é), nunca em re-renders com a vez inalterada.
+  const vezAnteriorRef = useRef<number | null>(null)
+  useEffect(() => {
+    const eraMinhaVez = !!meuPlayerId && vezAnteriorRef.current === meuPlayerId
+    const agoraMinhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
+
+    if (!eraMinhaVez && agoraMinhaVez) {
+      playSfx("chegou-sua-vez")
+    }
+
+    vezAnteriorRef.current = session.turnoAtualPlayerId ?? null
+  }, [session.turnoAtualPlayerId, meuPlayerId])
+
+  // Guarda anti-repetição: "tempo-acabando" toca uma única vez por turno,
+  // resetada sempre que a vez muda (novo turno = novo aviso possível).
+  const alertouTempoRef = useRef(false)
+  useEffect(() => {
+    alertouTempoRef.current = false
+  }, [session.turnoAtualPlayerId])
 
   useEffect(() => {
     if (!session.turnoIniciadoEm) return
     const inicio = new Date(session.turnoIniciadoEm).getTime()
     const tick = () => {
       const passado = Math.floor((Date.now() - inicio) / 1000)
-      setRestante(Math.max(0, TURNO_TIMEOUT_S - passado))
+      const restanteS = Math.max(0, TURNO_TIMEOUT_S - passado)
+      setRestante(restanteS)
+
+      if (minhaVez && restanteS === AVISO_TEMPO_S && !alertouTempoRef.current) {
+        playSfx("tempo-acabando")
+        alertouTempoRef.current = true
+      }
     }
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [session.turnoIniciadoEm, session.turnoAtualPlayerId])
-
-  const handleRolarDados = async () => {
-    if (rolando) return
-    setDado1(undefined)
-    setDado2(undefined)
-    setRolando(true)
-    setDadosAberto(true)
-    try {
-      const r = await rolarDados(session.id)
-      if (!r) {
-        setDadosAberto(false)
-        return
-      }
-
-      // Falência: dispara antes de rolar os dados (nenhum dado foi jogado)
-      if (r.falido) {
-        setDadosAberto(false)
-        toastError(r.mensagem ?? "Você faliu por não quitar suas dívidas a tempo.")
-        return
-      }
-
-      setDado1(r.dado1)
-      setDado2(r.dado2)
-      if (r.foiPreso) {
-        toastInfo(`Deu ${r.dado1} e ${r.dado2} — 3 duplos seguidos! Direto pra prisão.`)
-      } else {
-        toastSuccess(`Deu ${r.dado1} e ${r.dado2}${r.duplo ? " (duplo — jogue de novo depois)" : ""}${r.passouInicio ? " · +R$ 2.000 (passou pelo Início)" : ""}`)
-        if (r.mensagem) toastInfo(r.mensagem)
-      }
-    } catch (err: any) {
-      setDadosAberto(false)
-      toastError(err?.response?.data?.message || "Erro ao rolar dados")
-    } finally {
-      setRolando(false)
-    }
-  }
+  }, [session.turnoIniciadoEm, session.turnoAtualPlayerId, minhaVez])
 
   const handleUsarCartaPrisao = async () => {
     if (usandoCarta) return
@@ -92,14 +82,6 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
 
   return (
     <div className="mb-3 space-y-2">
-      <DadosRoll
-        aberto={dadosAberto}
-        rolando={rolando}
-        dado1={dado1}
-        dado2={dado2}
-        onClose={() => setDadosAberto(false)}
-      />
-
       <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border font-inconsolata text-sm ${
         minhaVez ? "border-green-500/50 bg-green-500/10 text-green-300" : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
       }`}>
@@ -117,7 +99,7 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
           {minhaVez && (
             <>
               <button
-                onClick={handleRolarDados}
+                onClick={onRolarDados}
                 disabled={rolando || !!session.aguardandoAcao}
                 title={session.aguardandoAcao ? "Aguardando resolução da casa" : undefined}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"

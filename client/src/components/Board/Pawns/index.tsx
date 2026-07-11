@@ -8,7 +8,7 @@ import type { Player } from "@/types/game"
 
 const PASSO_DURACAO_S = 0.15
 const MAX_CASAS_ANIMADAS = 12
-const AVATAR_SIZE = 24
+const AVATAR_SIZE = 30
 
 type Props = {
   players: Player[]
@@ -64,7 +64,7 @@ export default function Pawns({ players }: Props) {
   return (
     <>
       {players.map((player, idx) => {
-        const offset = (idx % 4) * 7 - 10
+        const offset = (idx % 4) * 14 - 21
         return (
           <div
             key={player.id}
