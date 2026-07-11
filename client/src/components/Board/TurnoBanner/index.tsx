@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faHourglassHalf, faForward, faDice, faLock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
+import { faHourglassHalf, faDice, faLock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
 import type { GameSession } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
@@ -16,10 +16,9 @@ type Props = {
 }
 
 export default function TurnoBanner({ session, meuPlayerId }: Props) {
-  const { passarVez, rolarDados, sairPrisaoComCarta } = useGameStore()
+  const { rolarDados, sairPrisaoComCarta } = useGameStore()
   const { info: toastInfo, success: toastSuccess, error: toastError } = useToast()
   const [restante, setRestante] = useState(TURNO_TIMEOUT_S)
-  const [loading, setLoading] = useState(false)
   const [rolando, setRolando] = useState(false)
   const [usandoCarta, setUsandoCarta] = useState(false)
   const [dado1, setDado1] = useState<number | undefined>()
@@ -41,18 +40,6 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [session.turnoIniciadoEm, session.turnoAtualPlayerId])
-
-  const handlePassarVez = async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      await passarVez(session.id)
-    } catch (err: any) {
-      toastError(err?.response?.data?.message || "Erro ao passar a vez")
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleRolarDados = async () => {
     if (rolando) return
@@ -130,14 +117,7 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
                 <FontAwesomeIcon icon={faDice} />
                 Rolar dados
               </button>
-              <button
-                onClick={handlePassarVez}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"
-              >
-                <FontAwesomeIcon icon={faForward} />
-                Passar a vez
-              </button>
+
             </>
           )}
         </div>
