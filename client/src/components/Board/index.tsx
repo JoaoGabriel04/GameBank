@@ -23,7 +23,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })
   const dragState = useRef<{ dragging: boolean; lastX: number; lastY: number }>({ dragging: false, lastX: 0, lastY: 0 })
-  const pinchState = useRef<{ pinching: boolean; startDist: number; startScale: number }>({ pinching: false, startDist: 0, startScale: 1 })
+  const pinchState = useRef<{ pinching: boolean; startDist: number; startScale: number; centerX: number; centerY: number }>({ pinching: false, startDist: 0, startScale: 1, centerX: 0, centerY: 0 })
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
@@ -79,8 +79,19 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
+    const vp = viewportRef.current
+    if (!vp) return
+    const rect = vp.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
     const delta = e.deltaY > 0 ? -0.1 : 0.1
-    setTransformClamped(t => ({ ...t, scale: clampScale(t.scale + delta) }))
+    setTransformClamped(t => {
+      const newScale = clampScale(t.scale + delta)
+      // Ajusta translate para que o ponto sob o mouse permaneça no mesmo lugar
+      const nx = mouseX - (mouseX - t.x) * (newScale / t.scale)
+      const ny = mouseY - (mouseY - t.y) * (newScale / t.scale)
+      return { scale: newScale, x: nx, y: ny }
+    })
   }
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -108,7 +119,12 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      pinchState.current = { pinching: true, startDist: dist(e.touches), startScale: transform.scale }
+      const vp = viewportRef.current
+      if (!vp) return
+      const rect = vp.getBoundingClientRect()
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+      pinchState.current = { pinching: true, startDist: dist(e.touches), startScale: transform.scale, centerX: cx, centerY: cy }
     } else if (e.touches.length === 1) {
       dragState.current = { dragging: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY }
     }
@@ -117,7 +133,13 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && pinchState.current.pinching) {
       const ratio = dist(e.touches) / pinchState.current.startDist
-      setTransformClamped(t => ({ ...t, scale: clampScale(pinchState.current.startScale * ratio) }))
+      const { centerX, centerY, startScale } = pinchState.current
+      setTransformClamped(t => {
+        const newScale = clampScale(startScale * ratio)
+        const nx = centerX - (centerX - t.x) * (newScale / t.scale)
+        const ny = centerY - (centerY - t.y) * (newScale / t.scale)
+        return { scale: newScale, x: nx, y: ny }
+      })
     } else if (e.touches.length === 1 && dragState.current.dragging) {
       const dx = e.touches[0].clientX - dragState.current.lastX
       const dy = e.touches[0].clientY - dragState.current.lastY
