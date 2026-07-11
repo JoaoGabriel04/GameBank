@@ -12,6 +12,12 @@ function parseBullMQConnection() {
   const url = process.env.REDIS_URL ?? "redis://localhost:6379";
   try {
     const parsed = new URL(url);
+    // rediss:// (Redis gerenciado — Render, Upstash, Redis Cloud etc. exigem
+    // TLS na maioria dos planos). O client `redis` (usado em lib/redis.ts pra
+    // locks/Socket.IO) detecta isso sozinho a partir da URL; o ioredis do
+    // BullMQ NÃO — sem isso a conexão falha silenciosamente em produção
+    // enquanto tudo funciona normal em dev (Redis local, sem TLS).
+    const tls = parsed.protocol === "rediss:" ? {} : undefined;
     return {
       host: parsed.hostname,
       port: parseInt(parsed.port || "6379"),
@@ -20,6 +26,7 @@ function parseBullMQConnection() {
       maxRetriesPerRequest: null as null,
       enableReadyCheck: false,
       retryStrategy: (times: number) => Math.min(times * 500, 10_000),
+      ...(tls ? { tls } : {}),
     };
   } catch {
     return {
