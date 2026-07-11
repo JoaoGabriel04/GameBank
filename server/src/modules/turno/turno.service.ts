@@ -225,7 +225,7 @@ class TurnoService {
     const dividaAtiva = await prisma.debt.findFirst({ where: { sessionId, playerId: player.id, pago: false } });
     if (!dividaAtiva) return null;
 
-    const atual = await prisma.sessionPlayer.findUnique({ where: { id: player.id }, select: { rodadasDevendo: true } });
+    const atual = await prisma.sessionPlayer.findUnique({ where: { id: player.id }, select: { rodadasDevendo: true, saldo: true } });
     const rodadas = (atual?.rodadasDevendo ?? 0) + 1;
 
     if (rodadas < 3) {
@@ -233,21 +233,38 @@ class TurnoService {
       return null;
     }
 
+    // Calcula patrimônio antes de limpar (para ranking)
+    const posses = await prisma.sessionPosses.findMany({
+      where: { sessionId, playerId: player.id },
+      include: { propriedade: true },
+    });
+    let patrimony = atual?.saldo ?? 0;
+    for (const sp of posses) {
+      if (sp.propriedade) {
+        patrimony += sp.propriedade.custo_compra;
+        patrimony += sp.casas * sp.propriedade.custo_casa;
+      }
+    }
+
     // Falência: propriedades voltam ao banco (sem dono, sem leilão),
     // jogador marcado como falido e removido dos turnos.
-    await prisma.$transaction([
-      prisma.sessionPosses.updateMany({
+    await prisma.$transaction(async (tx) => {
+      await tx.sessionPlayer.update({
+        where: { id: player.id },
+        data: { patrimonyAtDesistir: patrimony },
+      });
+      await tx.sessionPosses.updateMany({
         where: { sessionId, playerId: player.id },
-        data: { playerId: null, casas: 0, hipotecada: false },
-      }),
-      prisma.sessionPlayer.update({
+        data: { playerId: null, casas: 0, hipotecada: false, negociando: false },
+      });
+      await tx.sessionPlayer.update({
         where: { id: player.id },
         data: { saldo: 0, desistiu: true, motivoDesistencia: "FALENCIA", desistiuEm: new Date(), rodadasDevendo: 0 },
-      }),
-      prisma.historico.create({
+      });
+      await tx.historico.create({
         data: { sessionId, data: new Date(), tipo: "FALENCIA", detalhes: `${player.nome} faliu — 3 rodadas sem quitar dívidas.` },
-      }),
-    ]);
+      });
+    });
 
     const avanco = await this.avancarTurno(sessionId, session);
 
@@ -480,6 +497,13 @@ class TurnoService {
       if (session.aguardandoAcao) {
         await this.agendarTimeout(sessionId);
         return null;
+      }
+
+      // Verifica falência do jogador que perdeu o tempo
+      const atual = session.jogadores.find(j => j.id === session.turnoAtualPlayerId);
+      if (atual) {
+        const falencia = await this.verificarFalencia(sessionId, session, { id: atual.id, nome: atual.nome });
+        if (falencia) return falencia;
       }
 
       return this.avancarTurno(sessionId, session, true);
