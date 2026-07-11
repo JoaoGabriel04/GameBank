@@ -219,11 +219,15 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
               const sessionPosse = casa.propId != null
                 ? session.sessionPosses?.find(sp => sp.propId === casa.propId)
                 : undefined
+              const donoJogador = sessionPosse?.playerId
+                ? jogadoresAtivos.find(p => p.id === sessionPosse.playerId)
+                : undefined
               return (
                 <div key={casa.pos} style={{ gridRow: row, gridColumn: col }}>
                   <BoardTile
                     casa={casa}
                     sessionPosse={sessionPosse}
+                    donoJogador={donoJogador}
                     destaque={casa.pos === (jogadorDaVez?.posicao ?? -1)}
                   />
                 </div>
