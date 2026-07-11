@@ -30,6 +30,9 @@ export default function EndGameVoteModal({
   const required = voteUpdate?.requiredUserIds ?? voteData.requiredUserIds
   const yesCount = required.filter((uid) => votes[uid] === "yes").length
   const total = required.length
+  const roomSize = total + 1 // owner já votou sim
+  const threshold = Math.floor(roomSize / 2) + 1 // >50%
+  const totalYes = 1 + yesCount // owner + confirmaram
   const myVote = myUserId ? votes[myUserId] : undefined
   const alreadyVoted = myVote !== undefined
 
@@ -74,7 +77,7 @@ export default function EndGameVoteModal({
               <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-4 py-2">
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <span className="font-inconsolata text-sm text-green-400">
-                  {yesCount}/{total} confirmaram
+                  {totalYes}/{roomSize} confirmaram
                 </span>
               </div>
             </div>

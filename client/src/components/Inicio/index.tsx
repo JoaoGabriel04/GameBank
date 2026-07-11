@@ -539,7 +539,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 { icon: Banknote, label: "Vender Casas", modal: "venderCasas" as const, color: "text-orange-400 bg-orange-500/10", acao: "venderCasas" as const },
                 ...(isTabuleiro ? [] : [{ icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10", acao: "aluguel" as const }]),
               ].map((action) => {
-                const isTurnAction = action.acao === "casas" || action.acao === "venderCasas"
+                const isTurnAction = action.acao === "casas"
                 const naoMinhaVez = isTabuleiro && isTurnAction && currentPlayer?.id !== currentSession?.turnoAtualPlayerId
                 return (
                   <button

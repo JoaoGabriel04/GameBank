@@ -265,7 +265,7 @@ export default function Chat() {
                         <XCircle className="w-3 h-3" />
                         <span className="font-inconsolata text-[10px]">{noCount} não</span>
                       </div>
-                      <span className="font-inconsolata text-[10px] text-zinc-600 ml-auto">{total} elegíveis</span>
+                      <span className="font-inconsolata text-[10px] text-zinc-600 ml-auto">{Math.floor(total / 2) + 1}/{total} necessários</span>
                     </div>
 
                     {/* Votos individuais */}

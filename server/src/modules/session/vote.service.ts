@@ -76,16 +76,20 @@ export async function castVote(
 
   state.votes[userId] = vote;
 
-  if (vote === "no") {
-    await redis.del(key(sessionId));
-    return { ...state, resolved: false, cancelled: true };
-  }
+  const roomSize = state.requiredUserIds.length + 1; // owner + demais
+  const threshold = Math.floor(roomSize / 2) + 1;     // >50%
+  const yesCount = state.requiredUserIds.filter((uid) => state.votes[uid] === "yes").length;
+  const noCount  = state.requiredUserIds.filter((uid) => state.votes[uid] === "no").length;
+  const totalYes = 1 + yesCount; // owner já votou sim ao iniciar
 
-  // Verifica se todos votaram SIM
-  const allVoted = state.requiredUserIds.every((uid) => state.votes[uid] === "yes");
-  if (allVoted) {
+  if (totalYes >= threshold) {
     await redis.del(key(sessionId));
     return { ...state, resolved: true, cancelled: false };
+  }
+
+  if (noCount >= roomSize - threshold + 1) {
+    await redis.del(key(sessionId));
+    return { ...state, resolved: false, cancelled: true };
   }
 
   // Salva estado atualizado
@@ -175,7 +179,7 @@ export async function castKickVote(
   const eligible = state.requiredUserIds.length;
   const yesCount = state.requiredUserIds.filter((uid) => state.votes[uid] === "yes").length;
   const noCount  = state.requiredUserIds.filter((uid) => state.votes[uid] === "no").length;
-  const majority = Math.ceil(eligible / 2);
+  const majority = Math.floor(eligible / 2) + 1; // >50%
 
   // Maioria a favor → expulsão aprovada
   if (yesCount >= majority) {
