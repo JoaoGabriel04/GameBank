@@ -22,6 +22,8 @@ type Props = {
 export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })
+  const transformRef = useRef(transform)
+  transformRef.current = transform
   const dragState = useRef<{ dragging: boolean; lastX: number; lastY: number }>({ dragging: false, lastX: 0, lastY: 0 })
   const pinchState = useRef<{ pinching: boolean; startDist: number; startScale: number; centerX: number; centerY: number }>({ pinching: false, startDist: 0, startScale: 1, centerX: 0, centerY: 0 })
 
@@ -87,7 +89,6 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     const delta = e.deltaY > 0 ? -0.1 : 0.1
     setTransformClamped(t => {
       const newScale = clampScale(t.scale + delta)
-      // Ajusta translate para que o ponto sob o mouse permaneça no mesmo lugar
       const nx = mouseX - (mouseX - t.x) * (newScale / t.scale)
       const ny = mouseY - (mouseY - t.y) * (newScale / t.scale)
       return { scale: newScale, x: nx, y: ny }
@@ -95,7 +96,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   }
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === "touch") return // touch é tratado via touch events (suporta pinch)
+    if (e.pointerType === "touch") return
     dragState.current = { dragging: true, lastX: e.clientX, lastY: e.clientY }
   }
 
@@ -117,27 +118,33 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
   }
 
+  const center = (touches: React.TouchList, rect: DOMRect) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2 - rect.left,
+    y: (touches[0].clientY + touches[1].clientY) / 2 - rect.top,
+  })
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      const vp = viewportRef.current
-      if (!vp) return
-      const rect = vp.getBoundingClientRect()
-      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
-      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
-      pinchState.current = { pinching: true, startDist: dist(e.touches), startScale: transform.scale, centerX: cx, centerY: cy }
+      dragState.current.dragging = false
+      pinchState.current = { pinching: true, startDist: dist(e.touches), startScale: transformRef.current.scale, centerX: 0, centerY: 0 }
     } else if (e.touches.length === 1) {
+      pinchState.current.pinching = false
       dragState.current = { dragging: true, lastX: e.touches[0].clientX, lastY: e.touches[0].clientY }
     }
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
     if (e.touches.length === 2 && pinchState.current.pinching) {
       const ratio = dist(e.touches) / pinchState.current.startDist
-      const { centerX, centerY, startScale } = pinchState.current
+      const vp = viewportRef.current
+      if (!vp) return
+      const rect = vp.getBoundingClientRect()
+      const { x: cx, y: cy } = center(e.touches, rect)
+      const newScale = clampScale(pinchState.current.startScale * ratio)
       setTransformClamped(t => {
-        const newScale = clampScale(startScale * ratio)
-        const nx = centerX - (centerX - t.x) * (newScale / t.scale)
-        const ny = centerY - (centerY - t.y) * (newScale / t.scale)
+        const nx = cx - (cx - t.x) * (newScale / t.scale)
+        const ny = cy - (cy - t.y) * (newScale / t.scale)
         return { scale: newScale, x: nx, y: ny }
       })
     } else if (e.touches.length === 1 && dragState.current.dragging) {
@@ -149,9 +156,9 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     }
   }
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (e.touches.length < 2) pinchState.current.pinching = false
-    if (e.touches.length === 0) dragState.current.dragging = false
+  const handleTouchEnd = () => {
+    pinchState.current.pinching = false
+    dragState.current.dragging = false
   }
 
   const jogadoresAtivos = (session.jogadores ?? []).filter(p => !p.desistiu)
