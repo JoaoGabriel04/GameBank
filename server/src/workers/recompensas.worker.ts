@@ -27,6 +27,8 @@ function createRecompensasWorker(connection = bullMQConnection) {
       for (const p of players) {
         const tipo = p.position === 1 ? "premium" : p.position === 2 ? "comum" : null;
         if (!tipo) continue;
+        // mesma condição de XP/coins: só concede baú se o jogador realmente recebeu recompensa
+        if (!p.teveRecompensa) continue;
         // sessionId não é passado aqui — a sessão já foi deletada antes do worker rodar
         const bau = await bauService.concederBauPartida(p.userId, tipo, undefined, p.position, p.gameResultId);
         if (!bau) {

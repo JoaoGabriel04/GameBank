@@ -26,6 +26,10 @@ export const sessionController = {
       return res.status(201).json(result);
     } catch (err) {
       if (err instanceof AppError) {
+        if (err.message === "Você já está em uma partida em andamento." && req.user?.userId) {
+          const active = await sessionService.findMyActiveSession(req.user.userId);
+          return res.status(400).json({ message: err.message, activeSessionId: active?.id ?? null });
+        }
         return res.status(err.statusCode).json({ message: err.message });
       }
       sessionLogger.error({ err });
@@ -47,6 +51,10 @@ export const sessionController = {
       return res.status(200).json({ ...session, roomToken: token });
     } catch (err) {
       if (err instanceof AppError) {
+        if (err.message === "Você já está em uma partida em andamento." && req.user?.userId) {
+          const active = await sessionService.findMyActiveSession(req.user.userId);
+          return res.status(400).json({ message: err.message, activeSessionId: active?.id ?? null });
+        }
         return res.status(err.statusCode).json({ message: err.message });
       }
       sessionLogger.error({ err });

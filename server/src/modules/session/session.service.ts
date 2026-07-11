@@ -40,6 +40,13 @@ export class SessionService {
     criadorTeamIndex?: number,
     tipoJogo: string = "banca"
   ) {
+    if (userId) {
+      const active = await this.repo.findByPlayerUserId(userId);
+      if (active?.status === "Em Andamento") {
+        throw new AppError(400, "Você já está em uma partida em andamento.");
+      }
+    }
+
     if (modo === "duplas" && (!times || times.length < 2)) {
       throw new AppError(400, "Modo duplas requer pelo menos 2 times.");
     }
@@ -153,6 +160,12 @@ export class SessionService {
       const existingPlayer = await this.repo.findPlayerByUserAndSession(userId, sessionId);
       if (existingPlayer) {
         throw new AppError(400, "Você já está nesta sala.");
+      }
+
+      // Não pode entrar em outra sala se já está em uma partida em andamento
+      const active = await this.repo.findByPlayerUserId(userId);
+      if (active?.status === "Em Andamento") {
+        throw new AppError(400, "Você já está em uma partida em andamento.");
       }
 
       // Remove o jogador de outras salas em espera

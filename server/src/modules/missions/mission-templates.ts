@@ -112,5 +112,5 @@ export const WEEKLY_TEMPLATES: MissionTemplate[] = [
   },
 ]
 
-export const DAILY_COUNT = 4
+export const DAILY_COUNT = 6
 export const WEEKLY_COUNT = 6

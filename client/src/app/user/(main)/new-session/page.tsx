@@ -26,7 +26,7 @@ interface TeamForm {
 
 export default function NewSession() {
   const router = useRouter();
-  const { success: toastSuccess, error: toastError } = useToast()
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
   const { createSession } = useGameStore();
   const { user: authUser } = useAuthStore();
 
@@ -163,9 +163,14 @@ export default function NewSession() {
       } else {
         toastError("Erro ao criar sala");
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const apiErr = (error as { response?: { data?: { activeSessionId?: number } } })?.response?.data;
+      if (apiErr?.activeSessionId) {
+        toastWarning("Você já está em uma partida em andamento. Redirecionando...");
+        router.push(`/user/game/${apiErr.activeSessionId}`);
+        return;
+      }
       toastError("Erro ao criar sala");
-      console.error("Erro ao criar sala:", error);
     }
   };
 

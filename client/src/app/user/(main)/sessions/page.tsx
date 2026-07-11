@@ -26,6 +26,7 @@ import UserName from "@/components/UserName";
 import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import { apiErrMsg } from "@/lib/api-error";
+import { useToast } from "@/components/Toast";
 
 /* -- Join modal (mantém lógica existente, visual redesenhado) -- */
 function JoinModal({
@@ -39,6 +40,7 @@ function JoinModal({
 }) {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { warning: toastWarning } = useToast();
   const { mutate } = useSessions();
   const [password, setPassword]       = useState("");
   const [teamId, setTeamId]           = useState<number | undefined>(undefined);
@@ -69,7 +71,14 @@ function JoinModal({
       onClose();
       mutate();
       router.push(`/user/game/${session.id}`);
-    } catch (err) {
+    } catch (err: unknown) {
+      const apiErr = (err as { response?: { data?: { activeSessionId?: number } } })?.response?.data;
+      if (apiErr?.activeSessionId) {
+        onClose();
+        toastWarning("Você já está em uma partida em andamento. Redirecionando...");
+        router.push(`/user/game/${apiErr.activeSessionId}`);
+        return;
+      }
       setError(apiErrMsg(err, "Erro ao entrar na sala."));
     } finally {
       setLoading(false);

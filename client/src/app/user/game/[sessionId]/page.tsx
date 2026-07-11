@@ -282,9 +282,27 @@ export default function Game() {
   const handleVote = (vote: "yes" | "no") => {
     setVotingLoading(true);
     emitVote(vote);
-    // O servidor vai responder via game:vote_update ou game:vote_cancelled
-    // Aguarda 3 segundos como fallback para liberar o botão
-    setTimeout(() => setVotingLoading(false), 3000);
+    // Fallback: após 5s verifica se a sessão ainda existe.
+    // Se o servidor já encerrou mas o session:closed não chegou,
+    // buscamos o resultado direto da API para exibir o pódio.
+    setTimeout(async () => {
+      setVotingLoading(false);
+      if (!voteData || !sessionId) return;
+      try {
+        await sessionsApi.load(sessionId);
+      } catch {
+        const res = await sessionsApi.getResultado(sessionId).catch(() => null);
+        if (res?.data?.ranking?.length) {
+          setVoteData(null);
+          setVoteUpdate(null);
+          setPodiumData(res.data.ranking);
+          setSessionEnded(true);
+          sessionStorage.setItem(`podium_${sessionId}`, JSON.stringify(res.data.ranking));
+          setRoomToken(null);
+          disconnectSocket();
+        }
+      }
+    }, 5000);
   };
 
   const handleQuit = async () => {
