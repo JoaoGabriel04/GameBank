@@ -396,8 +396,10 @@ class TurnoService {
     const debtValor = valor - pago;
 
     await turnoRepository.moverPlayer(pagador.id, { saldo: pagador.saldo - pago });
-    if (credor && pago > 0) {
-      await turnoRepository.moverPlayer(credor.id, { saldo: credor.saldo + pago });
+    if (credor) {
+      // Se o pagador não tem saldo suficiente, o banco cobre a diferença
+      // para que o proprietário receba o aluguel integral.
+      await turnoRepository.moverPlayer(credor.id, { saldo: credor.saldo + valor });
     }
 
     if (debtValor > 0) {
@@ -407,7 +409,7 @@ class TurnoService {
     await turnoRepository.criarHistorico({
       sessionId,
       tipo: credor ? "PAGAMENTO_ALUGUEL" : "IMPOSTO",
-      detalhes: `${pagador.nome} pagou R$ ${pago}${debtValor > 0 ? ` e ficou devendo R$ ${debtValor}` : ""} — ${descricao}.`,
+      detalhes: `${pagador.nome} pagou R$ ${pago}${debtValor > 0 ? ` e ficou devendo R$ ${debtValor} (banco cobriu o restante para ${credor?.nome ?? ""})` : ""} — ${descricao}.`,
     });
 
     return { pago, debtCriada: debtValor > 0, debtValor };
