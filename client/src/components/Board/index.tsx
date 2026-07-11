@@ -8,7 +8,7 @@ import TurnoBanner from "./TurnoBanner"
 import CompraCasaModal from "./CompraCasaModal"
 import Pawns from "./Pawns"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
-import type { Casa, GameSession } from "@/types/game"
+import type { Casa, GameSession, CorPropriedade } from "@/types/game"
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 3
@@ -138,26 +138,26 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   // pra sobreviver a um refresh de página enquanto a decisão está pendente.
   const jogadorDaVez = jogadoresAtivos.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && jogadorDaVez?.id === meuPlayerId
-  let compraPendente: { nome: string; preco: number } | null = null
+  let compraPendente: { nome: string; preco: number; cor?: string } | null = null
   if (minhaVez && session.aguardandoAcao && jogadorDaVez) {
     const casaAtual = tabuleiro.find(c => c.pos === (jogadorDaVez.posicao ?? 0))
     if (casaAtual && (casaAtual.tipo === "propriedade" || casaAtual.tipo === "acao") && casaAtual.propId != null) {
       const posse = session.sessionPosses?.find(sp => sp.propId === casaAtual.propId)
       if (posse && !posse.playerId && posse.propriedade) {
-        compraPendente = { nome: posse.propriedade.nome, preco: posse.propriedade.custo_compra }
+        compraPendente = { nome: posse.propriedade.nome, preco: posse.propriedade.custo_compra, cor: posse.propriedade.grupo_cor }
       }
     }
   }
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       {session.turnoAtualPlayerId != null && (
         <TurnoBanner session={session} meuPlayerId={meuPlayerId} />
       )}
       {compraPendente && (
-        <CompraCasaModal sessionId={session.id} nome={compraPendente.nome} preco={compraPendente.preco} />
+        <CompraCasaModal sessionId={session.id} nome={compraPendente.nome} preco={compraPendente.preco} cor={compraPendente.cor as CorPropriedade | undefined} />
       )}
-      <div className="relative w-full h-[70vh] min-h-[320px] bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none">
+      <div className="relative w-full flex-1 min-h-0 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none">
       <div
         ref={viewportRef}
         className="w-full h-full cursor-grab active:cursor-grabbing"

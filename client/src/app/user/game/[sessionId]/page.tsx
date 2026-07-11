@@ -622,6 +622,7 @@ export default function Game() {
   }
 
   const isWaiting = currentSession.status === "Esperando";
+  const isTabuleiro = abaAtual === "Tabuleiro";
   const linksNav = currentSession.tipoJogo === "tabuleiro" ? linksNavTabuleiro : linksNavBanca;
   const currentPlayer = currentSession?.jogadores?.find(
     (p) => p.userId === authUser?.id
@@ -710,77 +711,89 @@ export default function Game() {
           )}
         </header>
 
-        {/* LINHA 2 — Conteúdo rolável */}
-        <section className="flex-1 w-full overflow-hidden">
-          <section className="w-full h-full overflow-y-auto px-4">
-          <div className="pb-6">
-            {!isWaiting && (
-              <div className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
-                {/* Informações do jogador */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {currentPlayer && (
-                      <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 145} />
-                    )}
-                    <div>
-                      <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
-                        {currentSession.nome}
-                        {isSpectator && (
-                          <span className="text-xs font-inconsolata bg-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded-full">
-                            Espectador
-                          </span>
-                        )}
-                      </h1>
-                      <div className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
-                        {currentPlayer && (
-                          <UserName
-                            nome={currentPlayer.nome}
-                            badge={currentPlayer.badge}
-                            badgeImageUrl={currentPlayer.badgeImageUrl}
-                            badgeVariant="micro"
-                          />
-                        )}
-                        {!currentPlayer && <span>—</span>}
-                        <span>·</span>
-                        <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
+        {/* LINHA 2 — Conteúdo */}
+        {isTabuleiro ? (
+          <section className="flex-1 w-full flex flex-col min-h-0">
+            <section className="w-full h-full flex flex-col min-h-0">
+              <AnimatePresence mode="wait">
+                <motion.div key={abaAtual} variants={fadeIn} animate="visible" className="flex-1 flex flex-col min-h-0">
+                  {renderConteudo()}
+                </motion.div>
+              </AnimatePresence>
+            </section>
+          </section>
+        ) : (
+          <section className="flex-1 w-full overflow-hidden">
+            <section className="w-full h-full overflow-y-auto px-4">
+            <div className="pb-6">
+              {!isWaiting && (
+                <div className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
+                  {/* Informações do jogador */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {currentPlayer && (
+                        <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 145} />
+                      )}
+                      <div>
+                        <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
+                          {currentSession.nome}
+                          {isSpectator && (
+                            <span className="text-xs font-inconsolata bg-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded-full">
+                              Espectador
+                            </span>
+                          )}
+                        </h1>
+                        <div className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
+                          {currentPlayer && (
+                            <UserName
+                              nome={currentPlayer.nome}
+                              badge={currentPlayer.badge}
+                              badgeImageUrl={currentPlayer.badgeImageUrl}
+                              badgeVariant="micro"
+                            />
+                          )}
+                          {!currentPlayer && <span>—</span>}
+                          <span>·</span>
+                          <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {spectatorCount > 0 && (
-                      <span className="flex items-center gap-1 text-sm font-inconsolata text-zinc-500">
-                        <Eye className="w-4 h-4" />
-                        {spectatorCount}
-                      </span>
-                    )}
-                    {currentPlayer && !isSpectator && (
-                      <button
-                        onClick={desistirLoading ? undefined : handleDesistir}
-                        disabled={desistirLoading}
-                        className="font-jaro text-xs uppercase tracking-wider px-3 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        Desistir
+                    <div className="flex items-center gap-3">
+                      {spectatorCount > 0 && (
+                        <span className="flex items-center gap-1 text-sm font-inconsolata text-zinc-500">
+                          <Eye className="w-4 h-4" />
+                          {spectatorCount}
+                        </span>
+                      )}
+                      {currentPlayer && !isSpectator && (
+                        <button
+                          onClick={desistirLoading ? undefined : handleDesistir}
+                          disabled={desistirLoading}
+                          className="font-jaro text-xs uppercase tracking-wider px-3 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          Desistir
+                        </button>
+                      )}
+                      <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
+                        {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
-                    )}
-                    <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
-                      {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    </div>
                   </div>
+                  <p className="text-zinc-500 font-inconsolata text-xs">
+                    {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
+                  </p>
                 </div>
-                <p className="text-zinc-500 font-inconsolata text-xs">
-                  {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
-                </p>
-              </div>
-            )}
+              )}
 
-            <AnimatePresence mode="wait">
-              <motion.div key={abaAtual} variants={fadeIn} animate="visible">
-                {renderConteudo()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              <AnimatePresence mode="wait">
+                <motion.div key={abaAtual} variants={fadeIn} animate="visible">
+                  {renderConteudo()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            </section>
           </section>
-        </section>
+        )}
 
         {/* LINHA 3 — Nav mobile (oculto no desktop via lg:hidden) */}
         <div className="shrink-0 lg:hidden">

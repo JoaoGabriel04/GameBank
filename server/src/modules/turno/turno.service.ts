@@ -405,9 +405,16 @@ class TurnoService {
       const resultado = await propriedadeService.buyProp(casa.propId, sessionId, playerId);
       await turnoRepository.setAguardandoAcao(sessionId, false);
 
-      const avanco = await this.avancarTurno(sessionId, session);
+      const foiDuplo = session.ultimoDado1 != null && session.ultimoDado1 === session.ultimoDado2;
+      if (!foiDuplo) {
+        const avanco = await this.avancarTurno(sessionId, session);
+        return { ...resultado, ...avanco };
+      }
 
-      return { ...resultado, ...avanco };
+      await this.agendarTimeout(sessionId);
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+      return { ...resultado, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
     });
   }
 
@@ -416,9 +423,16 @@ class TurnoService {
       const session = await this.validarPendenciaDeCompra(sessionId, playerId);
       await turnoRepository.setAguardandoAcao(sessionId, false);
 
-      const avanco = await this.avancarTurno(sessionId, session);
+      const foiDuplo = session.ultimoDado1 != null && session.ultimoDado1 === session.ultimoDado2;
+      if (!foiDuplo) {
+        const avanco = await this.avancarTurno(sessionId, session);
+        return { recusado: true, ...avanco };
+      }
 
-      return { recusado: true, ...avanco };
+      await this.agendarTimeout(sessionId);
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+      return { recusado: true, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
     });
   }
 

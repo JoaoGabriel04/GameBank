@@ -29,6 +29,8 @@ export const turnoRepository = {
         ordemTurnos: true,
         turnoIniciadoEm: true,
         aguardandoAcao: true,
+        ultimoDado1: true,
+        ultimoDado2: true,
         jogadores: {
           select: {
             id: true,

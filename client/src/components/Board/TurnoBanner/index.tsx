@@ -6,6 +6,7 @@ import { faHourglassHalf, faForward, faDice, faLock, faTriangleExclamation } fro
 import type { GameSession } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
+import DadosRoll from "@/components/Board/DadosRoll"
 
 const TURNO_TIMEOUT_S = 60
 
@@ -21,6 +22,9 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
   const [loading, setLoading] = useState(false)
   const [rolando, setRolando] = useState(false)
   const [usandoCarta, setUsandoCarta] = useState(false)
+  const [dado1, setDado1] = useState<number | undefined>()
+  const [dado2, setDado2] = useState<number | undefined>()
+  const [dadosAberto, setDadosAberto] = useState(false)
 
   const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
@@ -52,10 +56,18 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
 
   const handleRolarDados = async () => {
     if (rolando) return
+    setDado1(undefined)
+    setDado2(undefined)
     setRolando(true)
+    setDadosAberto(true)
     try {
       const r = await rolarDados(session.id)
-      if (!r) return
+      if (!r) {
+        setDadosAberto(false)
+        return
+      }
+      setDado1(r.dado1)
+      setDado2(r.dado2)
       if (r.foiPreso) {
         toastInfo(`Deu ${r.dado1} e ${r.dado2} — 3 duplos seguidos! Direto pra prisão.`)
       } else {
@@ -63,6 +75,7 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
         if (r.mensagem) toastInfo(r.mensagem)
       }
     } catch (err: any) {
+      setDadosAberto(false)
       toastError(err?.response?.data?.message || "Erro ao rolar dados")
     } finally {
       setRolando(false)
@@ -84,6 +97,14 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
 
   return (
     <div className="mb-3 space-y-2">
+      <DadosRoll
+        aberto={dadosAberto}
+        rolando={rolando}
+        dado1={dado1}
+        dado2={dado2}
+        onClose={() => setDadosAberto(false)}
+      />
+
       <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border font-inconsolata text-sm ${
         minhaVez ? "border-green-500/50 bg-green-500/10 text-green-300" : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
       }`}>
