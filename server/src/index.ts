@@ -16,6 +16,7 @@ import { seedDiamondPackages } from "./utils/seed-diamond-packages.js";
 import { seedBaus } from "./utils/seed-baus.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket, getIO } from "./lib/socket.js";
+import { turnoService } from "./modules/turno/turno.service.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
 import { logger } from "./lib/logger.js";
@@ -144,6 +145,9 @@ async function start() {
   await seedDiamondPackages();
   await seedBaus();
   startNegotiationCleanup();
+  turnoService.recoverStuckSessions().catch(err => {
+    logger.error({ err }, "erro ao recuperar sessões travadas no startup");
+  });
   startCronJobs();
   initQueueMonitoring();
 

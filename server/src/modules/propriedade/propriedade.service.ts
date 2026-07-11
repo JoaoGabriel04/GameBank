@@ -4,9 +4,18 @@ import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { MissionsService } from "../missions/missions.service.js";
 
+// Rastreia quais propriedades já receberam casa neste turno (1 casa máxima
+// por propriedade por rodada). Chave: "sessionId:playerId".
+const construcoesNesteTurno = new Map<string, Set<number>>();
+
 export class PropriedadeService {
   private missionService = new MissionsService();
   constructor(private repo = new PropriedadeRepository()) {}
+
+  limparConstrucoesTurno(sessionId: number, playerId: number) {
+    const key = `${sessionId}:${playerId}`;
+    construcoesNesteTurno.delete(key);
+  }
 
   async getPropById(propriedadeId: number) {
     const prop = await this.repo.findPropriedadeById(propriedadeId);
@@ -30,8 +39,7 @@ export class PropriedadeService {
         throw new AppError(400, "Saldo insuficiente");
       }
 
-      const hipotecada = await this.repo.findFirstHipotecada();
-      const valorCompra = hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
+      const valorCompra = sessionPosses.hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
 
       await prisma.$transaction([
         prisma.sessionPosses.updateMany({
@@ -62,6 +70,14 @@ export class PropriedadeService {
 
   async buyHouse(userId: number, sessionId: number, propriedadeId: number) {
     return withLock(`prop:${propriedadeId}`, async () => {
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { turnoAtualPlayerId: true, tipoJogo: true },
+      });
+      if (session?.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId !== userId) {
+        throw new AppError(403, "Só pode comprar casas na sua vez.");
+      }
+
       const propriedade = await this.repo.findSessionPosses(sessionId, propriedadeId);
       if (!propriedade) throw new AppError(404, "Propriedade não encontrada!");
 
@@ -80,6 +96,17 @@ export class PropriedadeService {
       if (propriedade.casas >= 5) {
         throw new AppError(400, "Esta propriedade já possui o número máximo de casas!");
       }
+
+      await this.requireMonopoly(sessionId, userId, propriedade.propriedade.grupo_cor);
+
+      const key = `${sessionId}:${userId}`;
+      const jaConstruiu = construcoesNesteTurno.get(key);
+      if (jaConstruiu?.has(propriedadeId)) {
+        throw new AppError(400, "Você já comprou uma casa nesta propriedade neste turno.");
+      }
+
+      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set([propriedadeId]));
+      else jaConstruiu.add(propriedadeId);
 
       await prisma.$transaction([
         prisma.sessionPosses.update({
@@ -108,6 +135,14 @@ export class PropriedadeService {
 
   async buyHousesBatch(userId: number, sessionId: number, sessaoPossesIds: number[]) {
     return withLock(`batch:houses:${sessionId}:${userId}`, async () => {
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { turnoAtualPlayerId: true, tipoJogo: true },
+      });
+      if (session?.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId !== userId) {
+        throw new AppError(403, "Só pode comprar casas na sua vez.");
+      }
+
       if (!sessaoPossesIds.length) {
         throw new AppError(400, "Nenhuma propriedade selecionada");
       }
@@ -124,6 +159,8 @@ export class PropriedadeService {
         throw new AppError(404, "Alguma(s) propriedade(s) não encontrada(s)");
       }
 
+      const key = `${sessionId}:${userId}`;
+      let jaConstruiu = construcoesNesteTurno.get(key);
       let totalCost = 0;
       const nomes: string[] = [];
       for (const prop of properties) {
@@ -136,6 +173,10 @@ export class PropriedadeService {
         if (prop.casas >= 5) {
           throw new AppError(400, `${prop.propriedade.nome} já tem o máximo de casas`);
         }
+        if (jaConstruiu?.has(prop.propriedade.id)) {
+          throw new AppError(400, `${prop.propriedade.nome} já recebeu uma casa neste turno.`);
+        }
+        await this.requireMonopoly(sessionId, userId, prop.propriedade.grupo_cor);
         totalCost += prop.propriedade.custo_casa;
         nomes.push(prop.propriedade.nome);
       }
@@ -143,6 +184,10 @@ export class PropriedadeService {
       if (player.saldo < totalCost) {
         throw new AppError(400, "Saldo insuficiente para comprar as casas");
       }
+
+      // Marca no tracking em memória
+      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set(properties.map(p => p.propriedade.id)));
+      else properties.forEach(p => jaConstruiu!.add(p.propriedade.id));
 
       const updateQueries = properties.map((prop) =>
         prisma.sessionPosses.update({
@@ -531,5 +576,13 @@ export class PropriedadeService {
         }),
       ]);
     });
+  }
+
+  private async requireMonopoly(sessionId: number, playerId: number, grupoCor: string) {
+    const groupPosses = await this.repo.findSessionPossesByGroup(sessionId, grupoCor);
+    const ownedAll = groupPosses.every((sp) => sp.playerId === playerId);
+    if (!ownedAll) {
+      throw new AppError(400, "Você precisa ter todas as propriedades do grupo para construir casas.");
+    }
   }
 }

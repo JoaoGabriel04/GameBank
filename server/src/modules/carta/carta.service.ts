@@ -152,7 +152,7 @@ export class CartaService {
               data: { saldo: { decrement: pago } },
             })
           );
-          totalRecebido += carta.valor;
+          totalRecebido += pago;
         }
 
         operacoes.push(

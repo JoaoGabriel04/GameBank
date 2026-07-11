@@ -208,14 +208,14 @@ export default function NewSession() {
                 <p className="text-sm text-zinc-500 font-inconsolata">Você usa o tabuleiro físico, o app cuida do dinheiro</p>
               </button>
               <button
-                disabled
-                className="flex-1 p-4 rounded-lg border-2 transition-all cursor-not-allowed border-zinc-800 bg-zinc-950/30 opacity-60 relative"
+                onClick={() => setTipoJogo('tabuleiro')}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${tipoJogo === 'tabuleiro'
+                  ? 'border-cyan-400 bg-cyan-400/10'
+                  : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
+                }`}
               >
-                <div className="text-lg font-semibold font-jaro text-zinc-500 mb-1">Modo Tabuleiro</div>
-                <p className="text-sm text-zinc-600 font-inconsolata">Jogue tudo no app, com tabuleiro digital</p>
-                <span className="absolute top-2 right-2 text-xs font-inconsolata text-amber-500 border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                  Em breve
-                </span>
+                <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Modo Tabuleiro</div>
+                <p className="text-sm text-zinc-500 font-inconsolata">Jogue tudo no app, com tabuleiro digital</p>
               </button>
             </div>
           </div>

@@ -63,7 +63,7 @@ class TurnoService {
       aguardandoAcao: false,
     });
 
-    if (primeiro) this.agendarTimeout(sessionId);
+    if (primeiro) await this.agendarTimeout(sessionId);
     return { ordem, turnoAtualPlayerId: primeiro };
   }
 
@@ -122,6 +122,17 @@ class TurnoService {
       await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
       const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
 
+      // Auto-avança o turno após jogada sem duplos (a menos que haja ação pendente)
+      if (!duplo && !resolucao.aguardandoAcao) {
+        const avanco = await this.avancarTurno(sessionId, session);
+        return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao, ...avanco };
+      }
+
+      // Duplo ou ação pendente: não avança o turno, mas reseta o timer
+      await this.agendarTimeout(sessionId);
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
       return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao };
     });
   }
@@ -166,8 +177,13 @@ class TurnoService {
 
     if (duplo) {
       await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
-      const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
-        return { dado1, dado2, duplo: true, escapouPrisao: true, novaPosicao, passouInicio, ...resolucao };
+      await turnoRepository.setAguardandoAcao(sessionId, false);
+      await this.agendarTimeout(sessionId);
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+      // Sai da prisão mas permanece na casa Prisão (pos 10) — ganha outra
+      // jogada (duplo=true → rolarDados não avança o turno).
+      return { dado1, dado2, duplo: true, escapouPrisao: true, novaPosicao: player.posicao, passouInicio: false, aguardandoAcao: false };
     }
 
     const ultimaRodada = player.turnosPrisao <= 1;
@@ -175,32 +191,28 @@ class TurnoService {
     if (!ultimaRodada) {
       await turnoRepository.moverPlayer(player.id, { turnosPrisao: player.turnosPrisao - 1 });
       const avanco = await this.avancarTurno(sessionId, session);
-      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-      await emitUpdatedSession(sessionId);
       return { dado1, dado2, duplo: false, escapouPrisao: false, aindaPreso: true, ...avanco };
     }
 
     const tentativas = player.tentativasPrisao + 1;
     if (tentativas < 3) {
       await turnoRepository.moverPlayer(player.id, { tentativasPrisao: tentativas });
+      await this.agendarTimeout(sessionId);
       const { emitUpdatedSession } = await import("../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
       return { dado1, dado2, duplo: false, escapouPrisao: false, aindaPreso: true, tentativasPrisao: tentativas };
     }
 
-    // 3ª tentativa falhou — paga a multa (com fallback de dívida) e sai
-    // obrigatoriamente, movendo pela última rolagem.
-    const cobranca = await this.cobrarComFallbackDivida(
+    // 3ª tentativa falhou — paga a multa e sai sem andar, encerra a vez
+    await this.cobrarComFallbackDivida(
       sessionId, player, MULTA_PRISAO, null, `Multa de R$ ${MULTA_PRISAO} — não conseguiu sair da prisão`
     );
     await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
-    const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(
-      sessionId, { ...player, saldo: player.saldo - cobranca.pago }, dado1 + dado2
-    );
 
+    const avanco = await this.avancarTurno(sessionId, session);
     return {
       dado1, dado2, duplo: false, escapouPrisao: true, pagouMulta: true,
-      novaPosicao, passouInicio, ...resolucao,
+      novaPosicao: player.posicao, passouInicio: false, ...avanco,
     };
   }
 
@@ -238,8 +250,6 @@ class TurnoService {
     ]);
 
     const avanco = await this.avancarTurno(sessionId, session);
-    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-    await emitUpdatedSession(sessionId);
 
     return { falido: true, ...avanco };
   }
@@ -283,6 +293,14 @@ class TurnoService {
           mensagem = r.debtCriada
             ? `${player.nome} pagou R$ ${r.pago} e ficou devendo R$ ${r.debtValor} de aluguel em ${posse.propriedade.nome}.`
             : `${player.nome} pagou R$ ${valor} de aluguel em ${posse.propriedade.nome}.`;
+          const { emitToRoom } = await import("../../lib/socket.js");
+          emitToRoom(sessionId, "aluguel:toast", {
+            fromPlayerNome: player.nome,
+            toPlayerId: posse.player.id,
+            toUserId: posse.player.userId,
+            valor,
+            propriedadeNome: posse.propriedade.nome,
+          });
         }
         break;
       }
@@ -342,7 +360,7 @@ class TurnoService {
       case 1: return prop.aluguel_1c ?? prop.aluguel_base ?? 0;
       case 2: return prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
       case 3: return prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-      case 4: return prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_base ?? 0;
+      case 4: return prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_base ?? 0;
       default: return prop.aluguel_hotel ?? prop.aluguel_4c ?? prop.aluguel_base ?? 0;
     }
   }
@@ -387,22 +405,20 @@ class TurnoService {
       const resultado = await propriedadeService.buyProp(casa.propId, sessionId, playerId);
       await turnoRepository.setAguardandoAcao(sessionId, false);
 
-      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-      await emitUpdatedSession(sessionId);
+      const avanco = await this.avancarTurno(sessionId, session);
 
-      return resultado;
+      return { ...resultado, ...avanco };
     });
   }
 
   async recusarCompra(sessionId: number, playerId: number) {
     return withLock(`turno:${sessionId}`, async () => {
-      await this.validarPendenciaDeCompra(sessionId, playerId);
+      const session = await this.validarPendenciaDeCompra(sessionId, playerId);
       await turnoRepository.setAguardandoAcao(sessionId, false);
 
-      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-      await emitUpdatedSession(sessionId);
+      const avanco = await this.avancarTurno(sessionId, session);
 
-      return { recusado: true };
+      return { recusado: true, ...avanco };
     });
   }
 
@@ -448,7 +464,7 @@ class TurnoService {
 
       // Timer pausa durante decisão obrigatória (ex: escolher o que vender)
       if (session.aguardandoAcao) {
-        this.agendarTimeout(sessionId);
+        await this.agendarTimeout(sessionId);
         return null;
       }
 
@@ -461,6 +477,17 @@ class TurnoService {
     if (!session) throw new AppError(404, "Sessão não encontrada");
     if (session.tipoJogo !== "tabuleiro") throw new AppError(400, "Sessão não é do Modo Tabuleiro");
     if (session.status !== "Em Andamento") throw new AppError(400, "Partida não está em andamento");
+
+    // Fallback: se o timer do servidor não disparou, avança o turno na
+    // primeira ação do jogador após o timeout.
+    if (session.turnoIniciadoEm && !session.aguardandoAcao) {
+      const elapsed = Date.now() - new Date(session.turnoIniciadoEm).getTime();
+      if (elapsed >= TURNO_TIMEOUT_MS) {
+        await this.avancarTurno(sessionId, session, true);
+        throw new AppError(400, "Tempo da rodada expirou. Turno avançado automaticamente.");
+      }
+    }
+
     return session;
   }
 
@@ -493,6 +520,7 @@ class TurnoService {
     // Turno de quem estava jogando terminou — zera contagem de duplos dele
     if (session.turnoAtualPlayerId != null) {
       duplosConsecutivos.delete(session.turnoAtualPlayerId);
+      propriedadeService.limparConstrucoesTurno(sessionId, session.turnoAtualPlayerId);
     }
 
     // Ninguém mais ativo para jogar (edge case — o fluxo normal já
@@ -508,7 +536,7 @@ class TurnoService {
       aguardandoAcao: false,
     });
 
-    this.agendarTimeout(sessionId);
+    await this.agendarTimeout(sessionId);
 
     const { emitUpdatedSession } = await import("../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);
@@ -521,18 +549,42 @@ class TurnoService {
     return { turnoAtualPlayerId: proximo.id, avancou: true };
   }
 
-  private agendarTimeout(sessionId: number) {
+  private async agendarTimeout(sessionId: number) {
     cancelTurnoTimer(sessionId);
-    const timer = setTimeout(() => {
-      this.avancarPorTimeout(sessionId).catch(err => {
-        sessionLogger.error({ err, sessionId }, "erro ao avançar turno por timeout");
-      });
+    // Atualiza turnoIniciadoEm para o cliente reiniciar o contador
+    try { await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: new Date() }); } catch {}
+    const timer = setTimeout(async () => {
+      try {
+        await this.avancarPorTimeout(sessionId);
+      } catch (err: any) {
+        if (err?.statusCode === 423) {
+          // Lock ocupado — retenta
+          this.agendarTimeout(sessionId);
+        } else {
+          sessionLogger.error({ err, sessionId }, "erro ao avançar turno por timeout");
+        }
+      }
     }, TURNO_TIMEOUT_MS);
     turnoTimers.set(sessionId, timer);
   }
 
   cancelarTimeout(sessionId: number) {
     cancelTurnoTimer(sessionId);
+  }
+
+  async recoverStuckSessions() {
+    const sessions = await turnoRepository.findSessionsStuck();
+    const now = Date.now();
+    for (const s of sessions) {
+      if (!s.turnoIniciadoEm) continue;
+      const elapsed = now - new Date(s.turnoIniciadoEm).getTime();
+      if (elapsed >= TURNO_TIMEOUT_MS) {
+        sessionLogger.warn({ sessionId: s.id, elapsed }, "recuperando sessão travada no startup");
+        await this.avancarPorTimeout(s.id).catch(err => {
+          sessionLogger.error({ err, sessionId: s.id }, "erro ao recuperar sessão travada");
+        });
+      }
+    }
   }
 }
 

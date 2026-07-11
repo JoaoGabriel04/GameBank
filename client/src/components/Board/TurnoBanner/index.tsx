@@ -16,7 +16,7 @@ type Props = {
 
 export default function TurnoBanner({ session, meuPlayerId }: Props) {
   const { passarVez, rolarDados, sairPrisaoComCarta } = useGameStore()
-  const { info: toastInfo, success: toastSuccess } = useToast()
+  const { info: toastInfo, success: toastSuccess, error: toastError } = useToast()
   const [restante, setRestante] = useState(TURNO_TIMEOUT_S)
   const [loading, setLoading] = useState(false)
   const [rolando, setRolando] = useState(false)
@@ -43,6 +43,8 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
     setLoading(true)
     try {
       await passarVez(session.id)
+    } catch (err: any) {
+      toastError(err?.response?.data?.message || "Erro ao passar a vez")
     } finally {
       setLoading(false)
     }
@@ -60,6 +62,8 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
         toastSuccess(`Deu ${r.dado1} e ${r.dado2}${r.duplo ? " (duplo — jogue de novo depois)" : ""}${r.passouInicio ? " · +R$ 2.000 (passou pelo Início)" : ""}`)
         if (r.mensagem) toastInfo(r.mensagem)
       }
+    } catch (err: any) {
+      toastError(err?.response?.data?.message || "Erro ao rolar dados")
     } finally {
       setRolando(false)
     }
@@ -71,6 +75,8 @@ export default function TurnoBanner({ session, meuPlayerId }: Props) {
     try {
       const mensagem = await sairPrisaoComCarta(session.id)
       if (mensagem) toastSuccess(mensagem)
+    } catch (err: any) {
+      toastError(err?.response?.data?.message || "Erro ao usar carta")
     } finally {
       setUsandoCarta(false)
     }

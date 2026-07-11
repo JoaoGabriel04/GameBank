@@ -27,18 +27,42 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
+  const clampPosition = useCallback((t: typeof transform) => {
+    const vp = viewportRef.current
+    if (!vp) return t
+    const rect = vp.getBoundingClientRect()
+    const bw = BOARD_SIZE * t.scale
+    const bh = BOARD_SIZE * t.scale
+    const margin = Math.min(rect.width, rect.height) * 0.15
+    const minX = Math.min(0, margin - bw)
+    const maxX = Math.max(0, rect.width - margin)
+    const minY = Math.min(0, margin - bh)
+    const maxY = Math.max(0, rect.height - margin)
+    if (minX > maxX) return { ...t, x: (rect.width - bw) / 2, y: (rect.height - bh) / 2 }
+    return {
+      ...t,
+      x: Math.min(maxX, Math.max(minX, t.x)),
+      y: Math.min(maxY, Math.max(minY, t.y)),
+    }
+  }, [])
+
+  // Wrapper que aplica clampPosition após cada atualização
+  const setTransformClamped = useCallback((updater: typeof transform | ((prev: typeof transform) => typeof transform)) => {
+    setTransform(prev => clampPosition(typeof updater === "function" ? updater(prev) : updater))
+  }, [clampPosition])
+
   const centerOn = useCallback((pos: number, scale?: number) => {
     const vp = viewportRef.current
     if (!vp) return
     const rect = vp.getBoundingClientRect()
     const { x, y } = posToPixelCenter(pos)
     const s = scale ?? transform.scale
-    setTransform({
+    setTransformClamped({
       scale: s,
       x: rect.width / 2 - x * s,
       y: rect.height / 2 - y * s,
     })
-  }, [transform.scale])
+  }, [setTransformClamped, transform.scale])
 
   // Ao montar: ajusta escala para caber o tabuleiro inteiro na viewport, centralizado
   useEffect(() => {
@@ -46,17 +70,17 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     if (!vp) return
     const rect = vp.getBoundingClientRect()
     const fitScale = clampScale(Math.min(rect.width / BOARD_SIZE, rect.height / BOARD_SIZE) * 0.95)
-    setTransform({
+    setTransformClamped({
       scale: fitScale,
       x: (rect.width - BOARD_SIZE * fitScale) / 2,
       y: (rect.height - BOARD_SIZE * fitScale) / 2,
     })
-  }, [])
+  }, [setTransformClamped])
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.1 : 0.1
-    setTransform(t => ({ ...t, scale: clampScale(t.scale + delta) }))
+    setTransformClamped(t => ({ ...t, scale: clampScale(t.scale + delta) }))
   }
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -70,7 +94,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     const dy = e.clientY - dragState.current.lastY
     dragState.current.lastX = e.clientX
     dragState.current.lastY = e.clientY
-    setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy }))
+    setTransformClamped(t => ({ ...t, x: t.x + dx, y: t.y + dy }))
   }
 
   const handlePointerUp = () => {
@@ -93,13 +117,13 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && pinchState.current.pinching) {
       const ratio = dist(e.touches) / pinchState.current.startDist
-      setTransform(t => ({ ...t, scale: clampScale(pinchState.current.startScale * ratio) }))
+      setTransformClamped(t => ({ ...t, scale: clampScale(pinchState.current.startScale * ratio) }))
     } else if (e.touches.length === 1 && dragState.current.dragging) {
       const dx = e.touches[0].clientX - dragState.current.lastX
       const dy = e.touches[0].clientY - dragState.current.lastY
       dragState.current.lastX = e.touches[0].clientX
       dragState.current.lastY = e.touches[0].clientY
-      setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy }))
+      setTransformClamped(t => ({ ...t, x: t.x + dx, y: t.y + dy }))
     }
   }
 
@@ -166,15 +190,11 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
               const sessionPosse = casa.propId != null
                 ? session.sessionPosses?.find(sp => sp.propId === casa.propId)
                 : undefined
-              const donoJogador = sessionPosse?.playerId
-                ? jogadoresAtivos.find(p => p.id === sessionPosse.playerId)
-                : undefined
               return (
                 <div key={casa.pos} style={{ gridRow: row, gridColumn: col }}>
                   <BoardTile
                     casa={casa}
                     sessionPosse={sessionPosse}
-                    donoJogador={donoJogador}
                     destaque={casa.pos === (jogadorDaVez?.posicao ?? -1)}
                   />
                 </div>

@@ -365,7 +365,7 @@ export class BauService {
     const bau = await bauRepository.findBauByTipo(tipo)
     if (!bau) throw new AppError(500, "Baú não encontrado no banco")
 
-    // Deduz pagamento em transação separada e rápida
+    // Deduz pagamento antes de abrir os baús
     await prisma.$transaction(async (tx) => {
       if (totalCoins) {
         await tx.user.update({ where: { id: userId }, data: { coins: { decrement: totalCoins } } })
@@ -374,6 +374,8 @@ export class BauService {
         await tx.user.update({ where: { id: userId }, data: { diamonds: { decrement: totalDiamonds } } })
       }
     })
+
+    let paymentDeducted = true
 
     // Abre cada baú em transação própria — evita timeout de megastransação
     const batches: {
@@ -388,8 +390,9 @@ export class BauService {
       }[]
     }[] = []
 
-    // ownedItemIds é recarregado antes de cada abertura para refletir items completos anteriores
-    for (let i = 0; i < quantidade; i++) {
+    try {
+      // ownedItemIds é recarregado antes de cada abertura para refletir items completos anteriores
+      for (let i = 0; i < quantidade; i++) {
       const userItems = await bauRepository.findUserItems(userId)
       const ownedItemIds = new Set(userItems.map(r => r.item_id))
 
@@ -519,6 +522,18 @@ export class BauService {
       totalXpBonus: totalXpBonus > 0 ? totalXpBonus : undefined,
       batches,
       itens: batches.flatMap(b => b.itens),
+    }
+    } catch (err) {
+      if (paymentDeducted) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            coins: { increment: totalCoins },
+            diamonds: { increment: totalDiamonds },
+          },
+        }).catch(() => {})
+      }
+      throw err
     }
   }
 }

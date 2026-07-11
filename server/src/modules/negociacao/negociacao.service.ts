@@ -1,6 +1,7 @@
 import { NegociacaoRepository } from "./negociacao.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
+import { withLock } from "../../middleware/lock.middleware.js";
 import type { PrismaPromise } from "../../../generated/prisma/index.js";
 import { NEGOTIATION_TIMEOUT_MS, MAX_NEG_VALOR } from "../../utils/level.js";
 
@@ -156,17 +157,18 @@ export class NegociacaoService {
   }
 
   async aceitarNegociacao(negotiationId: number, playerId: number) {
-    const negotiation = await this.repo.findNegotiationById(negotiationId);
-    if (!negotiation) throw new AppError(404, "Negociação não encontrada!");
-    if (negotiation.status !== "pendente") {
-      throw new AppError(400, "Esta negociação não está mais pendente!");
-    }
-    if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
-      throw new AppError(400, "Esta negociação já expirou!");
-    }
-    if (negotiation.toPlayerId !== playerId) {
-      throw new AppError(403, "Apenas o alvo pode aceitar esta negociação!");
-    }
+    return withLock(`negociacao:${negotiationId}`, async () => {
+      const negotiation = await this.repo.findNegotiationById(negotiationId);
+      if (!negotiation) throw new AppError(404, "Negociação não encontrada!");
+      if (negotiation.status !== "pendente") {
+        throw new AppError(400, "Esta negociação não está mais pendente!");
+      }
+      if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
+        throw new AppError(400, "Esta negociação já expirou!");
+      }
+      if (negotiation.toPlayerId !== playerId) {
+        throw new AppError(403, "Apenas o alvo pode aceitar esta negociação!");
+      }
 
     const items = negotiation.items as {
       id: number;
@@ -258,18 +260,20 @@ export class NegociacaoService {
     });
 
     return this.repo.findNegotiationById(negotiationId);
+  });
   }
 
   async recusarNegociacao(negotiationId: number, playerId: number) {
-    const negotiation = await this.repo.findNegotiationById(negotiationId);
-    if (!negotiation) throw new AppError(404, "Negociação não encontrada!");
-    if (negotiation.status !== "pendente") {
-      throw new AppError(400, "Esta negociação não está mais pendente!");
-    }
-    if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
-      throw new AppError(400, "Esta negociação já expirou!");
-    }
-    if (negotiation.toPlayerId !== playerId) {
+    return withLock(`negociacao:${negotiationId}`, async () => {
+      const negotiation = await this.repo.findNegotiationById(negotiationId);
+      if (!negotiation) throw new AppError(404, "Negociação não encontrada!");
+      if (negotiation.status !== "pendente") {
+        throw new AppError(400, "Esta negociação não está mais pendente!");
+      }
+      if (negotiation.expiresAt && new Date() > negotiation.expiresAt) {
+        throw new AppError(400, "Esta negociação já expirou!");
+      }
+      if (negotiation.toPlayerId !== playerId) {
       throw new AppError(403, "Apenas o alvo pode recusar esta negociação!");
     }
 
@@ -303,6 +307,7 @@ export class NegociacaoService {
 
     await prisma.$transaction(unlockOps);
     return this.repo.findNegotiationById(negotiationId);
+  });
   }
 
   async contraOfertar(
@@ -324,34 +329,37 @@ export class NegociacaoService {
     }
 
     // Destrava props antigas e fecha negociação anterior
-    const unlockOps: PrismaOp[] = [];
+    const propIds = oldNegotiation.items
+      .filter((item: any) => item.fromSide && item.sessionPossesId)
+      .map((item: any) => item.sessionPossesId);
 
-    for (const item of oldNegotiation.items) {
-      if (item.fromSide && item.sessionPossesId) {
-        unlockOps.push(
-          prisma.sessionPosses.update({
-            where: { id: item.sessionPossesId },
-            data: { negociando: false },
-          })
-        );
-      }
-    }
-    unlockOps.push(
+    await prisma.$transaction([
+      ...propIds.map((id: number) =>
+        prisma.sessionPosses.update({ where: { id }, data: { negociando: false } })
+      ),
       prisma.negotiation.update({
         where: { id: negotiationId },
         data: { status: "recusada", respondedAt: new Date() },
-      })
-    );
-    await prisma.$transaction(unlockOps);
+      }),
+    ]);
 
     // Cria nova negociação com papéis invertidos — timer recomeça do zero
-    return this.criarNegociacao(
-      oldNegotiation.sessionId,
-      oldNegotiation.toPlayerId,
-      oldNegotiation.fromPlayerId,
-      newOfferItems,
-      newWantItems
-    );
+    // Se falhar, reverte o status da negociação antiga para pendente
+    try {
+      return await this.criarNegociacao(
+        oldNegotiation.sessionId,
+        oldNegotiation.toPlayerId,
+        oldNegotiation.fromPlayerId,
+        newOfferItems,
+        newWantItems
+      );
+    } catch (err) {
+      await prisma.negotiation.update({
+        where: { id: negotiationId },
+        data: { status: "pendente", respondedAt: null as any },
+      }).catch(() => {});
+      throw err;
+    }
   }
 
   async listarPendentes(sessionId: number, playerId: number) {

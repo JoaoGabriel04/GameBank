@@ -6,3 +6,6 @@ export function getMinPlayersToStart(): number {
     ? MIN_PLAYERS_TO_START_PROD
     : MIN_PLAYERS_TO_START_DEV;
 }
+
+/** Patrimônio máximo permitido para desistência voluntária (proporcional ao saldo inicial). */
+export const DESIST_LIMIT = 15000;

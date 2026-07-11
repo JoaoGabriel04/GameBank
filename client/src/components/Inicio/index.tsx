@@ -182,6 +182,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
     (p) => p.userId === authUser?.id
   );
   const isSpectator = !!currentPlayer?.desistiu;
+  const isTabuleiro = currentSession?.tipoJogo === "tabuleiro";
 
   const myProps: PropItem[] = useMemo(() => {
     if (!currentSession || !currentPlayer) return [];
@@ -512,7 +513,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
                 { icon: ArrowDownToLine, label: "Depositar", modal: "deposito" as const, color: "text-green-400 bg-green-500/10" },
                 { icon: ArrowUpFromLine, label: "Sacar", modal: "saque" as const, color: "text-red-400 bg-red-500/10" },
                 { icon: ArrowRightLeft, label: "Transferir", modal: "transferencia" as const, color: "text-sky-400 bg-sky-500/10" },
-              ].map((action) => (
+              ].filter(a => !(isTabuleiro && (a.modal === "deposito" || a.modal === "saque"))).map((action) => (
                 <button
                   key={action.label}
                   onClick={() => setActiveModal(action.modal)}
@@ -534,51 +535,59 @@ export default function Inicio({ onNavigate }: InicioProps) {
             <h4 className="text-xs font-inconsolata text-zinc-600 uppercase tracking-wider mb-2.5">Propriedades</h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { icon: Home, label: "Comprar Casas", modal: "casas" as const, color: "text-teal-400 bg-teal-500/10" },
-                { icon: Banknote, label: "Vender Casas", modal: "venderCasas" as const, color: "text-orange-400 bg-orange-500/10" },
-                { icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10" }
-              ].map((action) => (
+                { icon: Home, label: "Comprar Casas", modal: "casas" as const, color: "text-teal-400 bg-teal-500/10", acao: "casas" as const },
+                { icon: Banknote, label: "Vender Casas", modal: "venderCasas" as const, color: "text-orange-400 bg-orange-500/10", acao: "venderCasas" as const },
+                ...(isTabuleiro ? [] : [{ icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10", acao: "aluguel" as const }]),
+              ].map((action) => {
+                const isTurnAction = action.acao === "casas" || action.acao === "venderCasas"
+                const naoMinhaVez = isTabuleiro && isTurnAction && currentPlayer?.id !== currentSession?.turnoAtualPlayerId
+                return (
+                  <button
+                    key={action.label}
+                    onClick={() => !naoMinhaVez && setActiveModal(action.modal)}
+                    disabled={naoMinhaVez}
+                    className={`flex flex-col items-center gap-2 p-4 bg-zinc-900 border rounded-xl transition-colors ${naoMinhaVez ? "border-zinc-800/50 opacity-40 cursor-not-allowed" : "border-zinc-800 hover:border-zinc-600 cursor-pointer"}`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${action.color}`}>
+                      <action.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">
+                      {action.label}
+                    </span>
+                  </button>
+                )
+              })}
+              {!isTabuleiro && (
                 <button
-                  key={action.label}
-                  onClick={() => setActiveModal(action.modal)}
+                  onClick={() => onNavigate?.("Loja")}
                   className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-600 transition-colors cursor-pointer"
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${action.color}`}>
-                    <action.icon className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-purple-400 bg-purple-500/10">
+                    <ShoppingBag className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">
-                    {action.label}
-                  </span>
+                  <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">Loja</span>
                 </button>
-              ))}
-              <button
-                onClick={() => onNavigate?.("Loja")}
-                className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-600 transition-colors cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-purple-400 bg-purple-500/10">
-                  <ShoppingBag className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">Loja</span>
-              </button>
+              )}
             </div>
           </div>
 
-          {/* Jogo */}
-          <div>
-            <h4 className="text-xs font-inconsolata text-zinc-600 uppercase tracking-wider mb-2.5">Jogo</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <button
-                onClick={() => setConfirmSortearOpen(true)}
-                disabled={drawingCard || !currentPlayer}
-                className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-yellow-400 bg-yellow-500/10">
-                  <Shuffle className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">Sortear</span>
-              </button>
+          {!isTabuleiro && (
+            <div>
+              <h4 className="text-xs font-inconsolata text-zinc-600 uppercase tracking-wider mb-2.5">Jogo</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button
+                  onClick={() => setConfirmSortearOpen(true)}
+                  disabled={drawingCard || !currentPlayer}
+                  className="flex flex-col items-center gap-2 p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-yellow-400 bg-yellow-500/10">
+                    <Shuffle className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-inconsolata text-zinc-400 text-center leading-tight">Sortear</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

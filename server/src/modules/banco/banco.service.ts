@@ -15,6 +15,10 @@ export class BancoService {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
 
+    if (valor <= 0) {
+      throw new AppError(400, "Valor deve ser maior que zero!");
+    }
+
     if (valor > MAX_VALOR) {
       throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
     }
@@ -38,6 +42,10 @@ export class BancoService {
   async saque(userId: number, sessionId: number, valor: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+
+    if (valor <= 0) {
+      throw new AppError(400, "Valor deve ser maior que zero!");
+    }
 
     if (valor > MAX_VALOR) {
       throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
@@ -67,12 +75,20 @@ export class BancoService {
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Jogador pagador não encontrado!");
 
+    if (valor <= 0) {
+      throw new AppError(400, "Valor deve ser maior que zero!");
+    }
+
     if (valor > MAX_VALOR) {
       throw new AppError(400, `Valor máximo permitido é R$ ${MAX_VALOR.toLocaleString("pt-BR")}`);
     }
 
     const recebedor = await this.repo.findPlayerById(recebedorId);
     if (!recebedor) throw new AppError(404, "Jogador recebedor não encontrado!");
+
+    if (pagador.saldo < valor) {
+      throw new AppError(400, "Saldo insuficiente para transferência!");
+    }
 
     await prisma.$transaction([
       prisma.sessionPlayer.update({
@@ -131,7 +147,7 @@ export class BancoService {
         valorAluguel = prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
         break;
       case 4:
-        valorAluguel = prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_3c ?? prop.aluguel_base ?? 0;
+        valorAluguel = prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_base ?? 0;
         break;
       default:
         valorAluguel = prop.aluguel_hotel ?? prop.aluguel_4c ?? prop.aluguel_base ?? 0;

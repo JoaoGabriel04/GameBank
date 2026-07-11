@@ -50,8 +50,17 @@ export class PropriedadeRepository {
     return prisma.sessionPlayer.update({ where: { id }, data });
   }
 
-  async findFirstHipotecada() {
-    return prisma.sessionPosses.findFirst({ where: { hipotecada: true } });
+  async findFirstHipotecada(sessionId?: number) {
+    const where: any = { hipotecada: true };
+    if (sessionId !== undefined) where.sessionId = sessionId;
+    return prisma.sessionPosses.findFirst({ where });
+  }
+
+  async findSessionPossesByGroup(sessionId: number, grupoCor: string) {
+    return prisma.sessionPosses.findMany({
+      where: { sessionId, propriedade: { grupo_cor: grupoCor } },
+      include: { propriedade: true },
+    });
   }
 
   async createHistorico(data: { sessionId: number; data: Date; tipo: string; detalhes: string }) {

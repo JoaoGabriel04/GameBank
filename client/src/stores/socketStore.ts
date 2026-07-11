@@ -158,8 +158,24 @@ export function connectSocket(sessionId: number) {
   });
 
   socket.on("session:updated", (data) => {
-    const { sessionId: updatedId } = data || {};
+    const { sessionId: updatedId, turnoAtualPlayerId: novoPlayerId, jogadores } = data || {};
     if (updatedId && updatedId !== sessionId) return;
+
+    const antigo = useGameStore.getState().currentSession;
+    const antigoPlayerId = antigo?.turnoAtualPlayerId;
+
+    if (antigoPlayerId != null && novoPlayerId && novoPlayerId !== antigoPlayerId && jogadores?.length) {
+      const authUser = useAuthStore.getState().user;
+      const meuJogador = jogadores.find((p: { userId?: number | null }) => p.userId === authUser?.id);
+      const novoJogador = jogadores.find((p: { id: number }) => p.id === novoPlayerId);
+
+      if (meuJogador && novoJogador?.id === meuJogador.id) {
+        toast.success("É a sua vez de jogar!");
+      } else if (novoJogador) {
+        toast.info(`Vez de ${novoJogador.nome}`);
+      }
+    }
+
     useGameStore.setState({ currentSession: data });
   });
 

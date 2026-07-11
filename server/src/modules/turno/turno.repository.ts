@@ -1,6 +1,23 @@
 import { prisma } from "../../lib/prisma.js";
 
 export const turnoRepository = {
+  findSessionsStuck: () =>
+    prisma.session.findMany({
+      where: {
+        status: "Em Andamento",
+        tipoJogo: "tabuleiro",
+        turnoIniciadoEm: { not: null },
+        turnoAtualPlayerId: { not: null },
+      },
+      select: {
+        id: true,
+        turnoIniciadoEm: true,
+        jogadores: {
+          select: { id: true, userId: true, nome: true, desistiu: true, pularProximaRodada: true, emPrisao: true },
+        },
+      },
+    }),
+
   findSessionComJogadores: (sessionId: number) =>
     prisma.session.findUnique({
       where: { id: sessionId },

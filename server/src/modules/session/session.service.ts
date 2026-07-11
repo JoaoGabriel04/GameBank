@@ -12,11 +12,12 @@ import { pickPlayerColor } from "../../utils/player-color.js";
 import { mapSessionWithAvatars, mapSessionPlayers } from "../../utils/session-mapper.js";
 import { addXp } from "../../utils/level.js";
 import { clearSessionDeck } from "../carta/carta.repository.js";
-import { getMinPlayersToStart } from "../../shared/constants/session.js";
+import { getMinPlayersToStart, DESIST_LIMIT } from "../../shared/constants/session.js";
 import { calcularRecompensa, type RewardResult } from "./reward.service.js";
 import { calcularDeltaTrofeus } from "../../shared/constants/trophies.js";
 import { recompensasQueue, missoesQueue } from "../../lib/queues.js";
 import { getTabuleiro } from "../tabuleiro/tabuleiro.data.js";
+import { withLock } from "../../middleware/lock.middleware.js";
 import type { RecompensasBauJob } from "../../workers/recompensas.worker.js";
 import type { MissoesJob } from "../../workers/missoes.worker.js";
 
@@ -39,6 +40,10 @@ export class SessionService {
     criadorTeamIndex?: number,
     tipoJogo: string = "banca"
   ) {
+    if (tipoJogo === "tabuleiro" && process.env.NODE_ENV === "production") {
+      throw new AppError(400, "Modo Tabuleiro está disponível apenas em ambiente de desenvolvimento.");
+    }
+
     if (modo === "duplas" && (!times || times.length < 2)) {
       throw new AppError(400, "Modo duplas requer pelo menos 2 times.");
     }
@@ -213,6 +218,7 @@ export class SessionService {
   }
 
   async startSession(sessionId: number, userId?: number) {
+    return withLock(`session:${sessionId}`, async () => {
     const session = await this.repo.findByIdSimple(sessionId);
     if (!session) throw new AppError(404, "Sessão não encontrada");
 
@@ -275,6 +281,7 @@ export class SessionService {
 
     await this.invalidateCache(session.id);
     return this.repo.findById(session.id);
+  });
   }
 
   async invalidateCache(sessionId: number) {
@@ -360,6 +367,7 @@ export class SessionService {
   }
 
   async quitSession(sessionId: number, userId: number) {
+    return withLock(`session:${sessionId}`, async () => {
     const player = await this.repo.findPlayerByUserAndSession(userId, sessionId);
     if (!player) {
       throw new AppError(404, "Você não está nesta sala.");
@@ -433,9 +441,11 @@ export class SessionService {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
+  });
   }
 
   async desistirSession(sessionId: number, userId: number) {
+    return withLock(`session:${sessionId}`, async () => {
     const player = await this.repo.findPlayerByUserAndSession(userId, sessionId);
     if (!player) {
       throw new AppError(404, "Você não está nesta sala.");
@@ -459,8 +469,8 @@ export class SessionService {
       }
     }
 
-    if (patrimony >= 15000) {
-      throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ 14.999).`);
+    if (patrimony >= DESIST_LIMIT) {
+      throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ ${(DESIST_LIMIT - 1).toLocaleString("pt-BR")}).`);
     }
 
     // Modo Tabuleiro: dívida ativa com o banco bloqueia desistência voluntária
@@ -502,6 +512,7 @@ export class SessionService {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
+  });
   }
 
   async getPlayerByUser(sessionId: number, userId: number) {
@@ -509,6 +520,7 @@ export class SessionService {
   }
 
   async kickPlayer(sessionId: number, targetPlayerId: number) {
+    return withLock(`session:${sessionId}`, async () => {
     const player = await this.repo.findPlayerById(targetPlayerId);
     if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
     if (player.desistiu) throw new AppError(400, "Jogador já saiu da partida");
@@ -548,6 +560,7 @@ export class SessionService {
       return { autoEnded: true as const, ranking };
     }
     return { autoEnded: false as const };
+  });
   }
 
   private missionService = new MissionsService();

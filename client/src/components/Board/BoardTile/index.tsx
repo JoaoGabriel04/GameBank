@@ -5,8 +5,7 @@ import {
   faFlagCheckered, faLock, faGavel, faNewspaper,
   faSackDollar, faFileInvoiceDollar, faUmbrellaBeach, faHouse,
 } from "@fortawesome/free-solid-svg-icons"
-import type { Casa, Player, SessionPropriedade } from "@/types/game"
-import { PLAYER_COLORS } from "@/types/game"
+import type { Casa, SessionPropriedade } from "@/types/game"
 import { getGroupColorHex } from "@/utils/properties"
 
 const TIPO_ICON: Partial<Record<Casa["tipo"], typeof faHouse>> = {
@@ -22,14 +21,12 @@ const TIPO_ICON: Partial<Record<Casa["tipo"], typeof faHouse>> = {
 type Props = {
   casa: Casa
   sessionPosse?: SessionPropriedade
-  donoJogador?: Player
   destaque?: boolean
 }
 
-export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
+export default function BoardTile({ casa, sessionPosse, destaque }: Props) {
   const isPropriedade = casa.tipo === "propriedade" || casa.tipo === "acao"
   const cor = isPropriedade ? getGroupColorHex(sessionPosse?.propriedade?.grupo_cor) : null
-  const donoCor = donoJogador ? PLAYER_COLORS.find(p => p.value === donoJogador.cor) : null
   const icon = TIPO_ICON[casa.tipo]
 
   return (
@@ -61,12 +58,6 @@ export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }:
           </span>
         )}
       </div>
-
-      {donoCor && (
-        <div
-          className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full ${donoCor.bg} ${sessionPosse?.hipotecada ? "opacity-40" : ""}`}
-        />
-      )}
     </div>
   )
 }
