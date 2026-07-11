@@ -485,8 +485,9 @@ class TurnoService {
     return { ...session, posicaoJogador: player.posicao };
   }
 
-  // Disparado pelo timeout de 60s — não valida "de quem é a vez" pois é
-  // o próprio servidor avançando o turno atual.
+  // Disparado pelo timeout de 60s — se o jogador não agiu, o sistema
+  // joga automaticamente: rola os dados, move a peça, recusa compras,
+  // paga aluguéis/dívidas e avança o turno.
   async avancarPorTimeout(sessionId: number) {
     return withLock(`turno:${sessionId}`, async () => {
       const session = await turnoRepository.findSessionComJogadores(sessionId);
@@ -495,19 +496,53 @@ class TurnoService {
         return null;
       }
 
-      // Timer pausa durante decisão obrigatória (ex: escolher o que vender)
+      // Se há ação pendente (compra de propriedade), recusa automaticamente
       if (session.aguardandoAcao) {
-        await this.agendarTimeout(sessionId);
-        return null;
+        await turnoRepository.setAguardandoAcao(sessionId, false);
+      }
+
+      const atual = session.jogadores.find(j => j.id === session.turnoAtualPlayerId);
+      if (!atual || atual.desistiu) {
+        return this.avancarTurno(sessionId, session, true);
       }
 
       // Verifica falência do jogador que perdeu o tempo
-      const atual = session.jogadores.find(j => j.id === session.turnoAtualPlayerId);
-      if (atual) {
-        const falencia = await this.verificarFalencia(sessionId, session, { id: atual.id, nome: atual.nome });
-        if (falencia) return falencia;
+      const falencia = await this.verificarFalencia(sessionId, session, { id: atual.id, nome: atual.nome });
+      if (falencia) return falencia;
+
+      // Busca dados completos do jogador (posicao, saldo, prisao, etc.)
+      const player = await turnoRepository.findPlayerParaJogada(atual.id);
+      if (!player || player.sessionId !== sessionId) {
+        return this.avancarTurno(sessionId, session, true);
       }
 
+      if (player.emPrisao) {
+        // Turno na prisão: decrementa o contador; no último turno paga a multa
+        if (player.turnosPrisao > 1) {
+          await turnoRepository.moverPlayer(player.id, { turnosPrisao: player.turnosPrisao - 1 });
+        } else {
+          await this.cobrarComFallbackDivida(
+            sessionId, { id: player.id, nome: player.nome, saldo: player.saldo },
+            MULTA_PRISAO, null,
+            `Multa de R$ ${MULTA_PRISAO} — não conseguiu sair da prisão`
+          );
+          await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
+        }
+      } else {
+        // Rola os dados automaticamente
+        const dado1 = Math.floor(Math.random() * 6) + 1;
+        const dado2 = Math.floor(Math.random() * 6) + 1;
+        const total = dado1 + dado2;
+
+        await turnoRepository.registrarDados(sessionId, {
+          ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: false,
+        });
+
+        // Move e resolve a casa (paga aluguel, sorteia carta, etc.)
+        await this.moverEResolver(sessionId, player, total);
+      }
+
+      // Sempre avança o turno no timeout (sem bônus de duplos)
       return this.avancarTurno(sessionId, session, true);
     });
   }
