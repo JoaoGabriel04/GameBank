@@ -40,10 +40,6 @@ export class SessionService {
     criadorTeamIndex?: number,
     tipoJogo: string = "banca"
   ) {
-    if (tipoJogo === "tabuleiro" && process.env.NODE_ENV === "production") {
-      throw new AppError(400, "Modo Tabuleiro está disponível apenas em ambiente de desenvolvimento.");
-    }
-
     if (modo === "duplas" && (!times || times.length < 2)) {
       throw new AppError(400, "Modo duplas requer pelo menos 2 times.");
     }
