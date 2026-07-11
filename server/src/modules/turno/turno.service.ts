@@ -122,8 +122,10 @@ class TurnoService {
       await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
       const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
 
-      // Auto-avança o turno após jogada sem duplos (a menos que haja ação pendente)
-      if (!duplo && !resolucao.aguardandoAcao) {
+      // Auto-avança o turno após jogada sem duplos, OU se a casa força o
+      // fim da vez (Feriado, prisão) mesmo com duplo — a menos que haja
+      // ação pendente (compra de propriedade).
+      if ((!duplo || resolucao.encerraVez) && !resolucao.aguardandoAcao) {
         const avanco = await this.avancarTurno(sessionId, session);
         return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao, ...avanco };
       }
@@ -287,6 +289,11 @@ class TurnoService {
     let aguardandoAcao = false;
     let compraDisponivel: { propId: number; sessionPossesId: number; nome: string; preco: number } | undefined;
     let mensagem = "";
+    // BUG 4 (TABULEIRO_FIXES): casas que encerram a vez mesmo com duplo —
+    // Feriado (pula a próxima rodada) e qualquer evento que prenda o
+    // jogador nesta jogada (Vá para a Detenção, carta de Sorte/Revés de
+    // prisão). Preso ou de folga não joga de novo só porque tirou duplo.
+    let encerraVez = false;
 
     switch (casa.tipo) {
       case "propriedade":
@@ -331,7 +338,19 @@ class TurnoService {
         mensagem = sorteio.effectDescription;
         if (sorteio.carta.tipo === "prisao") {
           await turnoRepository.moverPlayer(player.id, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
+          encerraVez = true;
         }
+        // Broadcast pra todo mundo ver a carta sorteada — mesmo evento que
+        // o botão manual "Sortear" do Modo Banca já emite (carta.controller).
+        const { emitToRoom } = await import("../../lib/socket.js");
+        emitToRoom(sessionId, "card:drawn", {
+          playerNome: player.nome,
+          playerId: player.id,
+          tipoBaralho: sorteio.tipoBaralho,
+          carta: sorteio.carta,
+          effectDescription: sorteio.effectDescription,
+          ...(sorteio.debtCreated ? { debtCreated: true, debtValor: sorteio.debtValor } : {}),
+        });
         break;
       }
 
@@ -355,12 +374,14 @@ class TurnoService {
       case "feriado": {
         await turnoRepository.moverPlayer(player.id, { pularProximaRodada: true });
         mensagem = `${player.nome} caiu no Feriado e vai pular a próxima rodada.`;
+        encerraVez = true;
         break;
       }
 
       case "va_para_prisao": {
         await turnoRepository.moverPlayer(player.id, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
         mensagem = `${player.nome} foi direto para a prisão.`;
+        encerraVez = true;
         break;
       }
 
@@ -372,7 +393,7 @@ class TurnoService {
 
     await turnoRepository.setAguardandoAcao(sessionId, aguardandoAcao);
 
-    return { casa, aguardandoAcao, compraDisponivel, mensagem: mensagem || undefined };
+    return { casa, aguardandoAcao, compraDisponivel, mensagem: mensagem || undefined, encerraVez };
   }
 
   private calcularAluguel(prop: { aluguel_base: number; aluguel_1c: number; aluguel_2c: number; aluguel_3c: number; aluguel_4c: number; aluguel_hotel: number }, casas: number) {
@@ -492,12 +513,34 @@ class TurnoService {
   // Disparado pelo timeout de 60s — se o jogador não agiu, o sistema
   // joga automaticamente: rola os dados, move a peça, recusa compras,
   // paga aluguéis/dívidas e avança o turno.
-  async avancarPorTimeout(sessionId: number) {
+  //
+  // BUG 6, Parte C (idempotência): `turnoEsperadoIniciadoEm` é o
+  // turnoIniciadoEm que estava vigente quando ESTE timeout foi agendado.
+  // Com timer em memória + varredura periódica + re-agendamento no join,
+  // mais de um caminho pode tentar avançar o mesmo turno expirado (ex.:
+  // o timer perdido dispara tarde, ao mesmo tempo em que a varredura ou
+  // um F5 já avançaram). Se o turno já mudou desde o agendamento, este
+  // disparo é obsoleto — ignorar em vez de avançar de novo (o que pularia
+  // um jogador). Chamadas sem esse parâmetro (varredura, recuperação no
+  // boot) não têm essa garantia extra, mas o lock por sessionId já evita
+  // execução concorrente entre elas.
+  async avancarPorTimeout(sessionId: number, turnoEsperadoIniciadoEm?: string) {
     return withLock(`turno:${sessionId}`, async () => {
       const session = await turnoRepository.findSessionComJogadores(sessionId);
       if (!session || session.status !== "Em Andamento" || session.tipoJogo !== "tabuleiro") {
         cancelTurnoTimer(sessionId);
         return null;
+      }
+
+      if (
+        turnoEsperadoIniciadoEm &&
+        session.turnoIniciadoEm?.toISOString() !== turnoEsperadoIniciadoEm
+      ) {
+        sessionLogger.info(
+          { sessionId, esperado: turnoEsperadoIniciadoEm, atual: session.turnoIniciadoEm },
+          "avancarPorTimeout ignorado — turno já avançou por outro caminho"
+        );
+        return { avancou: false, motivo: "turno já avançou" };
       }
 
       // Se há ação pendente (compra de propriedade), recusa automaticamente
@@ -631,10 +674,12 @@ class TurnoService {
   private async agendarTimeout(sessionId: number) {
     cancelTurnoTimer(sessionId);
     // Atualiza turnoIniciadoEm para o cliente reiniciar o contador
-    try { await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: new Date() }); } catch {}
+    const agora = new Date();
+    try { await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agora }); } catch {}
+    const esperadoIso = agora.toISOString();
     const timer = setTimeout(async () => {
       try {
-        await this.avancarPorTimeout(sessionId);
+        await this.avancarPorTimeout(sessionId, esperadoIso);
       } catch (err: any) {
         if (err?.statusCode === 423) {
           // Lock ocupado — retenta
@@ -651,6 +696,49 @@ class TurnoService {
     cancelTurnoTimer(sessionId);
   }
 
+  // BUG 6, Parte B: chamado quando um socket entra na room da sessão (F5,
+  // reconexão, novo jogador entrando). Se o processo perdeu o timer em
+  // memória (hibernação/restart), este é o caminho mais rápido de
+  // recuperação — não precisa esperar a varredura periódica (até 15-17s).
+  // Sessões com ação pendente (aguardandoAcao) ficam por conta da
+  // varredura periódica, que já cobre esse caso.
+  async garantirTimerAtivo(sessionId: number) {
+    if (turnoTimers.has(sessionId)) return; // já tem timer rodando
+
+    const session = await turnoRepository.findSessionComJogadores(sessionId);
+    if (!session || session.status !== "Em Andamento" || session.tipoJogo !== "tabuleiro") return;
+    if (!session.turnoIniciadoEm || session.aguardandoAcao) return;
+
+    const elapsed = Date.now() - new Date(session.turnoIniciadoEm).getTime();
+    const restante = TURNO_TIMEOUT_MS - elapsed;
+
+    if (restante <= 0) {
+      // Já expirou — avançar imediatamente em vez de esperar a varredura
+      await this.avancarPorTimeout(sessionId).catch(err => {
+        if (err?.statusCode !== 423) {
+          sessionLogger.error({ err, sessionId }, "erro ao avançar turno expirado no re-agendamento");
+        }
+      });
+      return;
+    }
+
+    // Re-agenda pelo tempo restante, preservando o turnoIniciadoEm atual
+    // (não reseta o contador visível ao jogador).
+    const esperadoIso = new Date(session.turnoIniciadoEm).toISOString();
+    const timer = setTimeout(async () => {
+      try {
+        await this.avancarPorTimeout(sessionId, esperadoIso);
+      } catch (err: any) {
+        if (err?.statusCode === 423) {
+          this.agendarTimeout(sessionId);
+        } else {
+          sessionLogger.error({ err, sessionId }, "erro ao avançar turno por timeout (re-agendado)");
+        }
+      }
+    }, restante);
+    turnoTimers.set(sessionId, timer);
+  }
+
   async recoverStuckSessions() {
     const sessions = await turnoRepository.findSessionsStuck();
     const now = Date.now();
@@ -661,6 +749,38 @@ class TurnoService {
         sessionLogger.warn({ sessionId: s.id, elapsed }, "recuperando sessão travada no startup");
         await this.avancarPorTimeout(s.id).catch(err => {
           sessionLogger.error({ err, sessionId: s.id }, "erro ao recuperar sessão travada");
+        });
+      }
+    }
+  }
+
+  // Varredura periódica (BUG 6): os timers de turno vivem em memória do
+  // processo — se o servidor hibernar/reiniciar (Render free tier) no meio
+  // de uma partida, o setTimeout agendado é perdido e ninguém avança o
+  // turno automaticamente. Diferente de recoverStuckSessions (só no boot),
+  // esta varredura roda a cada 15s enquanto o processo está de pé, usando
+  // turnoIniciadoEm (persistido no banco) como fonte de verdade — nunca
+  // depende do timer em memória ter sobrevivido.
+  //
+  // Margem de +2s sobre o timeout normal: evita competir com o setTimeout
+  // in-memory que dispara exatamente em TURNO_TIMEOUT_MS quando ele está
+  // saudável (a varredura só deve agir quando o timer normal falhou).
+  async varrerTurnosExpirados() {
+    const sessions = await turnoRepository.findSessionsStuck();
+    const agora = Date.now();
+
+    for (const s of sessions) {
+      if (!s.turnoIniciadoEm) continue;
+      const elapsed = agora - new Date(s.turnoIniciadoEm).getTime();
+
+      if (elapsed >= TURNO_TIMEOUT_MS + 2000) {
+        sessionLogger.warn({ sessionId: s.id, elapsed }, "turno expirado detectado pela varredura periódica");
+        await this.avancarPorTimeout(s.id).catch(err => {
+          // 423 = lock ocupado (outra ação concorrente já está resolvendo
+          // este turno) — não é erro, só significa que já está sendo tratado.
+          if (err?.statusCode !== 423) {
+            sessionLogger.error({ err, sessionId: s.id }, "erro ao avançar turno na varredura periódica");
+          }
         });
       }
     }

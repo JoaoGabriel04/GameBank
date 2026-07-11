@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHouse,
   faStore,
-  faStar,
   faTrophy,
   faClock,
   faChessBoard,
@@ -15,7 +14,6 @@ const tabIcons: Record<string, IconDefinition> = {
   "Tabuleiro": faChessBoard,
   "Início": faHouse,
   "Loja": faStore,
-  "Especiais": faStar,
   "Ranking": faTrophy,
   "Histórico": faClock,
 };

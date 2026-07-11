@@ -165,19 +165,29 @@ export function connectSocket(sessionId: number) {
     const antigo = useGameStore.getState().currentSession;
     const antigoPlayerId = antigo?.turnoAtualPlayerId;
 
+    // Adiado (junto com o toast) até o TurnoModal revelar o resultado —
+    // ver comentário abaixo.
     if (antigoPlayerId != null && novoPlayerId && novoPlayerId !== antigoPlayerId && jogadores?.length) {
-      const authUser = useAuthStore.getState().user;
-      const meuJogador = jogadores.find((p: { userId?: number | null }) => p.userId === authUser?.id);
-      const novoJogador = jogadores.find((p: { id: number }) => p.id === novoPlayerId);
+      useGameStore.getState().deferOrRun(() => {
+        const authUser = useAuthStore.getState().user;
+        const meuJogador = jogadores.find((p: { userId?: number | null }) => p.userId === authUser?.id);
+        const novoJogador = jogadores.find((p: { id: number }) => p.id === novoPlayerId);
 
-      if (meuJogador && novoJogador?.id === meuJogador.id) {
-        toast.success("É a sua vez de jogar!");
-      } else if (novoJogador) {
-        toast.info(`Vez de ${novoJogador.nome}`);
-      }
+        if (meuJogador && novoJogador?.id === meuJogador.id) {
+          toast.success("É a sua vez de jogar!");
+        } else if (novoJogador) {
+          toast.info(`Vez de ${novoJogador.nome}`);
+        }
+      });
     }
 
-    useGameStore.setState({ currentSession: data });
+    // BUG 2 (TABULEIRO_FIXES): passa pelo buffer — se uma rolagem local
+    // estiver em andamento (holdSessionUpdates), a posição do peão e o
+    // estado do turno só se aplicam depois que o TurnoModal revelar o
+    // resultado dos dados, evitando que o peão se mova antes do jogador
+    // ver o número. O toast acima usa o mesmo gate (deferOrRun) — sem
+    // isso ele chegava antes do próprio jogador ver quanto tirou.
+    useGameStore.getState().applyOrBufferSession(data);
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -239,9 +249,14 @@ export function connectSocket(sessionId: number) {
     }
   });
 
-  // Sorte e Revés — carta sorteada (broadcast)
+  // Sorte e Revés — carta sorteada (broadcast). Adiado como o toast de
+  // vez acima: se for a própria rolagem do jogador (caiu em Notícias),
+  // sem isso o toast da carta chegava antes dele ver o resultado dos
+  // dados no próprio modal.
   socket.on("card:drawn", (data) => {
-    useCardStore.getState().addCardEvent(data);
+    useGameStore.getState().deferOrRun(() => {
+      useCardStore.getState().addCardEvent(data);
+    });
   });
 
   // Sorte e Revés — carta prisão usada (broadcast)

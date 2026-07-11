@@ -8,7 +8,9 @@ import type { Player } from "@/types/game"
 
 const PASSO_DURACAO_S = 0.15
 const MAX_CASAS_ANIMADAS = 12
-const AVATAR_SIZE = 30
+// BUG 3 (TABULEIRO_FIXES): peões pouco visíveis nas casas de 140px —
+// aumentado de 30 pra 44 e com sombra/anel branco (ver render abaixo).
+const AVATAR_SIZE = 44
 
 type Props = {
   players: Player[]
@@ -17,6 +19,18 @@ type Props = {
 function tileCenterPx(pos: number) {
   const { x, y } = posToPixelCenter(pos)
   return { x: x - AVATAR_SIZE / 2, y: y - AVATAR_SIZE / 2 }
+}
+
+// Quando múltiplos peões estão na mesma casa, espalha em pequeno círculo
+// pra não se sobreporem completamente.
+function offsetParaJogador(pos: number, players: Player[], playerId: number) {
+  const naMesma = players.filter(p => (p.posicao ?? 0) === pos)
+  const idx = naMesma.findIndex(p => p.id === playerId)
+  const total = naMesma.length
+  if (total <= 1) return { dx: 0, dy: 0 }
+  const angle = (idx / total) * Math.PI * 2
+  const raio = 14
+  return { dx: Math.cos(angle) * raio, dy: Math.sin(angle) * raio }
 }
 
 export default function Pawns({ players }: Props) {
@@ -63,8 +77,8 @@ export default function Pawns({ players }: Props) {
 
   return (
     <>
-      {players.map((player, idx) => {
-        const offset = (idx % 4) * 14 - 21
+      {players.map((player) => {
+        const { dx, dy } = offsetParaJogador(player.posicao ?? 0, players, player.id)
         return (
           <div
             key={player.id}
@@ -72,7 +86,14 @@ export default function Pawns({ players }: Props) {
             className="absolute"
             style={{ left: 0, top: 0, width: AVATAR_SIZE, height: AVATAR_SIZE, zIndex: 10 }}
           >
-            <div style={{ marginLeft: offset, marginTop: offset }}>
+            <div
+              className="rounded-full ring-2 ring-white/80"
+              style={{
+                marginLeft: dx,
+                marginTop: dy,
+                filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.7))",
+              }}
+            >
               <PlayerAvatar player={player} size={AVATAR_SIZE} />
             </div>
           </div>

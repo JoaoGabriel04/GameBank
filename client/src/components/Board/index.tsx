@@ -25,7 +25,7 @@ type Props = {
 }
 
 export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
-  const { rolarDados, comprarCasaAtual, recusarCompra } = useGameStore()
+  const { rolarDados, comprarCasaAtual, recusarCompra, setHoldSessionUpdates } = useGameStore()
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })
@@ -40,6 +40,13 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const [modalAberto, setModalAberto] = useState(false)
   const [erroCompra, setErroCompra] = useState<string | null>(null)
   const decidindoRef = useRef(false)
+  // Marca se o resultado atual já teve sua animação de revelação mostrada
+  // uma vez — reabrir uma decisão de compra minimizada (botão "decidir
+  // depois" / banner) não deve repetir a animação de dados do zero.
+  const resultadoJaReveladoRef = useRef(false)
+  // Cache do resultado sintetizado pelo fallback (ver abaixo) — evita
+  // recriar o objeto a cada render enquanto a mesma compra fica pendente.
+  const fallbackResultadoRef = useRef<{ propId: number; sessionPossesId: number; resultado: RolarDadosResult } | null>(null)
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
@@ -188,15 +195,96 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   const jogadorDaVez = jogadoresAtivos.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && jogadorDaVez?.id === meuPlayerId
 
+  // Fallback: se a sessão indica ação pendente mas não há resultado local
+  // (ex.: refresh de página, ou reabrir uma decisão minimizada — "decidir
+  // depois" — em meio a uma decisão), sintetiza um resultado mínimo já na
+  // fase "acao" — sem repetir a animação de dados de uma rolagem que já
+  // aconteceu antes desta montagem.
+  //
+  // IMPORTANTE: o objeto sintetizado é cacheado em um ref e só recriado
+  // quando a propriedade pendente realmente muda. Sem isso, cada re-render
+  // do Board (ex.: um "session:updated" qualquer chegando via socket)
+  // criaria um objeto NOVO, e o TurnoModal reiniciaria a animação de
+  // entrada do zero a cada vez — deixando os botões praticamente
+  // inutilizáveis (GSAP nunca termina de assentar o card em opacity:1).
+  //
+  // Calculado ANTES de handleComprar/handleRecusar (e não no fim da
+  // função) porque essas duas funções precisam ler resultadoModal, não o
+  // estado local `resultado` puro — no cenário de fallback, `resultado`
+  // é null (é exatamente por isso que caímos no fallback), então checar
+  // `resultado?.compraDisponivel` ali faria os botões não fazerem nada.
+  let resultadoModal = resultado
+  let modalAbertoFinal = modalAberto
+  let faseInicialModal: "rolando" | "acao" = "rolando"
+  if (!resultado && minhaVez && session.aguardandoAcao && jogadorDaVez) {
+    const casaAtual = tabuleiro.find(c => c.pos === (jogadorDaVez.posicao ?? 0))
+    if (casaAtual && (casaAtual.tipo === "propriedade" || casaAtual.tipo === "acao") && casaAtual.propId != null) {
+      const posse = session.sessionPosses?.find(sp => sp.propId === casaAtual.propId)
+      if (posse && !posse.playerId && posse.propriedade) {
+        const cache = fallbackResultadoRef.current
+        if (cache && cache.propId === casaAtual.propId && cache.sessionPossesId === posse.id) {
+          resultadoModal = cache.resultado
+        } else {
+          resultadoModal = {
+            dado1: session.ultimoDado1 ?? 1,
+            dado2: session.ultimoDado2 ?? 1,
+            duplo: false,
+            foiPreso: false,
+            novaPosicao: casaAtual.pos,
+            aguardandoAcao: true,
+            compraDisponivel: {
+              propId: casaAtual.propId,
+              sessionPossesId: posse.id,
+              nome: posse.propriedade.nome,
+              preco: posse.propriedade.custo_compra,
+            },
+          }
+          fallbackResultadoRef.current = { propId: casaAtual.propId, sessionPossesId: posse.id, resultado: resultadoModal }
+        }
+        modalAbertoFinal = true
+        faseInicialModal = "acao"
+      }
+    }
+  } else {
+    fallbackResultadoRef.current = null
+  }
+  // Reabrindo uma decisão minimizada sem ter trocado de aba (resultado
+  // local real, não o sintetizado acima): pula direto pra "acao", sem
+  // repetir a animação de dados que já rodou uma vez.
+  //
+  // CRÍTICO: só se aplica quando o resultado atual REALMENTE tem uma
+  // compra pendente. Sem o `resultado.compraDisponivel` aqui, isso disparava
+  // em QUALQUER re-render após a revelação (ex.: o próprio evento de
+  // sessão liberado pelo buffer do BUG 2), forçando faseInicial="acao" de
+  // volta pra rolagens sem ação nenhuma — a fase virava "acao" mas o bloco
+  // de JSX de "acao" exige compraDisponivel, e o de "desfecho" exige
+  // fase==="desfecho": nenhum dos dois renderiza nada, modal trava em branco.
+  if (resultado && resultado.compraDisponivel && resultadoJaReveladoRef.current) {
+    faseInicialModal = "acao"
+  }
+
   const handleRolarDados = useCallback(async () => {
     if (rolando) return
     setRolando(true)
+    resultadoJaReveladoRef.current = false
     stopSfx("tempo-acabando")
-    playSfx("rolando-dados")
+    // SFX de dados toca só quando a animação de rolagem termina (ver
+    // handleDadosParados) — não no clique, faz mais sentido acompanhando
+    // o número aparecendo.
+    // BUG 2 (TABULEIRO_FIXES): retém atualizações de sessão (peão, turno)
+    // até o TurnoModal revelar o resultado — evita que o peão se mova ou
+    // a vez mude na tela antes do jogador ver os dados. Liberado via
+    // handleResultadoRevelado (fluxo normal) ou aqui mesmo nos caminhos
+    // que não chegam a abrir o modal.
+    setHoldSessionUpdates(true)
     try {
       const r = await rolarDados(session.id)
-      if (!r) return
+      if (!r) {
+        setHoldSessionUpdates(false)
+        return
+      }
       if (r.falido) {
+        setHoldSessionUpdates(false)
         toastError(r.mensagem ?? "Você faliu por não quitar suas dívidas a tempo.")
         return
       }
@@ -210,17 +298,36 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
       }
       setResultado(r)
       setModalAberto(true)
+      // Rede de segurança: se o TurnoModal desmontar no meio da animação
+      // (ex.: jogador troca de aba) o GSAP é revertido e onResultadoRevelado
+      // nunca dispara — sem isso o buffer ficaria preso até a próxima
+      // rolagem. 4s dá folga de sobra pra sequência normal (~2.2s).
+      setTimeout(() => setHoldSessionUpdates(false), 4000)
     } catch (err: any) {
+      setHoldSessionUpdates(false)
       toastError(err?.response?.data?.message || "Erro ao rolar dados")
     } finally {
       setRolando(false)
     }
-  }, [rolando, rolarDados, session.id, toastError])
+  }, [rolando, rolarDados, session.id, toastError, setHoldSessionUpdates])
+
+  // BUG 2 (TABULEIRO_FIXES): chamado pelo TurnoModal no instante em que o
+  // resultado dos dados vira visível — só então libera o peão pra mover.
+  const handleResultadoRevelado = useCallback(() => {
+    setHoldSessionUpdates(false)
+    resultadoJaReveladoRef.current = true
+  }, [setHoldSessionUpdates])
+
+  // Chamado pelo TurnoModal quando os dados param de girar e mostram o
+  // número — momento certo pro SFX de dados, não no clique do botão.
+  const handleDadosParados = useCallback(() => {
+    playSfx("rolando-dados")
+  }, [])
 
   const handleComprar = useCallback(async () => {
-    if (decidindoRef.current || !resultado?.compraDisponivel) return
+    if (decidindoRef.current || !resultadoModal?.compraDisponivel) return
     decidindoRef.current = true
-    const nome = resultado.compraDisponivel.nome
+    const nome = resultadoModal.compraDisponivel.nome
     setErroCompra(null)
     try {
       const ok = await comprarCasaAtual(session.id)
@@ -240,13 +347,13 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     } finally {
       decidindoRef.current = false
     }
-  }, [resultado, comprarCasaAtual, session.id, toastSuccess, toastError])
+  }, [resultadoModal, comprarCasaAtual, session.id, toastSuccess, toastError])
 
   const handleRecusar = useCallback(async () => {
-    if (decidindoRef.current || !resultado?.compraDisponivel) return
+    if (decidindoRef.current || !resultadoModal?.compraDisponivel) return
     decidindoRef.current = true
     setErroCompra(null)
-    const nome = resultado.compraDisponivel.nome
+    const nome = resultadoModal.compraDisponivel.nome
     try {
       const ok = await recusarCompra(session.id)
       setModalAberto(false)
@@ -255,7 +362,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     } finally {
       decidindoRef.current = false
     }
-  }, [resultado, recusarCompra, session.id, toastSuccess, toastError])
+  }, [resultadoModal, recusarCompra, session.id, toastSuccess, toastError])
 
   const handleFecharModal = useCallback(() => {
     setModalAberto(false)
@@ -267,37 +374,6 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     setResultado(null)
   }, [])
 
-  // Fallback: se a sessão indica ação pendente mas não há resultado local
-  // (ex.: refresh de página em meio a uma decisão), sintetiza um resultado
-  // mínimo já na fase "acao" — sem repetir a animação de dados de uma
-  // rolagem que já aconteceu antes desta montagem.
-  let resultadoModal = resultado
-  let modalAbertoFinal = modalAberto
-  let faseInicialModal: "rolando" | "acao" = "rolando"
-  if (!resultado && minhaVez && session.aguardandoAcao && jogadorDaVez) {
-    const casaAtual = tabuleiro.find(c => c.pos === (jogadorDaVez.posicao ?? 0))
-    if (casaAtual && (casaAtual.tipo === "propriedade" || casaAtual.tipo === "acao") && casaAtual.propId != null) {
-      const posse = session.sessionPosses?.find(sp => sp.propId === casaAtual.propId)
-      if (posse && !posse.playerId && posse.propriedade) {
-        resultadoModal = {
-          dado1: session.ultimoDado1 ?? 1,
-          dado2: session.ultimoDado2 ?? 1,
-          duplo: false,
-          foiPreso: false,
-          novaPosicao: casaAtual.pos,
-          aguardandoAcao: true,
-          compraDisponivel: {
-            propId: casaAtual.propId,
-            sessionPossesId: posse.id,
-            nome: posse.propriedade.nome,
-            preco: posse.propriedade.custo_compra,
-          },
-        }
-        modalAbertoFinal = true
-        faseInicialModal = "acao"
-      }
-    }
-  }
   const nomeCasaModal = resultadoModal?.novaPosicao != null
     ? tabuleiro.find(c => c.pos === resultadoModal!.novaPosicao)?.nome
     : undefined
@@ -317,7 +393,23 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
         onRecusar={handleRecusar}
         onFechar={handleFecharModal}
         onJogarNovamente={handleJogarNovamente}
+        onDadosParados={handleDadosParados}
+        onResultadoRevelado={handleResultadoRevelado}
       />
+      {/* Compra pendente minimizada — o jogador fechou pra ir vender algo
+          e conseguir dinheiro. Fica visível até ele decidir ou o tempo
+          da rodada acabar (o backend recusa automaticamente no timeout). */}
+      {minhaVez && session.aguardandoAcao && !modalAbertoFinal && resultadoModal?.compraDisponivel && (
+        <button
+          onClick={() => setModalAberto(true)}
+          className="mb-3 w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-amber-500/50 bg-amber-500/10 text-amber-300 font-inconsolata text-sm hover:bg-amber-500/20 transition-colors cursor-pointer"
+        >
+          <span>
+            💰 Compra pendente: {resultadoModal.compraDisponivel.nome} — R$ {resultadoModal.compraDisponivel.preco.toLocaleString("pt-BR")}
+          </span>
+          <span className="text-xs underline shrink-0">Decidir agora</span>
+        </button>
+      )}
       <div
         className="relative w-full flex-1 min-h-0 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none"
         style={{

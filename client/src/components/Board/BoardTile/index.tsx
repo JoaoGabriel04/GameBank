@@ -88,8 +88,9 @@ export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }:
         </div>
       )}
 
-      {/* Casas e hotel — na base, acima do preço */}
-      {isPropriedade && !hipotecada && casas > 0 && (
+      {/* Casas e hotel — na base, acima do preço. Nota: casa.tipo === "propriedade",
+          não isPropriedade — ações ("acao") nunca têm casas/hotel. */}
+      {casa.tipo === "propriedade" && !hipotecada && casas > 0 && (
         <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-1 z-10">
           {temHotel ? (
             <div

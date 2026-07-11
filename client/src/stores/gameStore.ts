@@ -56,6 +56,11 @@ import {
 interface GameStore {
   sessions: GameSession[];
   currentSession: GameSession | null;
+  // BUG 2 (TABULEIRO_FIXES): enquanto true, atualizações de sessão
+  // (socket "session:updated" e o refetch pós-rolarDados) ficam retidas
+  // em vez de aplicadas — evita que o peão se mova / a vez mude na tela
+  // antes do TurnoModal revelar o resultado dos dados ao jogador.
+  holdSessionUpdates: boolean;
   loading: boolean;
   loadingProperty: boolean; // loading separado para leituras (getPropertyById, getPlayerById)
   networkError: boolean;
@@ -99,7 +104,17 @@ interface GameStore {
   getAluguel: (propriedade: Propriedade, casas: number) => number;
 
   updatePlayerInSession: (userId: number, data: Partial<Player>) => void;
+
+  // BUG 2 (TABULEIRO_FIXES)
+  applyOrBufferSession: (session: GameSession) => void;
+  deferOrRun: (fn: () => void) => void;
+  setHoldSessionUpdates: (hold: boolean) => void;
 }
+
+// Buffer transitório da última sessão recebida enquanto holdSessionUpdates
+// está ativo. Módulo-level (como os timers no backend): só importa "agora".
+let pendingSessionUpdate: GameSession | null = null;
+let pendingCallbacks: (() => void)[] = [];
 
 // --- Utilitário de erro (fora do create, criado uma única vez) -----------------
 
@@ -126,6 +141,7 @@ function handleError(
 export const useGameStore = create<GameStore>((set, get) => ({
   sessions: [],
   currentSession: null,
+  holdSessionUpdates: false,
   loading: false,
   loadingProperty: false,
   networkError: false,
@@ -198,9 +214,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const result = await rolarDadosApi(sessionId);
       // Recarrega sessão para garantir estado consistente
-      // mesmo se o socket "session:updated" atrasar
+      // mesmo se o socket "session:updated" atrasar. Passa pelo mesmo
+      // buffer do socket — se holdSessionUpdates estiver ativo (rolagem
+      // em andamento), fica retido até o TurnoModal revelar o resultado.
       loadSessionApi(sessionId).then((session) => {
-        set({ currentSession: session });
+        get().applyOrBufferSession(session);
       }).catch(() => {});
       return result;
     } catch (err) {
@@ -573,5 +591,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ),
       },
     });
+  },
+
+  applyOrBufferSession: (session) => {
+    if (get().holdSessionUpdates) {
+      pendingSessionUpdate = session;
+    } else {
+      set({ currentSession: session });
+    }
+  },
+
+  // Roda `fn` imediatamente, ou adia até o hold liberar — mesmo mecanismo
+  // do peão, usado pros toasts que reagem a eventos de socket disparados
+  // pela própria rolagem (mudança de vez, carta sorteada, aluguel). Sem
+  // isso, o toast chega pro jogador que rolou antes dele ver o resultado
+  // no próprio modal.
+  deferOrRun: (fn) => {
+    if (get().holdSessionUpdates) {
+      pendingCallbacks.push(fn);
+    } else {
+      fn();
+    }
+  },
+
+  setHoldSessionUpdates: (hold) => {
+    set({ holdSessionUpdates: hold });
+    if (!hold) {
+      if (pendingSessionUpdate) {
+        const buffered = pendingSessionUpdate;
+        pendingSessionUpdate = null;
+        set({ currentSession: buffered });
+      }
+      if (pendingCallbacks.length) {
+        const callbacks = pendingCallbacks;
+        pendingCallbacks = [];
+        callbacks.forEach((cb) => cb());
+      }
+    }
   },
 }));

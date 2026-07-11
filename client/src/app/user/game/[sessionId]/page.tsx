@@ -1,7 +1,6 @@
 /* eslint-disable */
 "use client";
 
-import Especiais from "@/components/Especiais";
 import Inicio from "@/components/Inicio";
 import Loja from "@/components/Loja";
 import Board from "@/components/Board";
@@ -41,20 +40,19 @@ import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faStar, faTrophy, faChessBoard } from "@fortawesome/free-solid-svg-icons";
+import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faTrophy, faChessBoard } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { RankedPlayer, Player } from "@/types/game";
 import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
-const linksNavBanca = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
-const linksNavTabuleiro = ["Tabuleiro", "Início", "Especiais", "Ranking", "Histórico"];
+const linksNavBanca = ["Início", "Loja", "Ranking", "Histórico"];
+const linksNavTabuleiro = ["Tabuleiro", "Início", "Ranking", "Histórico"];
 
 const tabIcons: Record<string, IconDefinition> = {
   "Tabuleiro": faChessBoard,
   "Início":    faHouse,
   "Loja":      faStore,
-  "Especiais": faStar,
   "Ranking":   faTrophy,
   "Histórico": faClock,
 };
@@ -644,7 +642,6 @@ export default function Game() {
         : null;
       case "Início":       return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
       case "Loja":         return <Loja />;
-      case "Especiais":    return <Especiais />;
       case "Ranking":      return <Ranking />;
       case "Histórico":    return <Historico />;
       default:             return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;

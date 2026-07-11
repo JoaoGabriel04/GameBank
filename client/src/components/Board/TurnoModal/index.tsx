@@ -49,6 +49,14 @@ type TurnoModalProps = {
   onFechar: () => void
   // Se duplo, o modal avisa e ao fechar prepara nova rolagem
   onJogarNovamente?: () => void
+  // Chamado no exato momento em que os dados param de girar e mostram o
+  // número — ponto certo pra tocar o SFX de dados (não no clique).
+  onDadosParados?: () => void
+  // BUG 2 (TABULEIRO_FIXES): chamado no exato momento em que a fase sai de
+  // "resultado" para "desfecho"/"acao" — o ponto correto pra liberar
+  // atualizações de sessão retidas (ex.: o peão só deve se mover depois
+  // que o jogador já viu o número dos dados).
+  onResultadoRevelado?: () => void
   // Fase em que o modal deve abrir. Default "rolando" (animação completa).
   // Usado para retomar direto em "acao" quando a ação pendente já existia
   // antes da montagem (ex.: refresh de página em meio a uma decisão) — sem
@@ -60,7 +68,7 @@ type FaseTurno = "rolando" | "resultado" | "desfecho" | "acao"
 
 export default function TurnoModal({
   aberto, resultado, nomeCasa, erroCompra,
-  onComprar, onRecusar, onFechar, onJogarNovamente,
+  onComprar, onRecusar, onFechar, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
@@ -113,8 +121,12 @@ export default function TurnoModal({
         ease: "none",
       })
     }
-    // Após girar, mostrar resultado
-    tl.call(() => setFase("resultado"))
+    // Após girar, mostrar resultado — SFX dos dados toca aqui, junto com
+    // o número aparecendo, não no clique (faz mais sentido: som de "parou").
+    tl.call(() => {
+      setFase("resultado")
+      onDadosParados?.()
+    })
     // Depois de 1s no resultado, ir para o desfecho
     tl.to({}, { duration: 1 })
     tl.call(() => {
@@ -123,6 +135,9 @@ export default function TurnoModal({
       } else {
         setFase("desfecho")
       }
+      // Libera atualizações de sessão retidas (peão pode mover agora —
+      // o jogador já viu o resultado dos dados).
+      onResultadoRevelado?.()
     })
   }, { dependencies: [aberto, resultado, faseInicial] })
 
@@ -321,6 +336,17 @@ export default function TurnoModal({
                 Comprar
               </button>
             </div>
+
+            {/* A decisão fica pendente (não conta como recusa) até o
+                jogador decidir ou o tempo da rodada acabar — dá espaço pra
+                ele ir vender casas/hipotecar propriedades e conseguir o
+                dinheiro antes de comprar. */}
+            <button
+              onClick={onFechar}
+              className="mt-3 w-full py-1.5 text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 underline decoration-dotted cursor-pointer"
+            >
+              Decidir depois (fecha sem recusar — venda algo pra ter mais dinheiro)
+            </button>
           </div>
         )}
       </div>

@@ -137,6 +137,14 @@ export async function initSocket(httpServer: HttpServer) {
       }
     }
 
+    // BUG 6, Parte B: garante que o turno tem um timer ativo sempre que
+    // alguém entra na room da sessão (F5, reconexão, nova entrada). Falha
+    // silenciosa — nunca deve travar o join por causa disso.
+    async function garantirTimerAtivo(sessionId: number) {
+      const { turnoService } = await import("../modules/turno/turno.service.js");
+      await turnoService.garantirTimerAtivo(sessionId).catch(() => {});
+    }
+
     socket.on("session:join", async ({ sessionId }: { sessionId: number }) => {
       try {
         const { prisma } = await import("../lib/prisma.js");
@@ -161,6 +169,7 @@ export async function initSocket(httpServer: HttpServer) {
           await deliverQueuedMessages(socket);
           // Reenvia votação ativa para este socket (persistência após refresh)
           await deliverActiveVote(socket, sessionId);
+          await garantirTimerAtivo(sessionId);
           // Notifica cliente que está pronto para receber eventos
           socket.emit("socket:ready", { sessionId });
           return;
@@ -181,6 +190,7 @@ export async function initSocket(httpServer: HttpServer) {
             await loadChatHistory(socket, sessionId);
             await deliverQueuedMessages(socket);
             await deliverActiveVote(socket, sessionId);
+            await garantirTimerAtivo(sessionId);
             socket.emit("socket:ready", { sessionId });
             return;
           }
@@ -204,6 +214,7 @@ export async function initSocket(httpServer: HttpServer) {
           await loadChatHistory(socket, sessionId);
           await deliverQueuedMessages(socket);
           await deliverActiveVote(socket, sessionId);
+          await garantirTimerAtivo(sessionId);
           socket.emit("socket:ready", { sessionId });
         } else {
           socket.emit("error", { message: "Token não pertence a esta sala" });

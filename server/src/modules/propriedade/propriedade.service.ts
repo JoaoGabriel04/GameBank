@@ -88,6 +88,10 @@ export class PropriedadeService {
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado!");
 
+      if (propriedade.propriedade.tipo === "ação") {
+        throw new AppError(400, "Não é possível construir casas em ações.");
+      }
+
       const custoCasa = propriedade.propriedade.custo_casa;
       if (player.saldo < custoCasa) {
         throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
@@ -169,6 +173,9 @@ export class PropriedadeService {
         }
         if (prop.negociando) {
           throw new AppError(400, `${prop.propriedade.nome} está em negociação`);
+        }
+        if (prop.propriedade.tipo === "ação") {
+          throw new AppError(400, `Não é possível construir casas em ${prop.propriedade.nome} (ação).`);
         }
         if (prop.casas >= 5) {
           throw new AppError(400, `${prop.propriedade.nome} já tem o máximo de casas`);

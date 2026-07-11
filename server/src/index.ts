@@ -148,6 +148,13 @@ async function start() {
   turnoService.recoverStuckSessions().catch(err => {
     logger.error({ err }, "erro ao recuperar sessões travadas no startup");
   });
+  // BUG 6: varredura periódica pra recuperar turnos travados por timers
+  // perdidos (hibernação/restart do free tier) enquanto o processo roda.
+  setInterval(() => {
+    turnoService.varrerTurnosExpirados().catch(err => {
+      logger.error({ err }, "erro na varredura de turnos expirados");
+    });
+  }, 15_000);
   startCronJobs();
   initQueueMonitoring();
 
