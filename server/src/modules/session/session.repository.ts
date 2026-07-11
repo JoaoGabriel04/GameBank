@@ -109,6 +109,7 @@ export class SessionRepository {
         aguardandoAcao: true,
         ultimoDado1: true,
         ultimoDado2: true,
+        ordemTurnos: true,
         jogadores: {
           include: {
             team: true,

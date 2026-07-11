@@ -196,8 +196,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   rolarDados: async (sessionId) => {
     try {
-      return await rolarDadosApi(sessionId);
-      // Estado atualizado via socket "session:updated" (emitUpdatedSession no backend)
+      const result = await rolarDadosApi(sessionId);
+      // Recarrega sessão para garantir estado consistente
+      // mesmo se o socket "session:updated" atrasar
+      loadSessionApi(sessionId).then((session) => {
+        set({ currentSession: session });
+      }).catch(() => {});
+      return result;
     } catch (err) {
       handleError(set, err);
       return undefined;

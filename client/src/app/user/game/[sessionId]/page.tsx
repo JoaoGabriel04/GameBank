@@ -732,7 +732,7 @@ export default function Game() {
         {/* LINHA 2 — Conteúdo */}
         {isTabuleiro ? (
           <section className="flex-1 w-full flex flex-col min-h-0">
-            <section className="w-full h-full flex flex-col min-h-0">
+            <section className="w-full h-full flex flex-col min-h-0 px-2 lg:px-4">
               <AnimatePresence mode="wait">
                 <motion.div key={abaAtual} variants={fadeIn} animate="visible" className="flex-1 flex flex-col min-h-0">
                   {renderConteudo()}
