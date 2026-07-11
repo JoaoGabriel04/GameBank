@@ -35,7 +35,7 @@ function PlayerAvatar({ player }: { player: Player }) {
         <img
           src={src}
           alt={player.nome}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover rounded-full"
           onError={() => setImgFailed(true)}
         />
       ) : preset ? (

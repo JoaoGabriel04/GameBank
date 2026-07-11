@@ -46,7 +46,7 @@ import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
 const linksNavBanca = ["Início", "Loja", "Especiais", "Ranking", "Histórico"];
-const linksNavTabuleiro = ["Tabuleiro", "Início", "Loja", "Especiais", "Ranking", "Histórico"];
+const linksNavTabuleiro = ["Tabuleiro", "Início", "Especiais", "Ranking", "Histórico"];
 
 const tabIcons: Record<string, IconDefinition> = {
   "Tabuleiro": faChessBoard,
