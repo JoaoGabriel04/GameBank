@@ -37,6 +37,34 @@ Gerenciador multiplayer completo para o jogo de tabuleiro **Super Banco Imobili�
 - Construção e venda de casas e hotéis
 - Cálculo automático de aluguel por número de casas/hotéis
 
+### Modo Tabuleiro — Economia
+- Renda passiva por propriedade desenvolvida (15% do aluguel atual)
+- IPTU sobre todas as propriedades (8% do valor de compra)
+- Custo de manutenção por casa/hotel (12% do custo da casa)
+- Cobrança consolidada na passagem pelo Início, com extrato detalhado
+- Propriedades hipotecadas não pagam IPTU nem geram renda
+- Ações (grupo Preto) não têm IPTU nem manutenção
+
+### Modo Tabuleiro — Eventos Econômicos
+- Evento a cada 3 rodadas (dura 2 rodadas), anunciado com 1 rodada de antecedência
+- 10 eventos: crises, booms, mudanças de IPTU, custo de construção, dividendos
+- Afetam a rodada inteira: aluguéis, IPTU, manutenção, renda passiva, construção
+- Informação pública — a vantagem vem de saber reagir, não de saber antes
+
+### Modo Tabuleiro — Escolha de Movimento
+- Após rolar, o jogador escolhe andar: dado 1, dado 2 ou a soma
+- A UI mostra o destino de cada opção (casa, dono, preço, aluguel)
+- Duplo só concede jogada extra se o jogador escolher a soma
+- Na prisão a escolha não se aplica (vale sempre a soma)
+- Timeout aplica a soma automaticamente
+
+### Modo Tabuleiro — Leilão Cego
+- Propriedade recusada vai a leilão entre todos os jogadores
+- Lances simultâneos e secretos (leilão cego) — evita conluio
+- Lance mínimo de 50% do preço de tabela; lance é vinculante
+- Empate resolvido pelo menor patrimônio (catch-up)
+- Timeout de 30s; sem lances, a propriedade segue sem dono
+
 ### Negociações
 - Proposta de troca entre jogadores (dinheiro + propriedades)
 - Notificações em tempo real para o jogador alvo
@@ -168,22 +196,131 @@ tabela. Não têm casas, hotéis nem aluguel progressivo.
 
 ### Turno (Modo Tabuleiro)
 
-1. O jogador da vez rola 2 dados (1–6 cada)
-2. O peão avança a soma das casas; se passar ou cair em Início, ganha
-   **R$ 2.000**
-3. A casa onde parou é resolvida automaticamente (compra, aluguel,
+1. O jogador da vez rola 2 dados (1–6 cada) — o peão **ainda não se move**
+2. O jogador **escolhe o movimento**: andar o dado 1, o dado 2 ou a soma
+   dos dois (ver [Modo Tabuleiro — Escolha de Movimento](#modo-tabuleiro--escolha-de-movimento))
+3. Só então o peão avança; se passar ou cair em Início, recebe os
+   **R$ 2.000** de crédito junto com o extrato de IPTU, manutenção e
+   renda passiva de todas as suas propriedades (ver
+   [Modo Tabuleiro — Economia](#modo-tabuleiro--economia))
+4. A casa onde parou é resolvida automaticamente (compra, aluguel,
    imposto, carta, prisão, feriado...)
-4. **Dados iguais (duplo)** → joga de novo, **exceto** se a casa onde
-   parou for **Feriado**, **Vá para a Detenção** ou uma carta de
-   prisão — nesses casos a vez encerra mesmo com duplo
-5. **3 duplos seguidos** na mesma vez → vai direto para a prisão, sem
-   completar o movimento
-6. Cada turno tem **60 segundos**; se o tempo acabar, o servidor joga
-   automaticamente pelo jogador (rola, move, recusa compras pendentes,
-   paga o que for devido) e passa a vez
-7. Comprar uma propriedade pode ficar **pendente durante todo o turno**
+5. **Dados iguais (duplo)** → joga de novo, **só se escolher a soma**,
+   **exceto** se a casa onde parou for **Feriado**, **Vá para a Detenção**
+   ou uma carta de prisão — nesses casos a vez encerra mesmo com duplo
+6. **3 duplos seguidos** na mesma vez → vai direto para a prisão, sem
+   completar o movimento e sem oferecer escolha
+7. Cada turno tem **60 segundos**; se o tempo acabar em qualquer fase, o
+   servidor joga automaticamente pelo jogador (rola, escolhe a soma,
+   move, recusa compras pendentes, paga o que for devido) e passa a vez
+8. Comprar uma propriedade pode ficar **pendente durante todo o turno**
    — o jogador pode navegar para vender/hipotecar outras propriedades
    e conseguir dinheiro antes de decidir
+9. **Recusar a compra** manda a propriedade a **leilão** entre todos os
+   jogadores — o turno fica pausado até o leilão fechar (ver
+   [Modo Tabuleiro — Leilão Cego](#modo-tabuleiro--leilão-cego))
+
+### Modo Tabuleiro — Economia
+
+Exclusivo do Modo Tabuleiro (o Modo Banca não é afetado). A cada volta
+completa (passagem pelo Início), o extrato de cada jogador é calculado
+e aplicado de uma vez, junto com o crédito de R$ 2.000:
+
+- **Renda passiva** — 15% do aluguel atual de cada propriedade
+  desenvolvida (`RENDA_PASSIVA_PCT`)
+- **IPTU** — 8% do valor de compra de cada propriedade (`IPTU_PCT`)
+- **Manutenção** — 12% do custo da casa, por casa construída; um hotel
+  conta como 5 casas (`MANUTENCAO_PCT`, `HOTEL_EQUIVALE_CASAS`)
+- **Propriedades hipotecadas** não pagam IPTU nem manutenção e não
+  geram renda passiva — estão com o banco
+- **Ações (grupo Preto)** não têm IPTU, manutenção nem renda passiva
+- Se o líquido (crédito + renda − IPTU − manutenção) for negativo, o
+  jogador recebe o que tem direito e a cobrança do restante segue a
+  mesma regra de dívida do resto do jogo (conta para a falência em 3
+  rodadas)
+- Os percentuais ficam em `server/src/constants/economia.ts`, ajustáveis
+  conforme o balanceamento observado em partidas reais
+
+### Modo Tabuleiro — Eventos Econômicos
+
+Exclusivo do Modo Tabuleiro. Ciclo de **3 rodadas**: 1 rodada de aviso (sem
+evento ativo, só o anúncio) seguida de **2 rodadas com o evento ativo**
+(`EVENTO_DURACAO_RODADAS`) — cada rodada dessas afeta o jogo inteiro. O
+anúncio sai **1 rodada antes** do evento começar, então todos sabem ao
+mesmo tempo; o que diferencia os jogadores é a capacidade de reagir, não
+informação privilegiada.
+
+- **Banner de aviso** no topo do tabuleiro durante a rodada de antecedência
+  (não pode ser dispensado — é informação crítica)
+- **Modal** para todos os jogadores no momento em que o evento entra em
+  vigor, com descrição e dica de como reagir
+- **Badge permanente** enquanto o evento está ativo, clicável para reabrir
+  os detalhes
+- Aluguéis, custo de construção e o extrato do Início (IPTU, manutenção,
+  renda passiva) exibidos na UI já refletem o modificador ativo
+
+Catálogo (`server/src/constants/eventos.ts`, espelhado em
+`client/src/constants/eventos.ts`):
+
+| Evento | Efeito |
+|---|---|
+| Crise Imobiliária | Aluguéis −50% |
+| Boom Imobiliário | Aluguéis +50% |
+| IPTU Extraordinário | IPTU dobra |
+| Isenção Fiscal | IPTU zerado |
+| Escassez de Material | Construção +50% |
+| Aquecimento do Mercado | Construção −30% |
+| Inflação | Manutenção +50% |
+| Recessão | Renda passiva zerada |
+| Dividendos Extraordinários | Ações (grupo Preto) rendem 2x |
+| Injeção de Liquidez | Todos recebem R$ 1.000 imediatamente |
+
+Sorteio aleatório, sem repetir o evento anterior em sequência. **Venda de
+casa não usa o modificador de construção** (sempre custo base) —
+anti-exploit contra "comprar barato no boom, vender caro na escassez".
+
+### Modo Tabuleiro — Escolha de Movimento
+
+Exclusivo do Modo Tabuleiro. Depois de rolar os dados, o jogador **escolhe**
+quantas casas andar — dado 1, dado 2 ou a soma — antes de o peão se mover.
+A UI mostra o destino de cada opção: nome da casa, se está livre e por
+quanto, de quem é e o aluguel, ou o tipo de casa especial (carta, imposto,
+feriado...), já refletindo eventos econômicos ativos.
+
+- **Duplo só concede jogada extra se a escolha for a soma** — escolher um
+  dado avulso zera a contagem de duplos (não acumula para os 3 seguidos)
+- **Na prisão não há escolha** — sair (com duplo ou pagando multa) sempre
+  move a soma dos dados, como antes
+- **3 duplos seguidos** vão direto para a prisão, sem oferecer escolha
+- **Timeout**: se os 60s acabarem em meio à escolha, o servidor aplica a
+  soma automaticamente
+- A escolha é uma segunda chamada ao servidor (`escolher-movimento`) —
+  rolar os dados não move mais o peão sozinho
+
+### Modo Tabuleiro — Leilão Cego
+
+Exclusivo do Modo Tabuleiro. Quando o jogador da vez **recusa** comprar a
+propriedade em que caiu, ela vai a leilão entre todos os jogadores ativos —
+**pausa o turno** até o leilão fechar.
+
+- **Cego**: todos dão lance ao mesmo tempo, **sem ver o lance dos outros**
+  — o evento de socket só informa que cada jogador decidiu, nunca o valor.
+  Isso elimina conluio: como ninguém vê o lance alheio, não dá pra combinar
+  "não dou lance se você não der"
+- **Lance mínimo**: 50% do preço de tabela (`LEILAO_LANCE_MINIMO_PCT`)
+- **Lance vinculante**: quem vence é obrigado a comprar — não há como
+  desistir depois. Um único lance por jogador por leilão (constraint
+  `@@unique` no banco)
+- **Empate no maior lance**: vence quem tem **menor patrimônio** (saldo +
+  propriedades + casas) — mecânica de catch-up para quem está perdendo
+- **Ninguém deu lance**: a propriedade continua sem dono
+- **Timeout de 30s** (`LEILAO_TIMEOUT_MS`); quem não decidiu a tempo conta
+  como "passou". Timer resiliente com varredura periódica (mesmo padrão
+  do timer de turno) — um leilão não trava a partida mesmo se o processo
+  reiniciar no meio dele
+- Revelação de todos os lances **só acontece no resultado**, nunca antes
+- Depois do leilão, o turno retoma: avança normalmente, ou o mesmo jogador
+  joga de novo se tinha tirado duplo antes de recusar
 
 ### Prisão
 

@@ -3,9 +3,22 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
-import type { RolarDadosResult } from "@/services/api/turno"
+import type { RolarDadosResult, OpcaoMovimento, EscolhaMovimento } from "@/services/api/turno"
+import ExtratoInicioModal from "../ExtratoInicioModal"
+import { playSfx } from "@/utils/sfx"
 
 const COUNTDOWN_SEGUNDOS = 10
+const ESCOLHA_TIMEOUT_S = 60
+const ESCOLHA_AVISO_S = 10
+
+// Opção de movimento já enriquecida com a situação da casa de destino
+// (livre/dono/preço/aluguel) — calculada em Board (que tem acesso ao
+// tabuleiro e à sessão) e só exibida aqui.
+export type OpcaoInfo = OpcaoMovimento & {
+  statusLabel: string
+  statusTone: "verde" | "vermelho" | "neutro"
+  valor?: number
+}
 
 const DICE_DOTS: Record<number, number[][]> = {
   1: [[1, 1]],
@@ -62,17 +75,24 @@ type TurnoModalProps = {
   // antes da montagem (ex.: refresh de página em meio a uma decisão) — sem
   // repetir a animação de dados de uma rolagem que já aconteceu.
   faseInicial?: FaseTurno
+  // Escolha de Movimento (Mecânica 3): opções já enriquecidas (destino,
+  // dono, preço/aluguel) e callback pra efetivar a escolha.
+  opcoes?: OpcaoInfo[]
+  onEscolherMovimento?: (escolha: EscolhaMovimento) => void
 }
 
-type FaseTurno = "rolando" | "resultado" | "desfecho" | "acao"
+type FaseTurno = "rolando" | "resultado" | "escolha" | "extrato-inicio" | "desfecho" | "acao"
 
 export default function TurnoModal({
   aberto, resultado, nomeCasa, erroCompra,
   onComprar, onRecusar, onFechar, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
+  opcoes, onEscolherMovimento,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
+  const [escolhaRestante, setEscolhaRestante] = useState(ESCOLHA_TIMEOUT_S)
+  const [escolhendo, setEscolhendo] = useState(false)
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -85,16 +105,33 @@ export default function TurnoModal({
   const exigeAcao = resultado?.aguardandoAcao && resultado?.compraDisponivel
 
   // ── Ao abrir: iniciar na fase inicial (normalmente "rolando") ────────
+  // Não se aplica quando `resultado` muda por causa da 2ª chamada
+  // (escolherMovimento resolvido) — esse caso é tratado só pelo useGSAP
+  // abaixo, que decide a próxima fase sem repetir "rolando".
   useEffect(() => {
-    if (aberto && resultado) {
+    if (aberto && resultado && resultado.escolha == null) {
       setFase(faseInicial)
       setCountdown(COUNTDOWN_SEGUNDOS)
     }
   }, [aberto, resultado, faseInicial])
 
-  // ── Sequência de fases (rolando → resultado → desfecho) ──────────────
+  // ── Sequência de fases (rolando → resultado → [escolha] → desfecho) ──
   useGSAP(() => {
     if (!aberto || !resultado) return
+
+    // Escolha de movimento já resolvida (chegou o resultado final da 2ª
+    // chamada, escolherMovimento) — não repete a animação de entrada/dados
+    // (já foram mostrados na 1ª rolagem), só decide a próxima fase.
+    if (resultado.escolha != null) {
+      if (resultado.passouInicio && resultado.extratoInicio) {
+        setFase("extrato-inicio")
+      } else if (exigeAcao) {
+        setFase("acao")
+      } else {
+        setFase("desfecho")
+      }
+      return
+    }
 
     // Entrada do modal
     if (backdropRef.current) {
@@ -130,20 +167,51 @@ export default function TurnoModal({
     // Depois de 1s no resultado, ir para o desfecho
     tl.to({}, { duration: 1 })
     tl.call(() => {
-      if (exigeAcao) {
+      // Libera atualizações de sessão retidas (peão pode mover agora —
+      // o jogador já viu o resultado dos dados). Chamado ANTES de decidir
+      // a próxima fase pra garantir a ordem: peão anda primeiro, extrato
+      // (se houver) aparece depois, e só então o desfecho da casa.
+      onResultadoRevelado?.()
+
+      if (resultado.aguardandoEscolha) {
+        setFase("escolha")
+      } else if (resultado.passouInicio && resultado.extratoInicio) {
+        setFase("extrato-inicio")
+      } else if (exigeAcao) {
         setFase("acao")
       } else {
         setFase("desfecho")
       }
-      // Libera atualizações de sessão retidas (peão pode mover agora —
-      // o jogador já viu o resultado dos dados).
-      onResultadoRevelado?.()
     })
   }, { dependencies: [aberto, resultado, faseInicial] })
 
-  // ── Transição de entrada do desfecho (push lateral suave) ────────────
+  // ── Fase "escolha": countdown de 60s (mesmo timeout do servidor) + SFX
+  // aos 10s restantes. O servidor aplica a soma automaticamente se o
+  // tempo acabar — este timer é só visual/aviso, não fecha o modal
+  // sozinho (quem fecha é a resposta de escolherMovimento ou a detecção
+  // de timeout em Board via session.aguardandoEscolha).
+  const escolhaAvisadoRef = useRef(false)
+  useEffect(() => {
+    if (fase !== "escolha") return
+    setEscolhendo(false)
+    escolhaAvisadoRef.current = false
+    setEscolhaRestante(ESCOLHA_TIMEOUT_S)
+    const inicio = Date.now()
+    const interval = setInterval(() => {
+      const decorrido = (Date.now() - inicio) / 1000
+      const restante = Math.max(0, ESCOLHA_TIMEOUT_S - decorrido)
+      setEscolhaRestante(Math.ceil(restante))
+      if (restante <= ESCOLHA_AVISO_S && !escolhaAvisadoRef.current) {
+        escolhaAvisadoRef.current = true
+        playSfx("tempo-acabando")
+      }
+    }, 250)
+    return () => clearInterval(interval)
+  }, [fase])
+
+  // ── Transição de entrada do desfecho/extrato (push lateral suave) ────
   useGSAP(() => {
-    if ((fase === "desfecho" || fase === "acao") && desfechoRef.current) {
+    if ((fase === "desfecho" || fase === "acao" || fase === "extrato-inicio" || fase === "escolha") && desfechoRef.current) {
       gsap.fromTo(desfechoRef.current,
         { x: 40, opacity: 0 },
         { x: 0, opacity: 1, duration: 0.35, ease: "power3.out" }
@@ -157,7 +225,10 @@ export default function TurnoModal({
       onComplete: () => {
         onFechar()
         // Se tirou duplo e não foi preso, prepara nova rolagem
-        if (resultado?.duplo && !resultado?.foiPreso) {
+        // Mecânica 3: duplo só concede jogada extra se a escolha foi a
+        // soma (duploValido). Resultados sem esse campo (prisão, 3
+        // duplos seguidos) mantêm o comportamento antigo via fallback.
+        if ((resultado?.duploValido ?? resultado?.duplo) && !resultado?.foiPreso) {
           onJogarNovamente?.()
         }
       }
@@ -169,6 +240,14 @@ export default function TurnoModal({
       tl.to(backdropRef.current, { opacity: 0, duration: 0.2 }, 0)
     }
   }, [resultado, onFechar, onJogarNovamente])
+
+  // ── Sair do extrato do Início: só por ação explícita do jogador (clique
+  // no overlay ou no card) — sem fechamento automático por tempo. É a
+  // informação mais importante do turno (créditos, IPTU, manutenção,
+  // renda passiva), então não pode passar batido por causa de um timer.
+  const continuarExtrato = useCallback(() => {
+    setFase(exigeAcao ? "acao" : "desfecho")
+  }, [exigeAcao])
 
   // ── Countdown na fase "desfecho" (só informativos) ───────────────────
   useEffect(() => {
@@ -202,15 +281,24 @@ export default function TurnoModal({
   return (
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] px-4"
+      className={`fixed inset-0 bg-black/70 flex items-center justify-center px-4 ${
+        // Extrato do Início é a informação mais crítica do turno (créditos,
+        // IPTU, manutenção, renda passiva) — fica acima de qualquer outro
+        // modal (evento econômico, leilão), que também usam z-[200].
+        fase === "extrato-inicio" ? "z-[220]" : "z-[200]"
+      }`}
       style={{ opacity: 0 }}
-      // Só permite fechar clicando fora se NÃO exige ação e NÃO está rolando
-      onClick={fase === "desfecho" ? fecharModal : undefined}
+      // Clicar fora fecha na fase "desfecho" (informativo) e avança no
+      // extrato do Início (crítico, mas sem timeout automático — só sai
+      // por ação explícita do jogador, seja no overlay ou no card).
+      onClick={fase === "desfecho" ? fecharModal : fase === "extrato-inicio" ? continuarExtrato : undefined}
     >
       <div
         ref={cardRef}
         onClick={(e) => e.stopPropagation()}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center"
+        className={`bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full text-center transition-[max-width] ${
+          fase === "escolha" ? "max-w-xl" : "max-w-sm"
+        }`}
         style={{ opacity: 0 }}
       >
         {/* ── Dados (sempre visíveis no topo) ── */}
@@ -239,6 +327,75 @@ export default function TurnoModal({
           </div>
         )}
 
+        {/* ── Fase: escolha (Mecânica 3 — escolher dado1, dado2 ou soma) ── */}
+        {fase === "escolha" && (
+          <div ref={desfechoRef}>
+            <p className="font-jaro text-lg text-zinc-100 mb-3">Escolha seu movimento</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {(opcoes ?? []).map((op) => {
+                const ehSoma = op.tipo === "soma"
+                const toneClasses = op.statusTone === "verde"
+                  ? "text-emerald-400"
+                  : op.statusTone === "vermelho"
+                    ? "text-red-400"
+                    : "text-zinc-400"
+                return (
+                  <button
+                    key={op.tipo}
+                    disabled={escolhendo}
+                    onClick={() => {
+                      if (escolhendo) return
+                      setEscolhendo(true)
+                      onEscolherMovimento?.(op.tipo)
+                    }}
+                    className="flex flex-col items-center gap-1 p-3 rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer text-left"
+                  >
+                    <span className="font-jaro text-base text-zinc-100">Andar {op.passos}</span>
+                    <span className="font-inconsolata text-xs text-zinc-300 text-center leading-snug">{op.nomeCasa}</span>
+                    <span className={`font-inconsolata text-[11px] text-center leading-snug ${toneClasses}`}>
+                      {op.statusLabel}
+                      {op.valor != null && ` · R$ ${op.valor.toLocaleString("pt-BR")}`}
+                    </span>
+                    {op.passaInicio && (
+                      <span className="font-inconsolata text-[10px] text-emerald-400">+R$ 2.000 (Início)</span>
+                    )}
+                    {resultado.duplo && (
+                      ehSoma ? (
+                        <span className="mt-1 font-inconsolata text-[10px] font-semibold text-amber-400">
+                          ⭐ SOMA — 🔁 joga de novo!
+                        </span>
+                      ) : (
+                        <span className="mt-1 font-inconsolata text-[10px] text-zinc-500">
+                          ⚠️ sem jogada extra
+                        </span>
+                      )
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="font-inconsolata text-[10px] text-zinc-600 mt-3">
+              ⏱ {escolhaRestante}s — se o tempo acabar, a soma é aplicada automaticamente
+            </p>
+          </div>
+        )}
+
+        {/* ── Fase: extrato-inicio (crédito/IPTU/manutenção da passagem) ── */}
+        {fase === "extrato-inicio" && resultado.extratoInicio && (
+          <div
+            ref={desfechoRef}
+            onClick={continuarExtrato}
+            className="cursor-pointer"
+          >
+            <ExtratoInicioModal extrato={resultado.extratoInicio} />
+            <p className="font-inconsolata text-[10px] text-zinc-600 mt-3">
+              Toque para continuar
+            </p>
+          </div>
+        )}
+
         {/* ── Fase: desfecho (informativo, com countdown) ── */}
         {fase === "desfecho" && (
           <div ref={desfechoRef}>
@@ -254,8 +411,9 @@ export default function TurnoModal({
               </p>
             )}
 
-            {/* Passou pelo Início */}
-            {resultado.passouInicio && (
+            {/* Passou pelo Início — já detalhado na fase "extrato-inicio";
+                aqui só cobre o caso raro em que não há extrato calculado. */}
+            {resultado.passouInicio && !resultado.extratoInicio && (
               <p className="font-inconsolata text-sm text-emerald-400 mb-1">
                 +R$ 2.000 por passar pelo Início
               </p>

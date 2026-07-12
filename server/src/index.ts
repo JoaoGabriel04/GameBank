@@ -154,6 +154,12 @@ async function start() {
     turnoService.varrerTurnosExpirados().catch(err => {
       logger.error({ err }, "erro na varredura de turnos expirados");
     });
+    // Leilão Cego (Mecânica 4): mesmo risco do BUG 6, mas para o timer do
+    // leilão — sem isso um leilão travado trava a partida inteira, já que
+    // o turno fica pausado enquanto emLeilao for true.
+    turnoService.varrerLeiloesExpirados().catch(err => {
+      logger.error({ err }, "erro na varredura de leilões expirados");
+    });
   }, 15_000);
   startCronJobs();
   initQueueMonitoring();

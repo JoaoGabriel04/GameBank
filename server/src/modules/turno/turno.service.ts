@@ -6,6 +6,25 @@ import { TOTAL_CASAS, POS_PRISAO, CREDITO_INICIO, MULTA_PRISAO, getCasa, type Ca
 import { PropriedadeRepository } from "../propriedade/propriedade.repository.js";
 import { PropriedadeService } from "../propriedade/propriedade.service.js";
 import { CartaService } from "../carta/carta.service.js";
+import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS, LEILAO_LANCE_MINIMO_PCT, LEILAO_TIMEOUT_MS } from "../../constants/economia.js";
+import { getEvento, sortearEvento, EVENTO_DURACAO_RODADAS, type EventoEfeito } from "../../constants/eventos.js";
+import { leilaoRepository } from "../leilao/leilao.repository.js";
+
+export type ExtratoInicio = {
+  creditoInicio: number;
+  rendaPassiva: number;
+  iptu: number;
+  manutencao: number;
+  liquido: number;
+  detalhes: Array<{
+    propId: number;
+    nome: string;
+    casas: number;
+    iptu: number;
+    manutencao: number;
+    rendaPassiva: number;
+  }>;
+};
 
 const propriedadeRepository = new PropriedadeRepository();
 const propriedadeService = new PropriedadeService();
@@ -28,6 +47,20 @@ function cancelTurnoTimer(sessionId: number) {
   if (timer) {
     clearTimeout(timer);
     turnoTimers.delete(sessionId);
+  }
+}
+
+// Timer do leilão — mesmo racional/limitação do turnoTimers (em memória,
+// por isso a varredura periódica de varrerLeiloesExpirados é obrigatória:
+// sem ela, um leilão perdido por hibernação/restart trava a partida
+// inteira, já que o turno não avança enquanto emLeilao for true).
+const leilaoTimers = new Map<number, NodeJS.Timeout>();
+
+function cancelLeilaoTimer(sessionId: number) {
+  const timer = leilaoTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    leilaoTimers.delete(sessionId);
   }
 }
 
@@ -63,6 +96,12 @@ class TurnoService {
       aguardandoAcao: false,
     });
 
+    // Semeia o anúncio do primeiro evento — a rodada 1 já nasce como
+    // "rodada de aviso" (sem evento ativo, anunciando o que vem na
+    // rodada 2). Sem isso, a primeira virada de rodada não teria nada
+    // pra promover a eventoAtual (ver processarViradaDeRodada).
+    await turnoRepository.updateEvento(sessionId, { eventoProximo: sortearEvento().codigo });
+
     if (primeiro) await this.agendarTimeout(sessionId);
     return { ordem, turnoAtualPlayerId: primeiro };
   }
@@ -89,6 +128,10 @@ class TurnoService {
       if (session.aguardandoAcao) {
         throw new AppError(400, "Resolva a ação pendente antes de rolar os dados.");
       }
+      // Não pode rolar de novo se já rolou e ainda não escolheu o movimento.
+      if (session.aguardandoEscolha) {
+        throw new AppError(400, "Escolha o movimento antes de rolar novamente.");
+      }
 
       const player = await turnoRepository.findPlayerParaJogada(playerId);
       if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
@@ -99,9 +142,13 @@ class TurnoService {
         throw new AppError(403, "Você já saiu desta partida.");
       }
 
+      await this.aplicarJurosEmprestimo(sessionId, player.id);
+
       const falencia = await this.verificarFalencia(sessionId, session, player);
       if (falencia) return falencia;
 
+      // PRISÃO: fluxo inalterado — não há escolha de movimento na prisão,
+      // sempre vale a soma.
       if (player.emPrisao) {
         return this.rolarDadosEmPrisao(sessionId, session, player);
       }
@@ -114,60 +161,237 @@ class TurnoService {
       const contagemAtual = duplo ? contagemAnterior + 1 : 0;
       duplosConsecutivos.set(playerId, contagemAtual);
 
-      // 3 duplos seguidos → prisão direta, sem completar o movimento e
-      // sem jogar de novo.
+      // 3 duplos seguidos → prisão direta, sem oferecer escolha de
+      // movimento e sem jogar de novo.
       if (contagemAtual >= 3) {
         duplosConsecutivos.set(playerId, 0);
         await turnoRepository.moverPlayer(playerId, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
-        await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: false });
+        await turnoRepository.registrarDados(sessionId, {
+          ultimoDado1: dado1, ultimoDado2: dado2,
+          aguardandoAcao: false, aguardandoEscolha: false,
+        });
 
         const avanco = await this.avancarTurno(sessionId, session);
         return { dado1, dado2, duplo: true, foiPreso: true, novaPosicao: POS_PRISAO, passouInicio: false, ...avanco };
       }
 
-      await turnoRepository.registrarDados(sessionId, { ultimoDado1: dado1, ultimoDado2: dado2, aguardandoAcao: true });
-      const { novaPosicao, passouInicio, resolucao } = await this.moverEResolver(sessionId, player, dado1 + dado2);
+      // Guarda os dados e entra em estado de escolha — NÃO move ainda.
+      await turnoRepository.registrarDados(sessionId, {
+        ultimoDado1: dado1, ultimoDado2: dado2,
+        aguardandoAcao: false, aguardandoEscolha: true,
+      });
 
-      // Auto-avança o turno após jogada sem duplos, OU se a casa força o
-      // fim da vez (Feriado, prisão) mesmo com duplo — a menos que haja
-      // ação pendente (compra de propriedade).
-      if ((!duplo || resolucao.encerraVez) && !resolucao.aguardandoAcao) {
-        const avanco = await this.avancarTurno(sessionId, session);
-        return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao, ...avanco };
-      }
-
-      // Duplo ou ação pendente: não avança o turno, mas reseta o timer
+      // Reset do timer: o jogador tem os 60s para escolher o movimento.
       await this.agendarTimeout(sessionId);
+
       const { emitUpdatedSession } = await import("../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
 
-      return { dado1, dado2, duplo, foiPreso: false, novaPosicao, passouInicio, ...resolucao };
+      return {
+        dado1, dado2, duplo,
+        aguardandoEscolha: true,
+        opcoes: this.calcularOpcoesMovimento(player.posicao, dado1, dado2),
+      };
     });
   }
 
-  // Move o jogador `total` casas (com crédito de início se aplicável) e
-  // dispara resolverCasa — compartilhado entre a rolagem normal e a saída
-  // (com sucesso ou forçada) da prisão.
+  /** Retorna as 3 opções de movimento com o destino de cada uma. */
+  private calcularOpcoesMovimento(posAtual: number, dado1: number, dado2: number) {
+    const montar = (passos: number, tipo: "dado1" | "dado2" | "soma") => {
+      const destino = (posAtual + passos) % TOTAL_CASAS;
+      const casa = getCasa(destino);
+      return {
+        tipo,
+        passos,
+        destino,
+        nomeCasa: casa.nome,
+        tipoCasa: casa.tipo,
+        passaInicio: (posAtual + passos) >= TOTAL_CASAS,
+      };
+    };
+
+    return [
+      montar(dado1, "dado1"),
+      montar(dado2, "dado2"),
+      montar(dado1 + dado2, "soma"),
+    ];
+  }
+
+  // Público, com lock — chamado pelo jogador via API.
+  async escolherMovimento(
+    sessionId: number,
+    playerId: number,
+    escolha: "dado1" | "dado2" | "soma"
+  ) {
+    return withLock(`turno:${sessionId}`, async () => {
+      const session = await this.validarESessaoAtiva(sessionId);
+
+      if (session.turnoAtualPlayerId !== playerId) {
+        throw new AppError(403, "Não é sua vez de jogar.");
+      }
+
+      return this.escolherMovimentoInterno(sessionId, session, escolha);
+    });
+  }
+
+  // Privado, SEM lock — chamado tanto por escolherMovimento (com lock
+  // próprio) quanto por avancarPorTimeout (que já está dentro de um
+  // withLock). Chamar escolherMovimento a partir de avancarPorTimeout
+  // causaria deadlock (mesmo mutex de sessão, sem reentrância).
+  private async escolherMovimentoInterno(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>,
+    escolha: "dado1" | "dado2" | "soma",
+    porTimeout = false
+  ) {
+    if (!session.aguardandoEscolha) {
+      throw new AppError(400, "Não há escolha de movimento pendente.");
+    }
+
+    const playerId = session.turnoAtualPlayerId;
+    if (!playerId) throw new AppError(400, "Nenhum jogador na vez.");
+
+    const dado1 = session.ultimoDado1 ?? 0;
+    const dado2 = session.ultimoDado2 ?? 0;
+    if (!dado1 || !dado2) throw new AppError(400, "Dados não encontrados.");
+
+    const player = await turnoRepository.findPlayerParaJogada(playerId);
+    if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+
+    // Quantos passos, conforme a escolha
+    const passos = escolha === "dado1" ? dado1
+                 : escolha === "dado2" ? dado2
+                 : dado1 + dado2;
+
+    const duplo = dado1 === dado2;
+
+    // ── REGRA CRÍTICA: duplo só concede nova jogada se escolher a SOMA ──
+    // Senão seria abuso: escolher o dado menor E ainda jogar de novo.
+    const duploValido = duplo && escolha === "soma";
+
+    // Se o duplo NÃO for válido (escolheu dado avulso), zera a contagem
+    // — não acumula para os 3 duplos.
+    if (duplo && !duploValido) {
+      duplosConsecutivos.set(playerId, 0);
+    }
+
+    // Sai do estado de escolha e entra em resolução
+    await turnoRepository.registrarDados(sessionId, {
+      aguardandoEscolha: false,
+      aguardandoAcao: true,
+    });
+
+    const { novaPosicao, passouInicio, resolucao, extratoInicio } =
+      await this.moverEResolver(sessionId, player, passos);
+
+    // Avanço do turno: mesma lógica de antes, mas usando duploValido
+    // e respeitando encerraVez (feriado/prisão encerram mesmo com duplo)
+    const deveEncerrar = (!duploValido || resolucao.encerraVez) && !resolucao.aguardandoAcao;
+
+    if (deveEncerrar) {
+      const avanco = await this.avancarTurno(sessionId, session, porTimeout);
+      return {
+        dado1, dado2, duplo, duploValido, escolha, passos,
+        foiPreso: false, novaPosicao, passouInicio,
+        ...resolucao, ...avanco, extratoInicio,
+      };
+    }
+
+    // Duplo válido ou ação pendente: não avança, reseta o timer
+    await this.agendarTimeout(sessionId);
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
+
+    return {
+      dado1, dado2, duplo, duploValido, escolha, passos,
+      foiPreso: false, novaPosicao, passouInicio,
+      ...resolucao, extratoInicio,
+    };
+  }
+
+  // Move o jogador `total` casas (com crédito de início + extrato de
+  // IPTU/manutenção/renda passiva se aplicável) e dispara resolverCasa —
+  // compartilhado entre a rolagem normal e a saída (com sucesso ou
+  // forçada) da prisão.
   private async moverEResolver(
     sessionId: number,
-    player: { id: number; nome: string; posicao: number; saldo: number },
-    total: number
+    player: { id: number; nome: string; posicao: number; saldo: number; userId?: number | null },
+    total: number,
+    opts?: { creditarInicio?: boolean } // permite suprimir (ex: Vá para Prisão)
   ) {
     const novaPosicao = (player.posicao + total) % TOTAL_CASAS;
     const passouInicio = (player.posicao + total) >= TOTAL_CASAS;
-    const saldoAposInicio = passouInicio ? player.saldo + CREDITO_INICIO : player.saldo;
+    const deveCreditar = passouInicio && (opts?.creditarInicio ?? true);
 
-    await turnoRepository.moverPlayer(player.id, {
-      posicao: novaPosicao,
-      ...(passouInicio ? { saldo: saldoAposInicio } : {}),
-    });
+    let saldoAtualizado = player.saldo;
+    let extrato: ExtratoInicio | null = null;
 
-    const resolucao = await this.resolverCasa(sessionId, { ...player, posicao: novaPosicao, saldo: saldoAposInicio }, total);
+    // Mover primeiro (posição sempre atualiza)
+    await turnoRepository.moverPlayer(player.id, { posicao: novaPosicao });
+
+    if (deveCreditar) {
+      extrato = await this.calcularExtratoInicio(sessionId, player.id);
+
+      if (extrato.liquido >= 0) {
+        // Saldo positivo: credita direto
+        saldoAtualizado = player.saldo + extrato.liquido;
+        await turnoRepository.moverPlayer(player.id, { saldo: saldoAtualizado });
+
+        await turnoRepository.criarHistorico({
+          sessionId,
+          tipo: "PASSAGEM_INICIO",
+          detalhes: `${player.nome} passou pelo Início: +R$ ${extrato.creditoInicio} (crédito) ` +
+                    `+R$ ${extrato.rendaPassiva} (renda passiva) ` +
+                    `−R$ ${extrato.iptu} (IPTU) −R$ ${extrato.manutencao} (manutenção) ` +
+                    `= R$ ${extrato.liquido >= 0 ? "+" : ""}${extrato.liquido}`,
+        });
+      } else {
+        // Líquido negativo: credita o que recebe, cobra o que deve.
+        // Usa cobrarComFallbackDivida (gera dívida se não tiver saldo, e
+        // já integra com a regra de falência em 3 rodadas).
+        const aReceber = extrato.creditoInicio + extrato.rendaPassiva;
+        const aPagar = extrato.iptu + extrato.manutencao;
+
+        // Credita primeiro
+        const saldoComReceita = player.saldo + aReceber;
+        await turnoRepository.moverPlayer(player.id, { saldo: saldoComReceita });
+
+        // Depois cobra (pode gerar dívida)
+        await this.cobrarComFallbackDivida(
+          sessionId,
+          { ...player, saldo: saldoComReceita },
+          aPagar,
+          null, // credor = banco
+          `IPTU e manutenção (passagem pelo Início)`
+        );
+
+        // Recarrega saldo real após a cobrança
+        const atualizado = await turnoRepository.findPlayer(player.id);
+        saldoAtualizado = atualizado?.saldo ?? saldoComReceita;
+      }
+
+      // Notifica a sala com o extrato — o próprio jogador já recebe o
+      // extrato completo na resposta HTTP da rolagem; este evento serve
+      // pro toast curto dos demais jogadores.
+      const { emitToRoom } = await import("../../lib/socket.js");
+      emitToRoom(sessionId, "inicio:extrato", {
+        playerId: player.id,
+        playerUserId: player.userId ?? null,
+        playerNome: player.nome,
+        extrato,
+      });
+    }
+
+    const resolucao = await this.resolverCasa(
+      sessionId,
+      { ...player, posicao: novaPosicao, saldo: saldoAtualizado },
+      total
+    );
 
     const { emitUpdatedSession } = await import("../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);
 
-    return { novaPosicao, passouInicio, resolucao };
+    return { novaPosicao, passouInicio: deveCreditar, resolucao, extratoInicio: extrato };
   }
 
   // Rodadas 1-2 presas: 1 tentativa de duplo (falhou → turnosPrisao--,
@@ -224,6 +448,12 @@ class TurnoService {
     };
   }
 
+  private async aplicarJurosEmprestimo(sessionId: number, playerId: number) {
+    const { EmprestimoService } = await import("../emprestimo/emprestimo.service.js");
+    const emprestimoService = new EmprestimoService();
+    return emprestimoService.aplicarJurosEmprestimo(sessionId, playerId);
+  }
+
   private async verificarFalencia(
     sessionId: number,
     session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>,
@@ -253,6 +483,11 @@ class TurnoService {
         patrimony += sp.casas * sp.propriedade.custo_casa;
       }
     }
+
+    // ── ANTES da falência limpar as propriedades, executar a garantia ──
+    const { EmprestimoService } = await import("../emprestimo/emprestimo.service.js");
+    const emprestimoService = new EmprestimoService();
+    await emprestimoService.executarGarantia(sessionId, player.id);
 
     // Falência: propriedades voltam ao banco (sem dono, sem leilão),
     // jogador marcado como falido e removido dos turnos.
@@ -297,6 +532,7 @@ class TurnoService {
     numDados: number
   ) {
     const casa = getCasa(player.posicao);
+    const mods = await this.getModificadores(sessionId);
     let aguardandoAcao = false;
     let compraDisponivel: { propId: number; sessionPossesId: number; nome: string; preco: number } | undefined;
     let mensagem = "";
@@ -323,23 +559,28 @@ class TurnoService {
           };
         } else if (posse.playerId !== player.id && !posse.hipotecada && posse.player) {
           const valor = casa.tipo === "acao"
-            ? 500 * numDados
-            : this.calcularAluguel(posse.propriedade, posse.casas);
-          const r = await this.cobrarComFallbackDivida(
-            sessionId, player, valor, posse.player,
-            `Aluguel de R$ ${valor} em ${posse.propriedade.nome}`
-          );
-          mensagem = r.debtCriada
-            ? `${player.nome} pagou R$ ${r.pago} e ficou devendo R$ ${r.debtValor} de aluguel em ${posse.propriedade.nome}.`
-            : `${player.nome} pagou R$ ${valor} de aluguel em ${posse.propriedade.nome}.`;
-          const { emitToRoom } = await import("../../lib/socket.js");
-          emitToRoom(sessionId, "aluguel:toast", {
-            fromPlayerNome: player.nome,
-            toPlayerId: posse.player.id,
-            toUserId: posse.player.userId,
-            valor,
-            propriedadeNome: posse.propriedade.nome,
-          });
+            ? Math.round(500 * numDados * (mods.acoesMult ?? 1))
+            : Math.round(this.calcularAluguel(posse.propriedade, posse.casas) * (mods.aluguelMult ?? 1));
+          // Preso não recebe aluguel — o pagador não paga nada
+          if (posse.player.emPrisao) {
+            mensagem = `${posse.player.nome} está na prisão e não pode receber aluguel — ${player.nome} não pagou.`;
+          } else {
+            const r = await this.cobrarComFallbackDivida(
+              sessionId, player, valor, posse.player,
+              `Aluguel de R$ ${valor} em ${posse.propriedade.nome}`
+            );
+            mensagem = r.debtCriada
+              ? `${player.nome} pagou R$ ${r.pago} e ficou devendo R$ ${r.debtValor} de aluguel em ${posse.propriedade.nome}.`
+              : `${player.nome} pagou R$ ${valor} de aluguel em ${posse.propriedade.nome}.`;
+            const { emitToRoom } = await import("../../lib/socket.js");
+            emitToRoom(sessionId, "aluguel:toast", {
+              fromPlayerNome: player.nome,
+              toPlayerId: posse.player.id,
+              toUserId: posse.player.userId,
+              valor,
+              propriedadeNome: posse.propriedade.nome,
+            });
+          }
         }
         break;
       }
@@ -405,6 +646,144 @@ class TurnoService {
     await turnoRepository.setAguardandoAcao(sessionId, aguardandoAcao);
 
     return { casa, aguardandoAcao, compraDisponivel, mensagem: mensagem || undefined, encerraVez };
+  }
+
+  // Processa a virada de rodada: ciclo de 3 rodadas — 1 de aviso (sem
+  // evento ativo, eventoProximo anunciado) + EVENTO_DURACAO_RODADAS (2)
+  // rodadas com o evento ativo. Máquina de estados baseada em
+  // eventoRodadasRestantes (quantas rodadas o eventoAtual ainda dura),
+  // não em aritmética sobre o número da rodada — assim o evento pode
+  // durar mais de 1 rodada sem precisar recalcular a partir de rodadaAtual.
+  private async processarViradaDeRodada(
+    sessionId: number,
+    novaRodada: number,
+    session: { eventoAtual?: string | null; eventoProximo?: string | null; eventoRodadasRestantes?: number | null }
+  ) {
+    const restantes = session.eventoRodadasRestantes ?? 0;
+
+    let eventoAtivo: string | null;
+    let novasRestantes: number;
+    let eventoProximo: string | null;
+    let eventoRecemAtivado = false;
+    // Continuação pura (evento já ativo, só decrementando) não muda nada
+    // que o cliente precise saber além do que a sessão já carrega — sem
+    // este flag, o modal de ativação reapareceria a cada rodada em que o
+    // evento (agora com 2 rodadas de duração) segue ativo.
+    let houveTransicao = true;
+
+    if (session.eventoAtual && restantes > 1) {
+      // Evento em curso, ainda tem rodada(s) sobrando — continua igual.
+      eventoAtivo = session.eventoAtual;
+      novasRestantes = restantes - 1;
+      eventoProximo = null;
+      houveTransicao = false;
+    } else if (session.eventoAtual) {
+      // Evento acabou de esgotar as rodadas — esta é a rodada de aviso:
+      // sem evento ativo, sorteia e anuncia o próximo.
+      eventoAtivo = null;
+      novasRestantes = 0;
+      eventoProximo = sortearEvento(session.eventoAtual).codigo;
+    } else if (session.eventoProximo) {
+      // Estávamos na rodada de aviso — o evento anunciado agora começa.
+      eventoAtivo = session.eventoProximo;
+      novasRestantes = EVENTO_DURACAO_RODADAS;
+      eventoProximo = null;
+      eventoRecemAtivado = true;
+    } else {
+      // Sem evento e sem aviso pendente (não deveria acontecer após o
+      // bootstrap em iniciarTurnos, mas não deixa a sessão travada).
+      eventoAtivo = null;
+      novasRestantes = 0;
+      eventoProximo = null;
+    }
+
+    await turnoRepository.updateEvento(sessionId, {
+      eventoAtual: eventoAtivo,
+      eventoProximo,
+      eventoRodadasRestantes: novasRestantes,
+    });
+
+    const def = getEvento(eventoAtivo);
+    if (eventoRecemAtivado && def?.efeito.creditoImediato) {
+      await turnoRepository.creditarTodosAtivos(sessionId, def.efeito.creditoImediato);
+    }
+
+    if (eventoRecemAtivado) {
+      await turnoRepository.criarHistorico({
+        sessionId,
+        tipo: "EVENTO_ECONOMICO",
+        detalhes: `Rodada ${novaRodada}: ${def?.nome} — ${def?.descricao}`,
+      });
+    }
+
+    // Só notifica em transições reais (evento ativou ou virou aviso) —
+    // continuação pura não emite, pra não reabrir o modal de ativação
+    // a cada rodada em que o mesmo evento segue valendo.
+    if (houveTransicao) {
+      const { emitToRoom } = await import("../../lib/socket.js");
+      emitToRoom(sessionId, "evento:mudou", {
+        rodada: novaRodada,
+        eventoAtual: eventoAtivo,
+        eventoProximo,
+      });
+    }
+  }
+
+  // Busca os multiplicadores do evento econômico ativo na sessão (evento
+  // nenhum → objeto vazio, todos os multiplicadores tratados como 1/0
+  // pelos callers). Público — reutilizado por propriedade.service.ts para
+  // o custo de construção via getEvento (import puro, sem circularidade).
+  async getModificadores(sessionId: number): Promise<EventoEfeito> {
+    const session = await turnoRepository.findEventoAtual(sessionId);
+    return getEvento(session?.eventoAtual)?.efeito ?? {};
+  }
+
+  // Calcula o extrato completo (crédito do Início, renda passiva, IPTU e
+  // manutenção de todas as propriedades do jogador) para a passagem pelo
+  // Início. Hipotecadas e ações (grupo Preto) ficam de fora.
+  private async calcularExtratoInicio(sessionId: number, playerId: number): Promise<ExtratoInicio> {
+    const posses = await propriedadeRepository.findSessionPossesByPlayer(sessionId, playerId);
+    const mods = await this.getModificadores(sessionId);
+
+    let iptu = 0;
+    let manutencao = 0;
+    let rendaPassiva = 0;
+    const detalhes: ExtratoInicio["detalhes"] = [];
+
+    for (const posse of posses) {
+      const prop = posse.propriedade;
+      if (!prop) continue;
+
+      // Hipotecada não paga IPTU/manutenção nem gera renda — está com o banco.
+      if (posse.hipotecada) continue;
+      // Ações (grupo Preto) não têm IPTU/manutenção nem renda passiva.
+      if (prop.tipo === "ação") continue;
+
+      const casas = posse.casas ?? 0;
+      const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
+
+      const propIptu = Math.round(prop.custo_compra * IPTU_PCT * (mods.iptuMult ?? 1));
+      const propManut = Math.round(prop.custo_casa * MANUTENCAO_PCT * casasEquivalentes * (mods.manutencaoMult ?? 1));
+      const aluguelAtual = this.calcularAluguel(prop, casas);
+      const propRenda = Math.round(aluguelAtual * RENDA_PASSIVA_PCT * (mods.rendaPassivaMult ?? 1));
+
+      iptu += propIptu;
+      manutencao += propManut;
+      rendaPassiva += propRenda;
+
+      detalhes.push({
+        propId: prop.id,
+        nome: prop.nome,
+        casas,
+        iptu: propIptu,
+        manutencao: propManut,
+        rendaPassiva: propRenda,
+      });
+    }
+
+    const liquido = CREDITO_INICIO + rendaPassiva - iptu - manutencao;
+
+    return { creditoInicio: CREDITO_INICIO, rendaPassiva, iptu, manutencao, liquido, detalhes };
   }
 
   private calcularAluguel(prop: { aluguel_base: number; aluguel_1c: number; aluguel_2c: number; aluguel_3c: number; aluguel_4c: number; aluguel_hotel: number }, casas: number) {
@@ -478,17 +857,82 @@ class TurnoService {
       const session = await this.validarPendenciaDeCompra(sessionId, playerId);
       await turnoRepository.setAguardandoAcao(sessionId, false);
 
-      const foiDuplo = session.ultimoDado1 != null && session.ultimoDado1 === session.ultimoDado2;
-      if (!foiDuplo) {
-        const avanco = await this.avancarTurno(sessionId, session);
-        return { recusado: true, ...avanco };
+      const casa = getCasa(session.posicaoJogador);
+      if (casa.propId == null) {
+        // Nada a leiloar (não deveria acontecer — validarPendenciaDeCompra
+        // já exige aguardandoAcao — mas defensivamente cai no comportamento
+        // antigo em vez de travar o turno).
+        return this.finalizarRecusaSemLeilao(sessionId, session);
       }
 
-      await this.agendarTimeout(sessionId);
-      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
-      await emitUpdatedSession(sessionId);
-      return { recusado: true, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
+      // Recusar dispara o Leilão Cego — pausa o turno até o leilão fechar.
+      return this.iniciarLeilao(sessionId, session, casa.propId);
     });
+  }
+
+  private async finalizarRecusaSemLeilao(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>
+  ) {
+    const foiDuplo = session.ultimoDado1 != null && session.ultimoDado1 === session.ultimoDado2;
+    if (!foiDuplo) {
+      const avanco = await this.avancarTurno(sessionId, session);
+      return { recusado: true, ...avanco };
+    }
+
+    await this.agendarTimeout(sessionId);
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
+    return { recusado: true, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
+  }
+
+  // Leilão Cego (Mecânica 4): abre o leilão para todos os jogadores ativos.
+  // PAUSA o turno — o timer de turno é cancelado e só retoma quando o
+  // leilão fechar (encerrarLeilaoInterno). Lock já é o de `turno:${id}`
+  // (herdado de recusarCompra) — iniciarLeilao NUNCA adquire o lock de
+  // leilão, só o darLance/encerrarLeilaoPorTimeout fazem isso.
+  private async iniciarLeilao(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>,
+    propId: number
+  ) {
+    const posse = await propriedadeRepository.findSessionPosses(sessionId, propId);
+    if (!posse?.propriedade) {
+      return this.finalizarRecusaSemLeilao(sessionId, session);
+    }
+
+    const lanceMinimo = Math.round(posse.propriedade.custo_compra * LEILAO_LANCE_MINIMO_PCT);
+
+    // Pausa o timer do turno — o leilão tem timer próprio (30s).
+    cancelTurnoTimer(sessionId);
+
+    await turnoRepository.updateLeilao(sessionId, {
+      emLeilao: true,
+      leilaoPropId: propId,
+      leilaoIniciadoEm: new Date(),
+      leilaoLanceMinimo: lanceMinimo,
+    });
+
+    // Limpa lances antigos desta propriedade (segurança — ex.: um leilão
+    // anterior para a mesma prop que não tenha limpado corretamente).
+    await leilaoRepository.limparLances(sessionId, propId);
+
+    // Agenda o encerramento em 30s (timer resiliente — ver agendarTimeoutLeilao)
+    await this.agendarTimeoutLeilao(sessionId);
+
+    const { emitToRoom } = await import("../../lib/socket.js");
+    emitToRoom(sessionId, "leilao:iniciado", {
+      propId,
+      nome: posse.propriedade.nome,
+      precoTabela: posse.propriedade.custo_compra,
+      lanceMinimo,
+      timeoutMs: LEILAO_TIMEOUT_MS,
+    });
+
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
+
+    return { recusado: true, leilaoIniciado: true, propId, lanceMinimo };
   }
 
   async usarCartaPrisao(sessionId: number, playerId: number) {
@@ -523,6 +967,215 @@ class TurnoService {
     return { ...session, posicaoJogador: player.posicao };
   }
 
+  // ═══════════════════ Leilão Cego (Mecânica 4) ═══════════════════════
+  //
+  // Lock PRÓPRIO (`leilao:${id}`) — NUNCA aninhado com `turno:${id}`.
+  // iniciarLeilao/encerrarLeilaoInterno rodam dentro do lock de turno
+  // (herdado de recusarCompra/avancarPorTimeout); darLance e
+  // encerrarLeilaoPorTimeout rodam dentro do lock de leilão. Os dois
+  // nunca se chamam um ao outro dentro do lock errado — deadlock evitado
+  // por construção.
+
+  async darLance(sessionId: number, playerId: number, valor: number) {
+    return withLock(`leilao:${sessionId}`, async () => {
+      const session = await turnoRepository.findSessionComJogadores(sessionId);
+      if (!session?.emLeilao || session.leilaoPropId == null) {
+        throw new AppError(400, "Não há leilão em andamento.");
+      }
+
+      const player = await turnoRepository.findPlayerParaJogada(playerId);
+      if (!player || player.sessionId !== sessionId || player.desistiu) {
+        throw new AppError(403, "Você não participa desta sessão.");
+      }
+
+      // Lance é VINCULANTE — não pode mudar de ideia depois de dar.
+      const existente = await leilaoRepository.findLance(sessionId, session.leilaoPropId, playerId);
+      if (existente) throw new AppError(400, "Você já deu seu lance neste leilão.");
+
+      // valor 0 = passou (não quer participar)
+      if (valor > 0) {
+        const minimo = session.leilaoLanceMinimo ?? 0;
+        if (valor < minimo) {
+          throw new AppError(400, `O lance mínimo é R$ ${minimo}.`);
+        }
+        if (valor > player.saldo) {
+          throw new AppError(400, "Você não tem saldo suficiente para esse lance.");
+        }
+      }
+
+      await leilaoRepository.criarLance({
+        sessionId, propId: session.leilaoPropId, playerId, valor,
+      });
+
+      // SIGILO: nunca inclui o valor — só avisa que o jogador decidiu.
+      const { emitToRoom } = await import("../../lib/socket.js");
+      emitToRoom(sessionId, "leilao:jogador_decidiu", { playerId });
+
+      // Se todos os jogadores ativos já deram lance, encerra antes do timeout.
+      const ativos = await leilaoRepository.contarJogadoresAtivos(sessionId);
+      const lances = await leilaoRepository.contarLances(sessionId, session.leilaoPropId);
+
+      if (lances >= ativos) {
+        return this.encerrarLeilaoInterno(sessionId, session);
+      }
+
+      return { lanceRegistrado: true };
+    });
+  }
+
+  // Privado — chamado de dentro do lock de leilão (darLance,
+  // encerrarLeilaoPorTimeout). Nunca adquire o lock de turno.
+  private async encerrarLeilaoInterno(
+    sessionId: number,
+    session: NonNullable<Awaited<ReturnType<typeof turnoRepository.findSessionComJogadores>>>
+  ) {
+    const propId = session.leilaoPropId;
+    if (propId == null) return null;
+
+    cancelLeilaoTimer(sessionId);
+
+    const lances = await leilaoRepository.findLances(sessionId, propId);
+    const validos = lances.filter(l => l.valor > 0);
+
+    let vencedor: { playerId: number; valor: number } | null = null;
+
+    if (validos.length > 0) {
+      const maiorValor = Math.max(...validos.map(l => l.valor));
+      const empatados = validos.filter(l => l.valor === maiorValor);
+
+      if (empatados.length === 1) {
+        vencedor = { playerId: empatados[0].playerId, valor: maiorValor };
+      } else {
+        // ── DESEMPATE: menor patrimônio leva (mecânica de catch-up) ──
+        const patrimonios = await Promise.all(
+          empatados.map(async l => ({
+            playerId: l.playerId,
+            patrimonio: await this.calcularPatrimonio(l.playerId),
+          }))
+        );
+        patrimonios.sort((a, b) => a.patrimonio - b.patrimonio);
+        vencedor = { playerId: patrimonios[0].playerId, valor: maiorValor };
+      }
+    }
+
+    if (vencedor) {
+      // Lance VINCULANTE: o vencedor é obrigado a comprar, pelo valor do
+      // lance (não o de tabela).
+      await propriedadeService.buyPropPorValor(propId, sessionId, vencedor.playerId, vencedor.valor);
+
+      await turnoRepository.criarHistorico({
+        sessionId,
+        tipo: "LEILAO",
+        detalhes: `Leilão encerrado: propriedade arrematada por R$ ${vencedor.valor}`,
+      });
+    } else {
+      await turnoRepository.criarHistorico({
+        sessionId,
+        tipo: "LEILAO",
+        detalhes: `Leilão encerrado sem lances — propriedade segue sem dono.`,
+      });
+    }
+
+    // Limpa o estado de leilão
+    await turnoRepository.updateLeilao(sessionId, {
+      emLeilao: false,
+      leilaoPropId: null,
+      leilaoIniciadoEm: null,
+      leilaoLanceMinimo: null,
+    });
+    await leilaoRepository.limparLances(sessionId, propId);
+
+    // Revela TODOS os lances (agora sim — momento de tensão do leilão cego)
+    const { emitToRoom } = await import("../../lib/socket.js");
+    emitToRoom(sessionId, "leilao:resultado", {
+      propId,
+      lances: lances.map(l => ({ playerId: l.playerId, valor: l.valor })),
+      vencedorId: vencedor?.playerId ?? null,
+      valorFinal: vencedor?.valor ?? null,
+    });
+
+    // ── RETOMAR O TURNO ──────────────────────────────────────────────
+    // O jogador que recusou continua na vez (a menos que tenha tirado
+    // duplo, caso em que joga de novo; senão o turno avança).
+    const foiDuplo = session.ultimoDado1 != null && session.ultimoDado1 === session.ultimoDado2;
+    const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+
+    if (!foiDuplo) {
+      const sessionAtual = await turnoRepository.findSessionComJogadores(sessionId);
+      const avanco = await this.avancarTurno(sessionId, sessionAtual!);
+      await emitUpdatedSession(sessionId);
+      return { leilaoEncerrado: true, vencedor, ...avanco };
+    }
+
+    // Duplo: o mesmo jogador joga de novo — reagenda o timer do turno.
+    await this.agendarTimeout(sessionId);
+    await emitUpdatedSession(sessionId);
+    return { leilaoEncerrado: true, vencedor, avancou: false, duplo: true };
+  }
+
+  // Reutiliza o mesmo cálculo usado na falência (saldo + custo_compra das
+  // propriedades + casas × custo_casa) — aqui para o desempate do leilão.
+  private async calcularPatrimonio(playerId: number): Promise<number> {
+    const { prisma } = await import("../../lib/prisma.js");
+    const player = await prisma.sessionPlayer.findUnique({ where: { id: playerId }, select: { saldo: true } });
+    const posses = await prisma.sessionPosses.findMany({
+      where: { playerId },
+      include: { propriedade: true },
+    });
+    let patrimonio = player?.saldo ?? 0;
+    for (const sp of posses) {
+      if (sp.propriedade) {
+        patrimonio += sp.propriedade.custo_compra;
+        patrimonio += sp.casas * sp.propriedade.custo_casa;
+      }
+    }
+    return patrimonio;
+  }
+
+  private async agendarTimeoutLeilao(sessionId: number) {
+    cancelLeilaoTimer(sessionId);
+    const timer = setTimeout(() => {
+      this.encerrarLeilaoPorTimeout(sessionId).catch(err => {
+        sessionLogger.error({ err, sessionId }, "erro ao encerrar leilão por timeout");
+      });
+    }, LEILAO_TIMEOUT_MS);
+    leilaoTimers.set(sessionId, timer);
+  }
+
+  // Ponto de entrada do timeout — adquire o lock de LEILÃO (nunca o de
+  // turno). Quem não deu lance a tempo conta implicitamente como "passou"
+  // (não há registro — encerrarLeilaoInterno só considera quem deu lance).
+  async encerrarLeilaoPorTimeout(sessionId: number) {
+    return withLock(`leilao:${sessionId}`, async () => {
+      const session = await turnoRepository.findSessionComJogadores(sessionId);
+      if (!session?.emLeilao) return null; // já encerrado por outro caminho
+      return this.encerrarLeilaoInterno(sessionId, session);
+    });
+  }
+
+  // Varredura periódica (mesmo padrão do BUG 6 / varrerTurnosExpirados):
+  // sem isso, um leilão cujo timer em memória se perdeu (hibernação/
+  // restart do processo) trava a partida inteira, já que o turno não
+  // avança enquanto emLeilao for true. Chamada no mesmo intervalo de 15s.
+  async varrerLeiloesExpirados() {
+    const sessions = await turnoRepository.findSessionsEmLeilao();
+    const agora = Date.now();
+
+    for (const s of sessions) {
+      if (!s.leilaoIniciadoEm) continue;
+      const elapsed = agora - new Date(s.leilaoIniciadoEm).getTime();
+
+      if (elapsed >= LEILAO_TIMEOUT_MS + 2000) {
+        sessionLogger.warn({ sessionId: s.id, elapsed }, "leilão expirado detectado pela varredura periódica");
+        await this.encerrarLeilaoPorTimeout(s.id).catch(err => {
+          if (err?.statusCode !== 423) {
+            sessionLogger.error({ err, sessionId: s.id }, "erro ao encerrar leilão na varredura periódica");
+          }
+        });
+      }
+    }
+  }
+
   // Disparado pelo timeout de 60s — se o jogador não agiu, o sistema
   // joga automaticamente: rola os dados, move a peça, recusa compras,
   // paga aluguéis/dívidas e avança o turno.
@@ -545,6 +1198,14 @@ class TurnoService {
         return null;
       }
 
+      // Leilão em andamento: o turno está pausado de propósito (o timer
+      // de turno já foi cancelado em iniciarLeilao). O leilão tem seu
+      // próprio timer/varredura — não interferir aqui.
+      if (session.emLeilao) {
+        cancelTurnoTimer(sessionId);
+        return null;
+      }
+
       if (
         turnoEsperadoIniciadoEm &&
         session.turnoIniciadoEm?.toISOString() !== turnoEsperadoIniciadoEm
@@ -556,15 +1217,51 @@ class TurnoService {
         return { avancou: false, motivo: "turno já avançou" };
       }
 
-      // Se há ação pendente (compra de propriedade), recusa automaticamente
+      // Escolha de movimento pendente → tempo esgotado, aplica a SOMA
+      // (comportamento clássico). Chama a versão interna (sem lock) —
+      // já estamos dentro do withLock deste método, e escolherMovimento
+      // público tem o seu próprio (chamá-lo aqui causaria deadlock).
+      if (session.aguardandoEscolha && session.turnoAtualPlayerId) {
+        sessionLogger.info(
+          { sessionId, playerId: session.turnoAtualPlayerId },
+          "timeout na escolha de movimento — usando a soma (padrão)"
+        );
+        return this.escolherMovimentoInterno(sessionId, session, "soma", true);
+      }
+
+      // Ação pendente (compra de propriedade) expirou — o jogador JÁ tinha
+      // rolado os dados; só não respondeu ao modal de comprar/recusar.
+      // Resolve isso como recusa automática (mesmo caminho de
+      // recusarCompra, inclusive leilão) e retorna aqui — NUNCA cai no
+      // fallback de "rolar os dados automaticamente" abaixo, que é só
+      // para quando o jogador nem chegou a rolar.
       if (session.aguardandoAcao) {
         await turnoRepository.setAguardandoAcao(sessionId, false);
+
+        const atualAcao = session.jogadores.find(j => j.id === session.turnoAtualPlayerId);
+        if (!atualAcao || atualAcao.desistiu) {
+          return this.avancarTurno(sessionId, session, true);
+        }
+        const playerAcao = await turnoRepository.findPlayerParaJogada(atualAcao.id);
+        if (!playerAcao || playerAcao.sessionId !== sessionId) {
+          return this.avancarTurno(sessionId, session, true);
+        }
+
+        const casaAcao = getCasa(playerAcao.posicao);
+        if (casaAcao.propId == null) {
+          return this.avancarTurno(sessionId, session, true);
+        }
+        // iniciarLeilao pausa o turno (não chama avancarTurno) — a
+        // retomada acontece quando o leilão fechar.
+        return this.iniciarLeilao(sessionId, session, casaAcao.propId);
       }
 
       const atual = session.jogadores.find(j => j.id === session.turnoAtualPlayerId);
       if (!atual || atual.desistiu) {
         return this.avancarTurno(sessionId, session, true);
       }
+
+      await this.aplicarJurosEmprestimo(sessionId, atual.id);
 
       // Verifica falência do jogador que perdeu o tempo
       const falencia = await this.verificarFalencia(sessionId, session, { id: atual.id, nome: atual.nome });
@@ -612,9 +1309,20 @@ class TurnoService {
     if (!session) throw new AppError(404, "Sessão não encontrada");
     if (session.tipoJogo !== "tabuleiro") throw new AppError(400, "Sessão não é do Modo Tabuleiro");
     if (session.status !== "Em Andamento") throw new AppError(400, "Partida não está em andamento");
+    // Leilão em andamento: bloqueia qualquer ação de turno (rolar dados,
+    // escolher movimento, passar a vez, comprar/recusar). Sem este guard,
+    // um cliente poderia chamar essas rotas — protegidas pelo lock
+    // `turno:${id}` — enquanto encerrarLeilaoInterno roda sob o lock
+    // `leilao:${id}` (namespaces diferentes, sem exclusão mútua entre
+    // eles), correndo o risco de avançar o turno duas vezes ou mover o
+    // jogador errado.
+    if (session.emLeilao) {
+      throw new AppError(400, "Há um leilão em andamento — aguarde o resultado.");
+    }
 
     // Fallback: se o timer do servidor não disparou, avança o turno na
-    // primeira ação do jogador após o timeout.
+    // primeira ação do jogador após o timeout (emLeilao já foi rejeitado
+    // acima, então chegar aqui garante que o turno não está pausado).
     if (session.turnoIniciadoEm && !session.aguardandoAcao) {
       const elapsed = Date.now() - new Date(session.turnoIniciadoEm).getTime();
       if (elapsed >= TURNO_TIMEOUT_MS) {
@@ -663,6 +1371,15 @@ class TurnoService {
     if (!proximo) {
       cancelTurnoTimer(sessionId);
       return { turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false };
+    }
+
+    // Rodada: incrementa quando o turno passa do último para o primeiro
+    // da ordem (detectado pelo índice na ordem ser ≤ que o anterior)
+    const proximoIdx = ordem.indexOf(proximo.id);
+    if (session.turnoAtualPlayerId != null && proximoIdx <= atualIdx) {
+      const novaRodada = session.rodadaAtual + 1;
+      await turnoRepository.incrementRodada(sessionId);
+      await this.processarViradaDeRodada(sessionId, novaRodada, session);
     }
 
     await turnoRepository.updateTurno(sessionId, {
@@ -720,6 +1437,7 @@ class TurnoService {
 
     const session = await turnoRepository.findSessionComJogadores(sessionId);
     if (!session || session.status !== "Em Andamento" || session.tipoJogo !== "tabuleiro") return;
+    if (session.emLeilao) return; // turno pausado de propósito — leilão tem timer próprio
     if (!session.turnoIniciadoEm || session.aguardandoAcao) return;
 
     const elapsed = Date.now() - new Date(session.turnoIniciadoEm).getTime();
@@ -762,6 +1480,21 @@ class TurnoService {
         sessionLogger.warn({ sessionId: s.id, elapsed }, "recuperando sessão travada no startup");
         await this.avancarPorTimeout(s.id).catch(err => {
           sessionLogger.error({ err, sessionId: s.id }, "erro ao recuperar sessão travada");
+        });
+      }
+    }
+
+    // Leilão Cego: recuperação imediata no startup (a periódica de 15s já
+    // cobre isso, mas o timeout do leilão é só 30s — vale a pena não
+    // esperar o primeiro ciclo da varredura).
+    const emLeilao = await turnoRepository.findSessionsEmLeilao();
+    for (const s of emLeilao) {
+      if (!s.leilaoIniciadoEm) continue;
+      const elapsed = now - new Date(s.leilaoIniciadoEm).getTime();
+      if (elapsed >= LEILAO_TIMEOUT_MS) {
+        sessionLogger.warn({ sessionId: s.id, elapsed }, "recuperando leilão travado no startup");
+        await this.encerrarLeilaoPorTimeout(s.id).catch(err => {
+          sessionLogger.error({ err, sessionId: s.id }, "erro ao recuperar leilão travado");
         });
       }
     }

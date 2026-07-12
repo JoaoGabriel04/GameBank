@@ -27,6 +27,9 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
   const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
   const meuJogador = session.jogadores?.find(p => p.id === meuPlayerId)
+  const ordem: number[] = session.ordemTurnos ? JSON.parse(session.ordemTurnos) : []
+  const posicaoJogadorDaVez = jogadorDaVez ? ordem.indexOf(jogadorDaVez.id) + 1 : 0
+  const rodada = session.rodadaAtual ?? 1
 
   // Guarda anti-repetição: só toca "chegou-sua-vez" na transição
   // (não era minha vez → agora é), nunca em re-renders com a vez inalterada.
@@ -86,12 +89,17 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
         minhaVez ? "border-green-500/50 bg-green-500/10 text-green-300" : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
       }`}>
         <span className="flex items-center gap-2">
-          {minhaVez ? "Sua vez de jogar!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : "Aguardando início dos turnos..."}
+          {posicaoJogadorDaVez > 0 && (
+            <span className="font-semibold">{posicaoJogadorDaVez}°</span>
+          )}
+          <span className="text-zinc-600">|</span>
+          {minhaVez ? "Sua vez" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : "Aguardando início dos turnos..."}
           {session.ultimoDado1 != null && session.ultimoDado2 != null && (
             <span className="text-xs text-zinc-500">(último: {session.ultimoDado1} · {session.ultimoDado2})</span>
           )}
         </span>
         <div className="flex items-center gap-3">
+          <span className="text-xs text-zinc-500">Rodada {String(rodada).padStart(2, '0')}</span>
           <span className="flex items-center gap-1.5 text-xs text-zinc-500">
             <FontAwesomeIcon icon={faHourglassHalf} />
             {restante}s
@@ -100,8 +108,8 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
             <>
               <button
                 onClick={onRolarDados}
-                disabled={rolando || !!session.aguardandoAcao}
-                title={session.aguardandoAcao ? "Aguardando resolução da casa" : undefined}
+                disabled={rolando || !!session.aguardandoAcao || !!session.aguardandoEscolha}
+                title={session.aguardandoAcao ? "Aguardando resolução da casa" : session.aguardandoEscolha ? "Escolha o movimento no modal" : undefined}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"
               >
                 <FontAwesomeIcon icon={faDice} />

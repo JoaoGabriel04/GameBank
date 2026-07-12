@@ -7,6 +7,35 @@ export interface CompraDisponivel {
   preco: number
 }
 
+export interface ExtratoInicioDetalhe {
+  propId: number
+  nome: string
+  casas: number
+  iptu: number
+  manutencao: number
+  rendaPassiva: number
+}
+
+export interface ExtratoInicio {
+  creditoInicio: number
+  rendaPassiva: number
+  iptu: number
+  manutencao: number
+  liquido: number
+  detalhes: ExtratoInicioDetalhe[]
+}
+
+export type EscolhaMovimento = "dado1" | "dado2" | "soma"
+
+export interface OpcaoMovimento {
+  tipo: EscolhaMovimento
+  passos: number
+  destino: number
+  nomeCasa: string
+  tipoCasa: string
+  passaInicio: boolean
+}
+
 export interface RolarDadosResult {
   dado1: number
   dado2: number
@@ -14,6 +43,7 @@ export interface RolarDadosResult {
   foiPreso: boolean
   novaPosicao?: number
   passouInicio?: boolean
+  extratoInicio?: ExtratoInicio | null
   turnoAtualPlayerId?: number | null
   avancou?: boolean
   aguardandoAcao?: boolean
@@ -24,6 +54,12 @@ export interface RolarDadosResult {
   pagouMulta?: boolean
   tentativasPrisao?: number
   falido?: boolean
+  // Escolha de Movimento (Mecânica 3)
+  aguardandoEscolha?: boolean
+  opcoes?: OpcaoMovimento[]
+  escolha?: EscolhaMovimento
+  passos?: number
+  duploValido?: boolean
 }
 
 export const turnoApi = {
@@ -41,6 +77,9 @@ export const turnoApi = {
 
   sairPrisaoComCarta: (sessionId: number) =>
     api.post<{ mensagem: string }>(`/turno/${sessionId}/usar-carta-prisao`),
+
+  escolherMovimento: (sessionId: number, escolha: EscolhaMovimento) =>
+    api.post<RolarDadosResult>(`/turno/${sessionId}/escolher-movimento`, { escolha }),
 }
 
 export const passarVezApi = (sessionId: number) =>
@@ -57,3 +96,6 @@ export const recusarCompraApi = (sessionId: number) =>
 
 export const sairPrisaoComCartaApi = (sessionId: number) =>
   turnoApi.sairPrisaoComCarta(sessionId).then(res => res.data)
+
+export const escolherMovimentoApi = (sessionId: number, escolha: EscolhaMovimento) =>
+  turnoApi.escolherMovimento(sessionId, escolha).then(res => res.data)

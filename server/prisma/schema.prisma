@@ -185,9 +185,21 @@ model Session {
   ultimoDado1        Int?      // último resultado (para exibição)
   ultimoDado2        Int?
   aguardandoAcao     Boolean   @default(false) // esperando decisão do jogador
+  aguardandoEscolha  Boolean   @default(false) // dados rolados, esperando escolha de movimento
   turnoIniciadoEm    DateTime? // para timeout de 60s
+  rodadaAtual        Int       @default(1)   // contador de rodadas completadas
+  eventoAtual        String?   // código do evento econômico ativo nesta rodada
+  eventoProximo      String?   // código do evento anunciado para a próxima rodada de evento
+  eventoRodadasRestantes Int   @default(0) // rodadas restantes do eventoAtual (0 = nenhum ativo)
+
+  // --- Leilão Cego ---
+  emLeilao          Boolean   @default(false)
+  leilaoPropId      Int?      // propriedade sendo leiloada
+  leilaoIniciadoEm  DateTime? // para timer resiliente (mesmo padrão do turno)
+  leilaoLanceMinimo Int?      // 50% do preço de tabela
 
   sessionPosses SessionPosses[]
+  leilaoLances  LeilaoLance[]
   historico     Historico[]
   jogadores     SessionPlayer[]
   times         SessionTeam[]
@@ -195,6 +207,7 @@ model Session {
   notifications Notification[]
   negotiations Negotiation[]
   debts        Debt[]
+  emprestimos  Emprestimo[]
   coinTransactions CoinTransaction[]
   bauAdquiridos    BauAdquirido[]
 
@@ -229,6 +242,8 @@ model SessionPlayer {
   negotiationsFrom  Negotiation[] @relation("NegotiationFromPlayer")
   negotiationsTo    Negotiation[] @relation("NegotiationToPlayer")
   debts             Debt[]
+  emprestimos       Emprestimo[]
+  leilaoLances      LeilaoLance[]
 
   // --- Modo Tabuleiro ---
   posicao            Int      @default(0)   // casa atual (0 = Início)
@@ -390,6 +405,44 @@ model Debt {
   @@index([playerId])
   @@index([sessionId])
   @@map("dividas")
+}
+
+model Emprestimo {
+  id              Int      @id @default(autoincrement())
+  sessionId       Int
+  playerId        Int
+
+  valorOriginal   Int
+  valorDevido     Int
+  garantiaPropId  Int
+
+  quitado         Boolean  @default(false)
+  executado       Boolean  @default(false)
+  criadoEm        DateTime @default(now())
+  quitadoEm       DateTime?
+
+  session   Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  player    SessionPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, playerId])
+  @@index([playerId, quitado])
+  @@map("emprestimos")
+}
+
+model LeilaoLance {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  propId    Int
+  playerId  Int
+  valor     Int      // 0 = passou (não quer participar)
+  criadoEm  DateTime @default(now())
+
+  session   Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  player    SessionPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, propId, playerId]) // lance vinculante: 1 por jogador por leilão
+  @@index([sessionId, propId])
+  @@map("leilao_lances")
 }
 
 model Mission {

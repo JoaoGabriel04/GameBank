@@ -14,6 +14,7 @@ import {
   faHandshake,
   faGamepad,
   faPlus,
+  faBook,
 } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
@@ -159,6 +160,13 @@ export default function SaibaMais() {
               <FontAwesomeIcon icon={faPlus} className="mr-2" />
               Criar Nova Sala
             </Button1>
+            <a
+              href="/regras"
+              className="inline-flex items-center gap-2 text-zinc-400 hover:text-amber-400 font-inconsolata text-sm transition-colors"
+            >
+              <FontAwesomeIcon icon={faBook} className="mr-1" />
+              Regras completas do jogo
+            </a>
           </div>
         </div>
       </section>

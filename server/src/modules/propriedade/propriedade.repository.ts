@@ -56,6 +56,13 @@ export class PropriedadeRepository {
     return prisma.sessionPosses.findFirst({ where });
   }
 
+  async findSessionPossesByPlayer(sessionId: number, playerId: number) {
+    return prisma.sessionPosses.findMany({
+      where: { sessionId, playerId },
+      include: { propriedade: true },
+    });
+  }
+
   async findSessionPossesByGroup(sessionId: number, grupoCor: string) {
     return prisma.sessionPosses.findMany({
       where: { sessionId, propriedade: { grupo_cor: grupoCor } },

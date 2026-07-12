@@ -62,6 +62,9 @@ function TurnTimerStrip({ session, meuPlayerId }: { session: NonNullable<ReturnT
   const [restante, setRestante] = useState(60)
   const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
   const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
+  const ordem: number[] = session.ordemTurnos ? JSON.parse(session.ordemTurnos) : []
+  const posicaoJogadorDaVez = jogadorDaVez ? ordem.indexOf(jogadorDaVez.id) + 1 : 0
+  const rodada = session.rodadaAtual ?? 1
 
   useEffect(() => {
     if (!session.turnoIniciadoEm) return
@@ -79,11 +82,18 @@ function TurnTimerStrip({ session, meuPlayerId }: { session: NonNullable<ReturnT
     <div className={`shrink-0 flex items-center justify-between gap-3 px-4 py-1.5 border-b font-inconsolata text-xs ${
       minhaVez ? "border-green-500/30 bg-green-500/5 text-green-300" : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
     }`}>
-      <span>
-        {minhaVez ? "Sua vez!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
+      <span className="flex items-center gap-2">
+        {posicaoJogadorDaVez > 0 && (
+          <span className="font-semibold">{posicaoJogadorDaVez}°</span>
+        )}
+        <span>|</span>
+        <span>
+          {minhaVez ? "Sua vez" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
+        </span>
       </span>
-      <span className="flex items-center gap-1.5">
-        ⏱ {restante}s
+      <span className="flex items-center gap-2">
+        <span>Rodada {String(rodada).padStart(2, '0')}</span>
+        <span>⏱ {restante}s</span>
       </span>
     </div>
   )

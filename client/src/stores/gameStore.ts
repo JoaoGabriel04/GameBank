@@ -14,7 +14,8 @@ import {
   loadSessionApi,
   startSessionApi,
 } from "@/services/api/sessions";
-import { passarVezApi, rolarDadosApi, comprarCasaAtualApi, recusarCompraApi, sairPrisaoComCartaApi, type RolarDadosResult } from "@/services/api/turno";
+import { passarVezApi, rolarDadosApi, comprarCasaAtualApi, recusarCompraApi, sairPrisaoComCartaApi, escolherMovimentoApi, type RolarDadosResult, type EscolhaMovimento } from "@/services/api/turno";
+import { darLanceApi, type DarLanceResult } from "@/services/api/leilao";
 import {
   editPlayerApi,
   getPlayerByIdApi,
@@ -50,6 +51,7 @@ import {
 import {
   pagarDividaApi,
 } from "@/services/api/dividas";
+import { getEvento } from "@/constants/eventos";
 
 // --- Tipos --------------------------------------------------------------------
 
@@ -72,6 +74,8 @@ interface GameStore {
   startSession: (sessionId: number) => Promise<void>;
   passarVez: (sessionId: number) => Promise<void>;
   rolarDados: (sessionId: number) => Promise<RolarDadosResult | undefined>;
+  escolherMovimento: (sessionId: number, escolha: EscolhaMovimento) => Promise<RolarDadosResult | undefined>;
+  darLance: (sessionId: number, valor: number) => Promise<DarLanceResult | undefined>;
   comprarCasaAtual: (sessionId: number) => Promise<boolean>;
   recusarCompra: (sessionId: number) => Promise<boolean>;
   sairPrisaoComCarta: (sessionId: number) => Promise<string | undefined>;
@@ -101,6 +105,9 @@ interface GameStore {
   pagarDivida: (debtId: number, playerId: number, sessionId: number) => Promise<void>;
 
   getAvailableColors: (excludePlayerId?: number) => PlayerColor[];
+  /** Aluguel base (tabela), sem considerar evento econômico ativo. */
+  getAluguelBase: (propriedade: Propriedade, casas: number) => number;
+  /** Aluguel que será efetivamente cobrado agora — reflete o evento ativo (aluguelMult). */
   getAluguel: (propriedade: Propriedade, casas: number) => number;
 
   updatePlayerInSession: (userId: number, data: Partial<Player>) => void;
@@ -217,6 +224,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // mesmo se o socket "session:updated" atrasar. Passa pelo mesmo
       // buffer do socket — se holdSessionUpdates estiver ativo (rolagem
       // em andamento), fica retido até o TurnoModal revelar o resultado.
+      loadSessionApi(sessionId).then((session) => {
+        get().applyOrBufferSession(session);
+      }).catch(() => {});
+      return result;
+    } catch (err) {
+      handleError(set, err);
+      return undefined;
+    }
+  },
+
+  escolherMovimento: async (sessionId, escolha) => {
+    try {
+      const result = await escolherMovimentoApi(sessionId, escolha);
+      // Mesmo padrão do rolarDados: resincroniza a sessão passando pelo
+      // buffer do holdSessionUpdates, pra não deixar o peão vazar antes
+      // da hora se o socket "session:updated" chegar primeiro.
+      loadSessionApi(sessionId).then((session) => {
+        get().applyOrBufferSession(session);
+      }).catch(() => {});
+      return result;
+    } catch (err) {
+      handleError(set, err);
+      return undefined;
+    }
+  },
+
+  darLance: async (sessionId, valor) => {
+    try {
+      const result = await darLanceApi(sessionId, valor);
+      // Mesmo padrão: resincroniza a sessão via o buffer de holdSessionUpdates
+      // (o leilão pode fechar na hora se todos já deram lance).
       loadSessionApi(sessionId).then((session) => {
         get().applyOrBufferSession(session);
       }).catch(() => {});
@@ -568,7 +606,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return all.filter((color) => !usedColors.includes(color));
   },
 
-  getAluguel: (propriedade, casas) => {
+  getAluguelBase: (propriedade, casas) => {
     const alugueis = [
       propriedade.aluguel_base,
       propriedade.aluguel_1c,
@@ -578,6 +616,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       propriedade.aluguel_hotel,
     ];
     return alugueis[Math.min(casas, 5)];
+  },
+
+  getAluguel: (propriedade, casas) => {
+    const base = get().getAluguelBase(propriedade, casas);
+    const mult = getEvento(get().currentSession?.eventoAtual)?.efeito.aluguelMult ?? 1;
+    return Math.round(base * mult);
   },
 
   updatePlayerInSession: (userId, data) => {

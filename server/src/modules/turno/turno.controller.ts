@@ -89,4 +89,21 @@ export const turnoController = {
       parseError(res, err);
     }
   },
+
+  escolherMovimento: async (req: Request, res: Response) => {
+    try {
+      const sessionId = z.coerce.number().int().positive().parse(req.params.sessionId);
+      const schema = z.object({ escolha: z.enum(["dado1", "dado2", "soma"]) });
+      const { escolha } = schema.parse(req.body);
+      const userId = req.user!.userId;
+
+      const player = await sessionService.getPlayerByUser(sessionId, userId);
+      if (!player) throw new AppError(404, "Você não está nesta sala.");
+
+      const result = await turnoService.escolherMovimento(sessionId, player.id, escolha);
+      res.status(200).json(result);
+    } catch (err) {
+      parseError(res, err);
+    }
+  },
 };

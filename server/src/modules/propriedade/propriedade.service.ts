@@ -3,6 +3,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { MissionsService } from "../missions/missions.service.js";
+import { getEvento } from "../../constants/eventos.js";
 
 // Rastreia quais propriedades já receberam casa neste turno (1 casa máxima
 // por propriedade por rodada). Chave: "sessionId:playerId".
@@ -75,11 +76,64 @@ export class PropriedadeService {
     });
   }
 
+  // Leilão Cego (Mecânica 4): mesma transferência de buyProp, mas cobrando
+  // o valor do LANCE vencedor, não o preço de tabela. Lance é vinculante —
+  // o vencedor é obrigado a comprar mesmo se (por alguma race rara) o
+  // saldo não cobrir mais no momento do acerto; nesse caso paga o que der
+  // e o restante vira dívida, em vez de bloquear a transferência.
+  async buyPropPorValor(propId: number, sessionId: number, playerId: number, valor: number) {
+    return withLock(`prop:${propId}`, async () => {
+      const player = await this.repo.findPlayerById(playerId);
+      if (!player) throw new AppError(404, "Jogador não encontrado");
+
+      const sessionPosses = await this.repo.findSessionPosses(sessionId, propId);
+      if (!sessionPosses) throw new AppError(404, "Propriedade não encontrada nesta sessão");
+      if (sessionPosses.playerId) throw new AppError(400, "Propriedade já foi comprada");
+
+      const propriedade = sessionPosses.propriedade;
+      if (!propriedade) throw new AppError(404, "Dados da propriedade não encontrados");
+
+      const pago = Math.min(player.saldo, valor);
+      const debtValor = valor - pago;
+
+      await prisma.$transaction([
+        prisma.sessionPosses.updateMany({
+          where: { sessionId, propId },
+          data: { playerId, hipotecada: false, lastOwnerId: null },
+        }),
+        prisma.sessionPlayer.update({
+          where: { id: playerId },
+          data: { saldo: { decrement: pago } },
+        }),
+        prisma.historico.create({
+          data: {
+            sessionId: Number(sessionId),
+            data: new Date(),
+            tipo: "LEILAO_ARREMATE",
+            detalhes: `${player.nome} arrematou ${propriedade.nome} no leilão por R$ ${valor}` +
+              (debtValor > 0 ? ` (R$ ${debtValor} viraram dívida)` : ""),
+          },
+        }),
+        ...(debtValor > 0
+          ? [prisma.debt.create({
+              data: { sessionId, playerId, valor: debtValor, descricao: `Leilão de ${propriedade.nome} (dívida)` },
+            })]
+          : []),
+      ]);
+
+      if (player.userId) {
+        try { await this.missionService.track(player.userId, "properties_bought", 1); } catch {}
+      }
+
+      return this.repo.findSessionPosses(sessionId, propId);
+    });
+  }
+
   async buyHouse(userId: number, sessionId: number, propriedadeId: number) {
     return withLock(`prop:${propriedadeId}`, async () => {
       const session = await prisma.session.findUnique({
         where: { id: sessionId },
-        select: { turnoAtualPlayerId: true, tipoJogo: true },
+        select: { turnoAtualPlayerId: true, tipoJogo: true, eventoAtual: true },
       });
       if (session?.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId !== userId) {
         throw new AppError(403, "Só pode comprar casas na sua vez.");
@@ -94,12 +148,17 @@ export class PropriedadeService {
 
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado!");
+      if (player.emPrisao) throw new AppError(400, "Você está na prisão e não pode comprar casas.");
 
       if (propriedade.propriedade.tipo === "ação") {
         throw new AppError(400, "Não é possível construir casas em ações.");
       }
 
-      const custoCasa = propriedade.propriedade.custo_casa;
+      // Custo de construção reflete o evento econômico ativo (Escassez de
+      // Material / Aquecimento do Mercado) — exclusivo do Modo Tabuleiro,
+      // já que eventoAtual só é definido nessas sessões.
+      const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
+      const custoCasa = Math.round(propriedade.propriedade.custo_casa * custoConstrucaoMult);
       if (player.saldo < custoCasa) {
         throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
       }
@@ -148,7 +207,7 @@ export class PropriedadeService {
     return withLock(`batch:houses:${sessionId}:${userId}`, async () => {
       const session = await prisma.session.findUnique({
         where: { id: sessionId },
-        select: { turnoAtualPlayerId: true, tipoJogo: true },
+        select: { turnoAtualPlayerId: true, tipoJogo: true, eventoAtual: true },
       });
       if (session?.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId !== userId) {
         throw new AppError(403, "Só pode comprar casas na sua vez.");
@@ -160,6 +219,7 @@ export class PropriedadeService {
 
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado");
+      if (player.emPrisao) throw new AppError(400, "Você está na prisão e não pode comprar casas.");
 
       const properties = await prisma.sessionPosses.findMany({
         where: { id: { in: sessaoPossesIds }, sessionId },
@@ -170,6 +230,7 @@ export class PropriedadeService {
         throw new AppError(404, "Alguma(s) propriedade(s) não encontrada(s)");
       }
 
+      const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
       const key = `${sessionId}:${userId}`;
       let jaConstruiu = construcoesNesteTurno.get(key);
       let totalCost = 0;
@@ -191,7 +252,7 @@ export class PropriedadeService {
           throw new AppError(400, `${prop.propriedade.nome} já recebeu uma casa neste turno.`);
         }
         await this.requireMonopoly(sessionId, userId, prop.propriedade.grupo_cor);
-        totalCost += prop.propriedade.custo_casa;
+        totalCost += Math.round(prop.propriedade.custo_casa * custoConstrucaoMult);
         nomes.push(prop.propriedade.nome);
       }
 
@@ -359,6 +420,14 @@ export class PropriedadeService {
         throw new AppError(400, "Esta propriedade ainda possui casas!");
       }
 
+      // Verifica se a propriedade é garantia de empréstimo
+      const empAtivoVenda = await prisma.emprestimo.findFirst({
+        where: { sessionId, playerId: userId, quitado: false, garantiaPropId: propriedadeId },
+      });
+      if (empAtivoVenda) {
+        throw new AppError(400, "Esta propriedade está dada como garantia de um empréstimo.");
+      }
+
       const valorVenda = propriedade.propriedade.custo_compra;
 
       await prisma.$transaction([
@@ -402,6 +471,14 @@ export class PropriedadeService {
 
       if (propriedade.casas > 0) {
         throw new AppError(400, "Esta propriedade ainda possui casas!");
+      }
+
+      // Verifica se a propriedade é garantia de empréstimo
+      const empAtivoHip = await prisma.emprestimo.findFirst({
+        where: { sessionId, playerId: userId, quitado: false, garantiaPropId: propriedadeId },
+      });
+      if (empAtivoHip) {
+        throw new AppError(400, "Esta propriedade está dada como garantia de um empréstimo.");
       }
 
       const valorVenda = propriedade.propriedade.hipoteca;

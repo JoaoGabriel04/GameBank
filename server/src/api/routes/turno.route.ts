@@ -40,4 +40,11 @@ turnoRouter.post(
   turnoController.usarCartaPrisao
 );
 
+turnoRouter.post(
+  "/:sessionId/escolher-movimento",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.escolherMovimento
+);
+
 export default turnoRouter;

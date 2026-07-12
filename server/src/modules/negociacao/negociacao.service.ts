@@ -72,6 +72,13 @@ export class NegociacaoService {
       if (sp.hipotecada) {
         throw new AppError(400, "Não pode negociar propriedades hipotecadas!");
       }
+      // Não pode negociar propriedade que é garantia de empréstimo
+      const empOffer = await prisma.emprestimo.findFirst({
+        where: { sessionId, playerId: fromPlayerId, quitado: false, garantiaPropId: sp.propriedade.id },
+      });
+      if (empOffer) {
+        throw new AppError(400, "Esta propriedade está dada como garantia de um empréstimo.");
+      }
       offerSpMap.set(item.sessionPossesId, sp);
     }
 
@@ -81,6 +88,13 @@ export class NegociacaoService {
       const sp = await this.repo.findSessionPosses(sessionId, item.sessionPossesId);
       if (!sp || sp.playerId !== toPlayerId) {
         throw new AppError(400, "O alvo não é dono de uma das propriedades solicitadas!");
+      }
+      // Não pode negociar propriedade que é garantia de empréstimo
+      const empWant = await prisma.emprestimo.findFirst({
+        where: { sessionId, playerId: toPlayerId, quitado: false, garantiaPropId: sp.propriedade.id },
+      });
+      if (empWant) {
+        throw new AppError(400, "Esta propriedade está dada como garantia de um empréstimo.");
       }
       wantSpMap.set(item.sessionPossesId, sp);
     }

@@ -124,9 +124,17 @@ export interface GameSession {
   turnoAtualPlayerId?: number | null;
   turnoIniciadoEm?: string | null;
   aguardandoAcao?: boolean;
+  aguardandoEscolha?: boolean;
   ultimoDado1?: number | null;
   ultimoDado2?: number | null;
   ordemTurnos?: string | null; // JSON array de playerIds
+  rodadaAtual?: number;
+  eventoAtual?: string | null; // código do evento econômico ativo nesta rodada
+  eventoProximo?: string | null; // código do evento anunciado para a próxima rodada de evento
+  emLeilao?: boolean;
+  leilaoPropId?: number | null;
+  leilaoIniciadoEm?: string | null;
+  leilaoLanceMinimo?: number | null;
   status?: 'Esperando' | 'Em Andamento' | 'Finalizada';
   protegida?: boolean;
   maxJogadores?: number;
@@ -268,6 +276,23 @@ export interface GameNotification {
   respondedAt?: string;
   fromPlayer?: Player;
   toPlayer?: Player;
+}
+
+// ========================
+// Empréstimos
+// ========================
+
+export interface Emprestimo {
+  id: number;
+  sessionId: number;
+  playerId: number;
+  valorOriginal: number;
+  valorDevido: number;
+  garantiaPropId: number;
+  quitado: boolean;
+  executado: boolean;
+  criadoEm: string;
+  quitadoEm: string | null;
 }
 
 // ========================

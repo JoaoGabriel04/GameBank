@@ -8,6 +8,7 @@ import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
 import Button1 from "../Button01"
 import { toApiErr } from "@/lib/api-error"
+import { getEvento } from "@/constants/eventos"
 
 const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16",
@@ -50,7 +51,7 @@ export default function PropertyDetailModal({
   onActionSuccess,
 }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  const { hipotecarProp, sellPropriedade, getAluguel } = useGameStore()
+  const { hipotecarProp, sellPropriedade, getAluguel, getAluguelBase, currentSession } = useGameStore()
 
   const [confirmAction, setConfirmAction] = useState<{
     type: string
@@ -63,8 +64,13 @@ export default function PropertyDetailModal({
   const [actionLoading, setActionLoading] = useState(false)
 
   const accent = getAccentHex(propriedade.grupo_cor)
+  const aluguelBase = getAluguelBase(propriedade, sessionPropriedade.casas)
   const aluguelAtual = getAluguel(propriedade, sessionPropriedade.casas)
   const isHipotecada = sessionPropriedade.hipotecada
+  // Custo de construção reflete Escassez de Material / Aquecimento do
+  // Mercado — mesma regra de propriedade.service.ts (venda usa custo base).
+  const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1
+  const custoCasaAtual = Math.round(propriedade.custo_casa * custoConstrucaoMult)
 
   const handleConfirm = async () => {
     if (!confirmAction) return
@@ -154,11 +160,23 @@ export default function PropertyDetailModal({
               </div>
               <div>
                 <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Aluguel Atual</p>
-                <p className="text-lg font-jaro" style={{ color: accent }}>R$ {aluguelAtual.toLocaleString('pt-BR')}</p>
+                <p className="text-lg font-jaro">
+                  {aluguelAtual !== aluguelBase && (
+                    <span className="line-through text-zinc-600 mr-1 text-sm">R$ {aluguelBase.toLocaleString('pt-BR')}</span>
+                  )}
+                  <span style={{ color: accent }}>R$ {aluguelAtual.toLocaleString('pt-BR')}</span>
+                </p>
               </div>
               <div>
                 <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Custo Casa</p>
-                <p className="text-sm font-jaro text-zinc-300">R$ {propriedade.custo_casa.toLocaleString('pt-BR')}</p>
+                <p className="text-sm font-jaro">
+                  {custoConstrucaoMult !== 1 && (
+                    <span className="line-through text-zinc-600 mr-1">R$ {propriedade.custo_casa.toLocaleString('pt-BR')}</span>
+                  )}
+                  <span className={custoConstrucaoMult > 1 ? "text-red-400" : custoConstrucaoMult < 1 ? "text-emerald-400" : "text-zinc-300"}>
+                    R$ {custoCasaAtual.toLocaleString('pt-BR')}
+                  </span>
+                </p>
               </div>
               <div>
                 <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Valor Hipoteca</p>

@@ -17,6 +17,8 @@ import bannerRouter from "./banner.route.js"
 import diamondsRouter from "./diamonds.routes.js"
 import bauRouter from "./bau.route.js"
 import turnoRouter from "./turno.route.js"
+import leilaoRouter from "./leilao.route.js"
+import emprestimoRouter from "./emprestimo.route.js"
 
 const apiRouter = Router()
 
@@ -38,5 +40,7 @@ apiRouter.use("/admin", adminRouter)
 apiRouter.use("/diamonds", diamondsRouter)
 apiRouter.use("/baus", bauRouter)
 apiRouter.use("/turno", turnoRouter)
+apiRouter.use("/leilao", leilaoRouter)
+apiRouter.use("/emprestimos", emprestimoRouter)
 
 export default apiRouter

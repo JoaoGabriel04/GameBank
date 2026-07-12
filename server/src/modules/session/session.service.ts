@@ -503,6 +503,13 @@ export class SessionService {
       if (dividaAtiva) {
         throw new AppError(400, "Você não pode desistir com dívidas pendentes. Quite-as primeiro.");
       }
+      // Empréstimo ativo também bloqueia desistência
+      const empAtivo = await prisma.emprestimo.findFirst({
+        where: { sessionId, playerId: player.id, quitado: false },
+      });
+      if (empAtivo) {
+        throw new AppError(400, "Você não pode desistir com empréstimo ativo. Quite-o primeiro.");
+      }
     }
 
     await prisma.$transaction(async (tx) => {

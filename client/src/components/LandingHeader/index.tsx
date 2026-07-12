@@ -33,9 +33,17 @@ export default function LandingHeader() {
         />
       </Link>
 
-      <Button1 size="md" color="green" handle={handleCTA}>
-        {user ? "Acessar" : "Entrar"}
-      </Button1>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/regras"
+          className="hidden sm:inline-flex text-zinc-400 hover:text-green-400 font-inconsolata text-sm transition-colors"
+        >
+          Regras
+        </Link>
+        <Button1 size="md" color="green" handle={handleCTA}>
+          {user ? "Acessar" : "Entrar"}
+        </Button1>
+      </div>
     </header>
   );
 }

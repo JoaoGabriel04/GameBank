@@ -44,9 +44,9 @@ const tutorialSteps = [
   { num: "01", icon: faUserPlus, title: "Crie sua Conta", desc: "Cadastre-se com email ou entre com Google/Discord em segundos." },
   { num: "02", icon: faGamepad,  title: "Crie ou Entre em uma Sala", desc: "Monte sua sala com nome, senha e número de jogadores. Compartilhe o link!" },
   { num: "03", icon: faPalette,  title: "Personalize-se", desc: "Escolha sua cor e, em modo duplas, forme times com saldo compartilhado." },
-  { num: "04", icon: faDollarSign, title: "Gerencie seu Dinheiro", desc: "A aba Início mostra saldo, propriedades, aluguéis, cartas e transações." },
-  { num: "05", icon: faStore,    title: "Compre e Construa", desc: "Adquira propriedades na Loja e construa casas quando tiver monopólio." },
-  { num: "06", icon: faStar,     title: "Cartas e Negociações", desc: "Sorteie Sorte/Revés com efeitos automáticos. Negocie com outros jogadores." },
+  { num: "04", icon: faDollarSign, title: "Gerencie seu Dinheiro", desc: "A aba Início mostra saldo, propriedades, aluguéis, cartas e transações. No Modo Tabuleiro, cada volta cobra IPTU e manutenção mas paga renda passiva — desenvolver compensa, segurar terreno cru não." },
+  { num: "05", icon: faStore,    title: "Compre e Construa", desc: "Adquira propriedades na Loja e construa casas quando tiver monopólio. No Modo Tabuleiro, depois de rolar os dados você escolhe andar o dado 1, o dado 2 ou a soma — dá pra escapar de um hotel ou mirar numa propriedade livre. Se recusar uma compra, ela vai a leilão cego entre todos." },
+  { num: "06", icon: faStar,     title: "Cartas e Negociações", desc: "Sorteie Sorte/Revés com efeitos automáticos. Negocie com outros jogadores. A cada 2 rodadas, um evento econômico (crise, boom, IPTU extra...) é anunciado com antecedência e afeta todo mundo igual." },
   { num: "07", icon: faTrophy,   title: "Ranking e Vitória", desc: "Acompanhe o patrimônio de todos em tempo real. Quem será o melhor estrategista?" },
 ];
 
@@ -153,12 +153,20 @@ export default function Home() {
               automaticamente e as cartas de Sorte/Revés são sorteadas na hora. Tudo sincronizado em tempo real
               entre todos os jogadores — pelo celular, tablet ou computador.
             </p>
-            <a
-              href="/saibamais"
-              className="inline-flex items-center gap-2 mt-4 text-green-400 hover:text-green-300 font-inconsolata text-sm transition-colors"
-            >
-              Saiba mais <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
-            </a>
+            <div className="flex gap-4 mt-4">
+              <a
+                href="/saibamais"
+                className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 font-inconsolata text-sm transition-colors"
+              >
+                Saiba mais <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
+              </a>
+              <a
+                href="/regras"
+                className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 font-inconsolata text-sm transition-colors"
+              >
+                Regras completas <FontAwesomeIcon icon={faArrowRight} className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
       </section>

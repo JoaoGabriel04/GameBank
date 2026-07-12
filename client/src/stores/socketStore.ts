@@ -232,12 +232,51 @@ export function connectSocket(sessionId: number) {
     useNotificationStore.getState().addNotification(data);
   });
 
+  // Evento econômico — virada de rodada (Mecânica 2). O eventoAtual/
+  // eventoProximo em si já chega via session:updated (currentSession);
+  // isto aqui é só o "pulso" de transição pra disparar o modal de
+  // ativação uma única vez (não a cada re-render da sessão).
+  socket.on("evento:mudou", (data: { rodada: number; eventoAtual: string | null; eventoProximo: string | null }) => {
+    useEventoStore.getState().setUltimoEvento(data);
+  });
+
+  // Leilão Cego (Mecânica 4) — o estado emLeilao/leilaoPropId em si já
+  // chega via session:updated; estes eventos cuidam do que a sessão
+  // sozinha não carrega: o SIGILO (nunca o valor do lance, só "decidiu")
+  // e a revelação pontual do resultado.
+  socket.on("leilao:iniciado", (data: { propId: number; nome: string; precoTabela: number; lanceMinimo: number; timeoutMs: number }) => {
+    useLeilaoStore.getState().iniciar(data);
+  });
+
+  socket.on("leilao:jogador_decidiu", (data: { playerId: number }) => {
+    useLeilaoStore.getState().marcarDecidiu(data.playerId);
+  });
+
+  socket.on("leilao:resultado", (data: { propId: number; lances: { playerId: number; valor: number }[]; vencedorId: number | null; valorFinal: number | null }) => {
+    useLeilaoStore.getState().setResultado(data);
+  });
+
   // Aluguel recebido — broadcast na sala, filtrado por toUserId
   socket.on("aluguel:toast", (data: { fromPlayerNome: string; toPlayerId: number; toUserId?: number | null; valor: number; propriedadeNome: string }) => {
     const myId = useAuthStore.getState().user?.id;
     if (data.toUserId && data.toUserId === myId) {
       toast.success(`Você recebeu R$ ${data.valor.toLocaleString("pt-BR")} de ${data.fromPlayerNome} (${data.propriedadeNome})`);
       playSfx("pagou-aluguel")
+    }
+  });
+
+  // Passagem pelo Início (IPTU/manutenção/renda passiva) — o próprio
+  // jogador já recebe o extrato completo (modal) na resposta da rolagem;
+  // aqui só tratamos o toast curto pros demais jogadores da sala.
+  socket.on("inicio:extrato", (data: { playerId: number; playerUserId?: number | null; playerNome: string; extrato: { liquido: number } }) => {
+    const myId = useAuthStore.getState().user?.id;
+    if (data.playerUserId && data.playerUserId === myId) return;
+    const sinal = data.extrato.liquido >= 0 ? "+" : "−";
+    const valor = Math.abs(data.extrato.liquido).toLocaleString("pt-BR");
+    if (data.extrato.liquido >= 0) {
+      toast.success(`${data.playerNome} passou pelo Início: ${sinal}R$ ${valor}`);
+    } else {
+      toast.error(`${data.playerNome} passou pelo Início: ${sinal}R$ ${valor} (virou dívida)`);
     }
   });
 
@@ -372,6 +411,26 @@ export function connectSocket(sessionId: number) {
     toast.success(`Você ganhou um ${label}! Abra no Cofre.`);
   });
 
+  // Juros do empréstimo (Etapa 6)
+  socket.on("emprestimo:juros", (data: { playerId: number; valorAnterior: number; valorAtual: number; jurosPct: number }) => {
+    const myId = useAuthStore.getState().user?.id;
+    const me = useGameStore.getState().currentSession?.jogadores.find(p => p.userId === myId);
+    if (me && data.playerId === me.id) {
+      toast.warning(`Juros do empréstimo: R$ ${data.valorAnterior.toLocaleString("pt-BR")} → R$ ${data.valorAtual.toLocaleString("pt-BR")}`);
+    }
+  });
+
+  // Execução da garantia (Etapa 8)
+  socket.on("emprestimo:garantia_executada", (data: { playerId: number; propId: number }) => {
+    const myId = useAuthStore.getState().user?.id;
+    const me = useGameStore.getState().currentSession?.jogadores.find(p => p.userId === myId);
+    if (me && data.playerId === me.id) {
+      toast.error("🏦 GARANTIA EXECUTADA — O banco tomou sua propriedade pelo empréstimo não pago.");
+    } else {
+      toast.warning("Um jogador perdeu a garantia do empréstimo na falência.");
+    }
+  });
+
   // Fallback: negotiation:expired via emitToUser individual (negotiation-cleanup.ts)
   socket.on("negotiation:expired", ({ negotiationId }: { negotiationId: number }) => {
     if (!currentSessionId) return;
@@ -447,6 +506,67 @@ export const useCardStore = create<CardStore>((set) => ({
   clearEvents: () => set({ events: [] }),
 }));
 
+// --- Evento Econômico Store (Mecânica 2) ---------------------------------
+
+interface EventoMudouData {
+  rodada: number;
+  eventoAtual: string | null;
+  eventoProximo: string | null;
+}
+
+interface EventoStore {
+  ultimoEvento: EventoMudouData | null;
+  setUltimoEvento: (data: EventoMudouData) => void;
+  clearUltimoEvento: () => void;
+}
+
+export const useEventoStore = create<EventoStore>((set) => ({
+  ultimoEvento: null,
+  setUltimoEvento: (data) => set({ ultimoEvento: data }),
+  clearUltimoEvento: () => set({ ultimoEvento: null }),
+}));
+
+// --- Leilão Cego Store (Mecânica 4) --------------------------------------
+
+export interface LeilaoIniciadoData {
+  propId: number;
+  nome: string;
+  precoTabela: number;
+  lanceMinimo: number;
+  timeoutMs: number;
+}
+
+export interface LeilaoResultadoData {
+  propId: number;
+  lances: { playerId: number; valor: number }[];
+  vencedorId: number | null;
+  valorFinal: number | null;
+}
+
+interface LeilaoStore {
+  ativo: LeilaoIniciadoData | null;
+  decididos: number[]; // playerIds que já deram lance/passaram — NUNCA o valor
+  resultado: LeilaoResultadoData | null;
+  iniciar: (data: LeilaoIniciadoData) => void;
+  marcarDecidiu: (playerId: number) => void;
+  setResultado: (data: LeilaoResultadoData) => void;
+  clearResultado: () => void;
+  reset: () => void;
+}
+
+export const useLeilaoStore = create<LeilaoStore>((set) => ({
+  ativo: null,
+  decididos: [],
+  resultado: null,
+  iniciar: (data) => set({ ativo: data, decididos: [], resultado: null }),
+  marcarDecidiu: (playerId) => set((s) => ({
+    decididos: s.decididos.includes(playerId) ? s.decididos : [...s.decididos, playerId],
+  })),
+  setResultado: (data) => set({ resultado: data, ativo: null }),
+  clearResultado: () => set({ resultado: null }),
+  reset: () => set({ ativo: null, decididos: [], resultado: null }),
+}));
+
 export function disconnectSocket() {
   if (socket) {
     if (currentSessionId) {
@@ -468,5 +588,7 @@ function clearChatAndNotifications() {
   useChatStore.getState().clearMessages();
   useNotificationStore.getState().clearNotifications();
   useCardStore.getState().clearEvents();
+  useEventoStore.getState().clearUltimoEvento();
+  useLeilaoStore.getState().reset();
   useNegotiationStore.getState().clearNegotiations();
 }

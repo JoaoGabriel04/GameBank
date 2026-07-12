@@ -16,6 +16,8 @@ import ConfirmationModal from "../ConfirmationModal";
 import Modal from "../Modal";
 import { useToast } from "@/components/Toast";
 import { formatCurrency } from "@/utils/format";
+import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS, CREDITO_INICIO } from "@/constants/economia";
+import { getEvento } from "@/constants/eventos";
 import { toApiErr } from "@/lib/api-error";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
@@ -23,6 +25,7 @@ import UserBadge from "@/components/UserBadge";
 import UserName from "@/components/UserName";
 import PlayerCard from "@/components/PlayerCard";
 import { Chip } from "@/components/user/UserUI";
+import EmprestimoModal from "@/components/EmprestimoModal";
 
 import {
   Eye,
@@ -77,7 +80,7 @@ function getAccentHex(grupoCor: string | null): string {
 const COLOR_LABELS: Record<string, string> = {}
 for (const c of PROPERTY_COLORS) COLOR_LABELS[c.value] = c.label
 
-type ModalType = "deposito" | "saque" | "transferencia" | "aluguel" | "casas" | "venderCasas" | null;
+type ModalType = "deposito" | "saque" | "transferencia" | "aluguel" | "casas" | "venderCasas" | "emprestimo" | null;
 
 const QUICK_VALUES = [100, 500, 2000, 5000, 10000, 50000, 100000];
 
@@ -161,7 +164,7 @@ function PropertyCard({ item, selected, onClick, getAluguel, owner }: { item: { 
 
 export default function Inicio({ onNavigate }: InicioProps) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
-  const { currentSession, loadSession, getAluguel, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore();
+  const { currentSession, loadSession, getAluguel, getAluguelBase, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore();
   const { user: authUser } = useAuthStore();
   const { pendentes, setActive, minhaNegociacaoPendente, setMinhaNegociacao, setMinhaNegociacaoAberto } = useNegotiationStore();
 
@@ -229,6 +232,33 @@ export default function Inicio({ onNavigate }: InicioProps) {
     return total;
   }, [currentPlayer, myProps]);
 
+  // Projeção da próxima passagem pelo Início (Modo Tabuleiro): mesma
+  // fórmula usada no servidor (turno.service.ts calcularExtratoInicio) —
+  // hipotecadas e ações ficam de fora. Client-side, só para planejamento;
+  // o valor real é sempre calculado e aplicado no backend.
+  const projecaoInicio = useMemo(() => {
+    // Mesmos multiplicadores do evento ativo aplicados no servidor
+    // (calcularExtratoInicio) — usa getAluguelBase (sem aluguelMult) pois
+    // a renda passiva tem seu próprio rendaPassivaMult, independente do
+    // aluguel cobrado ao pousar na propriedade.
+    const mods = getEvento(currentSession?.eventoAtual)?.efeito ?? {};
+    let iptu = 0;
+    let manutencao = 0;
+    let rendaPassiva = 0;
+    for (const { prop, sessionProp } of myProps) {
+      if (sessionProp.hipotecada) continue;
+      if (prop.tipo === "ação") continue;
+      const casas = sessionProp.casas ?? 0;
+      const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
+      iptu += Math.round(prop.custo_compra * IPTU_PCT * (mods.iptuMult ?? 1));
+      manutencao += Math.round(prop.custo_casa * MANUTENCAO_PCT * casasEquivalentes * (mods.manutencaoMult ?? 1));
+      rendaPassiva += Math.round(getAluguelBase(prop, casas) * RENDA_PASSIVA_PCT * (mods.rendaPassivaMult ?? 1));
+    }
+    const receita = CREDITO_INICIO + rendaPassiva;
+    const despesa = iptu + manutencao;
+    return { receita, despesa, liquido: receita - despesa };
+  }, [myProps, getAluguelBase, currentSession?.eventoAtual]);
+
   const jogadores = useMemo(() => currentSession?.jogadores ?? [], [currentSession?.jogadores])
 
   const mySessionPosses = useMemo(
@@ -283,6 +313,16 @@ export default function Inicio({ onNavigate }: InicioProps) {
       return completo && !ehAcao
     })
   }, [propertyGroups])
+
+  // Custo de construção reflete o evento ativo (Escassez de Material /
+  // Aquecimento do Mercado) — mesma lógica de propriedade.service.ts
+  // (buyHouse/buyHousesBatch). Venda de casa NÃO usa este multiplicador
+  // (anti-exploit) — por isso só é aplicado na aba de compra.
+  const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1
+  const custoCasaAtual = useCallback(
+    (custoBase: number) => Math.round(custoBase * custoConstrucaoMult),
+    [custoConstrucaoMult]
+  )
 
   function toggleBatchProp(sessionPossesId: number) {
     setSelectedBatchProps((prev) =>
@@ -592,6 +632,35 @@ export default function Inicio({ onNavigate }: InicioProps) {
         </div>
       </div>
 
+      {/* -- Projeção da próxima passagem pelo Início (exclusivo Modo Tabuleiro) -- */}
+      {isTabuleiro && (
+        <div className="border border-zinc-800 rounded-xl bg-zinc-950 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Receipt className="w-4 h-4 text-zinc-400" />
+            <h4 className="text-xs font-inconsolata text-zinc-400 uppercase tracking-wider">
+              Próxima passagem pelo Início
+            </h4>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between font-inconsolata text-sm">
+              <span className="text-zinc-500">Receita estimada</span>
+              <span className="text-emerald-400">+R$ {formatCurrency(projecaoInicio.receita)}</span>
+            </div>
+            <div className="flex justify-between font-inconsolata text-sm">
+              <span className="text-zinc-500">Despesas estimadas</span>
+              <span className="text-red-400">−R$ {formatCurrency(projecaoInicio.despesa)}</span>
+            </div>
+            <div className="border-t border-zinc-800 my-2" />
+            <div className="flex justify-between items-center">
+              <span className="font-inconsolata text-sm text-zinc-300">Líquido previsto</span>
+              <span className={`font-jaro text-lg ${projecaoInicio.liquido >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {projecaoInicio.liquido >= 0 ? "+" : "−"}R$ {formatCurrency(Math.abs(projecaoInicio.liquido))}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isSpectator && (
         <div className="space-y-5">
           {/* Transações Bancárias */}
@@ -626,7 +695,10 @@ export default function Inicio({ onNavigate }: InicioProps) {
               {[
                 { icon: Home, label: "Comprar Casas", modal: "casas" as const, color: "text-teal-400 bg-teal-500/10", acao: "casas" as const },
                 { icon: Banknote, label: "Vender Casas", modal: "venderCasas" as const, color: "text-orange-400 bg-orange-500/10", acao: "venderCasas" as const },
-                ...(isTabuleiro ? [] : [{ icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10", acao: "aluguel" as const }]),
+                ...(isTabuleiro
+                  ? [{ icon: Banknote, label: "Empréstimo", modal: "emprestimo" as const, color: "text-green-400 bg-green-500/10", acao: null as string | null }]
+                  : [{ icon: Receipt, label: "Pagar Aluguel", modal: "aluguel" as const, color: "text-amber-400 bg-amber-500/10", acao: "aluguel" as const }]
+                ),
               ].map((action) => {
                 const isTurnAction = action.acao === "casas"
                 const naoMinhaVez = isTabuleiro && isTurnAction && currentPlayer?.id !== currentSession?.turnoAtualPlayerId
@@ -721,6 +793,16 @@ export default function Inicio({ onNavigate }: InicioProps) {
           <p className="text-sm font-inconsolata text-zinc-500 italic">Sem cartas especiais.</p>
         )}
       </div>
+
+      {/* -- Empréstimo Ativo -- */}
+      {isTabuleiro && (
+        <EmprestimoModal
+          isOpen={activeModal === "emprestimo"}
+          onClose={() => setActiveModal(null)}
+          sessionId={currentSession?.id ?? 0}
+          onSuccess={handleActionSuccess}
+        />
+      )}
 
       {/* -- Dívidas Pendentes -- */}
       {myDebts.length > 0 && (
@@ -1440,7 +1522,13 @@ export default function Inicio({ onNavigate }: InicioProps) {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-inconsolata text-zinc-200 truncate">{prop.nome}</p>
                             <p className="text-xs font-inconsolata text-zinc-500">
-                              {sessionProp.casas}/5 casas · R$ {formatCurrency(prop.custo_casa)}
+                              {sessionProp.casas}/5 casas ·{" "}
+                              {custoConstrucaoMult !== 1 && (
+                                <span className="line-through text-zinc-600 mr-1">R$ {formatCurrency(prop.custo_casa)}</span>
+                              )}
+                              <span className={custoConstrucaoMult > 1 ? "text-red-400" : custoConstrucaoMult < 1 ? "text-emerald-400" : ""}>
+                                R$ {formatCurrency(custoCasaAtual(prop.custo_casa))}
+                              </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1477,7 +1565,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
                     completedColorGroups
                       .flatMap((g) => g.items)
                       .filter((item) => selectedBatchProps.includes(item.sessionProp.id))
-                      .reduce((sum, item) => sum + item.prop.custo_casa, 0)
+                      .reduce((sum, item) => sum + custoCasaAtual(item.prop.custo_casa), 0)
                   )}
                 </span>
               </div>
