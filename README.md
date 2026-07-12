@@ -74,6 +74,192 @@ Gerenciador multiplayer completo para o jogo de tabuleiro **Super Banco Imobili�
 - Cards de sorte/revés configuráveis
 - Auditoria de ações administrativas
 
+## Regras do jogo
+
+O GameBank implementa o **Super Banco Imobiliário** (variante brasileira do
+Monopoly) em dois modos. As regras abaixo refletem exatamente o que está
+implementado no backend — não é um resumo genérico do jogo de tabuleiro.
+
+### Modos de jogo
+
+| | Modo Banca | Modo Tabuleiro |
+|---|---|---|
+| Tabuleiro físico | Sim — os jogadores jogam no tabuleiro real | Não — tudo acontece no app |
+| Peões, dados, casas | Físicos, fora do app | Digitais, dentro do app |
+| O app cuida de | Saldos, propriedades, dívidas | Tudo: dados, movimento, resolução de casa, turnos |
+| Sequência de turnos | Livre (sem imposição) | Controlada pelo servidor, com timeout de 60s por turno |
+
+Em **Modo Banca** o jogador registra manualmente cada ação (comprar,
+pagar aluguel, sortear carta) através dos menus do app, informando quem
+paga/recebe. Em **Modo Tabuleiro** o app rola os dados, move o peão,
+resolve a casa automaticamente e controla de quem é a vez.
+
+### Sessão e jogadores
+
+- Sala aceita de **3 a 6 jogadores** (padrão: 6), com saldo inicial
+  configurável (padrão **R$ 25.000**)
+- Modo **individual** (padrão) ou **duplas** por times (times exigem pelo
+  menos 2 jogadores cada; a UI atual só expõe o modo individual —
+  "Em breve" para duplas)
+- Apenas o dono da sala pode iniciar ou encerrar a partida
+- Sala com senha exige token de acesso; sem senha, entrada livre
+
+### O tabuleiro
+
+40 casas, dispostas nos 4 lados de um tabuleiro 11×11 (posições 0–39, a
+partir do canto Início, sentido horário):
+
+| Tipo de casa | Quantidade | Efeito |
+|---|---|---|
+| **Início** | 1 (pos. 0) | Nenhum efeito próprio; passar por ela ou cair nela credita **R$ 2.000** |
+| **Propriedade** | 28 | Pode ser comprada; cobra aluguel de quem não é dono |
+| **Ação** | 6 (grupo Preto) | Pode ser comprada; cobra **dividendo fixo** por dado, não tem casas |
+| **Notícias** | 6 | Sorteia uma carta de Sorte ou Revés |
+| **Prisão (só visitando)** | 1 (pos. 10) | Sem efeito se o jogador não está preso |
+| **Vá para a Detenção** | 1 (pos. 30) | Envia direto para a prisão, sem passar por Início |
+| **Restituição IR** | 1 | Recebe R$ 2.000 do banco |
+| **Receita Federal (Imposto)** | 1 | Paga R$ 2.000 ao banco |
+| **Feriado** | 1 | Pula a próxima rodada |
+
+### Propriedades e grupos de cor
+
+As 28 propriedades normais são organizadas em **8 grupos de cor** (2 ou 3
+imóveis cada: Verde-Claro, Roxo, Verde-Escuro, Azul, Vermelho, Amarelo,
+Laranja, Rosa) mais o grupo **Preto** com as 6 Ações. Cada propriedade tem:
+
+- **Custo de compra** — pago ao cair numa casa sem dono
+- **Aluguel base** — cobrado de quem cai lá sem ser o dono
+- **Aluguel por casas** (1 a 4 casas) e **aluguel com hotel** (5ª casa)
+- **Custo por casa** — preço de cada casa construída
+- **Valor de hipoteca**
+
+Ao cair numa propriedade/ação sem dono, o jogador pode comprá-la pelo
+custo de compra. Se pertence a outro jogador (e não está hipotecada), o
+aluguel correspondente é cobrado automaticamente.
+
+### Construção de casas e hotéis
+
+- Só é permitido construir em propriedades **normais com monopólio**
+  (o jogador precisa possuir **todas** as propriedades daquele grupo de
+  cor) — **ações nunca permitem construção**, mesmo com o grupo Preto
+  completo (rendem apenas o dividendo fixo por dado)
+- Máximo de **5 níveis**: 1 a 4 casas, o 5º nível vira **hotel**
+- Limite de **1 casa construída por propriedade por turno**
+- Só é possível vender casas de uma propriedade sem hipotecá-la primeiro
+
+### Ações (grupo Preto)
+
+As 6 empresas do grupo Preto são compráveis como qualquer propriedade,
+mas seu rendimento é diferente: quem cair numa ação de outro jogador paga
+**R$ 500 × soma dos dados** da própria jogada, não um valor fixo de
+tabela. Não têm casas, hotéis nem aluguel progressivo.
+
+### Hipoteca
+
+- Hipotecar uma propriedade **remove a posse** (ela some do jogador,
+  fica marcada como hipotecada) e credita o **valor de hipoteca** ao
+  jogador — só é permitido sem casas construídas
+- Qualquer jogador pode comprar de volta uma propriedade hipotecada,
+  pagando **hipoteca × 1.1** (10% de juros)
+- Se for o **dono original**, a compra é imediata; se for outro jogador,
+  o dono original recebe uma notificação e pode aceitar ou recusar
+- Comprar uma propriedade hipotecada "do zero" (sem dono) custa
+  **custo de compra × 1.2**
+
+### Turno (Modo Tabuleiro)
+
+1. O jogador da vez rola 2 dados (1–6 cada)
+2. O peão avança a soma das casas; se passar ou cair em Início, ganha
+   **R$ 2.000**
+3. A casa onde parou é resolvida automaticamente (compra, aluguel,
+   imposto, carta, prisão, feriado...)
+4. **Dados iguais (duplo)** → joga de novo, **exceto** se a casa onde
+   parou for **Feriado**, **Vá para a Detenção** ou uma carta de
+   prisão — nesses casos a vez encerra mesmo com duplo
+5. **3 duplos seguidos** na mesma vez → vai direto para a prisão, sem
+   completar o movimento
+6. Cada turno tem **60 segundos**; se o tempo acabar, o servidor joga
+   automaticamente pelo jogador (rola, move, recusa compras pendentes,
+   paga o que for devido) e passa a vez
+7. Comprar uma propriedade pode ficar **pendente durante todo o turno**
+   — o jogador pode navegar para vender/hipotecar outras propriedades
+   e conseguir dinheiro antes de decidir
+
+### Prisão
+
+- Vai para a prisão: 3 duplos seguidos, cair em "Vá para a Detenção" ou
+  tirar uma carta de prisão
+- Nas 2 primeiras rodadas presas: uma tentativa de duplo por rodada; se
+  falhar, permanece preso e a rodada acaba
+- Na 3ª rodada (última): até 3 tentativas de duplo na mesma vez; se
+  todas falharem, paga a **multa de R$ 500** e sai sem se mover
+- Tirar duplo a qualquer momento liberta imediatamente (fica na casa
+  Prisão, sem se mover, e ganha outra jogada)
+- Carta "Saia da Prisão" (ganha em carta de Sorte/Revés) pode ser usada
+  a qualquer momento para sair sem pagar nem esperar
+
+### Cartas de Sorte e Revés
+
+Baralho de 50 cartas de Sorte + 50 de Revés, sorteadas ao cair em
+"Notícias". Tipos de efeito:
+
+| Efeito | Descrição |
+|---|---|
+| Ganhar dinheiro | Recebe valor fixo do banco |
+| Perder dinheiro | Paga valor fixo ao banco (vira dívida se não tiver saldo) |
+| Receber dos jogadores | Recebe valor fixo de cada outro jogador |
+| Pagar aos jogadores | Paga valor fixo a cada outro jogador |
+| Saia da Prisão | Ganha a carta (ou, se já tiver uma, ganha R$ 500 em dinheiro) |
+| Vá para a prisão | Envia direto para a prisão |
+
+### Dívidas e falência
+
+- Quando um jogador não tem saldo suficiente para pagar aluguel,
+  imposto ou carta, ele paga o que der e o restante vira uma **dívida**
+  registrada — o credor recebe o valor cheio (o banco cobre a diferença)
+- Dívidas pendentes contam **rodadas sem quitar**; na **3ª rodada**
+  seguida sem pagar, o jogador **declara falência**: todas as suas
+  propriedades voltam ao banco (sem dono, sem leilão), o saldo zera e
+  ele sai da partida
+- Não é possível desistir voluntariamente com dívidas pendentes
+  (Modo Tabuleiro) nem com patrimônio ≥ **R$ 15.000**
+
+### Negociações
+
+Jogadores podem propor trocas (propriedades e/ou dinheiro dos dois
+lados) para qualquer outro jogador da sessão. O alvo pode **aceitar**,
+**recusar** ou enviar uma **contraproposta**. Propostas sem resposta
+**expiram em 2 minutos**.
+
+### Fim de partida e classificação
+
+A partida termina quando o dono encerra manualmente ou automaticamente
+quando **metade ou mais** dos jogadores desistiu/faliu. A colocação
+final é ordenada por:
+
+1. **Jogadores ativos até o fim**, do maior para o menor **patrimônio**
+   (saldo + custo de compra das propriedades + custo das casas)
+2. **Jogadores falidos**, pelo patrimônio que tinham no momento da falência
+3. **Jogadores que desistiram voluntariamente**, por ordem de quem saiu
+   por último primeiro
+
+### Recompensas por partida
+
+Ao final, cada jogador ganha coins e XP conforme a colocação:
+
+| Posição | Coins | XP |
+|---|---|---|
+| 1º | 500 | 400 |
+| 2º | 350 | 200 |
+| 3º | 200 | 100 |
+| 4º+ | 100 | 50 |
+
+Multiplicado por bônus de duração (×1.2 partidas ≥30min, ×1.5 ≥60min).
+Proteções anti-farm: nenhuma recompensa se a partida durar menos de 5
+minutos, se a atividade do jogador for muito baixa (possível AFK), ou
+dentro do cooldown de 20 minutos entre partidas recompensadas do mesmo
+usuário. Há também um teto diário de 3.000 coins e 1.500 XP por usuário.
+
 ## Desenvolvimento
 
 ### Pré-requisitos

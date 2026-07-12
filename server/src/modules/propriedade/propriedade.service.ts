@@ -35,16 +35,23 @@ export class PropriedadeService {
       const propriedade = sessionPosses.propriedade;
       if (!propriedade) throw new AppError(404, "Dados da propriedade não encontrados");
 
-      if (player.saldo < propriedade.custo_compra) {
+      // Propriedade sem dono mas ainda hipotecada (ex.: dono anterior faliu
+      // ou desistiu) custa 1.2x — checar saldo contra ESSE valor, não o
+      // custo_compra base, senão o jogador pode ficar com saldo negativo.
+      const valorCompra = sessionPosses.hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
+
+      if (player.saldo < valorCompra) {
         throw new AppError(400, "Saldo insuficiente");
       }
-
-      const valorCompra = sessionPosses.hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
 
       await prisma.$transaction([
         prisma.sessionPosses.updateMany({
           where: { sessionId, propId },
-          data: { playerId: userId },
+          // Limpa hipotecada/lastOwnerId — a compra normal (ao cair na casa)
+          // de uma propriedade sem dono e hipotecada precisa devolvê-la ao
+          // estado normal, senão ela fica presa como "hipotecada" mesmo já
+          // tendo um dono novo e pago.
+          data: { playerId: userId, hipotecada: false, lastOwnerId: null },
         }),
         prisma.sessionPlayer.update({
           where: { id: userId },

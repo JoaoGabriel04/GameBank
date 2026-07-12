@@ -29,12 +29,14 @@ export class UserService {
     }
 
     await prisma.$transaction(async (tx) => {
-      if (player.sessionPosses.length > 0) {
-        await tx.sessionPosses.updateMany({
-          where: { playerId },
-          data: { playerId: null, casas: 0 },
-        });
-      }
+      // Inclui propriedades hipotecadas por este jogador (playerId já nulo
+      // desde a hipoteca, só rastreadas por lastOwnerId) — além de devolver
+      // ao banco corretamente (sem ficar hipotecada presa a ninguém), evita
+      // que o delete abaixo quebre por causa da referência de lastOwnerId.
+      await tx.sessionPosses.updateMany({
+        where: { OR: [{ playerId }, { lastOwnerId: playerId }] },
+        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
+      });
       await tx.sessionPlayer.delete({ where: { id: playerId } });
     });
 

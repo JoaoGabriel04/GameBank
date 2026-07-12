@@ -14,6 +14,7 @@ export class BancoService {
   async deposito(userId: number, sessionId: number, valor: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+    if (player.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     if (valor <= 0) {
       throw new AppError(400, "Valor deve ser maior que zero!");
@@ -42,6 +43,7 @@ export class BancoService {
   async saque(userId: number, sessionId: number, valor: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+    if (player.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     if (valor <= 0) {
       throw new AppError(400, "Valor deve ser maior que zero!");
@@ -74,6 +76,7 @@ export class BancoService {
   async transferencia(pagadorId: number, recebedorId: number, sessionId: number, valor: number) {
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Jogador pagador não encontrado!");
+    if (pagador.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     if (valor <= 0) {
       throw new AppError(400, "Valor deve ser maior que zero!");
@@ -85,6 +88,7 @@ export class BancoService {
 
     const recebedor = await this.repo.findPlayerById(recebedorId);
     if (!recebedor) throw new AppError(404, "Jogador recebedor não encontrado!");
+    if (recebedor.desistiu) throw new AppError(400, "O jogador destinatário já saiu da partida.");
 
     if (pagador.saldo < valor) {
       throw new AppError(400, "Saldo insuficiente para transferência!");
@@ -126,6 +130,7 @@ export class BancoService {
 
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Pagador não encontrado");
+    if (pagador.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     const prop = poss.propriedade;
     if (!prop) throw new AppError(500, "Dados da propriedade indisponíveis");
@@ -192,6 +197,7 @@ export class BancoService {
 
     const pagador = await this.repo.findPlayerById(pagadorId);
     if (!pagador) throw new AppError(404, "Pagador não encontrado");
+    if (pagador.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     const valorAluguel = ALUGUEL_ACAO_MULTIPLICADOR * Number(numDados);
 
@@ -224,8 +230,11 @@ export class BancoService {
   async receberDeTodos(sessionId: number, userId: number) {
     const player = await this.repo.findPlayerById(userId);
     if (!player) throw new AppError(404, "Jogador não encontrado!");
+    if (player.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
-    const outrosJogadores = await this.repo.findPlayersBySession(sessionId, userId);
+    // Jogadores que já saíram não pagam (e não fazem parte da divisão)
+    const outrosJogadores = (await this.repo.findPlayersBySession(sessionId, userId))
+      .filter((j) => !j.desistiu);
 
     await prisma.$transaction([
       ...outrosJogadores.map((jogador) =>

@@ -389,12 +389,17 @@ export class SessionService {
 
     if (session.status === "Em Andamento" && !player.desistiu) {
       await prisma.$transaction(async (tx) => {
+        // Inclui propriedades hipotecadas pelo jogador (playerId já nulo
+        // desde a hipoteca, só rastreadas por lastOwnerId) — senão ficam
+        // hipotecadas indefinidamente, presas a um jogador que já saiu.
         await tx.sessionPosses.updateMany({
-          where: { sessionId, playerId: player.id },
+          where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
           data: {
             playerId: null,
+            lastOwnerId: null,
             casas: 0,
             hipotecada: false,
+            negociando: false,
           },
         });
 
@@ -443,6 +448,14 @@ export class SessionService {
     }
 
     await this.invalidateCache(sessionId);
+
+    // Se era a vez dele (Modo Tabuleiro), avança o turno imediatamente —
+    // senão turnoAtualPlayerId fica apontando pra um jogador que não existe
+    // mais até o timeout de 60s (ou a varredura periódica) resolver sozinho.
+    if (session.status === "Em Andamento" && session.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId === player.id) {
+      const { turnoService } = await import("../turno/turno.service.js");
+      await turnoService.passarVez(sessionId, player.id).catch(() => {});
+    }
 
     // Auto-end: quando restam metade ou menos dos jogadores, finaliza
     const totalPlayers = session.jogadores.length;
@@ -498,10 +511,14 @@ export class SessionService {
         data: { patrimonyAtDesistir: patrimony },
       });
 
+      // Inclui propriedades hipotecadas pelo jogador (playerId já nulo desde
+      // a hipoteca, só rastreadas por lastOwnerId) — senão ficam hipotecadas
+      // indefinidamente, presas a um jogador que já saiu da partida.
       await tx.sessionPosses.updateMany({
-        where: { sessionId, playerId: player.id },
+        where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
         data: {
           playerId: null,
+          lastOwnerId: null,
           casas: 0,
           hipotecada: false,
           negociando: false,
@@ -515,6 +532,14 @@ export class SessionService {
     });
 
     await this.invalidateCache(sessionId);
+
+    // Se era a vez dele (Modo Tabuleiro), avança o turno imediatamente —
+    // senão turnoAtualPlayerId fica apontando pra alguém que já desistiu
+    // até o timeout de 60s (ou a varredura periódica) resolver sozinho.
+    if (session.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId === player.id) {
+      const { turnoService } = await import("../turno/turno.service.js");
+      await turnoService.passarVez(sessionId, player.id).catch(() => {});
+    }
 
     // Auto-end: quando restam metade ou menos dos jogadores, finaliza
     const totalPlayers = session.jogadores.length;
@@ -553,9 +578,12 @@ export class SessionService {
         where: { id: player.id },
         data: { patrimonyAtDesistir: patrimony },
       });
+      // Inclui propriedades hipotecadas pelo jogador (playerId já nulo desde
+      // a hipoteca, só rastreadas por lastOwnerId) — senão ficam hipotecadas
+      // indefinidamente, presas a um jogador que já saiu da partida.
       await tx.sessionPosses.updateMany({
-        where: { sessionId, playerId: player.id },
-        data: { playerId: null, casas: 0, hipotecada: false, negociando: false },
+        where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
+        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
       });
       await tx.sessionPlayer.update({
         where: { id: player.id },
@@ -564,6 +592,14 @@ export class SessionService {
     });
 
     await this.invalidateCache(sessionId);
+
+    // Se era a vez dele (Modo Tabuleiro), avança o turno imediatamente —
+    // senão turnoAtualPlayerId fica apontando pra alguém que já foi
+    // expulso até o timeout de 60s (ou a varredura periódica) resolver.
+    if (session.tipoJogo === "tabuleiro" && session.turnoAtualPlayerId === player.id) {
+      const { turnoService } = await import("../turno/turno.service.js");
+      await turnoService.passarVez(sessionId, player.id).catch(() => {});
+    }
 
     const totalPlayers = session.jogadores.length;
     const activeCount = await this.repo.countActivePlayers(sessionId);
@@ -736,9 +772,13 @@ export class SessionService {
       await tx.notification.deleteMany({ where: { sessionId } });
       await tx.message.deleteMany({ where: { sessionId } });
       await tx.debt.deleteMany({ where: { sessionId } });
+      // sessionPosses ANTES de sessionPlayer: propriedades hipotecadas
+      // referenciam o jogador via lastOwnerId (playerId já é nulo desde a
+      // hipoteca), então apagar os jogadores primeiro violaria a FK sempre
+      // que alguma hipoteca ainda estivesse ativa ao fim da partida.
+      await tx.sessionPosses.deleteMany({ where: { sessionId } });
       await tx.sessionPlayer.deleteMany({ where: { sessionId } });
       await tx.sessionTeam.deleteMany({ where: { sessionId } });
-      await tx.sessionPosses.deleteMany({ where: { sessionId } });
       await tx.historico.deleteMany({ where: { sessionId } });
       await tx.session.delete({ where: { id: sessionId } });
     });

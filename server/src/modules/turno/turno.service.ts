@@ -92,6 +92,12 @@ class TurnoService {
 
       const player = await turnoRepository.findPlayerParaJogada(playerId);
       if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+      // Defesa em profundidade: turnoAtualPlayerId pode ficar apontando
+      // (temporariamente) pra um jogador que acabou de desistir/ser
+      // expulso na própria vez — bloqueia a rolagem mesmo que isso aconteça.
+      if (player.desistiu) {
+        throw new AppError(403, "Você já saiu desta partida.");
+      }
 
       const falencia = await this.verificarFalencia(sessionId, session, player);
       if (falencia) return falencia;
@@ -255,9 +261,14 @@ class TurnoService {
         where: { id: player.id },
         data: { patrimonyAtDesistir: patrimony },
       });
+      // Devolve ao banco tanto as propriedades que o jogador possuía quanto
+      // as que ele tinha hipotecado (essas ficam com playerId nulo desde a
+      // hipoteca — só rastreadas por lastOwnerId — por isso precisam entrar
+      // na busca separadamente, senão continuam hipotecadas indefinidamente
+      // presas a um jogador que já saiu da partida).
       await tx.sessionPosses.updateMany({
-        where: { sessionId, playerId: player.id },
-        data: { playerId: null, casas: 0, hipotecada: false, negociando: false },
+        where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
+        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
       });
       await tx.sessionPlayer.update({
         where: { id: player.id },
@@ -487,6 +498,7 @@ class TurnoService {
 
       const player = await turnoRepository.findPlayerParaJogada(playerId);
       if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+      if (player.desistiu) throw new AppError(403, "Você já saiu desta partida.");
       if (!player.emPrisao) throw new AppError(400, "Você não está na prisão.");
 
       const mensagem = await cartaService.usarCartaPrisao(sessionId, playerId);
@@ -506,6 +518,7 @@ class TurnoService {
 
     const player = await turnoRepository.findPlayerParaJogada(playerId);
     if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+    if (player.desistiu) throw new AppError(403, "Você já saiu desta partida.");
 
     return { ...session, posicaoJogador: player.posicao };
   }

@@ -27,9 +27,11 @@ export class NegociacaoService {
   ) {
     const fromPlayer = await this.repo.findPlayerById(fromPlayerId);
     if (!fromPlayer) throw new AppError(404, "Proponente não encontrado!");
+    if (fromPlayer.desistiu) throw new AppError(400, "Você já saiu desta partida.");
 
     const toPlayer = await this.repo.findPlayerById(toPlayerId);
     if (!toPlayer) throw new AppError(404, "Alvo não encontrado!");
+    if (toPlayer.desistiu) throw new AppError(400, "Este jogador já saiu da partida.");
 
     if (fromPlayerId === toPlayerId) {
       throw new AppError(400, "Não pode negociar consigo mesmo!");
@@ -192,6 +194,12 @@ export class NegociacaoService {
     const fromPlayer = await this.repo.findPlayerById(negotiation.fromPlayerId);
     const toPlayer = await this.repo.findPlayerById(negotiation.toPlayerId);
     if (!fromPlayer || !toPlayer) throw new AppError(404, "Jogador não encontrado!");
+    // Defesa: o proponente pode ter desistido/falido depois de criar a
+    // proposta (a janela de expiração é de 2 minutos) — não deixa a troca
+    // se concretizar com alguém que já saiu da partida.
+    if (fromPlayer.desistiu || toPlayer.desistiu) {
+      throw new AppError(400, "Esta negociação não é mais válida — um dos jogadores já saiu da partida.");
+    }
 
     if (netMoney > 0 && fromPlayer.saldo < netMoney) {
       throw new AppError(400, "Proponente não tem saldo suficiente!");

@@ -57,6 +57,38 @@ const tabIcons: Record<string, IconDefinition> = {
   "Histórico": faClock,
 };
 
+// Mini turn timer — exibido em todas as abas exceto Tabuleiro (que já tem o TurnoBanner)
+function TurnTimerStrip({ session, meuPlayerId }: { session: NonNullable<ReturnType<typeof useGameStore.getState>["currentSession"]>; meuPlayerId?: number }) {
+  const [restante, setRestante] = useState(60)
+  const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
+  const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
+
+  useEffect(() => {
+    if (!session.turnoIniciadoEm) return
+    const inicio = new Date(session.turnoIniciadoEm).getTime()
+    const tick = () => {
+      const passado = Math.floor((Date.now() - inicio) / 1000)
+      setRestante(Math.max(0, 60 - passado))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [session.turnoIniciadoEm])
+
+  return (
+    <div className={`shrink-0 flex items-center justify-between gap-3 px-4 py-1.5 border-b font-inconsolata text-xs ${
+      minhaVez ? "border-green-500/30 bg-green-500/5 text-green-300" : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
+    }`}>
+      <span>
+        {minhaVez ? "Sua vez!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
+      </span>
+      <span className="flex items-center gap-1.5">
+        ⏱ {restante}s
+      </span>
+    </div>
+  )
+}
+
 export default function Game() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const vh = useViewportHeight();
@@ -403,38 +435,6 @@ export default function Game() {
     "Finalizada": "text-red-400 bg-red-500/10 border-red-500/30",
   };
 
-
-  // ── Mini turn timer (exibido em todas as abas exceto Tabuleiro) ─────────
-  function TurnTimerStrip({ session: s, meuPlayerId: m }: { session: NonNullable<typeof currentSession>; meuPlayerId?: number }) {
-    const [restante, setRestante] = useState(60)
-    const jogadorDaVez = s.jogadores?.find(p => p.id === s.turnoAtualPlayerId)
-    const minhaVez = !!m && s.turnoAtualPlayerId === m
-
-    useEffect(() => {
-      if (!s.turnoIniciadoEm) return
-      const inicio = new Date(s.turnoIniciadoEm).getTime()
-      const tick = () => {
-        const passado = Math.floor((Date.now() - inicio) / 1000)
-        setRestante(Math.max(0, 60 - passado))
-      }
-      tick()
-      const id = setInterval(tick, 1000)
-      return () => clearInterval(id)
-    }, [s.turnoIniciadoEm])
-
-    return (
-      <div className={`shrink-0 flex items-center justify-between gap-3 px-4 py-1.5 border-b font-inconsolata text-xs ${
-        minhaVez ? "border-green-500/30 bg-green-500/5 text-green-300" : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
-      }`}>
-        <span>
-          {minhaVez ? "Sua vez!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
-        </span>
-        <span className="flex items-center gap-1.5">
-          ⏱ {restante}s
-        </span>
-      </div>
-    )
-  }
 
   // -- Waiting Room --------------------------------------------------------
   function renderWaitingRoom() {
