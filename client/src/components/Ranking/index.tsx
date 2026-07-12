@@ -3,27 +3,22 @@
 import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
-import { getPropData } from "@/utils/properties";
 import type { Player, SessionPropriedade } from "@/types/game";
 import PlayerCard from "../PlayerCard";
+import { calcularPatrimonio } from "@/shared/economia-core";
 
 function calculatePatrimonio(player: Player, allPosses: SessionPropriedade[]): number {
   if (player.desistiu && player.patrimonyAtDesistir != null) {
     return player.patrimonyAtDesistir;
   }
-  let total = player.saldo;
-  for (const sp of allPosses) {
-    if (sp.playerId !== player.id) continue;
-    const prop = getPropData(sp);
-    if (!prop) continue;
-    if (sp.hipotecada) {
-      total += prop.hipoteca;
-    } else {
-      total += prop.custo_compra;
-      total += sp.casas * prop.custo_casa;
-    }
-  }
-  return total;
+  // Propriedades hipotecadas já têm playerId nulo (transferido ao banco
+  // desde a hipoteca — ver Mecânica 1), então o filtro abaixo já as
+  // exclui naturalmente: o cálculo nunca soma o valor de hipoteca de uma
+  // propriedade que não é mais do jogador.
+  const posses = allPosses
+    .filter((sp) => sp.playerId === player.id)
+    .map((sp) => ({ casas: sp.casas, propriedade: sp.propriedade ?? null }));
+  return calcularPatrimonio(player.saldo, posses);
 }
 
 interface RankedPlayer {

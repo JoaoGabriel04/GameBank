@@ -1,9 +1,13 @@
 /* eslint-disable */
 "use client";
 
-import Inicio from "@/components/Inicio";
 import Loja from "@/components/Loja";
 import Board from "@/components/Board";
+import GameShell from "@/components/Game/GameShell";
+import VisaoSection from "@/components/Game/sections/VisaoSection";
+import ImoveisSection from "@/components/Game/sections/ImoveisSection";
+import BancoSection from "@/components/Game/sections/BancoSection";
+import RankingSection from "@/components/Game/sections/RankingSection";
 import { useGameStore } from "@/stores/gameStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
@@ -21,12 +25,11 @@ import UserBanner from "@/components/UserBanner";
 import PlayerCard from "@/components/PlayerCard";
 import UserName from "@/components/UserName";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeIn } from "@/lib/animations";
 import { useToast } from "@/components/Toast";
-import Historico from "@/components/Historico";
-import Ranking from "@/components/Ranking";
+
 import { formatCurrency } from "@/utils/format";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import EndGameVoteModal from "@/components/EndGameVoteModal";
@@ -40,69 +43,28 @@ import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faTrophy, faChessBoard } from "@fortawesome/free-solid-svg-icons";
+import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faTrophy, faChessBoard, faComments } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { RankedPlayer, Player } from "@/types/game";
 import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
-const linksNavBanca = ["Início", "Loja", "Ranking", "Histórico"];
-const linksNavTabuleiro = ["Tabuleiro", "Início", "Ranking", "Histórico"];
+const linksNavBanca = ["Visão", "Imóveis", "Banco", "Chat", "Ranking", "Loja"];
+const linksNavTabuleiro = ["Visão", "Imóveis", "Banco", "Chat", "Ranking"];
 
 const tabIcons: Record<string, IconDefinition> = {
-  "Tabuleiro": faChessBoard,
-  "Início":    faHouse,
-  "Loja":      faStore,
-  "Ranking":   faTrophy,
-  "Histórico": faClock,
+  "Visão":    faHouse,
+  "Imóveis":  faChessBoard,
+  "Banco":    faStore,
+  "Chat":     faComments,
+  "Ranking":  faTrophy,
+  "Loja":     faStore,
 };
-
-// Mini turn timer — exibido em todas as abas exceto Tabuleiro (que já tem o TurnoBanner)
-function TurnTimerStrip({ session, meuPlayerId }: { session: NonNullable<ReturnType<typeof useGameStore.getState>["currentSession"]>; meuPlayerId?: number }) {
-  const [restante, setRestante] = useState(60)
-  const jogadorDaVez = session.jogadores?.find(p => p.id === session.turnoAtualPlayerId)
-  const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
-  const ordem: number[] = session.ordemTurnos ? JSON.parse(session.ordemTurnos) : []
-  const posicaoJogadorDaVez = jogadorDaVez ? ordem.indexOf(jogadorDaVez.id) + 1 : 0
-  const rodada = session.rodadaAtual ?? 1
-
-  useEffect(() => {
-    if (!session.turnoIniciadoEm) return
-    const inicio = new Date(session.turnoIniciadoEm).getTime()
-    const tick = () => {
-      const passado = Math.floor((Date.now() - inicio) / 1000)
-      setRestante(Math.max(0, 60 - passado))
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [session.turnoIniciadoEm])
-
-  return (
-    <div className={`shrink-0 flex items-center justify-between gap-3 px-4 py-1.5 border-b font-inconsolata text-xs ${
-      minhaVez ? "border-green-500/30 bg-green-500/5 text-green-300" : "border-zinc-800 bg-zinc-900/40 text-zinc-400"
-    }`}>
-      <span className="flex items-center gap-2">
-        {posicaoJogadorDaVez > 0 && (
-          <span className="font-semibold">{posicaoJogadorDaVez}°</span>
-        )}
-        <span>|</span>
-        <span>
-          {minhaVez ? "Sua vez" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
-        </span>
-      </span>
-      <span className="flex items-center gap-2">
-        <span>Rodada {String(rodada).padStart(2, '0')}</span>
-        <span>⏱ {restante}s</span>
-      </span>
-    </div>
-  )
-}
 
 export default function Game() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const vh = useViewportHeight();
-  const [abaAtual, setAbaAtual] = useState("Início");
+  const [abaAtual, setAbaAtual] = useState("Visão");
   const [endLoading, setEndLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
   const [quitLoading, setQuitLoading] = useState(false);
@@ -115,6 +77,8 @@ export default function Game() {
   const [voteData, setVoteData] = useState<VoteRequestData | null>(null);
   const [voteUpdate, setVoteUpdate] = useState<VoteUpdateData | null>(null);
   const [votingLoading, setVotingLoading] = useState(false);
+  const [rolando, setRolando] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const params = useParams();
   const router = useRouter();
@@ -242,7 +206,7 @@ export default function Game() {
 
   // Restaura a aba salva no localStorage
   useEffect(() => {
-    setAbaAtual(localStorage.getItem("abaAtual") || "Início");
+    setAbaAtual(localStorage.getItem("abaAtual") || "Visão");
   }, []);
 
   // Lida com erros de carregamento da sessão
@@ -349,6 +313,22 @@ export default function Game() {
       }
     }, 5000);
   };
+
+  const handleRolarDados = useCallback(async () => {
+    if (rolando || !sessionId) return;
+    setRolando(true);
+    try {
+      const r = await useGameStore.getState().rolarDados(sessionId);
+      if (r?.falido) {
+        toastError(r.mensagem ?? "Você faliu.");
+      }
+    } catch (err) {
+      const e = toApiErr(err);
+      toastError(e?.response?.data?.message ?? "Erro ao rolar dados");
+    } finally {
+      setRolando(false);
+    }
+  }, [rolando, sessionId, toastError]);
 
   const handleQuit = async () => {
     if (!currentSession) return;
@@ -647,14 +627,25 @@ export default function Game() {
     }
 
     switch (abaAtual) {
-      case "Tabuleiro":    return currentSession.tabuleiro
-        ? <Board tabuleiro={currentSession.tabuleiro} session={currentSession} meuPlayerId={currentPlayer?.id} />
-        : null;
-      case "Início":       return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
-      case "Loja":         return <Loja />;
-      case "Ranking":      return <Ranking />;
-      case "Histórico":    return <Historico />;
-      default:             return <Inicio isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
+      case "Visão":
+        return (
+          <div className="space-y-4">
+            <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+            <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+          </div>
+        );
+      case "Imóveis":    return <ImoveisSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
+      case "Banco":      return <BancoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
+      case "Ranking":    return <RankingSection />;
+      case "Chat":       return <Chat variant="tab" onUnreadCount={setUnreadChatCount} />;
+      case "Loja":       return <Loja />;
+      default:
+        return (
+          <div className="space-y-4">
+            <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+            <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+          </div>
+        );
     }
   };
 
@@ -702,7 +693,6 @@ export default function Game() {
   }
 
   const isWaiting = currentSession.status === "Esperando";
-  const isTabuleiro = abaAtual === "Tabuleiro";
   const linksNav = currentSession.tipoJogo === "tabuleiro" ? linksNavTabuleiro : linksNavBanca;
   const currentPlayer = currentSession?.jogadores?.find(
     (p) => p.userId === authUser?.id
@@ -784,6 +774,11 @@ export default function Game() {
                   >
                     <FontAwesomeIcon icon={tabIcons[link]} className="text-xs" />
                     {link}
+                    {link === "Chat" && unreadChatCount > 0 && (
+                      <span className="w-4 h-4 bg-green-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                        {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -799,94 +794,77 @@ export default function Game() {
           />
         )}
 
-        {/* Mini turn timer — visível de qualquer aba (menos na Tabuleiro, que já tem o TurnoBanner) */}
-        {!isWaiting && !isTabuleiro && currentSession.turnoAtualPlayerId != null && (
-          <TurnTimerStrip session={currentSession} meuPlayerId={currentPlayer?.id} />
-        )}
-
         {/* LINHA 2 — Conteúdo */}
-        {isTabuleiro ? (
-          <section className="flex-1 w-full flex flex-col min-h-0">
-            <section className="w-full h-full flex flex-col min-h-0 px-2 lg:px-4 py-2">
-              <AnimatePresence mode="wait">
-                <motion.div key={abaAtual} variants={fadeIn} animate="visible" className="flex-1 flex flex-col min-h-0">
-                  {renderConteudo()}
-                </motion.div>
-              </AnimatePresence>
-            </section>
-          </section>
-        ) : (
-          <section className="flex-1 w-full overflow-hidden">
-            <section className="w-full h-full overflow-y-auto px-4">
-            <div className="pb-6">
-              {!isWaiting && (
-                <div className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
-                  {/* Informações do jogador */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {currentPlayer && (
-                        <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 145} />
-                      )}
-                      <div>
-                        <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
-                          {currentSession.nome}
-                          {isSpectator && (
-                            <span className="text-xs font-inconsolata bg-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded-full">
-                              Espectador
-                            </span>
-                          )}
-                        </h1>
-                        <div className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
-                          {currentPlayer && (
-                            <UserName
-                              nome={currentPlayer.nome}
-                              badge={currentPlayer.badge}
-                              badgeImageUrl={currentPlayer.badgeImageUrl}
-                              badgeVariant="micro"
-                            />
-                          )}
-                          {!currentPlayer && <span>—</span>}
-                          <span>·</span>
-                          <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
-                        </div>
+        <section className="flex-1 w-full overflow-hidden">
+          <section className="w-full h-full overflow-y-auto px-4">
+          <div className="pb-6">
+            {!isWaiting && (
+              <div className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
+                {/* Informações do jogador */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    {currentPlayer && (
+                      <UserAvatar avatarUrl={currentPlayer.avatarUrl} avatarUpdatedAt={currentPlayer.avatarUpdatedAt} nome={currentPlayer.nome} size="md" frame={currentPlayer.frame} frameType={currentPlayer.frameType} frameAnimated={currentPlayer.frameAnimated} frameScale={currentPlayer.frameScale ?? 145} />
+                    )}
+                    <div>
+                      <h1 className="text-xl font-jaro font-semibold text-zinc-100 flex items-center gap-2">
+                        {currentSession.nome}
+                        {isSpectator && (
+                          <span className="text-xs font-inconsolata bg-zinc-700/50 text-zinc-400 px-2 py-0.5 rounded-full">
+                            Espectador
+                          </span>
+                        )}
+                      </h1>
+                      <div className="text-sm font-inconsolata text-zinc-500 flex items-center gap-1.5">
+                        {currentPlayer && (
+                          <UserName
+                            nome={currentPlayer.nome}
+                            badge={currentPlayer.badge}
+                            badgeImageUrl={currentPlayer.badgeImageUrl}
+                            badgeVariant="micro"
+                          />
+                        )}
+                        {!currentPlayer && <span>—</span>}
+                        <span>·</span>
+                        <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {spectatorCount > 0 && (
-                        <span className="flex items-center gap-1 text-sm font-inconsolata text-zinc-500">
-                          <Eye className="w-4 h-4" />
-                          {spectatorCount}
-                        </span>
-                      )}
-                      {currentPlayer && !isSpectator && (
-                        <button
-                          onClick={desistirLoading ? undefined : handleDesistir}
-                          disabled={desistirLoading}
-                          className="font-jaro text-xs uppercase tracking-wider px-3 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          Desistir
-                        </button>
-                      )}
-                      <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
-                        {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
                   </div>
-                  <p className="text-zinc-500 font-inconsolata text-xs">
-                    {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    {spectatorCount > 0 && (
+                      <span className="flex items-center gap-1 text-sm font-inconsolata text-zinc-500">
+                        <Eye className="w-4 h-4" />
+                        {spectatorCount}
+                      </span>
+                    )}
+                    {currentPlayer && !isSpectator && (
+                      <button
+                        onClick={desistirLoading ? undefined : handleDesistir}
+                        disabled={desistirLoading}
+                        className="font-jaro text-xs uppercase tracking-wider px-3 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        Desistir
+                      </button>
+                    )}
+                    <button onClick={() => setShowSaldo(!showSaldo)} className="text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">
+                      {showSaldo ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              )}
+                <p className="text-zinc-500 font-inconsolata text-xs">
+                  {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
+                </p>
+              </div>
+            )}
 
-              <AnimatePresence mode="wait">
-                <motion.div key={abaAtual} variants={fadeIn} animate="visible">
-                  {renderConteudo()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            </section>
+            <AnimatePresence mode="wait">
+              <motion.div key={abaAtual} variants={fadeIn} animate="visible">
+                {renderConteudo()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
           </section>
-        )}
+        </section>
 
         {/* LINHA 3 — Nav mobile (oculto no desktop via lg:hidden) */}
         <div className="shrink-0 lg:hidden">
@@ -907,7 +885,6 @@ export default function Game() {
 
       <NegotiationResponseModal />
 
-      <Chat />
 
       <EndGameVoteModal
         isOpen={!!voteData}

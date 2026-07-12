@@ -18,6 +18,7 @@ import { useToast } from "@/components/Toast";
 import { formatCurrency } from "@/utils/format";
 import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS, CREDITO_INICIO } from "@/constants/economia";
 import { getEvento } from "@/constants/eventos";
+import { aplicarMod, calcularPatrimonio } from "@/shared/economia-core";
 import { toApiErr } from "@/lib/api-error";
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
@@ -220,16 +221,11 @@ export default function Inicio({ onNavigate }: InicioProps) {
 
   const patrimonio = useMemo(() => {
     if (!currentPlayer) return 0;
-    let total = currentPlayer.saldo;
-    for (const { prop, sessionProp } of myProps) {
-      if (sessionProp.hipotecada) {
-        total += prop.hipoteca;
-      } else {
-        total += prop.custo_compra;
-        total += sessionProp.casas * prop.custo_casa;
-      }
-    }
-    return total;
+    // myProps já filtra playerId === currentPlayer.id — propriedades
+    // hipotecadas têm playerId nulo desde a hipoteca (Mecânica 1) e nunca
+    // chegam aqui, então não precisam de um caso especial.
+    const posses = myProps.map(({ prop, sessionProp }) => ({ casas: sessionProp.casas, propriedade: prop }));
+    return calcularPatrimonio(currentPlayer.saldo, posses);
   }, [currentPlayer, myProps]);
 
   // Projeção da próxima passagem pelo Início (Modo Tabuleiro): mesma
@@ -250,9 +246,9 @@ export default function Inicio({ onNavigate }: InicioProps) {
       if (prop.tipo === "ação") continue;
       const casas = sessionProp.casas ?? 0;
       const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
-      iptu += Math.round(prop.custo_compra * IPTU_PCT * (mods.iptuMult ?? 1));
-      manutencao += Math.round(prop.custo_casa * MANUTENCAO_PCT * casasEquivalentes * (mods.manutencaoMult ?? 1));
-      rendaPassiva += Math.round(getAluguelBase(prop, casas) * RENDA_PASSIVA_PCT * (mods.rendaPassivaMult ?? 1));
+      iptu += aplicarMod(prop.custo_compra * IPTU_PCT, mods.iptuMult);
+      manutencao += aplicarMod(prop.custo_casa * MANUTENCAO_PCT * casasEquivalentes, mods.manutencaoMult);
+      rendaPassiva += aplicarMod(getAluguelBase(prop, casas) * RENDA_PASSIVA_PCT, mods.rendaPassivaMult);
     }
     const receita = CREDITO_INICIO + rendaPassiva;
     const despesa = iptu + manutencao;
@@ -320,7 +316,7 @@ export default function Inicio({ onNavigate }: InicioProps) {
   // (anti-exploit) — por isso só é aplicado na aba de compra.
   const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1
   const custoCasaAtual = useCallback(
-    (custoBase: number) => Math.round(custoBase * custoConstrucaoMult),
+    (custoBase: number) => aplicarMod(custoBase, custoConstrucaoMult),
     [custoConstrucaoMult]
   )
 

@@ -52,6 +52,7 @@ import {
   pagarDividaApi,
 } from "@/services/api/dividas";
 import { getEvento } from "@/constants/eventos";
+import { calcularAluguel, aplicarMod } from "@/shared/economia-core";
 
 // --- Tipos --------------------------------------------------------------------
 
@@ -607,21 +608,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   getAluguelBase: (propriedade, casas) => {
-    const alugueis = [
-      propriedade.aluguel_base,
-      propriedade.aluguel_1c,
-      propriedade.aluguel_2c,
-      propriedade.aluguel_3c,
-      propriedade.aluguel_4c,
-      propriedade.aluguel_hotel,
-    ];
-    return alugueis[Math.min(casas, 5)];
+    return calcularAluguel(propriedade, casas);
   },
 
   getAluguel: (propriedade, casas) => {
     const base = get().getAluguelBase(propriedade, casas);
-    const mult = getEvento(get().currentSession?.eventoAtual)?.efeito.aluguelMult ?? 1;
-    return Math.round(base * mult);
+    const mult = getEvento(get().currentSession?.eventoAtual)?.efeito.aluguelMult;
+    return aplicarMod(base, mult);
   },
 
   updatePlayerInSession: (userId, data) => {

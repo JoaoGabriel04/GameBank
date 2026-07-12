@@ -7,14 +7,19 @@ import {
   faTrophy,
   faClock,
   faChessBoard,
+  faComments,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 const tabIcons: Record<string, IconDefinition> = {
+  "Visão":    faHouse,
+  "Imóveis":  faChessBoard,
+  "Banco":    faStore,
+  "Chat":     faComments,
+  "Ranking":  faTrophy,
+  "Loja":     faStore,
   "Tabuleiro": faChessBoard,
-  "Início": faHouse,
-  "Loja": faStore,
-  "Ranking": faTrophy,
+  "Início":   faHouse,
   "Histórico": faClock,
 };
 

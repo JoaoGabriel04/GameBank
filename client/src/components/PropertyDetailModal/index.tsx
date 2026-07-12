@@ -9,6 +9,7 @@ import { useToast } from "@/components/Toast"
 import Button1 from "../Button01"
 import { toApiErr } from "@/lib/api-error"
 import { getEvento } from "@/constants/eventos"
+import { aplicarMod } from "@/shared/economia-core"
 
 const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16",
@@ -70,7 +71,7 @@ export default function PropertyDetailModal({
   // Custo de construção reflete Escassez de Material / Aquecimento do
   // Mercado — mesma regra de propriedade.service.ts (venda usa custo base).
   const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1
-  const custoCasaAtual = Math.round(propriedade.custo_casa * custoConstrucaoMult)
+  const custoCasaAtual = aplicarMod(propriedade.custo_casa, custoConstrucaoMult)
 
   const handleConfirm = async () => {
     if (!confirmAction) return
