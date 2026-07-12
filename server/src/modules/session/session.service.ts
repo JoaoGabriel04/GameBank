@@ -18,6 +18,7 @@ import { calcularDeltaTrofeus } from "../../shared/constants/trophies.js";
 import { recompensasQueue, missoesQueue } from "../../lib/queues.js";
 import { getTabuleiro } from "../tabuleiro/tabuleiro.data.js";
 import { withLock } from "../../middleware/lock.middleware.js";
+import { calcularPatrimonio } from "../../shared/economia-core.js";
 import type { RecompensasBauJob } from "../../workers/recompensas.worker.js";
 import type { MissoesJob } from "../../workers/missoes.worker.js";
 
@@ -484,13 +485,10 @@ export class SessionService {
     }
 
     // Calcular patrimônio antes de zerar
-    let patrimony = player.saldo;
-    for (const sp of session.sessionPosses ?? []) {
-      if (sp.playerId === player.id && sp.propriedade) {
-        patrimony += sp.propriedade.custo_compra;
-        patrimony += sp.casas * sp.propriedade.custo_casa;
-      }
-    }
+    const patrimony = calcularPatrimonio(
+      player.saldo,
+      (session.sessionPosses ?? []).filter(sp => sp.playerId === player.id)
+    );
 
     if (patrimony >= DESIST_LIMIT) {
       throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ ${(DESIST_LIMIT - 1).toLocaleString("pt-BR")}).`);
@@ -572,13 +570,10 @@ export class SessionService {
     if (!session || session.status !== "Em Andamento") throw new AppError(400, "Partida não está em andamento");
 
     // Calcula patrimônio antes de zerar
-    let patrimony = player.saldo;
-    for (const sp of session.sessionPosses ?? []) {
-      if (sp.playerId === player.id && sp.propriedade) {
-        patrimony += sp.propriedade.custo_compra;
-        patrimony += sp.casas * sp.propriedade.custo_casa;
-      }
-    }
+    const patrimony = calcularPatrimonio(
+      player.saldo,
+      (session.sessionPosses ?? []).filter(sp => sp.playerId === player.id)
+    );
 
     await prisma.$transaction(async (tx) => {
       await tx.sessionPlayer.update({
@@ -915,17 +910,9 @@ export class SessionService {
     const posses = session.sessionPosses ?? [];
 
     const withPatrimony = players.map((p: any) => {
-      let patrimony = p.saldo;
-      if (p.desistiu && p.patrimonyAtDesistir != null) {
-        patrimony = p.patrimonyAtDesistir;
-      } else {
-        for (const sp of posses) {
-          if (sp.playerId === p.id && sp.propriedade) {
-            patrimony += sp.propriedade.custo_compra;
-            patrimony += sp.casas * sp.propriedade.custo_casa;
-          }
-        }
-      }
+      const patrimony = p.desistiu && p.patrimonyAtDesistir != null
+        ? p.patrimonyAtDesistir
+        : calcularPatrimonio(p.saldo, posses.filter((sp: any) => sp.playerId === p.id));
 
       // grupo 0 = ativo até o fim; 1 = falência; 2 = desistência voluntária
       // null é tratado como falência para preservar compatibilidade com partidas antigas

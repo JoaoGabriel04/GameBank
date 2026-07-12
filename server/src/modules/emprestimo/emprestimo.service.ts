@@ -5,6 +5,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { EMPRESTIMO_LIMITE_PCT, EMPRESTIMO_JUROS_PCT, RENDA_PASSIVA_PCT } from "../../constants/economia.js";
 import { getEvento } from "../../constants/eventos.js";
+import { calcularAluguel, calcularPatrimonio } from "../../shared/economia-core.js";
 
 export class EmprestimoService {
   constructor(
@@ -15,14 +16,8 @@ export class EmprestimoService {
   async calcularLimiteCredito(sessionId: number, playerId: number): Promise<number> {
     const posses = await this.propRepo.findSessionPossesByPlayer(sessionId, playerId);
 
-    let valorTotal = 0;
-    for (const posse of posses) {
-      if (!posse.propriedade) continue;
-      if (posse.hipotecada) continue;
-
-      valorTotal += posse.propriedade.custo_compra;
-      valorTotal += (posse.casas ?? 0) * posse.propriedade.custo_casa;
-    }
+    // Garantia elegível: só propriedades não hipotecadas contam pro limite.
+    const valorTotal = calcularPatrimonio(0, posses.filter(p => !p.hipotecada));
 
     return Math.floor(valorTotal * EMPRESTIMO_LIMITE_PCT);
   }
@@ -68,7 +63,7 @@ export class EmprestimoService {
       if (prop.tipo === "ação") {
         aluguel = 500 * 7;
       } else {
-        aluguel = this.calcularAluguel(prop, casas);
+        aluguel = calcularAluguel(prop, casas);
       }
 
       const rendaPassiva = Math.round(aluguel * RENDA_PASSIVA_PCT);
@@ -80,20 +75,6 @@ export class EmprestimoService {
     }
 
     return melhor?.posse ?? null;
-  }
-
-  private calcularAluguel(
-    prop: { aluguel_base: number; aluguel_1c: number; aluguel_2c: number; aluguel_3c: number; aluguel_4c: number; aluguel_hotel: number },
-    casas: number
-  ) {
-    switch (casas) {
-      case 0: return prop.aluguel_base ?? 0;
-      case 1: return prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-      case 2: return prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-      case 3: return prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-      case 4: return prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-      default: return prop.aluguel_hotel ?? prop.aluguel_4c ?? prop.aluguel_base ?? 0;
-    }
   }
 
   async pegarEmprestimo(sessionId: number, playerId: number, valor: number) {

@@ -17,6 +17,7 @@ import { seedBaus } from "./utils/seed-baus.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket, getIO } from "./lib/socket.js";
 import { turnoService } from "./modules/turno/turno.service.js";
+import { leilaoService } from "./modules/leilao/leilao.service.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
 import { logger } from "./lib/logger.js";
@@ -157,7 +158,7 @@ async function start() {
     // Leilão Cego (Mecânica 4): mesmo risco do BUG 6, mas para o timer do
     // leilão — sem isso um leilão travado trava a partida inteira, já que
     // o turno fica pausado enquanto emLeilao for true.
-    turnoService.varrerLeiloesExpirados().catch(err => {
+    leilaoService.varrerLeiloesExpirados().catch(err => {
       logger.error({ err }, "erro na varredura de leilões expirados");
     });
   }, 15_000);

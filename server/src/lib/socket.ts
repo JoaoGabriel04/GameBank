@@ -450,15 +450,25 @@ export async function initSocket(httpServer: HttpServer) {
       const userId = socket.data.userId;
       if (!sessionId || !userId || !texto || !texto.trim()) return;
 
+      // Server-side validation: max chars & lines
+      const trimmed = texto.trim();
+      if (trimmed.length > 200) {
+        socket.emit("erro", "Mensagem muito longa (máximo 200 caracteres).");
+        return;
+      }
+      if (trimmed.split("\n").length > 3) {
+        socket.emit("erro", "Mensagem com muitas linhas (máximo 3).");
+        return;
+      }
+
       const permitido = await socketRateLimit(socket, {
         evento: "chat",
-        limite: 20,
+        limite: 5,
         janela: 10,
         mensagem: "Aguarde um momento antes de enviar mais mensagens.",
       });
       if (!permitido) return;
 
-      // Período de transição: clientes sem seq são aceitos com warning
       if (seq === undefined) {
         socketLogger.warn({ userId, sessionId }, "chat:send sem seq — cliente desatualizado");
       } else {
@@ -468,7 +478,6 @@ export async function initSocket(httpServer: HttpServer) {
 
       try {
         const { prisma } = await import("../lib/prisma.js");
-        // userId do JWT é User.id — busca o SessionPlayer vinculado a esta sessão
         const player = await prisma.sessionPlayer.findFirst({
           where: { sessionId, userId },
           select: { id: true, nome: true },
@@ -476,11 +485,7 @@ export async function initSocket(httpServer: HttpServer) {
         if (!player) return;
 
         const message = await prisma.message.create({
-          data: {
-            sessionId,
-            playerId: player.id,
-            texto: texto.trim(),
-          },
+          data: { sessionId, playerId: player.id, texto: trimmed },
         });
 
         const { emitChatMessage } = await import("../modules/socket/socket.handler.js");
@@ -488,7 +493,7 @@ export async function initSocket(httpServer: HttpServer) {
           id: message.id,
           playerId: player.id,
           playerNome: player.nome,
-          texto: texto.trim(),
+          texto: trimmed,
           createdAt: message.createdAt.toISOString(),
         });
       } catch (err) {

@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
 import { MissionsService } from "../missions/missions.service.js";
 import { getEvento } from "../../constants/eventos.js";
+import { aplicarMod } from "../../shared/economia-core.js";
 
 // Rastreia quais propriedades já receberam casa neste turno (1 casa máxima
 // por propriedade por rodada). Chave: "sessionId:playerId".
@@ -158,7 +159,7 @@ export class PropriedadeService {
       // Material / Aquecimento do Mercado) — exclusivo do Modo Tabuleiro,
       // já que eventoAtual só é definido nessas sessões.
       const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
-      const custoCasa = Math.round(propriedade.propriedade.custo_casa * custoConstrucaoMult);
+      const custoCasa = aplicarMod(propriedade.propriedade.custo_casa, custoConstrucaoMult);
       if (player.saldo < custoCasa) {
         throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
       }
@@ -252,7 +253,7 @@ export class PropriedadeService {
           throw new AppError(400, `${prop.propriedade.nome} já recebeu uma casa neste turno.`);
         }
         await this.requireMonopoly(sessionId, userId, prop.propriedade.grupo_cor);
-        totalCost += Math.round(prop.propriedade.custo_casa * custoConstrucaoMult);
+        totalCost += aplicarMod(prop.propriedade.custo_casa, custoConstrucaoMult);
         nomes.push(prop.propriedade.nome);
       }
 

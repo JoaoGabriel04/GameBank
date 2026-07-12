@@ -84,6 +84,11 @@ services:
     volumes:
       - ./server:/app
       - /app/node_modules
+      # Só para o teste de espelho (Fase 1 de REFORMULACAO_TELA_JOGO.md):
+      # o container do server não vê o diretório client/ por padrão —
+      # sem este mount, não daria pra comparar os dois economia-core.ts
+      # de dentro do container. Somente leitura, um único arquivo.
+      - ./client/src/shared/economia-core.ts:/app/client-economia-core.ts:ro
     entrypoint: ["/bin/sh", "/app/scripts/entrypoint.dev.sh"]
 
   client:

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Request, Response } from "express";
-import { turnoService } from "../turno/turno.service.js";
+import { leilaoService } from "./leilao.service.js";
 import { SessionService } from "../session/session.service.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { logger } from "../../lib/logger.js";
@@ -26,7 +26,7 @@ export const leilaoController = {
       const player = await sessionService.getPlayerByUser(sessionId, userId);
       if (!player) throw new AppError(404, "Você não está nesta sala.");
 
-      const result = await turnoService.darLance(sessionId, player.id, valor);
+      const result = await leilaoService.darLance(sessionId, player.id, valor);
       res.status(200).json(result);
     } catch (err) {
       parseError(res, err);

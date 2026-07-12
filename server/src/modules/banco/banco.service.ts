@@ -2,6 +2,7 @@ import { BancoRepository } from "./banco.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { MissionsService } from "../missions/missions.service.js";
+import { calcularAluguel } from "../../shared/economia-core.js";
 
 const ALUGUEL_ACAO_MULTIPLICADOR = 500;
 const RECEBER_DE_TODOS_VALOR = 500;
@@ -136,28 +137,7 @@ export class BancoService {
     if (!prop) throw new AppError(500, "Dados da propriedade indisponíveis");
 
     const casas = Number(poss.casas ?? 0);
-    let valorAluguel = 0;
-
-    switch (casas) {
-      case 0:
-        valorAluguel = prop.aluguel_base ?? 0;
-        break;
-      case 1:
-        valorAluguel = prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-        break;
-      case 2:
-        valorAluguel = prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-        break;
-      case 3:
-        valorAluguel = prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_1c ?? prop.aluguel_base ?? 0;
-        break;
-      case 4:
-        valorAluguel = prop.aluguel_4c ?? prop.aluguel_3c ?? prop.aluguel_2c ?? prop.aluguel_base ?? 0;
-        break;
-      default:
-        valorAluguel = prop.aluguel_hotel ?? prop.aluguel_4c ?? prop.aluguel_base ?? 0;
-        break;
-    }
+    const valorAluguel = calcularAluguel(prop, casas);
 
     if (pagador.saldo < valorAluguel) {
       throw new AppError(400, "Saldo insuficiente");
