@@ -420,6 +420,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     setRolando(true)
     resultadoJaReveladoRef.current = false
     minimizouManualmenteRef.current = false
+    escolhaFeitaRef.current = false
     stopSfx("tempo-acabando")
     // SFX de dados toca só quando a animação de rolagem termina (ver
     // handleDadosParados) — não no clique, faz mais sentido acompanhando
@@ -522,14 +523,16 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // Detecta quando o servidor resolveu a escolha de movimento por timeout
   // (o jogador não clicou a tempo) — session.aguardandoEscolha vira false
   // sem que tenhamos processado uma resposta local de escolherMovimento.
-  // BUG "Tempo esgotado" falso: se o jogador clicou em uma opção de
-  // movimento, escolhaFeitaRef fica true e o toast não é exibido.
+  // BUG: se o jogador clicou em uma opção, escolhaFeitaRef fica true —
+  // não fecha o modal nem limpa o resultado (quem faz isso é a resposta
+  // de escolherMovimento). Só no timeout real (ref false) que o modal
+  // fecha e o resultado é descartado.
   useEffect(() => {
     if (resultado?.aguardandoEscolha && !session.aguardandoEscolha) {
-      setHoldSessionUpdates(false)
-      setModalAberto(false)
-      setResultado(null)
       if (!escolhaFeitaRef.current) {
+        setHoldSessionUpdates(false)
+        setModalAberto(false)
+        setResultado(null)
         toastError("Tempo esgotado — movimento padrão aplicado (soma)")
       }
       escolhaFeitaRef.current = false
