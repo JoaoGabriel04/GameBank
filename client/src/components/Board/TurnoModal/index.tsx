@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
 import { Loader2 } from "lucide-react"
@@ -332,14 +333,15 @@ export default function TurnoModal({
 
   if (!aberto || !resultado) return null
 
-  return (
+  // Renderizado via portal para document.body para ficar ACIMA de qualquer
+  // modal que o GameShell possa abrir (ex.: BoardModal com z-[200]).
+  // Sem portal, o TurnoModal (dentro de Board → BoardPanel) ficaria atrás
+  // de BoardModal (irmão de BoardPanel no DOM) por estarem no mesmo z-index.
+  return createPortal(
     <div
       ref={backdropRef}
       className={`fixed inset-0 bg-black/70 flex items-center justify-center px-4 ${
-        // Extrato do Início é a informação mais crítica do turno (créditos,
-        // IPTU, manutenção, renda passiva) — fica acima de qualquer outro
-        // modal (evento econômico, leilão), que também usam z-[200].
-        fase === "extrato-inicio" ? "z-[220]" : "z-[200]"
+        fase === "extrato-inicio" ? "z-[320]" : "z-[300]"
       }`}
       style={{ opacity: 0 }}
       // Clicar fora fecha na fase "desfecho" (informativo) e avança no
@@ -601,6 +603,7 @@ export default function TurnoModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
