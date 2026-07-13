@@ -27,4 +27,4 @@ export const LEILAO_TIMEOUT_MS = 30_000;
 export const EMPRESTIMO_LIMITE_PCT = 0.50;
 
 /** Juros compostos por rodada. */
-export const EMPRESTIMO_JUROS_PCT = 0.10;
+export const EMPRESTIMO_JUROS_PCT = 0.05;
