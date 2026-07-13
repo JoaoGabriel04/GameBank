@@ -96,6 +96,26 @@ export const turnoRepository = {
       data: { saldo: { increment: valor } },
     }),
 
+  // Renda passiva por rodada: precisa das propriedades de cada jogador
+  // ativo pra calcular o aluguel individual (não é um valor flat como a
+  // Injeção de Liquidez acima).
+  findJogadoresAtivosComPosses: (sessionId: number) =>
+    prisma.sessionPlayer.findMany({
+      where: { sessionId, desistiu: false },
+      select: {
+        id: true,
+        nome: true,
+        saldo: true,
+        sessionPosses: {
+          select: {
+            casas: true,
+            hipotecada: true,
+            propriedade: true,
+          },
+        },
+      },
+    }),
+
   clearPularProximaRodada: (playerId: number) =>
     prisma.sessionPlayer.update({
       where: { id: playerId },

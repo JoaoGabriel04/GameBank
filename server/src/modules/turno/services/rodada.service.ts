@@ -1,5 +1,7 @@
 import { turnoRepository } from "../turno.repository.js";
 import { getEvento, sortearEvento, EVENTO_DURACAO_RODADAS, type EventoEfeito } from "../../../constants/eventos.js";
+import { RENDA_PASSIVA_PCT } from "../../../constants/economia.js";
+import { calcularAluguel, aplicarMod } from "../../../shared/economia-core.js";
 
 class RodadaService {
   // Busca os multiplicadores do evento econômico ativo na sessão (evento
@@ -89,6 +91,37 @@ class RodadaService {
         rodada: novaRodada,
         eventoAtual: eventoAtivo,
         eventoProximo,
+      });
+    }
+
+    // Renda passiva agora é por RODADA (não mais só na passagem pelo
+    // Início) — todo jogador ativo com propriedades desenvolvidas recebe
+    // a cada virada de rodada, usando os modificadores do evento que
+    // acabou de ser definido para esta rodada (def?.efeito, calculado
+    // acima). Independe de houveTransicao/eventoRecemAtivado: acontece
+    // toda rodada, evento mudando ou não.
+    await this.creditarRendaPassivaRodada(sessionId, novaRodada, def?.efeito ?? {});
+  }
+
+  private async creditarRendaPassivaRodada(sessionId: number, novaRodada: number, mods: EventoEfeito) {
+    const jogadores = await turnoRepository.findJogadoresAtivosComPosses(sessionId);
+
+    for (const jogador of jogadores) {
+      let renda = 0;
+      for (const posse of jogador.sessionPosses) {
+        if (posse.hipotecada || !posse.propriedade) continue;
+        if (posse.propriedade.tipo === "ação") continue;
+        const casas = posse.casas ?? 0;
+        const aluguelAtual = calcularAluguel(posse.propriedade, casas);
+        renda += aplicarMod(aluguelAtual * RENDA_PASSIVA_PCT, mods.rendaPassivaMult);
+      }
+      if (renda <= 0) continue;
+
+      await turnoRepository.moverPlayer(jogador.id, { saldo: jogador.saldo + renda });
+      await turnoRepository.criarHistorico({
+        sessionId,
+        tipo: "RENDA_PASSIVA",
+        detalhes: `${jogador.nome} recebeu R$ ${renda} de renda passiva das suas propriedades (rodada ${novaRodada}).`,
       });
     }
   }

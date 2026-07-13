@@ -118,7 +118,6 @@ class MovimentoService {
           sessionId,
           tipo: "PASSAGEM_INICIO",
           detalhes: `${player.nome} passou pelo Início: +R$ ${extrato.creditoInicio} (crédito) ` +
-                    `+R$ ${extrato.rendaPassiva} (renda passiva) ` +
                     `−R$ ${extrato.iptu} (IPTU) −R$ ${extrato.manutencao} (manutenção) ` +
                     `= R$ ${extrato.liquido >= 0 ? "+" : ""}${extrato.liquido}`,
         });
@@ -126,7 +125,7 @@ class MovimentoService {
         // Líquido negativo: credita o que recebe, cobra o que deve.
         // Usa cobrarComFallbackDivida (gera dívida se não tiver saldo, e
         // já integra com a regra de falência em 3 rodadas).
-        const aReceber = extrato.creditoInicio + extrato.rendaPassiva;
+        const aReceber = extrato.creditoInicio;
         const aPagar = extrato.iptu + extrato.manutencao;
 
         // Credita primeiro

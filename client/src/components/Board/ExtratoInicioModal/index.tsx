@@ -28,12 +28,6 @@ export default function ExtratoInicioModal({ extrato }: Props) {
           <span className="text-zinc-400">Crédito do Início</span>
           <span className="text-emerald-400">{fmt(extrato.creditoInicio)}</span>
         </div>
-        {extrato.rendaPassiva > 0 && (
-          <div className="flex justify-between font-inconsolata text-sm">
-            <span className="text-zinc-400">Renda passiva</span>
-            <span className="text-emerald-400">{fmt(extrato.rendaPassiva)}</span>
-          </div>
-        )}
         {extrato.iptu > 0 && (
           <div className="flex justify-between font-inconsolata text-sm">
             <span className="text-zinc-400">IPTU</span>
@@ -82,7 +76,6 @@ export default function ExtratoInicioModal({ extrato }: Props) {
                     {d.nome} {d.casas > 0 && `(${d.casas >= 5 ? "hotel" : `${d.casas} casa${d.casas > 1 ? "s" : ""}`})`}
                   </p>
                   <div className="flex gap-3 mt-0.5 font-inconsolata text-[11px]">
-                    {d.rendaPassiva > 0 && <span className="text-emerald-400">{fmt(d.rendaPassiva)} renda</span>}
                     {d.iptu > 0 && <span className="text-red-400">{fmt(-d.iptu)} IPTU</span>}
                     {d.manutencao > 0 && <span className="text-red-400">{fmt(-d.manutencao)} manut.</span>}
                   </div>

@@ -13,12 +13,12 @@ export interface ExtratoInicioDetalhe {
   casas: number
   iptu: number
   manutencao: number
-  rendaPassiva: number
 }
 
+// Renda passiva NÃO faz mais parte do extrato do Início — passou a ser
+// paga por rodada (ver rodada.service.ts no servidor).
 export interface ExtratoInicio {
   creditoInicio: number
-  rendaPassiva: number
   iptu: number
   manutencao: number
   liquido: number

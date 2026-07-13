@@ -1,13 +1,12 @@
 import { turnoRepository } from "../turno.repository.js";
 import { PropriedadeRepository } from "../../propriedade/propriedade.repository.js";
-import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS } from "../../../constants/economia.js";
+import { IPTU_PCT, MANUTENCAO_PCT, HOTEL_EQUIVALE_CASAS } from "../../../constants/economia.js";
 import { CREDITO_INICIO } from "../../tabuleiro/tabuleiro.data.js";
-import { calcularAluguel, aplicarMod } from "../../../shared/economia-core.js";
+import { aplicarMod } from "../../../shared/economia-core.js";
 import type { EventoEfeito } from "../../../constants/eventos.js";
 
 export type ExtratoInicio = {
   creditoInicio: number;
-  rendaPassiva: number;
   iptu: number;
   manutencao: number;
   liquido: number;
@@ -17,16 +16,17 @@ export type ExtratoInicio = {
     casas: number;
     iptu: number;
     manutencao: number;
-    rendaPassiva: number;
   }>;
 };
 
 const propriedadeRepository = new PropriedadeRepository();
 
 class EconomiaService {
-  // Calcula o extrato completo (crédito do Início, renda passiva, IPTU e
-  // manutenção de todas as propriedades do jogador) para a passagem pelo
-  // Início. Hipotecadas e ações (grupo Preto) ficam de fora.
+  // Calcula o extrato da passagem pelo Início (crédito + IPTU + manutenção
+  // de todas as propriedades do jogador). Hipotecadas e ações (grupo
+  // Preto) ficam de fora. Renda passiva NÃO entra mais aqui — passou a ser
+  // paga por RODADA (ver rodadaService.creditarRendaPassivaRodada), não
+  // mais só quando o jogador completa a volta.
   // `mods` é buscado uma vez pelo orquestrador e repassado — este serviço
   // nunca busca os modificadores de evento por conta própria.
   async calcularExtratoInicio(sessionId: number, playerId: number, mods: EventoEfeito): Promise<ExtratoInicio> {
@@ -34,16 +34,15 @@ class EconomiaService {
 
     let iptu = 0;
     let manutencao = 0;
-    let rendaPassiva = 0;
     const detalhes: ExtratoInicio["detalhes"] = [];
 
     for (const posse of posses) {
       const prop = posse.propriedade;
       if (!prop) continue;
 
-      // Hipotecada não paga IPTU/manutenção nem gera renda — está com o banco.
+      // Hipotecada não paga IPTU/manutenção — está com o banco.
       if (posse.hipotecada) continue;
-      // Ações (grupo Preto) não têm IPTU/manutenção nem renda passiva.
+      // Ações (grupo Preto) não têm IPTU/manutenção.
       if (prop.tipo === "ação") continue;
 
       const casas = posse.casas ?? 0;
@@ -51,12 +50,9 @@ class EconomiaService {
 
       const propIptu = aplicarMod(prop.custo_compra * IPTU_PCT, mods.iptuMult);
       const propManut = aplicarMod(prop.custo_casa * MANUTENCAO_PCT * casasEquivalentes, mods.manutencaoMult);
-      const aluguelAtual = calcularAluguel(prop, casas);
-      const propRenda = aplicarMod(aluguelAtual * RENDA_PASSIVA_PCT, mods.rendaPassivaMult);
 
       iptu += propIptu;
       manutencao += propManut;
-      rendaPassiva += propRenda;
 
       detalhes.push({
         propId: prop.id,
@@ -64,13 +60,12 @@ class EconomiaService {
         casas,
         iptu: propIptu,
         manutencao: propManut,
-        rendaPassiva: propRenda,
       });
     }
 
-    const liquido = CREDITO_INICIO + rendaPassiva - iptu - manutencao;
+    const liquido = CREDITO_INICIO - iptu - manutencao;
 
-    return { creditoInicio: CREDITO_INICIO, rendaPassiva, iptu, manutencao, liquido, detalhes };
+    return { creditoInicio: CREDITO_INICIO, iptu, manutencao, liquido, detalhes };
   }
 
   async aplicarJurosEmprestimo(sessionId: number, playerId: number) {

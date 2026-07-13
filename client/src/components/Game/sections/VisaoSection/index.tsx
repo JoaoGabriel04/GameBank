@@ -12,7 +12,6 @@ import { formatCurrency } from "@/utils/format";
 import {
   IPTU_PCT,
   MANUTENCAO_PCT,
-  RENDA_PASSIVA_PCT,
   HOTEL_EQUIVALE_CASAS,
   CREDITO_INICIO,
 } from "@/constants/economia";
@@ -42,7 +41,7 @@ type Props = {
 
 export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
-  const { currentSession, loadSession, getAluguelBase, sortearCarta, usarCartaPrisao, pagarDivida } = useGameStore();
+  const { currentSession, loadSession, sortearCarta, usarCartaPrisao, pagarDivida } = useGameStore();
   const { user: authUser } = useAuthStore();
 
   const [showSaldo, setShowSaldo] = useState(true);
@@ -72,14 +71,18 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
     return calcularPatrimonio(currentPlayer.saldo, posses);
   }, [currentPlayer, currentSession?.sessionPosses]);
 
+  // Renda passiva NÃO entra mais aqui — passou a ser paga por RODADA
+  // (mesmo racional do servidor em rodada.service.ts), então não depende
+  // mais de completar a volta até o Início. A projeção mostra só o que
+  // realmente acontece na passagem: crédito fixo − IPTU − manutenção.
   const projecaoInicio = useMemo(() => {
-    type DetalheProp = { propId: number; nome: string; casas: number; iptu: number; manutencao: number; rendaPassiva: number };
+    type DetalheProp = { propId: number; nome: string; casas: number; iptu: number; manutencao: number };
     if (!currentPlayer || !currentSession) return { receita: 0, despesa: 0, liquido: 0, detalhes: [] as DetalheProp[] };
     const myProps = currentSession.sessionPosses.filter(
       (sp) => sp.playerId === currentPlayer.id
     );
     const mods = getEvento(currentSession.eventoAtual)?.efeito ?? {};
-    let iptu = 0, manutencao = 0, rendaPassiva = 0;
+    let iptu = 0, manutencao = 0;
     const detalhes: DetalheProp[] = [];
     for (const sp of myProps) {
       if (sp.hipotecada || !sp.propriedade) continue;
@@ -91,26 +94,20 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
         sp.propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes,
         mods.manutencaoMult
       );
-      const propRendaPassiva = aplicarMod(
-        getAluguelBase(sp.propriedade, casas) * RENDA_PASSIVA_PCT,
-        mods.rendaPassivaMult
-      );
       iptu += propIptu;
       manutencao += propManutencao;
-      rendaPassiva += propRendaPassiva;
       detalhes.push({
         propId: sp.propriedade.id,
         nome: sp.propriedade.nome,
         casas,
         iptu: propIptu,
         manutencao: propManutencao,
-        rendaPassiva: propRendaPassiva,
       });
     }
-    const receita = CREDITO_INICIO + rendaPassiva;
+    const receita = CREDITO_INICIO;
     const despesa = iptu + manutencao;
     return { receita, despesa, liquido: receita - despesa, detalhes };
-  }, [currentPlayer, currentSession, getAluguelBase]);
+  }, [currentPlayer, currentSession]);
 
   const myDebts = useMemo(
     () => (currentSession?.debts ?? []).filter(
@@ -296,9 +293,6 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
                           {d.nome} {d.casas > 0 && `(${d.casas >= 5 ? "hotel" : `${d.casas} casa${d.casas > 1 ? "s" : ""}`})`}
                         </p>
                         <div className="flex gap-3 mt-0.5 font-inconsolata text-[11px]">
-                          {d.rendaPassiva > 0 && (
-                            <span className="text-emerald-400">+R$ {formatCurrency(d.rendaPassiva)} renda</span>
-                          )}
                           {d.iptu > 0 && (
                             <span className="text-red-400">−R$ {formatCurrency(d.iptu)} IPTU</span>
                           )}

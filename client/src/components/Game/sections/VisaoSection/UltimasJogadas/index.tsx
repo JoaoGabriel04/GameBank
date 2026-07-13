@@ -8,7 +8,7 @@ import { Home, Landmark, Gift, Ban, ArrowLeftToLine, Shield, Gavel, TrendingUp }
 
 const TIPOS_RELEVANTES = new Set([
   "PAGAMENTO_ALUGUEL", "COMPRA_PROPRIEDADE", "PASSAGEM_INICIO",
-  "SORTE_REVES", "IMPOSTO", "RESTITUICAO", "PRISAO", "LEILAO",
+  "SORTE_REVES", "IMPOSTO", "RESTITUICAO", "PRISAO", "LEILAO", "RENDA_PASSIVA",
 ]);
 
 function getTipoIcon(tipo: string) {
@@ -21,6 +21,7 @@ function getTipoIcon(tipo: string) {
     case "RESTITUICAO": return <TrendingUp className="w-3.5 h-3.5" />;
     case "PRISAO": return <Shield className="w-3.5 h-3.5" />;
     case "LEILAO": return <Gavel className="w-3.5 h-3.5" />;
+    case "RENDA_PASSIVA": return <TrendingUp className="w-3.5 h-3.5" />;
     default: return <TrendingUp className="w-3.5 h-3.5" />;
   }
 }
