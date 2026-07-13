@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { playSfx, stopSfx } from "@/utils/sfx"
+import { serverNow } from "@/utils/clock"
 import type { GameSession } from "@/types/game"
 
 const TURNO_TIMEOUT_S = 60
@@ -39,7 +40,8 @@ export default function GameSfxLayer({ session, meuPlayerId }: Props) {
     const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId
 
     const tick = () => {
-      const passado = Math.floor((Date.now() - inicio) / 1000)
+      // FIX_TURNO_TRAVADO_CONTADOR (BUG B.3): serverNow(), não Date.now().
+      const passado = Math.floor((serverNow() - inicio) / 1000)
       const restanteS = Math.max(0, TURNO_TIMEOUT_S - passado)
 
       if (minhaVez && restanteS === AVISO_TEMPO_S && !alertouTempoRef.current) {

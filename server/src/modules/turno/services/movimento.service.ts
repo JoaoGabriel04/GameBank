@@ -72,8 +72,12 @@ class MovimentoService {
       };
     }
 
-    // Duplo válido ou ação pendente: não avança, reseta o timer
-    await timerService.agendarTimeout(sessionId);
+    // Duplo válido ou ação pendente: não avança, reseta o timer — nova
+    // janela de decisão, novo timestamp gravado explicitamente
+    // (agendarTimeout só lê, nunca regrava turnoIniciadoEm).
+    const agoraReset = new Date();
+    await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraReset });
+    await timerService.agendarTimeout(sessionId, agoraReset);
     const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);
 

@@ -89,6 +89,12 @@ export const turnoRepository = {
   findEventoAtual: (sessionId: number) =>
     prisma.session.findUnique({ where: { id: sessionId }, select: { eventoAtual: true } }),
 
+  // FIX_TURNO_TRAVADO_CONTADOR (BUG C): leitura mínima usada por
+  // agendarTimeout quando não recebe o timestamp por parâmetro — só LÊ
+  // turnoIniciadoEm, nunca escreve (quem grava é sempre avancarTurno).
+  findSessionComTurno: (sessionId: number) =>
+    prisma.session.findUnique({ where: { id: sessionId }, select: { turnoIniciadoEm: true } }),
+
   // Injeção de Liquidez: credita todos os jogadores ainda ativos na sessão.
   creditarTodosAtivos: (sessionId: number, valor: number) =>
     prisma.sessionPlayer.updateMany({

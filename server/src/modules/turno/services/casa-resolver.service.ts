@@ -155,8 +155,11 @@ class CasaResolverService {
     if (duplo) {
       await turnoRepository.moverPlayer(player.id, { emPrisao: false, turnosPrisao: 0, tentativasPrisao: 0 });
       await turnoRepository.setAguardandoAcao(sessionId, false);
+      // Escapou com duplo, joga de novo — novo timestamp explícito.
+      const agoraDuplo = new Date();
+      await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraDuplo });
       const { timerService } = await import("./timer.service.js");
-      await timerService.agendarTimeout(sessionId);
+      await timerService.agendarTimeout(sessionId, agoraDuplo);
       const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
       // Sai da prisão mas permanece na casa Prisão (pos 10) — ganha outra
@@ -176,8 +179,11 @@ class CasaResolverService {
     const tentativas = player.tentativasPrisao + 1;
     if (tentativas < 3) {
       await turnoRepository.moverPlayer(player.id, { tentativasPrisao: tentativas });
+      // Nova tentativa na mesma vez — novo timestamp explícito.
+      const agoraTentativa = new Date();
+      await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraTentativa });
       const { timerService } = await import("./timer.service.js");
-      await timerService.agendarTimeout(sessionId);
+      await timerService.agendarTimeout(sessionId, agoraTentativa);
       const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
       return { dado1, dado2, duplo: false, escapouPrisao: false, aindaPreso: true, tentativasPrisao: tentativas };

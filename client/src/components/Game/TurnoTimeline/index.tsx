@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHourglassHalf, faDice } from "@fortawesome/free-solid-svg-icons";
+import { serverNow } from "@/utils/clock";
 
 type Props = {
   meuPlayerId?: number;
@@ -32,10 +33,18 @@ export default function TurnoTimeline({ meuPlayerId }: Props) {
   const minhaVez = !!meuPlayerId && turnoAtualPlayerId === meuPlayerId;
 
   useEffect(() => {
-    if (!currentSession.turnoIniciadoEm) return;
+    // FIX_TURNO_TRAVADO_CONTADOR (BUG B.4): null não pode deixar o contador
+    // congelado no valor da rodada anterior — zera explicitamente.
+    if (!currentSession.turnoIniciadoEm) {
+      setRestante(0);
+      return;
+    }
     const inicio = new Date(currentSession.turnoIniciadoEm).getTime();
     const tick = () => {
-      const passado = Math.floor((Date.now() - inicio) / 1000);
+      // FIX_TURNO_TRAVADO_CONTADOR (BUG B.3): serverNow(), não Date.now() —
+      // turnoIniciadoEm é hora do SERVIDOR; comparar direto com o relógio
+      // do cliente trava o contador em 0 se ele estiver adiantado.
+      const passado = Math.floor((serverNow() - inicio) / 1000);
       setRestante(Math.max(0, 60 - passado));
     };
     tick();

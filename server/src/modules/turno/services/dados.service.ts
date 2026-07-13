@@ -42,7 +42,11 @@ class DadosService {
     });
 
     // Reset do timer: o jogador tem os 60s para escolher o movimento.
-    await timerService.agendarTimeout(sessionId);
+    // Nova janela de decisão → novo timestamp, gravado explicitamente
+    // (agendarTimeout só lê, nunca regrava turnoIniciadoEm).
+    const agoraEscolha = new Date();
+    await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraEscolha });
+    await timerService.agendarTimeout(sessionId, agoraEscolha);
 
     const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);

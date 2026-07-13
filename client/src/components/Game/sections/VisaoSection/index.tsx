@@ -263,6 +263,15 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
               </span>
             </div>
 
+            {projecaoInicio.liquido < 0 && (
+              <div className="mt-1 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="font-inconsolata text-xs text-red-300">
+                  Seu IPTU supera o crédito do Início. Desenvolva propriedades para
+                  gerar renda passiva ou hipoteque o que não usa.
+                </p>
+              </div>
+            )}
+
             {projecaoInicio.detalhes.length > 0 && (
               <div className="pt-1">
                 <button

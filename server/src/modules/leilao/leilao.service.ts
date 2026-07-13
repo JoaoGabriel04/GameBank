@@ -217,9 +217,12 @@ class LeilaoService {
       return { leilaoEncerrado: true, vencedor, ...avanco };
     }
 
-    // Duplo: o mesmo jogador joga de novo — reagenda o timer do turno.
+    // Duplo: o mesmo jogador joga de novo — reagenda o timer do turno com
+    // um novo timestamp explícito (agendarTimeout só lê, nunca regrava).
+    const agoraDuplo = new Date();
+    await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraDuplo });
     const { timerService } = await import("../turno/services/timer.service.js");
-    await timerService.agendarTimeout(sessionId);
+    await timerService.agendarTimeout(sessionId, agoraDuplo);
     await emitUpdatedSession(sessionId);
     return { leilaoEncerrado: true, vencedor, avancou: false, duplo: true };
   }

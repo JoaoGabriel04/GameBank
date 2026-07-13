@@ -123,6 +123,8 @@ export interface GameSession {
   tabuleiro?: Casa[]; // presente apenas quando tipoJogo === 'tabuleiro'
   turnoAtualPlayerId?: number | null;
   turnoIniciadoEm?: string | null;
+  /** Hora do servidor no momento da resposta (FIX_TURNO_TRAVADO_CONTADOR/BUG B) — use com serverNow(), nunca Date.now() direto contra turnoIniciadoEm. */
+  serverTime?: string;
   aguardandoAcao?: boolean;
   aguardandoEscolha?: boolean;
   ultimoDado1?: number | null;

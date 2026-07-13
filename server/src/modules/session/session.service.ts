@@ -338,7 +338,10 @@ export class SessionService {
       try {
         const cached = await redis.get(cacheKey);
         if (cached) {
-          return JSON.parse(cached);
+          // FIX_TURNO_TRAVADO_CONTADOR (BUG B.1): serverTime é calculado
+          // agora, na leitura — nunca fica preso no cache (senão o cliente
+          // calcularia o offset contra um instante do passado).
+          return { ...JSON.parse(cached), serverTime: new Date().toISOString() };
         }
       } catch {
         // Cache unavailable — fallback to DB
@@ -376,6 +379,13 @@ export class SessionService {
         // Non-critical
       }
     }
+
+    // FIX_TURNO_TRAVADO_CONTADOR (BUG B.1): hora do servidor no payload —
+    // o cliente usa isso pra calcular o offset do próprio relógio e nunca
+    // mais comparar `turnoIniciadoEm` (hora do servidor) direto com
+    // `Date.now()` (hora do cliente). Fica de fora do JSON cacheado acima
+    // de propósito (sempre calculado no momento da resposta).
+    enriched.serverTime = new Date().toISOString();
 
     return enriched;
   }

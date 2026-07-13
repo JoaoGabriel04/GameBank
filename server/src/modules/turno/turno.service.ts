@@ -44,11 +44,12 @@ class TurnoService {
   async iniciarTurnos(sessionId: number, jogadorIds: number[]) {
     const ordem = shuffle(jogadorIds);
     const primeiro = ordem[0] ?? null;
+    const agora = new Date();
 
     await turnoRepository.updateTurno(sessionId, {
       ordemTurnos: JSON.stringify(ordem),
       turnoAtualPlayerId: primeiro,
-      turnoIniciadoEm: primeiro ? new Date() : null,
+      turnoIniciadoEm: primeiro ? agora : null,
       aguardandoAcao: false,
     });
 
@@ -59,7 +60,7 @@ class TurnoService {
     const { sortearEvento } = await import("../../constants/eventos.js");
     await turnoRepository.updateEvento(sessionId, { eventoProximo: sortearEvento().codigo });
 
-    if (primeiro) await timerService.agendarTimeout(sessionId);
+    if (primeiro) await timerService.agendarTimeout(sessionId, agora);
     return { ordem, turnoAtualPlayerId: primeiro };
   }
 
@@ -215,7 +216,11 @@ class TurnoService {
         return { ...resultado, ...avanco };
       }
 
-      await timerService.agendarTimeout(sessionId);
+      // Duplo: mesmo jogador joga de novo — nova janela de decisão, novo
+      // timestamp (gravado explicitamente; agendarTimeout só lê).
+      const agoraDuplo = new Date();
+      await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraDuplo });
+      await timerService.agendarTimeout(sessionId, agoraDuplo);
       const { emitUpdatedSession } = await import("../socket/socket.handler.js");
       await emitUpdatedSession(sessionId);
       return { ...resultado, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
@@ -253,7 +258,9 @@ class TurnoService {
       return { recusado: true, ...avanco };
     }
 
-    await timerService.agendarTimeout(sessionId);
+    const agoraDuplo = new Date();
+    await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraDuplo });
+    await timerService.agendarTimeout(sessionId, agoraDuplo);
     const { emitUpdatedSession } = await import("../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);
     return { recusado: true, turnoAtualPlayerId: session.turnoAtualPlayerId, avancou: false, duplo: true };
@@ -375,13 +382,16 @@ class TurnoService {
       await rodadaService.processarViradaDeRodada(sessionId, novaRodada, session);
     }
 
+    const agora = new Date();
     await turnoRepository.updateTurno(sessionId, {
       turnoAtualPlayerId: proximo.id,
-      turnoIniciadoEm: new Date(),
+      turnoIniciadoEm: agora,
       aguardandoAcao: false,
     });
 
-    await timerService.agendarTimeout(sessionId);
+    // FIX_TURNO_TRAVADO_CONTADOR (BUG C): passa o timestamp que acabou de
+    // ser gravado — agendarTimeout só LÊ, nunca regrava turnoIniciadoEm.
+    await timerService.agendarTimeout(sessionId, agora);
 
     const { emitUpdatedSession } = await import("../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);

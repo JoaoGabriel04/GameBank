@@ -38,12 +38,13 @@ Gerenciador multiplayer completo para o jogo de tabuleiro **Super Banco Imobili�
 - Cálculo automático de aluguel por número de casas/hotéis
 
 ### Modo Tabuleiro — Economia
-- Renda passiva por propriedade desenvolvida (15% do aluguel atual)
-- IPTU sobre todas as propriedades (8% do valor de compra)
-- Custo de manutenção por casa/hotel (12% do custo da casa)
-- Cobrança consolidada na passagem pelo Início, com extrato detalhado
-- Propriedades hipotecadas não pagam IPTU nem geram renda
-- Ações (grupo Preto) não têm IPTU nem manutenção
+- Renda passiva por propriedade desenvolvida (35% do aluguel atual), cobrada a cada rodada
+- Custo de manutenção por casa/hotel (12% do custo da casa), cobrado a cada rodada
+- IPTU sobre todas as propriedades (25% do valor de compra), cobrado ao passar pelo Início
+- Renda e manutenção incidem por rodada; o IPTU incide por volta (na passagem pelo Início)
+- Propriedades hipotecadas não pagam IPTU nem manutenção e não geram renda
+- Ações (grupo Preto) não têm IPTU, manutenção nem renda passiva
+- Terreno cru gera IPTU sem renda — desenvolver é essencial; jogadores inativos ficam para trás
 
 ### Modo Tabuleiro — Eventos Econômicos
 - Evento a cada 3 rodadas (dura 2 rodadas), anunciado com 1 rodada de antecedência
@@ -200,9 +201,8 @@ tabela. Não têm casas, hotéis nem aluguel progressivo.
 2. O jogador **escolhe o movimento**: andar o dado 1, o dado 2 ou a soma
    dos dois (ver [Modo Tabuleiro — Escolha de Movimento](#modo-tabuleiro--escolha-de-movimento))
 3. Só então o peão avança; se passar ou cair em Início, recebe os
-   **R$ 2.000** de crédito junto com o extrato de IPTU, manutenção e
-   renda passiva de todas as suas propriedades (ver
-   [Modo Tabuleiro — Economia](#modo-tabuleiro--economia))
+   **R$ 2.000** de crédito junto com o extrato de IPTU de todas as suas
+   propriedades (ver [Modo Tabuleiro — Economia](#modo-tabuleiro--economia))
 4. A casa onde parou é resolvida automaticamente (compra, aluguel,
    imposto, carta, prisão, feriado...)
 5. **Dados iguais (duplo)** → joga de novo, **só se escolher a soma**,
@@ -222,24 +222,33 @@ tabela. Não têm casas, hotéis nem aluguel progressivo.
 
 ### Modo Tabuleiro — Economia
 
-Exclusivo do Modo Tabuleiro (o Modo Banca não é afetado). A cada volta
-completa (passagem pelo Início), o extrato de cada jogador é calculado
-e aplicado de uma vez, junto com o crédito de R$ 2.000:
+Exclusivo do Modo Tabuleiro (o Modo Banca não é afetado). Renda passiva e
+manutenção são cobradas **a cada rodada**; o IPTU é cobrado **ao passar
+pelo Início**, junto com o crédito de R$ 2.000 — uma volta leva ~7
+rodadas, então quem desenvolve recebe renda passiva muito mais vezes por
+volta do que paga IPTU:
 
-- **Renda passiva** — 15% do aluguel atual de cada propriedade
-  desenvolvida (`RENDA_PASSIVA_PCT`)
-- **IPTU** — 8% do valor de compra de cada propriedade (`IPTU_PCT`)
-- **Manutenção** — 12% do custo da casa, por casa construída; um hotel
-  conta como 5 casas (`MANUTENCAO_PCT`, `HOTEL_EQUIVALE_CASAS`)
+- **Renda passiva** — 35% do aluguel atual de cada propriedade
+  desenvolvida, creditada por rodada (`RENDA_PASSIVA_PCT`)
+- **Manutenção** — 12% do custo da casa, por casa construída, cobrada por
+  rodada; um hotel conta como 5 casas (`MANUTENCAO_PCT`,
+  `HOTEL_EQUIVALE_CASAS`)
+- **IPTU** — 25% do valor de compra de cada propriedade, cobrado ao
+  passar pelo Início (`IPTU_PCT`)
 - **Propriedades hipotecadas** não pagam IPTU nem manutenção e não
   geram renda passiva — estão com o banco
 - **Ações (grupo Preto)** não têm IPTU, manutenção nem renda passiva
-- Se o líquido (crédito + renda − IPTU − manutenção) for negativo, o
+- **Terreno cru gera IPTU sem renda** — com IPTU de 25%, acumular
+  propriedades sem desenvolver pode deixar o líquido da passagem pelo
+  Início **negativo**; a UI avisa quando isso acontece (desenvolva ou
+  hipoteque o que não usa)
+- Se o líquido de qualquer cobrança (Início ou rodada) for negativo, o
   jogador recebe o que tem direito e a cobrança do restante segue a
   mesma regra de dívida do resto do jogo (conta para a falência em 3
   rodadas)
-- Os percentuais ficam em `server/src/constants/economia.ts`, ajustáveis
-  conforme o balanceamento observado em partidas reais
+- Os percentuais ficam em `server/src/constants/economia.ts` (espelhados
+  em `client/src/constants/economia.ts` para a projeção da UI),
+  ajustáveis conforme o balanceamento observado em partidas reais
 
 ### Modo Tabuleiro — Eventos Econômicos
 
@@ -256,8 +265,9 @@ informação privilegiada.
   vigor, com descrição e dica de como reagir
 - **Badge permanente** enquanto o evento está ativo, clicável para reabrir
   os detalhes
-- Aluguéis, custo de construção e o extrato do Início (IPTU, manutenção,
-  renda passiva) exibidos na UI já refletem o modificador ativo
+- Aluguéis, custo de construção, o extrato do Início (IPTU) e a renda
+  passiva/manutenção por rodada exibidos na UI já refletem o modificador
+  ativo
 
 Catálogo (`server/src/constants/eventos.ts`, espelhado em
 `client/src/constants/eventos.ts`):

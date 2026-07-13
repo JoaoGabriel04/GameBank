@@ -27,24 +27,46 @@ export function cancelTurnoTimer(sessionId: number) {
 }
 
 class TimerService {
-  async agendarTimeout(sessionId: number) {
+  // FIX_TURNO_TRAVADO_CONTADOR (BUG C): agendarTimeout NÃO escreve mais
+  // turnoIniciadoEm — quem controla o início do turno (ou de uma jogada
+  // extra dentro do mesmo turno: duplo, escolha de movimento, tentativa na
+  // prisão) grava o timestamp explicitamente e passa aqui por parâmetro.
+  // Sem isso, `turnoIniciadoEm` era gravado duas vezes por turno (uma no
+  // caller, outra aqui) com timestamps ligeiramente diferentes — o cliente
+  // podia ter recebido o primeiro valor via socket antes do segundo write.
+  //
+  // Vantagem extra: como recebe o timestamp já vigente, agenda pelo tempo
+  // RESTANTE (TURNO_TIMEOUT_MS - elapsed) em vez de reiniciar 60s do zero
+  // sempre que é chamado sem argumento (ex.: no F5/reconexão via
+  // garantirTimerAtivo) — o timer nunca fica maior que o combinado com o
+  // cliente.
+  async agendarTimeout(sessionId: number, turnoIniciadoEm?: Date) {
     cancelTurnoTimer(sessionId);
-    // Atualiza turnoIniciadoEm para o cliente reiniciar o contador
-    const agora = new Date();
-    try { await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agora }); } catch {}
-    const esperadoIso = agora.toISOString();
+
+    // Sem o timestamp: lê o que já está gravado (não escreve!).
+    let inicio = turnoIniciadoEm;
+    if (!inicio) {
+      const s = await turnoRepository.findSessionComTurno(sessionId);
+      if (!s?.turnoIniciadoEm) return;
+      inicio = new Date(s.turnoIniciadoEm);
+    }
+
+    const esperadoIso = inicio.toISOString();
+    const elapsed = Date.now() - inicio.getTime();
+    const restante = Math.max(0, TURNO_TIMEOUT_MS - elapsed);
+
     const timer = setTimeout(async () => {
       try {
         await this.avancarPorTimeout(sessionId, esperadoIso);
       } catch (err: any) {
         if (err?.statusCode === 423) {
           // Lock ocupado — retenta
-          this.agendarTimeout(sessionId);
+          this.agendarTimeout(sessionId, inicio);
         } else {
           sessionLogger.error({ err, sessionId }, "erro ao avançar turno por timeout");
         }
       }
-    }, TURNO_TIMEOUT_MS);
+    }, restante);
     turnoTimers.set(sessionId, timer);
   }
 

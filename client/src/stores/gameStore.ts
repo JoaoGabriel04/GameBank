@@ -53,6 +53,14 @@ import {
 } from "@/services/api/dividas";
 import { getEvento } from "@/constants/eventos";
 import { calcularAluguel, aplicarMod } from "@/shared/economia-core";
+import { setServerTime } from "@/utils/clock";
+
+// FIX_TURNO_TRAVADO_CONTADOR (BUG B.2): toda sessão que chega do servidor
+// (HTTP ou socket) traz `serverTime` — recalibra o offset do relógio aqui,
+// num único ponto, antes de guardar a sessão no estado.
+function syncServerClock(session: GameSession) {
+  if (session.serverTime) setServerTime(session.serverTime);
+}
 
 // --- Tipos --------------------------------------------------------------------
 
@@ -124,6 +132,13 @@ interface GameStore {
 let pendingSessionUpdate: GameSession | null = null;
 let pendingCallbacks: (() => void)[] = [];
 
+// FIX_TURNO_TRAVADO_CONTADOR (BUG A.4): rede de segurança final — nenhuma
+// sequência legítima de hold (rolar → revelar) passa de 6s. Se algum
+// caminho de liberação futuro esquecer de chamar setHoldSessionUpdates(false),
+// o watchdog libera à força em vez de travar a tela pra sempre.
+let holdWatchdog: ReturnType<typeof setTimeout> | null = null;
+const HOLD_MAX_MS = 6000;
+
 // --- Utilitário de erro (fora do create, criado uma única vez) -----------------
 
 function extractErrorMessage(err: unknown): string {
@@ -164,6 +179,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const newSession = await createSessionApi(nome, senha, modo, maxJogadores, saldoInicial, times, criadorNome, criadorCor, criadorTeamIndex, tipoJogo);
       if (!newSession) return;
 
+      syncServerClock(newSession);
       set((state) => ({
         sessions: [...state.sessions, newSession],
         currentSession: newSession,
@@ -183,6 +199,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const session = await loadSessionApi(sessionId);
       const resetCache = get().currentSession?.id !== session.id;
 
+      syncServerClock(session);
       set({
         currentSession: session,
         loading: false,
@@ -199,6 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const session = await startSessionApi(sessionId);
+      syncServerClock(session);
       set((state) => ({
         currentSession: session,
         sessions: state.sessions.map((s) => s.id === sessionId ? session : s),
@@ -631,6 +649,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   applyOrBufferSession: (session) => {
+    // Recalibra o relógio mesmo se a sessão ficar retida no buffer — o
+    // offset é global e não deve esperar o hold liberar.
+    syncServerClock(session);
     if (get().holdSessionUpdates) {
       pendingSessionUpdate = session;
     } else {
@@ -653,17 +674,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setHoldSessionUpdates: (hold) => {
     set({ holdSessionUpdates: hold });
-    if (!hold) {
-      if (pendingSessionUpdate) {
-        const buffered = pendingSessionUpdate;
-        pendingSessionUpdate = null;
-        set({ currentSession: buffered });
-      }
-      if (pendingCallbacks.length) {
-        const callbacks = pendingCallbacks;
-        pendingCallbacks = [];
-        callbacks.forEach((cb) => cb());
-      }
+
+    if (holdWatchdog) { clearTimeout(holdWatchdog); holdWatchdog = null; }
+
+    if (hold) {
+      // Se ninguém liberar em HOLD_MAX_MS, libera à força — o jogo nunca
+      // pode ficar preso por causa do buffer de animação.
+      holdWatchdog = setTimeout(() => {
+        console.warn("[gameStore] hold liberado pelo watchdog");
+        get().setHoldSessionUpdates(false);
+      }, HOLD_MAX_MS);
+      return;
+    }
+
+    if (pendingSessionUpdate) {
+      const buffered = pendingSessionUpdate;
+      pendingSessionUpdate = null;
+      set({ currentSession: buffered });
+    }
+    if (pendingCallbacks.length) {
+      const callbacks = pendingCallbacks;
+      pendingCallbacks = [];
+      callbacks.forEach((cb) => cb());
     }
   },
 }));

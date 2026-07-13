@@ -78,6 +78,11 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // reconstruir), criado uma única vez pra manter a MESMA referência
   // entre renders.
   const fallbackEscolhaRef = useRef<RolarDadosResult>({ duplo: false, foiPreso: false, aguardandoEscolha: true })
+  // FIX_TURNO_TRAVADO_CONTADOR (BUG A.2/A.3): timer de liberação de
+  // segurança do hold — precisa ser cancelável (duplo dentro de 4s não
+  // pode deixar o timer da rolagem anterior liberar o hold da nova) e
+  // limpo no unmount (troca de aba no meio da rolagem).
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
@@ -393,6 +398,18 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     faseInicialModal = "acao"
   }
 
+  // FIX_TURNO_TRAVADO_CONTADOR (BUG A.2): rearma o timeout de segurança,
+  // cancelando qualquer um pendente antes — sem isso, tirar duplo e rolar
+  // de novo dentro de 4s deixa o timer da rolagem ANTERIOR liberar o hold
+  // da rolagem NOVA, vazando o peão antes do modal revelar.
+  const armarLiberacaoDeSeguranca = useCallback(() => {
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
+    holdTimeoutRef.current = setTimeout(() => {
+      setHoldSessionUpdates(false)
+      holdTimeoutRef.current = null
+    }, 4000)
+  }, [setHoldSessionUpdates])
+
   const handleRolarDados = useCallback(async () => {
     if (rolando) return
     setRolando(true)
@@ -432,18 +449,22 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       // (ex.: jogador troca de aba) o GSAP é revertido e onResultadoRevelado
       // nunca dispara — sem isso o buffer ficaria preso até a próxima
       // rolagem. 4s dá folga de sobra pra sequência normal (~2.2s).
-      setTimeout(() => setHoldSessionUpdates(false), 4000)
+      armarLiberacaoDeSeguranca()
     } catch (err: any) {
       setHoldSessionUpdates(false)
       toastError(err?.response?.data?.message || "Erro ao rolar dados")
     } finally {
       setRolando(false)
     }
-  }, [rolando, rolarDados, session.id, toastError, setHoldSessionUpdates])
+  }, [rolando, rolarDados, session.id, toastError, setHoldSessionUpdates, armarLiberacaoDeSeguranca])
 
   // BUG 2 (TABULEIRO_FIXES): chamado pelo TurnoModal no instante em que o
   // resultado dos dados vira visível — só então libera o peão pra mover.
   const handleResultadoRevelado = useCallback(() => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current)
+      holdTimeoutRef.current = null
+    }
     setHoldSessionUpdates(false)
     resultadoJaReveladoRef.current = true
   }, [setHoldSessionUpdates])
@@ -459,26 +480,37 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     setHoldSessionUpdates(true)
     try {
       const r = await escolherMovimento(session.id, escolha)
-      if (!r) {
-        setHoldSessionUpdates(false)
-        return
-      }
+      if (!r) return
       if (r.foiPreso || /prisão/i.test(r.mensagem ?? "")) {
         playSfx("foi-preso")
       } else if (/aluguel/i.test(r.mensagem ?? "")) {
         playSfx("pagou-aluguel")
       }
-      // Não há suspense a proteger aqui (o jogador acabou de clicar
-      // deliberadamente) — libera o hold já junto com o resultado, no
-      // mesmo commit, pra não deixar o peão "pulando" fora de sincronia
-      // com a transição de fase do modal.
       setResultado(r)
-      setHoldSessionUpdates(false)
     } catch (err: any) {
-      setHoldSessionUpdates(false)
       toastError(err?.response?.data?.message || "Erro ao mover")
+    } finally {
+      // FIX_TURNO_TRAVADO_CONTADOR (BUG A.1): antes só liberava dentro do
+      // try/catch — se a promise nunca resolvesse nem rejeitasse (servidor
+      // hibernando no free tier), o hold ficava preso pra sempre. `finally`
+      // libera em QUALQUER desfecho. Não há suspense a proteger aqui (o
+      // jogador acabou de clicar deliberadamente), então liberar já junto
+      // com o resultado não deixa o peão "pulando" fora de sincronia com
+      // a transição de fase do modal.
+      setHoldSessionUpdates(false)
     }
   }, [session.id, escolherMovimento, toastError, setHoldSessionUpdates])
+
+  // FIX_TURNO_TRAVADO_CONTADOR (BUG A.3): cleanup no unmount — se o
+  // jogador trocar de aba/navegar para fora durante uma rolagem, o
+  // componente desmonta sem passar pelos handlers acima. Sem isso o hold
+  // fica preso (nenhum componente mais vivo pra liberá-lo).
+  useEffect(() => {
+    return () => {
+      if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current)
+      setHoldSessionUpdates(false)
+    }
+  }, [setHoldSessionUpdates])
 
   // Detecta quando o servidor resolveu a escolha de movimento por timeout
   // (o jogador não clicou a tempo) — session.aguardandoEscolha vira false

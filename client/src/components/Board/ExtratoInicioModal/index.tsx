@@ -47,7 +47,9 @@ export default function ExtratoInicioModal({ extrato }: Props) {
       {!liquidoPositivo && (
         <div className="mt-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="font-inconsolata text-xs text-red-300">
-            Você não tinha saldo suficiente — R$ {Math.abs(extrato.liquido).toLocaleString("pt-BR")} viraram dívida.
+            Seu IPTU superou o crédito do Início. Desenvolva propriedades para gerar
+            renda passiva ou hipoteque o que não usa. Se o saldo não cobrir, o
+            restante vira dívida.
           </p>
         </div>
       )}

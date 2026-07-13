@@ -7,6 +7,7 @@ import type { GameSession } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
 import { playSfx } from "@/utils/sfx"
+import { serverNow } from "@/utils/clock"
 
 const TURNO_TIMEOUT_S = 60
 const AVISO_TEMPO_S = 10
@@ -53,10 +54,16 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
   }, [session.turnoAtualPlayerId])
 
   useEffect(() => {
-    if (!session.turnoIniciadoEm) return
+    // FIX_TURNO_TRAVADO_CONTADOR (BUG B.4): null não pode deixar o contador
+    // congelado no valor da rodada anterior — zera explicitamente.
+    if (!session.turnoIniciadoEm) {
+      setRestante(0)
+      return
+    }
     const inicio = new Date(session.turnoIniciadoEm).getTime()
     const tick = () => {
-      const passado = Math.floor((Date.now() - inicio) / 1000)
+      // FIX_TURNO_TRAVADO_CONTADOR (BUG B.3): serverNow(), não Date.now().
+      const passado = Math.floor((serverNow() - inicio) / 1000)
       const restanteS = Math.max(0, TURNO_TIMEOUT_S - passado)
       setRestante(restanteS)
 

@@ -280,7 +280,7 @@ export default function Regras() {
           <ol className="list-decimal list-inside space-y-1">
             <li>O jogador da vez rola 2 dados (1–6 cada) — o peão <strong>ainda não se move</strong></li>
             <li>O jogador <strong>escolhe o movimento</strong>: andar o dado 1, o dado 2 ou a soma dos dois</li>
-            <li>Só então o peão avança; se passar ou cair em Início, recebe R$ 2.000 + extrato de IPTU, manutenção e renda passiva</li>
+            <li>Só então o peão avança; se passar ou cair em Início, recebe R$ 2.000 − IPTU das suas propriedades</li>
             <li>A casa onde parou é resolvida automaticamente (compra, aluguel, imposto, carta, prisão, feriado...)</li>
             <li><strong>Dados iguais (duplo)</strong> → joga de novo, <strong>só se escolher a soma</strong>, <strong>exceto</strong> se a casa for Feriado, Vá para a Detenção ou carta de prisão</li>
             <li><strong>3 duplos seguidos</strong> → vai direto para a prisão</li>
@@ -291,16 +291,14 @@ export default function Regras() {
         </Secao>
 
         <Secao id="economia" icon={faMoneyBillTransfer} title="Economia (Modo Tabuleiro)" color="purple">
-          <p>
-            Exclusivo do Modo Tabuleiro. A cada volta completa (passagem pelo Início), o extrato
-            de cada jogador é calculado e aplicado de uma vez:
-          </p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>Renda passiva</strong> — 15% do aluguel atual de cada propriedade desenvolvida</li>
-            <li><strong>IPTU</strong> — 8% do valor de compra de cada propriedade</li>
+            <li>Ao passar pelo Início: <strong>+R$ 2.000 − IPTU</strong> das suas propriedades (25% do valor de compra)</li>
+            <li>A cada rodada: <strong>renda passiva − manutenção</strong> das suas propriedades</li>
+            <li><strong>Renda passiva</strong> — 35% do aluguel atual (quanto mais casas, mais renda)</li>
             <li><strong>Manutenção</strong> — 12% do custo da casa, por casa construída (hotel = 5 casas)</li>
             <li>Propriedades <strong>hipotecadas</strong> não pagam IPTU nem manutenção e não geram renda passiva</li>
             <li><strong>Ações</strong> (grupo Preto) não têm IPTU, manutenção nem renda passiva</li>
+            <li><strong>Terreno parado só gera IPTU.</strong> Desenvolver é o que gera renda — acumular propriedades sem construir leva ao prejuízo</li>
           </ul>
         </Secao>
 
