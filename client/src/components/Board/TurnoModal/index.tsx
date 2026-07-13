@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
 import { Loader2 } from "lucide-react"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
+import type { Casa } from "@/types/game"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
 
@@ -94,6 +95,9 @@ type TurnoModalProps = {
   // Revelar dados (Crédito de Visão): opcional, gasta um crédito para ver
   // os valores dos dados antes de escolher o movimento.
   onRevelarDados?: () => void
+  // Tabuleiro + posição atual para calcular destinos ao revelar dados
+  tabuleiro?: Casa[]
+  posicaoAtual?: number
 }
 
 type FaseTurno = "rolando" | "resultado" | "escolha" | "extrato-inicio" | "desfecho" | "acao"
@@ -103,6 +107,7 @@ export default function TurnoModal({
   onComprar, onRecusar, onFechar, onDecidirDepois, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
   onEscolherMovimento, onRevelarDados,
+  tabuleiro = [], posicaoAtual = 0,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
@@ -314,6 +319,17 @@ export default function TurnoModal({
     return () => clearInterval(interval)
   }, [fase, fecharModal])
 
+  // ── Destinos revelados (calculados quando o jogador usou crédito de visão) ──
+  const destinos = useMemo(() => {
+    if (!resultado?.dado1 || tabuleiro.length === 0) return null
+    const total = tabuleiro.length
+    return {
+      dado1: tabuleiro[(posicaoAtual + resultado.dado1) % total],
+      dado2: resultado.dado2 != null ? tabuleiro[(posicaoAtual + resultado.dado2) % total] : null,
+      soma: resultado.dado2 != null ? tabuleiro[(posicaoAtual + resultado.dado1 + resultado.dado2) % total] : null,
+    }
+  }, [resultado?.dado1, resultado?.dado2, posicaoAtual, tabuleiro])
+
   if (!aberto || !resultado) return null
 
   return (
@@ -416,25 +432,28 @@ export default function TurnoModal({
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {(["dado1", "dado2", "soma"] as const).map((op) => (
-                <button
-                  key={op}
-                  disabled={escolhendo}
-                  onClick={() => {
-                    if (escolhendo) return
-                    setEscolhendo(true)
-                    onEscolherMovimento?.(op)
-                  }}
-                  className="flex flex-col items-center gap-1 p-4 rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                >
-                  <span className="font-jaro text-base text-zinc-100">
-                    {op === "dado1" ? "Dado 1" : op === "dado2" ? "Dado 2" : "Soma"}
-                  </span>
-                  <span className="font-inconsolata text-[11px] text-zinc-500">
-                    {op === "soma" ? "Dado 1 + Dado 2" : "Valor oculto"}
-                  </span>
-                </button>
-              ))}
+              {(["dado1", "dado2", "soma"] as const).map((op) => {
+                const destino = destinos?.[op]
+                return (
+                  <button
+                    key={op}
+                    disabled={escolhendo}
+                    onClick={() => {
+                      if (escolhendo) return
+                      setEscolhendo(true)
+                      onEscolherMovimento?.(op)
+                    }}
+                    className="flex flex-col items-center gap-1 p-4 rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    <span className="font-jaro text-base text-zinc-100">
+                      {op === "dado1" ? "Dado 1" : op === "dado2" ? "Dado 2" : "Soma"}
+                    </span>
+                    <span className="font-inconsolata text-[11px] text-zinc-500">
+                      {destino ? destino.nome : op === "soma" ? "Dado 1 + Dado 2" : "Valor oculto"}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
 
             <p className="font-inconsolata text-[10px] text-zinc-600 mt-3">
