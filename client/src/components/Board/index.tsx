@@ -24,6 +24,9 @@ import type { Casa, GameSession } from "@/types/game"
 
 const MIN_SCALE = 0.3
 const MAX_SCALE = 2.5
+// Escala usada no modo não-interativo (compacto): zoom fixo focado no
+// próprio peão, em vez do "caber o tabuleiro inteiro" do modo interativo.
+const FOCO_SCALE = 1.2
 
 // Espelho client-side de calcularOpcoesMovimento (turno.service.ts) — usado
 // só para reconstruir a tela de escolha após um refresh de página em meio
@@ -53,9 +56,14 @@ type Props = {
   tabuleiro: Casa[]
   session: GameSession
   meuPlayerId?: number
+  // Modo compacto (BoardPanel) x modo tela cheia (BoardModal). No modo
+  // compacto o usuário não pode arrastar/dar zoom manualmente — o board só
+  // acompanha, sempre focado e centralizado no próprio peão. Só na tela
+  // cheia o zoom/pan manual (mouse, touch, pinch) fica disponível.
+  interativo?: boolean
 }
 
-export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
+export default function Board({ tabuleiro, session, meuPlayerId, interativo = true }: Props) {
   const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, setHoldSessionUpdates, getAluguel } = useGameStore()
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -64,6 +72,11 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   transformRef.current = transform
   const dragState = useRef<{ dragging: boolean; lastX: number; lastY: number }>({ dragging: false, lastX: 0, lastY: 0 })
   const pinchState = useRef<{ pinching: boolean; startDist: number; startScale: number; centerX: number; centerY: number }>({ pinching: false, startDist: 0, startScale: 1, centerX: 0, centerY: 0 })
+  // Posição atual do próprio peão — usada pelo modo não-interativo (foco
+  // automático). Ref (não state) porque é lida de dentro do callback do
+  // ResizeObserver, criado uma única vez; sem ref, o observer ficaria preso
+  // ao valor da posição no momento em que foi criado (closure velha).
+  const minhaPosicaoRef = useRef(0)
 
   // ── Modal unificado de turno (rolar dados → resultado → desfecho/ação) ──
   const [rolando, setRolando] = useState(false)
@@ -143,11 +156,14 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     return unsub
   }, [])
 
-  // Ao montar: ajusta escala para caber o tabuleiro inteiro na viewport, centralizado
-  useEffect(() => {
+  // Ajusta a escala para caber o tabuleiro inteiro na viewport, centralizado.
+  // Só usado no modo interativo (tela cheia) — no modo compacto o board não
+  // mostra o tabuleiro inteiro, mostra um zoom focado (ver applyFoco).
+  const applyFitScale = useCallback(() => {
     const vp = viewportRef.current
     if (!vp) return
     const rect = vp.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return
     const fitScale = clampScale(Math.min(rect.width / BOARD_SIZE, rect.height / BOARD_SIZE) * 0.95)
     setTransformClamped({
       scale: fitScale,
@@ -156,7 +172,44 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     })
   }, [setTransformClamped])
 
+  // Centraliza num zoom fixo sobre o próprio peão. Modo compacto (não
+  // interativo): sem isso o jogador ficaria olhando pro tabuleiro inteiro
+  // minúsculo, sem poder dar zoom manual pra ver onde está.
+  const applyFoco = useCallback(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const rect = vp.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return
+    const scale = clampScale(FOCO_SCALE)
+    const { x, y } = posToPixelCenter(minhaPosicaoRef.current)
+    setTransformClamped({
+      scale,
+      x: rect.width / 2 - x * scale,
+      y: rect.height / 2 - y * scale,
+    })
+  }, [setTransformClamped])
+
+  // Recalcula sempre que o CONTAINER mudar de tamanho — não só no mount.
+  // Sem isso, quando o Board vive dentro de um painel cuja altura final só
+  // se estabelece depois do primeiro paint (ex.: BoardPanel dentro do
+  // layout de painéis), a escala é calculada cedo demais e nunca mais é
+  // recalculada, deixando o tabuleiro minúsculo/deslocado. O zoom/pan
+  // manual do usuário não aciona isso — o ResizeObserver só dispara quando
+  // o tamanho do próprio viewport muda, não quando o `transform` muda.
+  // Qual função rodar depende do modo: interativo cabe o board inteiro,
+  // compacto foca no próprio peão.
+  useEffect(() => {
+    const vp = viewportRef.current
+    if (!vp) return
+    const recalc = interativo ? applyFitScale : applyFoco
+    recalc()
+    const ro = new ResizeObserver(() => recalc())
+    ro.observe(vp)
+    return () => ro.disconnect()
+  }, [interativo, applyFitScale, applyFoco])
+
   const handleWheel = (e: React.WheelEvent) => {
+    if (!interativo) return
     e.preventDefault()
     const vp = viewportRef.current
     if (!vp) return
@@ -173,6 +226,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   }
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (!interativo) return
     if (e.pointerType === "touch") return
     dragState.current = { dragging: true, lastX: e.clientX, lastY: e.clientY }
   }
@@ -201,6 +255,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   })
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!interativo) return
     if (e.touches.length === 2) {
       dragState.current.dragging = false
       pinchState.current = { pinching: true, startDist: dist(e.touches), startScale: transformRef.current.scale, centerX: 0, centerY: 0 }
@@ -211,6 +266,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!interativo) return
     e.preventDefault()
     if (e.touches.length === 2 && pinchState.current.pinching) {
       const ratio = dist(e.touches) / pinchState.current.startDist
@@ -239,6 +295,20 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
   }
 
   const jogadoresAtivos = (session.jogadores ?? []).filter(p => !p.desistiu)
+
+  // Posição atual do próprio peão — mantém a ref viva pra o ResizeObserver
+  // (criado uma única vez) sempre focar no lugar certo, mesmo depois do
+  // peão se mover.
+  const minhaPosicao = jogadoresAtivos.find(p => p.id === meuPlayerId)?.posicao ?? 0
+  minhaPosicaoRef.current = minhaPosicao
+
+  // Modo compacto: sempre que o próprio peão mudar de posição, recentraliza
+  // automaticamente — o usuário não tem controle manual aqui, então isso é
+  // o único jeito de o board acompanhar o peão.
+  useEffect(() => {
+    if (interativo) return
+    applyFoco()
+  }, [interativo, minhaPosicao, applyFoco])
 
   // Derivado do estado da sessão (não da resposta transitória de rolar-dados)
   // pra sobreviver a um refresh de página enquanto a decisão está pendente.
@@ -318,7 +388,16 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
           }
           fallbackResultadoRef.current = { propId: casaAtual.propId, sessionPossesId: posse.id, resultado: resultadoModal }
         }
-        modalAbertoFinal = true
+        // BUG (decidir-depois some ao voltar de aba): diferente da escolha
+        // de movimento (obrigatória, sem opção de adiar), a compra pendente
+        // TEM um estado minimizado — "decidir depois". Forçar o modal
+        // aberto aqui (como no fallback da escolha) reabriria a tela de
+        // compra toda vez que o Board remonta (troca de aba, F5), mesmo
+        // que o jogador já tivesse escolhido minimizar. Em vez disso,
+        // respeita o estado local (`modalAberto`, false no primeiro mount)
+        // — a compra pendente aparece como banner minimizado, igual a
+        // quando o jogador clica "Decidir depois" manualmente.
+        modalAbertoFinal = modalAberto
         faseInicialModal = "acao"
       }
     }
@@ -493,6 +572,23 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     }
   }, [session.aguardandoEscolha])
 
+  // BUG (clicar Comprar "não faz nada"): `resultado` só é limpo por ações
+  // explícitas (handleJogarNovamente, timeout da escolha acima) — comprar
+  // e recusar fecham o modal (setModalAberto(false)) mas NUNCA limpavam
+  // `resultado`, que continuava com o `compraDisponivel` antigo. Se por
+  // qualquer motivo (timeout no servidor virando leilão, corrida entre o
+  // clique e o socket) o cliente visse `session.aguardandoAcao` ainda true
+  // por um instante, a UI reexibia a compra já resolvida — e o clique em
+  // "Decidir agora" reabria o MESMO resultado obsoleto, sem efeito. Mesmo
+  // racional do efeito de timeout da escolha acima: assim que o servidor
+  // confirma que não há mais nada pendente, o estado local é descartado.
+  useEffect(() => {
+    if (resultado?.aguardandoAcao && !session.aguardandoAcao) {
+      setModalAberto(false)
+      setResultado(null)
+    }
+  }, [session.aguardandoAcao])
+
   const handleComprar = useCallback(async () => {
     if (decidindoRef.current || !resultadoModal?.compraDisponivel) return
     decidindoRef.current = true
@@ -548,7 +644,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
     : undefined
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 select-none">
+    <div className="absolute inset-0 flex flex-col select-none">
       <EventoEconomicoBar
         eventoProximoCodigo={session.eventoProximo}
         eventoAtualCodigo={session.eventoAtual}
@@ -600,7 +696,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
         </button>
       )}
       <div
-        className="relative w-full flex-1 min-h-0 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden touch-none"
+        className={`relative w-full flex-1 min-h-0 bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden${interativo ? " touch-none" : ""}`}
         style={{
           backgroundImage: `url(${FUNDO_TABULEIRO})`,
           backgroundSize: "cover",
@@ -609,7 +705,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
       >
       <div
         ref={viewportRef}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className={`w-full h-full${interativo ? " cursor-grab active:cursor-grabbing" : ""}`}
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -670,7 +766,7 @@ export default function Board({ tabuleiro, session, meuPlayerId }: Props) {
         </div>
       </div>
 
-      {meuPlayerId != null && (
+      {interativo && meuPlayerId != null && (
         <button
           onClick={() => {
             const mine = jogadoresAtivos.find(p => p.id === meuPlayerId)

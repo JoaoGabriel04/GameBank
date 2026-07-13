@@ -375,8 +375,13 @@ export default function Chat({ variant = "floating", onUnreadCount }: Props) {
   );
 
   if (variant === "tab") {
+    // Altura FIXA — o pai aqui (renderConteudo em page.tsx) é um bloco
+    // comum sem altura definida (a rolagem da página acontece um nível
+    // acima), então `h-full` resolveria pra `auto` e a área de mensagens
+    // (`flex-1 min-h-0`) colapsaria a ~0px. Só o conteúdo interno
+    // (mensagens) rola — o card do chat em si não estica nem encolhe.
     return (
-      <div className="flex flex-col h-full rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+      <div className="flex flex-col h-[65vh] max-h-[560px] rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
         {chatContent}
       </div>
     );

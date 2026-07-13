@@ -54,12 +54,13 @@ export default function BoardModal({ session, meuPlayerId, isOpen, onClose }: Pr
             </div>
 
             {/* Board maximizado — sem ações, só visualização */}
-            <div className="flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0">
               {session.tabuleiro && (
                 <Board
                   tabuleiro={session.tabuleiro}
                   session={session}
                   meuPlayerId={meuPlayerId}
+                  interativo
                 />
               )}
             </div>

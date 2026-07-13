@@ -15,6 +15,7 @@ type Props = {
   rolando: boolean;
   onRolarDados: () => void;
 };
+
 export default function GameShell({ rolando, onRolarDados }: Props) {
   const currentSession = useGameStore((s) => s.currentSession);
   const { user: authUser } = useAuthStore();
@@ -34,7 +35,6 @@ export default function GameShell({ rolando, onRolarDados }: Props) {
   const meuPlayerId = currentPlayer?.id;
   const isTabuleiro = currentSession.tipoJogo === "tabuleiro";
 
-  // Modo Banca: mostra apenas as stats rápidas (não mexe em nada do layout)
   if (!isTabuleiro) {
     return (
       <div className="space-y-3">
@@ -46,35 +46,39 @@ export default function GameShell({ rolando, onRolarDados }: Props) {
   return (
     <>
       <div className="flex flex-col gap-3 pb-4">
-        {/* Board compacto — ~45% altura, com botão de maximizar */}
-        <BoardPanel
-          session={currentSession}
-          meuPlayerId={meuPlayerId}
-          onMaximize={() => setBoardModalOpen(true)}
-        />
+        {/*
+          CAIXA DO TABULEIRO — tamanho travado.
+          - overflow-hidden é OBRIGATÓRIO: nada dentro pode estourar isso,
+            não importa o tamanho intrínseco do board (1540x1540px).
+          - shrink-0: impede que o flex-col pai espreme ou estique essa caixa.
+          - Mobile: 50vh, teto 480px, largura total.
+          - Desktop (lg+): quadrado clamp(280px,25vw,420px).
+        */}
+        <div className="relative w-full h-[50vh] max-h-[480px] overflow-hidden shrink-0 lg:h-[clamp(280px,25vw,420px)] lg:w-[clamp(280px,25vw,420px)] lg:max-h-none">
+          <BoardPanel
+            session={currentSession}
+            meuPlayerId={meuPlayerId}
+            onMaximize={() => setBoardModalOpen(true)}
+          />
+        </div>
 
-        {/* Faixa do evento econômico */}
         <EventoBanner
           eventoAtualCodigo={currentSession.eventoAtual}
           eventoProximoCodigo={currentSession.eventoProximo}
           rodadaAtual={currentSession.rodadaAtual}
         />
 
-        {/* Timeline de turno */}
         <TurnoTimeline meuPlayerId={meuPlayerId} />
 
-        {/* Ação principal contextual */}
         <AcaoPrincipal
           meuPlayerId={meuPlayerId}
           rolando={rolando}
           onRolarDados={onRolarDados}
         />
 
-        {/* Stats rápidas */}
         <StatsRapidas meuPlayerId={meuPlayerId} />
       </div>
 
-      {/* Board modal — maximizado, só visualização */}
       {boardModalOpen && (
         <BoardModal
           session={currentSession}

@@ -15,12 +15,13 @@ export default function BoardPanel({ session, meuPlayerId, onMaximize }: Props) 
   if (!session.tabuleiro) return null;
 
   return (
-    <div className="flex flex-col" style={{ height: "min(45vh, 400px)" }}>
+    <div className="absolute inset-0 flex flex-col">
       <div className="relative flex-1 min-h-0">
         <Board
           tabuleiro={session.tabuleiro}
           session={session}
           meuPlayerId={meuPlayerId}
+          interativo={false}
         />
         <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
           <button

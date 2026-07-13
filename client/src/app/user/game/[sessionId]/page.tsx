@@ -629,9 +629,13 @@ export default function Game() {
     switch (abaAtual) {
       case "Visão":
         return (
-          <div className="space-y-4">
-            <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
-            <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+          <div className="space-y-4 lg:space-y-0 lg:flex lg:items-start lg:gap-4">
+            <div className="lg:shrink-0">
+              <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+            </div>
+            <div className="lg:flex-1 lg:min-w-0">
+              <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+            </div>
           </div>
         );
       case "Imóveis":    return <ImoveisSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />;
@@ -641,9 +645,13 @@ export default function Game() {
       case "Loja":       return <Loja />;
       default:
         return (
-          <div className="space-y-4">
-            <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
-            <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+          <div className="space-y-4 lg:space-y-0 lg:flex lg:items-start lg:gap-4">
+            <div className="lg:shrink-0">
+              <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+            </div>
+            <div className="lg:flex-1 lg:min-w-0">
+              <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
+            </div>
           </div>
         );
     }
