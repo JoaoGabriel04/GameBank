@@ -327,6 +327,14 @@ export class PropriedadeService {
         throw new AppError(404, "Alguma(s) propriedade(s) não encontrada(s)");
       }
 
+      // Mesmo multiplicador de evento aplicado na compra (buyHousesBatch) —
+      // ver comentário em sellHouse sobre o abuso que isso evita.
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { eventoAtual: true },
+      });
+      const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
+
       const propMap = new Map(properties.map((p) => [p.id, p]));
       let totalValue = 0;
       const detalhesItens: string[] = [];
@@ -346,7 +354,7 @@ export class PropriedadeService {
         if (prop.casas < item.quantidade) {
           throw new AppError(400, `${prop.propriedade.nome} tem apenas ${prop.casas} casa(s), não pode vender ${item.quantidade}`);
         }
-        const valorItem = prop.propriedade.custo_casa * item.quantidade;
+        const valorItem = aplicarMod(prop.propriedade.custo_casa, custoConstrucaoMult) * item.quantidade;
         totalValue += valorItem;
         detalhesItens.push(`${item.quantidade} casa(s) de ${prop.propriedade.nome}`);
       }
@@ -392,7 +400,16 @@ export class PropriedadeService {
         throw new AppError(400, "Esta propriedade não possui casas!");
       }
 
-      const valorVenda = propriedade.propriedade.custo_casa;
+      // Abuso corrigido: o multiplicador de evento (Escassez de Material,
+      // Aquecimento do Mercado) precisa valer tanto pra comprar quanto pra
+      // vender casas — senão dá pra comprar barato num evento de desconto
+      // e vender de volta pelo preço cheio, lucro garantido sem risco.
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { eventoAtual: true },
+      });
+      const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
+      const valorVenda = aplicarMod(propriedade.propriedade.custo_casa, custoConstrucaoMult);
 
       await prisma.$transaction([
         prisma.sessionPosses.update({
