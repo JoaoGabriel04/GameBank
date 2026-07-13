@@ -54,6 +54,7 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
     effectDescription: string;
   } | null>(null);
   const [drawingCard, setDrawingCard] = useState(false);
+  const [verDetalhesProjecao, setVerDetalhesProjecao] = useState(false);
 
   const isTabuleiro = currentSession?.tipoJogo === "tabuleiro";
   const isSpectator = !!currentPlayer?.desistiu;
@@ -72,30 +73,43 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
   }, [currentPlayer, currentSession?.sessionPosses]);
 
   const projecaoInicio = useMemo(() => {
-    if (!currentPlayer || !currentSession) return { receita: 0, despesa: 0, liquido: 0 };
+    type DetalheProp = { propId: number; nome: string; casas: number; iptu: number; manutencao: number; rendaPassiva: number };
+    if (!currentPlayer || !currentSession) return { receita: 0, despesa: 0, liquido: 0, detalhes: [] as DetalheProp[] };
     const myProps = currentSession.sessionPosses.filter(
       (sp) => sp.playerId === currentPlayer.id
     );
     const mods = getEvento(currentSession.eventoAtual)?.efeito ?? {};
     let iptu = 0, manutencao = 0, rendaPassiva = 0;
+    const detalhes: DetalheProp[] = [];
     for (const sp of myProps) {
       if (sp.hipotecada || !sp.propriedade) continue;
       if (sp.propriedade.tipo === "ação") continue;
       const casas = sp.casas ?? 0;
       const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
-      iptu += aplicarMod(sp.propriedade.custo_compra * IPTU_PCT, mods.iptuMult);
-      manutencao += aplicarMod(
+      const propIptu = aplicarMod(sp.propriedade.custo_compra * IPTU_PCT, mods.iptuMult);
+      const propManutencao = aplicarMod(
         sp.propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes,
         mods.manutencaoMult
       );
-      rendaPassiva += aplicarMod(
+      const propRendaPassiva = aplicarMod(
         getAluguelBase(sp.propriedade, casas) * RENDA_PASSIVA_PCT,
         mods.rendaPassivaMult
       );
+      iptu += propIptu;
+      manutencao += propManutencao;
+      rendaPassiva += propRendaPassiva;
+      detalhes.push({
+        propId: sp.propriedade.id,
+        nome: sp.propriedade.nome,
+        casas,
+        iptu: propIptu,
+        manutencao: propManutencao,
+        rendaPassiva: propRendaPassiva,
+      });
     }
     const receita = CREDITO_INICIO + rendaPassiva;
     const despesa = iptu + manutencao;
-    return { receita, despesa, liquido: receita - despesa };
+    return { receita, despesa, liquido: receita - despesa, detalhes };
   }, [currentPlayer, currentSession, getAluguelBase]);
 
   const myDebts = useMemo(
@@ -264,6 +278,40 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
                 {formatCurrency(Math.abs(projecaoInicio.liquido))}
               </span>
             </div>
+
+            {projecaoInicio.detalhes.length > 0 && (
+              <div className="pt-1">
+                <button
+                  onClick={() => setVerDetalhesProjecao((v) => !v)}
+                  className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 underline decoration-dotted cursor-pointer"
+                >
+                  {verDetalhesProjecao ? "Ocultar detalhes" : "Ver detalhes por propriedade"}
+                </button>
+
+                {verDetalhesProjecao && (
+                  <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                    {projecaoInicio.detalhes.map((d) => (
+                      <div key={d.propId} className="px-2 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+                        <p className="font-inconsolata text-xs text-zinc-200">
+                          {d.nome} {d.casas > 0 && `(${d.casas >= 5 ? "hotel" : `${d.casas} casa${d.casas > 1 ? "s" : ""}`})`}
+                        </p>
+                        <div className="flex gap-3 mt-0.5 font-inconsolata text-[11px]">
+                          {d.rendaPassiva > 0 && (
+                            <span className="text-emerald-400">+R$ {formatCurrency(d.rendaPassiva)} renda</span>
+                          )}
+                          {d.iptu > 0 && (
+                            <span className="text-red-400">−R$ {formatCurrency(d.iptu)} IPTU</span>
+                          )}
+                          {d.manutencao > 0 && (
+                            <span className="text-red-400">−R$ {formatCurrency(d.manutencao)} manut.</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
