@@ -53,8 +53,12 @@ export default function BoardModal({ session, meuPlayerId, isOpen, onClose }: Pr
               </div>
             </div>
 
-            {/* Board maximizado — sem ações, só visualização */}
-            <div className="relative flex-1 min-h-0">
+            {/* Board maximizado — sem ações, só visualização.
+                margin (não padding): o Board interno é `absolute inset-0`,
+                cuja containing block é o padding-box do ancestral
+                posicionado mais próximo — um padding aqui seria ignorado
+                e o Board preencheria o espaço inteiro mesmo assim. */}
+            <div className="relative flex-1 min-h-0 m-3 sm:m-6">
               {session.tabuleiro && (
                 <Board
                   tabuleiro={session.tabuleiro}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faCrosshairs } from "@fortawesome/free-solid-svg-icons"
+import { faCrosshairs, faExpand } from "@fortawesome/free-solid-svg-icons"
 import BoardTile from "./BoardTile"
 import TurnoBanner from "./TurnoBanner"
 import TurnoModal from "./TurnoModal"
@@ -36,9 +36,15 @@ type Props = {
   // acompanha, sempre focado e centralizado no próprio peão. Só na tela
   // cheia o zoom/pan manual (mouse, touch, pinch) fica disponível.
   interativo?: boolean
+  // Botão de maximizar (usado pelo BoardPanel/modo compacto). Renderizado
+  // ancorado na própria caixa visual do tabuleiro, não na raiz do Board —
+  // essa raiz também contém o EventoEconomicoBar/TurnoBanner empilhados
+  // antes dela, então um overlay posicionado na raiz flutuaria sobre esses
+  // banners em vez do tabuleiro.
+  onMaximize?: () => void
 }
 
-export default function Board({ tabuleiro, session, meuPlayerId, interativo = true }: Props) {
+export default function Board({ tabuleiro, session, meuPlayerId, interativo = true, onMaximize }: Props) {
   const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, setHoldSessionUpdates } = useGameStore()
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -689,6 +695,15 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
           title="Centralizar no meu peão"
         >
           <FontAwesomeIcon icon={faCrosshairs} />
+        </button>
+      )}
+      {onMaximize && (
+        <button
+          onClick={onMaximize}
+          title="Maximizar tabuleiro"
+          className="absolute top-2 right-2 flex items-center justify-center w-8 h-8 rounded-lg bg-black/50 hover:bg-black/70 text-zinc-300 hover:text-zinc-100 transition-colors cursor-pointer backdrop-blur-sm"
+        >
+          <FontAwesomeIcon icon={faExpand} className="text-xs" />
         </button>
       )}
       </div>
