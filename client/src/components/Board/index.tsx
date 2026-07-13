@@ -663,25 +663,29 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       )}
       <LeilaoModal session={session} meuPlayerId={meuPlayerId} />
       <LeilaoResultadoModal session={session} meuPlayerId={meuPlayerId} />
-      <TurnoModal
-        aberto={modalAbertoFinal}
-        resultado={resultadoModal}
-        nomeCasa={nomeCasaModal}
-        erroCompra={erroCompra}
-        acaoEmCurso={acaoEmCurso}
-        faseInicial={faseInicialModal}
-        onComprar={handleComprar}
-        onRecusar={handleRecusar}
-        onFechar={handleFecharModal}
-        onDecidirDepois={handleDecidirDepois}
-        onJogarNovamente={handleJogarNovamente}
-        onDadosParados={handleDadosParados}
-        onResultadoRevelado={handleResultadoRevelado}
-        onEscolherMovimento={handleEscolherMovimento}
-        onRevelarDados={handleRevelarDados}
-        tabuleiro={tabuleiro}
-        posicaoAtual={jogadorDaVez?.posicao ?? 0}
-      />
+      {!interativo && (
+        <TurnoModal
+          aberto={modalAbertoFinal}
+          resultado={resultadoModal}
+          nomeCasa={nomeCasaModal}
+          erroCompra={erroCompra}
+          acaoEmCurso={acaoEmCurso}
+          faseInicial={faseInicialModal}
+          onComprar={handleComprar}
+          onRecusar={handleRecusar}
+          onFechar={handleFecharModal}
+          onDecidirDepois={handleDecidirDepois}
+          onJogarNovamente={handleJogarNovamente}
+          onDadosParados={handleDadosParados}
+          onResultadoRevelado={handleResultadoRevelado}
+          onEscolherMovimento={handleEscolherMovimento}
+          onRevelarDados={handleRevelarDados}
+          tabuleiro={tabuleiro}
+          posicaoAtual={jogadorDaVez?.posicao ?? 0}
+          session={session}
+          meuPlayerId={meuPlayerId}
+        />
+      )}
       {/* Compra pendente minimizada — o jogador fechou pra ir vender algo
           e conseguir dinheiro. Fica visível até ele decidir ou o tempo
           da rodada acabar (o backend recusa automaticamente no timeout). */}

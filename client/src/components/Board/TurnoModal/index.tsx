@@ -6,7 +6,7 @@ import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
 import { Loader2 } from "lucide-react"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
-import type { Casa } from "@/types/game"
+import type { Casa, GameSession } from "@/types/game"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
 
@@ -99,6 +99,9 @@ type TurnoModalProps = {
   // Tabuleiro + posição atual para calcular destinos ao revelar dados
   tabuleiro?: Casa[]
   posicaoAtual?: number
+  // Sessão completa para verificar ownership das casas de destino
+  session?: GameSession
+  meuPlayerId?: number
 }
 
 type FaseTurno = "rolando" | "resultado" | "escolha" | "extrato-inicio" | "desfecho" | "acao"
@@ -108,7 +111,7 @@ export default function TurnoModal({
   onComprar, onRecusar, onFechar, onDecidirDepois, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
   onEscolherMovimento, onRevelarDados,
-  tabuleiro = [], posicaoAtual = 0,
+  tabuleiro = [], posicaoAtual = 0, session, meuPlayerId,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
@@ -331,6 +334,27 @@ export default function TurnoModal({
     }
   }, [resultado?.dado1, resultado?.dado2, posicaoAtual, tabuleiro])
 
+  // ── Ownership das casas de destino (quando os dados foram revelados) ──
+  const ownershipLabels = useMemo(() => {
+    if (!destinos || !session?.sessionPosses) return null
+    const labels: Partial<Record<EscolhaMovimento, string>> = {}
+    for (const op of ["dado1", "dado2", "soma"] as const) {
+      const casa = destinos[op]
+      if (!casa || casa.propId == null) continue
+      const posse = session.sessionPosses.find(p => p.propId === casa.propId)
+      if (!posse) continue
+      if (posse.playerId === null) {
+        labels[op] = "Livre"
+      } else if (posse.playerId === meuPlayerId) {
+        labels[op] = "Sua"
+      } else {
+        const dono = session.jogadores?.find(j => j.id === posse.playerId)
+        labels[op] = `Aluguel — ${dono?.nome ?? "?"}`
+      }
+    }
+    return labels
+  }, [destinos, session?.sessionPosses, session?.jogadores, meuPlayerId])
+
   if (!aberto || !resultado) return null
 
   // Renderizado via portal para document.body para ficar ACIMA de qualquer
@@ -453,6 +477,15 @@ export default function TurnoModal({
                     <span className="font-inconsolata text-[11px] text-zinc-500">
                       {destino ? destino.nome : op === "soma" ? "Dado 1 + Dado 2" : "Valor oculto"}
                     </span>
+                    {destino && ownershipLabels?.[op] && (
+                      <span className={`font-inconsolata text-[10px] ${
+                        ownershipLabels[op] === "Livre" ? "text-emerald-400" :
+                        ownershipLabels[op] === "Sua" ? "text-cyan-400" :
+                        "text-rose-400"
+                      }`}>
+                        {ownershipLabels[op]}
+                      </span>
+                    )}
                   </button>
                 )
               })}
