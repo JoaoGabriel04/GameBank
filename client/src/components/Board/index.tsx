@@ -11,7 +11,7 @@ import EventoModal from "./EventoModal"
 import LeilaoModal from "./LeilaoModal"
 import LeilaoResultadoModal from "./LeilaoResultadoModal"
 import Pawns from "./Pawns"
-import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, TOTAL_CASAS, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
+import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import { ARTE_CENTRAL, FUNDO_TABULEIRO, GRUPO_IMAGENS_PRELOAD } from "@/utils/tabuleiro-images"
 import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
@@ -19,7 +19,6 @@ import { useEventoStore } from "@/stores/socketStore"
 import { getEvento } from "@/constants/eventos"
 import { playSfx, stopSfx } from "@/utils/sfx"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
-import type { OpcaoInfo } from "./TurnoModal"
 import type { Casa, GameSession } from "@/types/game"
 
 const MIN_SCALE = 0.3
@@ -27,30 +26,6 @@ const MAX_SCALE = 2.5
 // Escala usada no modo não-interativo (compacto): zoom fixo focado no
 // próprio peão, em vez do "caber o tabuleiro inteiro" do modo interativo.
 const FOCO_SCALE = 1.2
-
-// Espelho client-side de calcularOpcoesMovimento (turno.service.ts) — usado
-// só para reconstruir a tela de escolha após um refresh de página em meio
-// à decisão (mesmo racional do fallback de compra pendente logo abaixo).
-// O cálculo real e autoritativo continua sempre no backend.
-function calcularOpcoesMovimentoClient(tabuleiro: Casa[], posAtual: number, dado1: number, dado2: number) {
-  const montar = (passos: number, tipo: "dado1" | "dado2" | "soma") => {
-    const destino = (posAtual + passos) % TOTAL_CASAS
-    const casa = tabuleiro.find((c) => c.pos === destino)
-    return {
-      tipo,
-      passos,
-      destino,
-      nomeCasa: casa?.nome ?? "",
-      tipoCasa: casa?.tipo ?? "inicio",
-      passaInicio: (posAtual + passos) >= TOTAL_CASAS,
-    }
-  }
-  return [
-    montar(dado1, "dado1" as const),
-    montar(dado2, "dado2" as const),
-    montar(dado1 + dado2, "soma" as const),
-  ]
-}
 
 type Props = {
   tabuleiro: Casa[]
@@ -64,7 +39,7 @@ type Props = {
 }
 
 export default function Board({ tabuleiro, session, meuPlayerId, interativo = true }: Props) {
-  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, setHoldSessionUpdates, getAluguel } = useGameStore()
+  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, setHoldSessionUpdates } = useGameStore()
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })
@@ -92,9 +67,11 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // Cache do resultado sintetizado pelo fallback (ver abaixo) — evita
   // recriar o objeto a cada render enquanto a mesma compra fica pendente.
   const fallbackResultadoRef = useRef<{ propId: number; sessionPossesId: number; resultado: RolarDadosResult } | null>(null)
-  // Cache do resultado sintetizado para a fase "escolha" (Mecânica 3) —
-  // mesmo racional do cache acima, evita recriar o objeto a cada render.
-  const fallbackEscolhaRef = useRef<{ dado1: number; dado2: number; resultado: RolarDadosResult } | null>(null)
+  // Resultado sintetizado para a fase "escolha" às cegas (Mecânica 3) —
+  // sempre o mesmo objeto (nada varia: não há dado1/dado2/opcoes pra
+  // reconstruir), criado uma única vez pra manter a MESMA referência
+  // entre renders.
+  const fallbackEscolhaRef = useRef<RolarDadosResult>({ duplo: false, foiPreso: false, aguardandoEscolha: true })
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
@@ -340,28 +317,19 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // Mecânica 3: refresh de página em meio à escolha de movimento não pode
   // deixar o jogador sem a tela de escolha (o botão "Rolar dados" fica
   // bloqueado pelo backend enquanto aguardandoEscolha for true).
-  if (!resultado && minhaVez && session.aguardandoEscolha && jogadorDaVez && session.ultimoDado1 && session.ultimoDado2) {
-    const cache = fallbackEscolhaRef.current
-    if (cache && cache.dado1 === session.ultimoDado1 && cache.dado2 === session.ultimoDado2) {
-      resultadoModal = cache.resultado
-    } else {
-      const opcoesFallback = calcularOpcoesMovimentoClient(
-        tabuleiro, jogadorDaVez.posicao ?? 0, session.ultimoDado1, session.ultimoDado2
-      )
-      resultadoModal = {
-        dado1: session.ultimoDado1,
-        dado2: session.ultimoDado2,
-        duplo: session.ultimoDado1 === session.ultimoDado2,
-        foiPreso: false,
-        aguardandoEscolha: true,
-        opcoes: opcoesFallback,
-      }
-      fallbackEscolhaRef.current = { dado1: session.ultimoDado1, dado2: session.ultimoDado2, resultado: resultadoModal }
-    }
+  //
+  // Às cegas: o servidor não manda mais dado1/dado2/opcoes enquanto
+  // aguardandoEscolha for true (nem na resposta de rolar-dados, nem aqui
+  // em session.ultimoDado1/2 — ver session.service.ts) — não tem nada
+  // pra reconstruir além do próprio estado "aguardando escolha". O objeto
+  // sintetizado é sempre o mesmo (fallbackEscolhaRef.current, criado uma
+  // única vez), pra manter a MESMA referência entre renders — senão cada
+  // "session:updated" recriaria o objeto e o TurnoModal replicaria a
+  // animação de entrada do zero.
+  if (!resultado && minhaVez && session.aguardandoEscolha && jogadorDaVez) {
+    resultadoModal = fallbackEscolhaRef.current
     modalAbertoFinal = true
     faseInicialModal = "escolha"
-  } else {
-    fallbackEscolhaRef.current = null
   }
   if (!resultado && minhaVez && session.aguardandoAcao && jogadorDaVez) {
     const casaAtual = tabuleiro.find(c => c.pos === (jogadorDaVez.posicao ?? 0))
@@ -480,60 +448,6 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     playSfx("rolando-dados")
   }, [])
 
-  // Mecânica 3 (Escolha de Movimento): enriquece as 3 opções vindas do
-  // backend (só destino/tipo/passos) com a situação real da casa — livre,
-  // de quem é, preço ou aluguel (já refletindo evento econômico ativo via
-  // getAluguel) — sem isso a escolha vira chute.
-  const opcoesEscolha: OpcaoInfo[] = useMemo(() => {
-    const opcoes = resultadoModal?.opcoes
-    if (!opcoes) return []
-    return opcoes.map((op) => {
-      const casaDef = tabuleiro.find((c) => c.pos === op.destino)
-      let statusLabel = casaDef?.nome ?? op.nomeCasa
-      let statusTone: OpcaoInfo["statusTone"] = "neutro"
-      let valor: number | undefined
-
-      if (op.tipoCasa === "propriedade" || op.tipoCasa === "acao") {
-        const posse = casaDef?.propId != null
-          ? session.sessionPosses?.find((sp) => sp.propId === casaDef.propId)
-          : undefined
-        if (posse && !posse.playerId) {
-          statusLabel = "🟢 Livre"
-          statusTone = "verde"
-          valor = posse.propriedade?.custo_compra
-        } else if (posse?.playerId === meuPlayerId) {
-          statusLabel = "🔵 Sua propriedade"
-        } else if (posse?.hipotecada) {
-          statusLabel = "⚪ Hipotecada — sem aluguel"
-        } else if (posse?.playerId) {
-          const dono = session.jogadores?.find((j) => j.id === posse.playerId)
-          valor = posse.propriedade ? getAluguel(posse.propriedade, posse.casas ?? 0) : undefined
-          statusLabel = `🔴 De ${dono?.nome ?? "outro jogador"}`
-          statusTone = "vermelho"
-        }
-      } else if (op.tipoCasa === "imposto") {
-        statusLabel = "💸 Imposto"
-        statusTone = "vermelho"
-      } else if (op.tipoCasa === "restituicao") {
-        statusLabel = "💰 Restituição"
-        statusTone = "verde"
-      } else if (op.tipoCasa === "noticias") {
-        statusLabel = "❓ Sorte/Revés"
-      } else if (op.tipoCasa === "feriado") {
-        statusLabel = "🏖️ Feriado — perde a vez"
-        statusTone = "vermelho"
-      } else if (op.tipoCasa === "va_para_prisao") {
-        statusLabel = "🚔 Vai para a prisão"
-        statusTone = "vermelho"
-      } else if (op.tipoCasa === "prisao_visita") {
-        statusLabel = "👀 Só visitando"
-      } else if (op.tipoCasa === "inicio") {
-        statusLabel = "🏁 Início"
-      }
-
-      return { ...op, statusLabel, statusTone, valor }
-    })
-  }, [resultadoModal?.opcoes, tabuleiro, session.sessionPosses, session.jogadores, meuPlayerId, getAluguel])
 
   const handleEscolherMovimento = useCallback(async (escolha: EscolhaMovimento) => {
     setHoldSessionUpdates(true)
@@ -678,7 +592,6 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
         onJogarNovamente={handleJogarNovamente}
         onDadosParados={handleDadosParados}
         onResultadoRevelado={handleResultadoRevelado}
-        opcoes={opcoesEscolha}
         onEscolherMovimento={handleEscolherMovimento}
       />
       {/* Compra pendente minimizada — o jogador fechou pra ir vender algo

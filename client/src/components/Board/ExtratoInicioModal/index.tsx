@@ -34,13 +34,6 @@ export default function ExtratoInicioModal({ extrato }: Props) {
             <span className="text-red-400">{fmt(-extrato.iptu)}</span>
           </div>
         )}
-        {extrato.manutencao > 0 && (
-          <div className="flex justify-between font-inconsolata text-sm">
-            <span className="text-zinc-400">Manutenção</span>
-            <span className="text-red-400">{fmt(-extrato.manutencao)}</span>
-          </div>
-        )}
-
         <div className="border-t border-zinc-700 my-2" />
 
         <div className="flex justify-between items-center">
@@ -77,7 +70,6 @@ export default function ExtratoInicioModal({ extrato }: Props) {
                   </p>
                   <div className="flex gap-3 mt-0.5 font-inconsolata text-[11px]">
                     {d.iptu > 0 && <span className="text-red-400">{fmt(-d.iptu)} IPTU</span>}
-                    {d.manutencao > 0 && <span className="text-red-400">{fmt(-d.manutencao)} manut.</span>}
                   </div>
                 </div>
               ))}

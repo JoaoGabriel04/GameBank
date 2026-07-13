@@ -12,33 +12,26 @@ export interface ExtratoInicioDetalhe {
   nome: string
   casas: number
   iptu: number
-  manutencao: number
 }
 
-// Renda passiva NÃO faz mais parte do extrato do Início — passou a ser
-// paga por rodada (ver rodada.service.ts no servidor).
+// Renda passiva E manutenção NÃO fazem mais parte do extrato do Início —
+// passaram a ser por rodada (ver rodada.service.ts no servidor). Só o
+// IPTU continua ligado à passagem pelo Início.
 export interface ExtratoInicio {
   creditoInicio: number
   iptu: number
-  manutencao: number
   liquido: number
   detalhes: ExtratoInicioDetalhe[]
 }
 
 export type EscolhaMovimento = "dado1" | "dado2" | "soma"
 
-export interface OpcaoMovimento {
-  tipo: EscolhaMovimento
-  passos: number
-  destino: number
-  nomeCasa: string
-  tipoCasa: string
-  passaInicio: boolean
-}
-
 export interface RolarDadosResult {
-  dado1: number
-  dado2: number
+  // Escolha às cegas (Mecânica 3): dado1/dado2 vêm ausentes na resposta de
+  // rolar-dados (o jogador ainda não escolheu) e só aparecem na resposta
+  // de escolher-movimento, depois que a escolha já foi travada no servidor.
+  dado1?: number
+  dado2?: number
   duplo: boolean
   foiPreso: boolean
   novaPosicao?: number
@@ -56,7 +49,6 @@ export interface RolarDadosResult {
   falido?: boolean
   // Escolha de Movimento (Mecânica 3)
   aguardandoEscolha?: boolean
-  opcoes?: OpcaoMovimento[]
   escolha?: EscolhaMovimento
   passos?: number
   duploValido?: boolean

@@ -9,12 +9,7 @@ import ConfirmationModal from "@/components/ConfirmationModal";
 import Modal from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import { formatCurrency } from "@/utils/format";
-import {
-  IPTU_PCT,
-  MANUTENCAO_PCT,
-  HOTEL_EQUIVALE_CASAS,
-  CREDITO_INICIO,
-} from "@/constants/economia";
+import { IPTU_PCT, CREDITO_INICIO } from "@/constants/economia";
 import { getEvento } from "@/constants/eventos";
 import { aplicarMod, calcularPatrimonio } from "@/shared/economia-core";
 import { toApiErr } from "@/lib/api-error";
@@ -71,41 +66,33 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
     return calcularPatrimonio(currentPlayer.saldo, posses);
   }, [currentPlayer, currentSession?.sessionPosses]);
 
-  // Renda passiva NÃO entra mais aqui — passou a ser paga por RODADA
-  // (mesmo racional do servidor em rodada.service.ts), então não depende
-  // mais de completar a volta até o Início. A projeção mostra só o que
-  // realmente acontece na passagem: crédito fixo − IPTU − manutenção.
+  // Renda passiva E manutenção NÃO entram mais aqui — passaram a ser por
+  // RODADA (mesmo racional do servidor em rodada.service.ts), então não
+  // dependem mais de completar a volta até o Início. A projeção mostra só
+  // o que realmente acontece na passagem: crédito fixo − IPTU.
   const projecaoInicio = useMemo(() => {
-    type DetalheProp = { propId: number; nome: string; casas: number; iptu: number; manutencao: number };
+    type DetalheProp = { propId: number; nome: string; casas: number; iptu: number };
     if (!currentPlayer || !currentSession) return { receita: 0, despesa: 0, liquido: 0, detalhes: [] as DetalheProp[] };
     const myProps = currentSession.sessionPosses.filter(
       (sp) => sp.playerId === currentPlayer.id
     );
     const mods = getEvento(currentSession.eventoAtual)?.efeito ?? {};
-    let iptu = 0, manutencao = 0;
+    let iptu = 0;
     const detalhes: DetalheProp[] = [];
     for (const sp of myProps) {
       if (sp.hipotecada || !sp.propriedade) continue;
       if (sp.propriedade.tipo === "ação") continue;
-      const casas = sp.casas ?? 0;
-      const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
       const propIptu = aplicarMod(sp.propriedade.custo_compra * IPTU_PCT, mods.iptuMult);
-      const propManutencao = aplicarMod(
-        sp.propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes,
-        mods.manutencaoMult
-      );
       iptu += propIptu;
-      manutencao += propManutencao;
       detalhes.push({
         propId: sp.propriedade.id,
         nome: sp.propriedade.nome,
-        casas,
+        casas: sp.casas ?? 0,
         iptu: propIptu,
-        manutencao: propManutencao,
       });
     }
     const receita = CREDITO_INICIO;
-    const despesa = iptu + manutencao;
+    const despesa = iptu;
     return { receita, despesa, liquido: receita - despesa, detalhes };
   }, [currentPlayer, currentSession]);
 
@@ -256,11 +243,11 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
           </div>
           <div className="space-y-1.5">
             <div className="flex justify-between font-inconsolata text-sm">
-              <span className="text-zinc-500">Receita estimada</span>
+              <span className="text-zinc-500">Crédito do Início</span>
               <span className="text-emerald-400">+R$ {formatCurrency(projecaoInicio.receita)}</span>
             </div>
             <div className="flex justify-between font-inconsolata text-sm">
-              <span className="text-zinc-500">Despesas estimadas</span>
+              <span className="text-zinc-500">IPTU estimado</span>
               <span className="text-red-400">−R$ {formatCurrency(projecaoInicio.despesa)}</span>
             </div>
             <div className="border-t border-zinc-800 my-2" />
@@ -295,9 +282,6 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
                         <div className="flex gap-3 mt-0.5 font-inconsolata text-[11px]">
                           {d.iptu > 0 && (
                             <span className="text-red-400">−R$ {formatCurrency(d.iptu)} IPTU</span>
-                          )}
-                          {d.manutencao > 0 && (
-                            <span className="text-red-400">−R$ {formatCurrency(d.manutencao)} manut.</span>
                           )}
                         </div>
                       </div>

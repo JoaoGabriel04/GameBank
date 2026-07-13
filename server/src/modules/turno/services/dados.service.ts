@@ -1,30 +1,8 @@
 import { turnoRepository } from "../turno.repository.js";
-import { TOTAL_CASAS, POS_PRISAO, getCasa } from "../../tabuleiro/tabuleiro.data.js";
+import { POS_PRISAO } from "../../tabuleiro/tabuleiro.data.js";
 import { timerService, duplosConsecutivos } from "./timer.service.js";
 
 class DadosService {
-  /** Retorna as 3 opções de movimento com o destino de cada uma. */
-  calcularOpcoesMovimento(posAtual: number, dado1: number, dado2: number) {
-    const montar = (passos: number, tipo: "dado1" | "dado2" | "soma") => {
-      const destino = (posAtual + passos) % TOTAL_CASAS;
-      const casa = getCasa(destino);
-      return {
-        tipo,
-        passos,
-        destino,
-        nomeCasa: casa.nome,
-        tipoCasa: casa.tipo,
-        passaInicio: (posAtual + passos) >= TOTAL_CASAS,
-      };
-    };
-
-    return [
-      montar(dado1, "dado1"),
-      montar(dado2, "dado2"),
-      montar(dado1 + dado2, "soma"),
-    ];
-  }
-
   // Rola os dados (caso não-prisão): controla duplos consecutivos, decide
   // entre prisão direta (3 duplos seguidos) e o estado normal de escolha
   // de movimento. `session` só é usado para repassar ao avancarTurno do
@@ -69,10 +47,16 @@ class DadosService {
     const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
     await emitUpdatedSession(sessionId);
 
+    // Escolha às cegas: o jogador decide dado1/dado2/soma ANTES de saber
+    // os valores — devolver dado1/dado2 (ou as opções com destino/casa)
+    // aqui deixaria óbvio pra onde cada escolha leva, e ele escolheria a
+    // casa mais vantajosa em vez de arriscar no dado. Os valores só saem
+    // do banco em escolherMovimentoInterno, depois que a escolha já foi
+    // enviada e travada. `duplo` pode ficar visível — não revela posição,
+    // só avisa que uma jogada extra está em jogo se ele escolher soma.
     return {
-      dado1, dado2, duplo,
+      duplo,
       aguardandoEscolha: true,
-      opcoes: this.calcularOpcoesMovimento(player.posicao, dado1, dado2),
     };
   }
 }

@@ -118,7 +118,7 @@ class MovimentoService {
           sessionId,
           tipo: "PASSAGEM_INICIO",
           detalhes: `${player.nome} passou pelo Início: +R$ ${extrato.creditoInicio} (crédito) ` +
-                    `−R$ ${extrato.iptu} (IPTU) −R$ ${extrato.manutencao} (manutenção) ` +
+                    `−R$ ${extrato.iptu} (IPTU) ` +
                     `= R$ ${extrato.liquido >= 0 ? "+" : ""}${extrato.liquido}`,
         });
       } else {
@@ -126,7 +126,7 @@ class MovimentoService {
         // Usa cobrarComFallbackDivida (gera dívida se não tiver saldo, e
         // já integra com a regra de falência em 3 rodadas).
         const aReceber = extrato.creditoInicio;
-        const aPagar = extrato.iptu + extrato.manutencao;
+        const aPagar = extrato.iptu;
 
         // Credita primeiro
         const saldoComReceita = player.saldo + aReceber;
@@ -138,7 +138,7 @@ class MovimentoService {
           { ...player, saldo: saldoComReceita },
           aPagar,
           null, // credor = banco
-          `IPTU e manutenção (passagem pelo Início)`
+          `IPTU (passagem pelo Início)`
         );
 
         // Recarrega saldo real após a cobrança

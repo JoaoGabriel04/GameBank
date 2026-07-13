@@ -1,7 +1,8 @@
 import { turnoRepository } from "../turno.repository.js";
 import { getEvento, sortearEvento, EVENTO_DURACAO_RODADAS, type EventoEfeito } from "../../../constants/eventos.js";
-import { RENDA_PASSIVA_PCT } from "../../../constants/economia.js";
+import { RENDA_PASSIVA_PCT, MANUTENCAO_PCT, HOTEL_EQUIVALE_CASAS } from "../../../constants/economia.js";
 import { calcularAluguel, aplicarMod } from "../../../shared/economia-core.js";
+import { economiaService } from "./economia.service.js";
 
 class RodadaService {
   // Busca os multiplicadores do evento econômico ativo na sessão (evento
@@ -103,26 +104,50 @@ class RodadaService {
     await this.creditarRendaPassivaRodada(sessionId, novaRodada, def?.efeito ?? {});
   }
 
+  // Renda passiva E manutenção agora são por RODADA (não mais só na
+  // passagem pelo Início) — só o IPTU continua ligado a passar pelo
+  // Início (ver economiaService.calcularExtratoInicio). O líquido pode
+  // dar negativo se a manutenção de casas/hotéis superar a renda: nesse
+  // caso credita a renda, cobra a manutenção com o mesmo fallback de
+  // dívida usado em outras cobranças do banco (paga o que dá, o resto
+  // vira Debt) — nunca deixa o saldo ir negativo.
   private async creditarRendaPassivaRodada(sessionId: number, novaRodada: number, mods: EventoEfeito) {
     const jogadores = await turnoRepository.findJogadoresAtivosComPosses(sessionId);
 
     for (const jogador of jogadores) {
       let renda = 0;
+      let manutencao = 0;
       for (const posse of jogador.sessionPosses) {
         if (posse.hipotecada || !posse.propriedade) continue;
         if (posse.propriedade.tipo === "ação") continue;
         const casas = posse.casas ?? 0;
+        const casasEquivalentes = casas >= 5 ? HOTEL_EQUIVALE_CASAS : casas;
         const aluguelAtual = calcularAluguel(posse.propriedade, casas);
         renda += aplicarMod(aluguelAtual * RENDA_PASSIVA_PCT, mods.rendaPassivaMult);
+        manutencao += aplicarMod(posse.propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes, mods.manutencaoMult);
       }
-      if (renda <= 0) continue;
 
-      await turnoRepository.moverPlayer(jogador.id, { saldo: jogador.saldo + renda });
-      await turnoRepository.criarHistorico({
-        sessionId,
-        tipo: "RENDA_PASSIVA",
-        detalhes: `${jogador.nome} recebeu R$ ${renda} de renda passiva das suas propriedades (rodada ${novaRodada}).`,
-      });
+      const liquido = renda - manutencao;
+      if (liquido === 0) continue;
+
+      if (liquido > 0) {
+        await turnoRepository.moverPlayer(jogador.id, { saldo: jogador.saldo + liquido });
+        await turnoRepository.criarHistorico({
+          sessionId,
+          tipo: "RENDA_PASSIVA",
+          detalhes: `${jogador.nome} recebeu R$ ${liquido} líquido de renda passiva (R$ ${renda} renda − R$ ${manutencao} manutenção) na rodada ${novaRodada}.`,
+        });
+      } else {
+        const saldoComReceita = jogador.saldo + renda;
+        await turnoRepository.moverPlayer(jogador.id, { saldo: saldoComReceita });
+        await economiaService.cobrarComFallbackDivida(
+          sessionId,
+          { id: jogador.id, nome: jogador.nome, saldo: saldoComReceita },
+          manutencao,
+          null,
+          `Manutenção das propriedades (rodada ${novaRodada}) — renda passiva de R$ ${renda} não cobriu o custo`
+        );
+      }
     }
   }
 }

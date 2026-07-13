@@ -3,22 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
-import type { RolarDadosResult, OpcaoMovimento, EscolhaMovimento } from "@/services/api/turno"
+import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
 
 const COUNTDOWN_SEGUNDOS = 10
 const ESCOLHA_TIMEOUT_S = 60
 const ESCOLHA_AVISO_S = 10
-
-// Opção de movimento já enriquecida com a situação da casa de destino
-// (livre/dono/preço/aluguel) — calculada em Board (que tem acesso ao
-// tabuleiro e à sessão) e só exibida aqui.
-export type OpcaoInfo = OpcaoMovimento & {
-  statusLabel: string
-  statusTone: "verde" | "vermelho" | "neutro"
-  valor?: number
-}
 
 const DICE_DOTS: Record<number, number[][]> = {
   1: [[1, 1]],
@@ -49,6 +40,18 @@ function DiceFace({ value }: { value: number }) {
   )
 }
 
+// Placeholder mostrado durante a fase "escolha" (às cegas) — mesmo
+// tamanho/posição do DiceFace real, só que sem revelar o valor. Existe
+// pra manter dado1Ref/dado2Ref sempre montados (nunca null), porque o
+// GSAP anima esses mesmos elementos assim que a escolha é enviada.
+function MysteryFace() {
+  return (
+    <div className="w-16 h-16 bg-zinc-800 border border-zinc-700 rounded-xl flex items-center justify-center">
+      <span className="font-jaro text-2xl text-zinc-600">?</span>
+    </div>
+  )
+}
+
 type TurnoModalProps = {
   aberto: boolean
   resultado: RolarDadosResult | null
@@ -71,13 +74,14 @@ type TurnoModalProps = {
   // que o jogador já viu o número dos dados).
   onResultadoRevelado?: () => void
   // Fase em que o modal deve abrir. Default "rolando" (animação completa).
-  // Usado para retomar direto em "acao" quando a ação pendente já existia
-  // antes da montagem (ex.: refresh de página em meio a uma decisão) — sem
-  // repetir a animação de dados de uma rolagem que já aconteceu.
+  // Usado para retomar direto em "acao"/"escolha" quando a ação pendente
+  // já existia antes da montagem (ex.: refresh de página em meio a uma
+  // decisão) — sem repetir a animação de dados de uma rolagem que já
+  // aconteceu.
   faseInicial?: FaseTurno
-  // Escolha de Movimento (Mecânica 3): opções já enriquecidas (destino,
-  // dono, preço/aluguel) e callback pra efetivar a escolha.
-  opcoes?: OpcaoInfo[]
+  // Escolha de Movimento (Mecânica 3, às cegas): o jogador decide antes de
+  // saber o valor. Não recebe mais opções com destino/casa — só o
+  // callback pra enviar a escolha.
   onEscolherMovimento?: (escolha: EscolhaMovimento) => void
 }
 
@@ -87,7 +91,7 @@ export default function TurnoModal({
   aberto, resultado, nomeCasa, erroCompra,
   onComprar, onRecusar, onFechar, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
-  opcoes, onEscolherMovimento,
+  onEscolherMovimento,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
@@ -104,36 +108,63 @@ export default function TurnoModal({
   // Determinar se a casa exige ação (comprar) ou é só informativa
   const exigeAcao = resultado?.aguardandoAcao && resultado?.compraDisponivel
 
-  // ── Ao abrir: iniciar na fase inicial (normalmente "rolando") ────────
-  // Não se aplica quando `resultado` muda por causa da 2ª chamada
-  // (escolherMovimento resolvido) — esse caso é tratado só pelo useGSAP
-  // abaixo, que decide a próxima fase sem repetir "rolando".
+  // ── Ao abrir com um resultado FRESCO (ainda não escolhido): entra direto
+  // na fase certa. Às cegas (aguardandoEscolha), pula "rolando" — não há
+  // dado nenhum pra animar ainda, a escolha vem primeiro. Senão, segue
+  // faseInicial (normalmente "rolando", ou "acao"/"desfecho" ao retomar
+  // uma decisão pendente após F5). Não se aplica quando `resultado` muda
+  // por causa da 2ª chamada (escolherMovimento resolvido) — esse caso é
+  // tratado só pelo useGSAP abaixo.
   useEffect(() => {
     if (aberto && resultado && resultado.escolha == null) {
-      setFase(faseInicial)
+      setFase(resultado.aguardandoEscolha ? "escolha" : faseInicial)
       setCountdown(COUNTDOWN_SEGUNDOS)
     }
   }, [aberto, resultado, faseInicial])
 
-  // ── Sequência de fases (rolando → resultado → [escolha] → desfecho) ──
+  // ── Sequência de fases ────────────────────────────────────────────────
+  // Fluxo às cegas: escolha (sem dado nenhum à mostra) → jogador decide →
+  // SÓ ENTÃO o servidor revela dado1/dado2 na resposta de
+  // escolherMovimento → rolando (anima) → resultado (revela) → desfecho.
   useGSAP(() => {
     if (!aberto || !resultado) return
 
     // Escolha de movimento já resolvida (chegou o resultado final da 2ª
-    // chamada, escolherMovimento) — não repete a animação de entrada/dados
-    // (já foram mostrados na 1ª rolagem), só decide a próxima fase.
+    // chamada, escolherMovimento) — é AQUI que os dados existem pela
+    // primeira vez. Roda a mesma animação de giro que antes aconteciaна
+    // rolagem inicial, só que agora depois da escolha.
     if (resultado.escolha != null) {
-      if (resultado.passouInicio && resultado.extratoInicio) {
-        setFase("extrato-inicio")
-      } else if (exigeAcao) {
-        setFase("acao")
-      } else {
-        setFase("desfecho")
+      setFase("rolando")
+      setCountdown(COUNTDOWN_SEGUNDOS)
+
+      const tl = gsap.timeline()
+      if (dado1Ref.current && dado2Ref.current) {
+        tl.to([dado1Ref.current, dado2Ref.current], {
+          rotation: 360,
+          duration: 0.3,
+          repeat: 3,
+          ease: "none",
+        })
       }
+      tl.call(() => {
+        setFase("resultado")
+        onDadosParados?.()
+      })
+      tl.to({}, { duration: 1 })
+      tl.call(() => {
+        onResultadoRevelado?.()
+        if (resultado.passouInicio && resultado.extratoInicio) {
+          setFase("extrato-inicio")
+        } else if (exigeAcao) {
+          setFase("acao")
+        } else {
+          setFase("desfecho")
+        }
+      })
       return
     }
 
-    // Entrada do modal
+    // Entrada do modal (1ª resposta ou reabertura de uma decisão pendente)
     if (backdropRef.current) {
       gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 })
     }
@@ -144,11 +175,17 @@ export default function TurnoModal({
       )
     }
 
+    // Às cegas: para por aqui. Sem dado1/dado2 na resposta, não tem o que
+    // animar — o jogador escolhe primeiro (fase "escolha" já setada pelo
+    // useEffect acima).
+    if (resultado.aguardandoEscolha) return
+
     // Resultado retomado (ex.: refresh com ação pendente) — sem animação
     // de dados, a rolagem já aconteceu antes da montagem do modal.
     if (faseInicial !== "rolando") return
 
-    // Animação dos dados girando (fase rolando, ~1.2s)
+    // Rolagem sem escolha envolvida (ex.: 3 duplos seguidos → prisão
+    // direta — não há escolha de movimento nesse caso).
     const tl = gsap.timeline()
     if (dado1Ref.current && dado2Ref.current) {
       tl.to([dado1Ref.current, dado2Ref.current], {
@@ -158,24 +195,14 @@ export default function TurnoModal({
         ease: "none",
       })
     }
-    // Após girar, mostrar resultado — SFX dos dados toca aqui, junto com
-    // o número aparecendo, não no clique (faz mais sentido: som de "parou").
     tl.call(() => {
       setFase("resultado")
       onDadosParados?.()
     })
-    // Depois de 1s no resultado, ir para o desfecho
     tl.to({}, { duration: 1 })
     tl.call(() => {
-      // Libera atualizações de sessão retidas (peão pode mover agora —
-      // o jogador já viu o resultado dos dados). Chamado ANTES de decidir
-      // a próxima fase pra garantir a ordem: peão anda primeiro, extrato
-      // (se houver) aparece depois, e só então o desfecho da casa.
       onResultadoRevelado?.()
-
-      if (resultado.aguardandoEscolha) {
-        setFase("escolha")
-      } else if (resultado.passouInicio && resultado.extratoInicio) {
+      if (resultado.passouInicio && resultado.extratoInicio) {
         setFase("extrato-inicio")
       } else if (exigeAcao) {
         setFase("acao")
@@ -301,10 +328,17 @@ export default function TurnoModal({
         }`}
         style={{ opacity: 0 }}
       >
-        {/* ── Dados (sempre visíveis no topo) ── */}
+        {/* ── Dados — placeholder "?" na fase escolha (às cegas), valor
+             real nas demais. Os refs ficam SEMPRE montados aqui (nunca
+             condicionalmente removidos) — o GSAP anima esses mesmos
+             elementos assim que a escolha é enviada. ── */}
         <div className="flex items-center justify-center gap-4 mb-4">
-          <div ref={dado1Ref}><DiceFace value={resultado.dado1} /></div>
-          <div ref={dado2Ref}><DiceFace value={resultado.dado2} /></div>
+          <div ref={dado1Ref}>
+            {fase === "escolha" ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
+          </div>
+          <div ref={dado2Ref}>
+            {fase === "escolha" ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
+          </div>
         </div>
 
         {/* ── Fase: rolando ── */}
@@ -318,7 +352,7 @@ export default function TurnoModal({
         {fase === "resultado" && (
           <div>
             <p className="font-jaro text-2xl text-zinc-100">
-              Você tirou {resultado.dado1 + resultado.dado2}
+              Você tirou {(resultado.dado1 ?? 0) + (resultado.dado2 ?? 0)}
             </p>
             <p className="font-inconsolata text-xs text-zinc-500 mt-1">
               ({resultado.dado1} + {resultado.dado2})
@@ -327,53 +361,41 @@ export default function TurnoModal({
           </div>
         )}
 
-        {/* ── Fase: escolha (Mecânica 3 — escolher dado1, dado2 ou soma) ── */}
+        {/* ── Fase: escolha (Mecânica 3, às cegas — dado1, dado2 ou soma,
+             decidido ANTES de saber os valores) ── */}
         {fase === "escolha" && (
           <div ref={desfechoRef}>
-            <p className="font-jaro text-lg text-zinc-100 mb-3">Escolha seu movimento</p>
+            <p className="font-jaro text-lg text-zinc-100 mb-1">Escolha antes de ver o resultado</p>
+            <p className="font-inconsolata text-xs text-zinc-500 mb-3">
+              Assim ninguém escolhe pra onde ir — o risco é real.
+            </p>
+
+            {resultado.duplo && (
+              <p className="font-inconsolata text-[11px] text-amber-400 mb-3">
+                ⭐ Os dados vieram iguais — escolher Soma garante uma jogada extra!
+              </p>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {(opcoes ?? []).map((op) => {
-                const ehSoma = op.tipo === "soma"
-                const toneClasses = op.statusTone === "verde"
-                  ? "text-emerald-400"
-                  : op.statusTone === "vermelho"
-                    ? "text-red-400"
-                    : "text-zinc-400"
-                return (
-                  <button
-                    key={op.tipo}
-                    disabled={escolhendo}
-                    onClick={() => {
-                      if (escolhendo) return
-                      setEscolhendo(true)
-                      onEscolherMovimento?.(op.tipo)
-                    }}
-                    className="flex flex-col items-center gap-1 p-3 rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer text-left"
-                  >
-                    <span className="font-jaro text-base text-zinc-100">Andar {op.passos}</span>
-                    <span className="font-inconsolata text-xs text-zinc-300 text-center leading-snug">{op.nomeCasa}</span>
-                    <span className={`font-inconsolata text-[11px] text-center leading-snug ${toneClasses}`}>
-                      {op.statusLabel}
-                      {op.valor != null && ` · R$ ${op.valor.toLocaleString("pt-BR")}`}
-                    </span>
-                    {op.passaInicio && (
-                      <span className="font-inconsolata text-[10px] text-emerald-400">+R$ 2.000 (Início)</span>
-                    )}
-                    {resultado.duplo && (
-                      ehSoma ? (
-                        <span className="mt-1 font-inconsolata text-[10px] font-semibold text-amber-400">
-                          ⭐ SOMA — 🔁 joga de novo!
-                        </span>
-                      ) : (
-                        <span className="mt-1 font-inconsolata text-[10px] text-zinc-500">
-                          ⚠️ sem jogada extra
-                        </span>
-                      )
-                    )}
-                  </button>
-                )
-              })}
+              {(["dado1", "dado2", "soma"] as const).map((op) => (
+                <button
+                  key={op}
+                  disabled={escolhendo}
+                  onClick={() => {
+                    if (escolhendo) return
+                    setEscolhendo(true)
+                    onEscolherMovimento?.(op)
+                  }}
+                  className="flex flex-col items-center gap-1 p-4 rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                  <span className="font-jaro text-base text-zinc-100">
+                    {op === "dado1" ? "Dado 1" : op === "dado2" ? "Dado 2" : "Soma"}
+                  </span>
+                  <span className="font-inconsolata text-[11px] text-zinc-500">
+                    {op === "soma" ? "Dado 1 + Dado 2" : "Valor oculto"}
+                  </span>
+                </button>
+              ))}
             </div>
 
             <p className="font-inconsolata text-[10px] text-zinc-600 mt-3">

@@ -356,6 +356,19 @@ export class SessionService {
       enriched.tabuleiro = getTabuleiro();
     }
 
+    // Escolha às cegas (Mecânica 3): enquanto aguardandoEscolha for true, o
+    // valor dos dados não pode vazar por NENHUM canal — nem pela resposta
+    // de rolar-dados (já não inclui), nem por aqui, que é o payload
+    // genérico da sessão (REST + broadcast socket.io pra sala inteira).
+    // Sem isso, o TurnoBanner (que mostra "último: X · Y" pra todo mundo)
+    // e o próprio devtools do jogador revelariam o resultado antes da
+    // escolha ser travada. Os valores continuam no banco — só saem daqui
+    // depois que escolherMovimento resolve e aguardandoEscolha vira false.
+    if (session.aguardandoEscolha) {
+      enriched.ultimoDado1 = null;
+      enriched.ultimoDado2 = null;
+    }
+
     if (redis) {
       try {
         await redis.setEx(cacheKey, CACHE_TTL_S, JSON.stringify(enriched));
