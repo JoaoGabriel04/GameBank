@@ -47,9 +47,14 @@ type Props = {
 
 export default function UltimasJogadas({ historico }: Props) {
   const ultimas = useMemo(() => {
+    // `historico` chega em ordem cronológica crescente (mais antigo
+    // primeiro — session.repository.ts inclui a relação sem orderBy).
+    // slice(-5) pega os 5 mais recentes; reverse() mostra o mais novo no
+    // topo, que é o sentido de "últimas jogadas".
     return historico
       .filter((h) => TIPOS_RELEVANTES.has(h.tipo))
-      .slice(0, 5);
+      .slice(-5)
+      .reverse();
   }, [historico]);
 
   if (ultimas.length === 0) return null;
