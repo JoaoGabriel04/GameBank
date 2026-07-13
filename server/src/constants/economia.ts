@@ -4,7 +4,7 @@
 
 /** IPTU: % do custo_compra.
  *  Cobrado ao PASSAR PELO INÍCIO (junto com o crédito de R$ 2.000). */
-export const IPTU_PCT = 0.25;
+export const IPTU_PCT = 0.15;
 
 /** Manutenção: % do custo_casa, por casa construída.
  *  Cobrada POR RODADA (junto com a renda passiva), não por volta. */

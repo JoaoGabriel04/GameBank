@@ -18,6 +18,7 @@ import { useToast } from "@/components/Toast"
 import { useEventoStore } from "@/stores/socketStore"
 import { getEvento } from "@/constants/eventos"
 import { playSfx, stopSfx } from "@/utils/sfx"
+import { withTimeout } from "@/utils/withTimeout"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import type { Casa, GameSession } from "@/types/game"
 
@@ -65,7 +66,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   const [modalAberto, setModalAberto] = useState(false)
   const [erroCompra, setErroCompra] = useState<string | null>(null)
   const [eventoModalCodigo, setEventoModalCodigo] = useState<string | null>(null)
-  const decidindoRef = useRef(false)
+  type AcaoCompra = "comprando" | "recusando" | null
+  const [acaoEmCurso, setAcaoEmCurso] = useState<AcaoCompra>(null)
+  // Marca se o jogador minimizou a compra deliberadamente ("Decidir depois").
+  // Sem isso, o fallback que reconstroi a compra pendente a partir do socket
+  // não consegue distinguir "minimizei de propósito" de "nunca chegou a abrir".
+  const minimizouManualmenteRef = useRef(false)
   // Marca se o resultado atual já teve sua animação de revelação mostrada
   // uma vez — reabrir uma decisão de compra minimizada (botão "decidir
   // depois" / banner) não deve repetir a animação de dados do zero.
@@ -73,6 +79,9 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // Cache do resultado sintetizado pelo fallback (ver abaixo) — evita
   // recriar o objeto a cada render enquanto a mesma compra fica pendente.
   const fallbackResultadoRef = useRef<{ propId: number; sessionPossesId: number; resultado: RolarDadosResult } | null>(null)
+  // BUG "Tempo esgotado" falso: marcamos quando o jogador clica em uma
+  // escolha de movimento, para o efeito de timeout não exibir o toast.
+  const escolhaFeitaRef = useRef(false)
   // Resultado sintetizado para a fase "escolha" às cegas (Mecânica 3) —
   // sempre o mesmo objeto (nada varia: não há dado1/dado2/opcoes pra
   // reconstruir), criado uma única vez pra manter a MESMA referência
@@ -367,16 +376,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
           }
           fallbackResultadoRef.current = { propId: casaAtual.propId, sessionPossesId: posse.id, resultado: resultadoModal }
         }
-        // BUG (decidir-depois some ao voltar de aba): diferente da escolha
-        // de movimento (obrigatória, sem opção de adiar), a compra pendente
-        // TEM um estado minimizado — "decidir depois". Forçar o modal
-        // aberto aqui (como no fallback da escolha) reabriria a tela de
-        // compra toda vez que o Board remonta (troca de aba, F5), mesmo
-        // que o jogador já tivesse escolhido minimizar. Em vez disso,
-        // respeita o estado local (`modalAberto`, false no primeiro mount)
-        // — a compra pendente aparece como banner minimizado, igual a
-        // quando o jogador clica "Decidir depois" manualmente.
-        modalAbertoFinal = modalAberto
+        // BUG 3 (FIX_COMPRA_TRAVADA_LOADING): antes usava `modalAberto` —
+        // falso no primeiro mount, então o modal nunca abria quando a
+        // resposta chegava só pelo socket. Agora distingue: se o jogador
+        // minimizou deliberadamente ("Decidir depois"), respeita; senão
+        // abre o modal (o resultado nunca foi exibido ainda).
+        modalAbertoFinal = modalAberto || !minimizouManualmenteRef.current
         faseInicialModal = "acao"
       }
     }
@@ -414,6 +419,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     if (rolando) return
     setRolando(true)
     resultadoJaReveladoRef.current = false
+    minimizouManualmenteRef.current = false
     stopSfx("tempo-acabando")
     // SFX de dados toca só quando a animação de rolagem termina (ver
     // handleDadosParados) — não no clique, faz mais sentido acompanhando
@@ -477,6 +483,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
 
 
   const handleEscolherMovimento = useCallback(async (escolha: EscolhaMovimento) => {
+    escolhaFeitaRef.current = true
     setHoldSessionUpdates(true)
     try {
       const r = await escolherMovimento(session.id, escolha)
@@ -515,14 +522,25 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // Detecta quando o servidor resolveu a escolha de movimento por timeout
   // (o jogador não clicou a tempo) — session.aguardandoEscolha vira false
   // sem que tenhamos processado uma resposta local de escolherMovimento.
+  // BUG "Tempo esgotado" falso: se o jogador clicou em uma opção de
+  // movimento, escolhaFeitaRef fica true e o toast não é exibido.
   useEffect(() => {
     if (resultado?.aguardandoEscolha && !session.aguardandoEscolha) {
       setHoldSessionUpdates(false)
       setModalAberto(false)
       setResultado(null)
-      toastError("Tempo esgotado — movimento padrão aplicado (soma)")
+      if (!escolhaFeitaRef.current) {
+        toastError("Tempo esgotado — movimento padrão aplicado (soma)")
+      }
+      escolhaFeitaRef.current = false
     }
   }, [session.aguardandoEscolha])
+
+  // BUG 3 (FIX_COMPRA_TRAVADA_LOADING): quando o jogador cai em uma
+  // propriedade nova, é uma decisão nova — o "minimizei antes" não persiste.
+  useEffect(() => {
+    minimizouManualmenteRef.current = false
+  }, [resultadoModal?.compraDisponivel?.propId])
 
   // BUG (clicar Comprar "não faz nada"): `resultado` só é limpo por ações
   // explícitas (handleJogarNovamente, timeout da escolha acima) — comprar
@@ -542,12 +560,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   }, [session.aguardandoAcao])
 
   const handleComprar = useCallback(async () => {
-    if (decidindoRef.current || !resultadoModal?.compraDisponivel) return
-    decidindoRef.current = true
+    if (acaoEmCurso || !resultadoModal?.compraDisponivel) return
     const nome = resultadoModal.compraDisponivel.nome
+    setAcaoEmCurso("comprando")
     setErroCompra(null)
     try {
-      const ok = await comprarCasaAtual(session.id)
+      const ok = await withTimeout(comprarCasaAtual(session.id), 15000)
       if (ok) {
         setModalAberto(false)
         setErroCompra(null)
@@ -561,27 +579,44 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
           setErroCompra(storeError || "Não foi possível concluir a compra.")
         }
       }
+    } catch (err: any) {
+      if (err?.message === "TIMEOUT") {
+        setErroCompra("O servidor está demorando a responder. Tente novamente.")
+      } else {
+        setErroCompra("Erro ao comprar. Tente novamente.")
+      }
     } finally {
-      decidindoRef.current = false
+      setAcaoEmCurso(null)
     }
-  }, [resultadoModal, comprarCasaAtual, session.id, toastSuccess, toastError])
+  }, [acaoEmCurso, resultadoModal, comprarCasaAtual, session.id, toastSuccess, toastError])
 
   const handleRecusar = useCallback(async () => {
-    if (decidindoRef.current || !resultadoModal?.compraDisponivel) return
-    decidindoRef.current = true
-    setErroCompra(null)
+    if (acaoEmCurso || !resultadoModal?.compraDisponivel) return
     const nome = resultadoModal.compraDisponivel.nome
+    setAcaoEmCurso("recusando")
+    setErroCompra(null)
     try {
-      const ok = await recusarCompra(session.id)
+      const ok = await withTimeout(recusarCompra(session.id), 15000)
       setModalAberto(false)
       if (ok) toastSuccess(`Você recusou a compra de ${nome}.`)
       else toastError("Não foi possível concluir a ação.")
+    } catch (err: any) {
+      if (err?.message === "TIMEOUT") {
+        setErroCompra("O servidor está demorando a responder. Tente novamente.")
+      } else {
+        toastError("Erro ao recusar. Tente novamente.")
+      }
     } finally {
-      decidindoRef.current = false
+      setAcaoEmCurso(null)
     }
-  }, [resultadoModal, recusarCompra, session.id, toastSuccess, toastError])
+  }, [acaoEmCurso, resultadoModal, recusarCompra, session.id, toastSuccess, toastError])
 
   const handleFecharModal = useCallback(() => {
+    setModalAberto(false)
+  }, [])
+
+  const handleDecidirDepois = useCallback(() => {
+    minimizouManualmenteRef.current = true
     setModalAberto(false)
   }, [])
 
@@ -623,10 +658,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
         resultado={resultadoModal}
         nomeCasa={nomeCasaModal}
         erroCompra={erroCompra}
+        acaoEmCurso={acaoEmCurso}
         faseInicial={faseInicialModal}
         onComprar={handleComprar}
         onRecusar={handleRecusar}
         onFechar={handleFecharModal}
+        onDecidirDepois={handleDecidirDepois}
         onJogarNovamente={handleJogarNovamente}
         onDadosParados={handleDadosParados}
         onResultadoRevelado={handleResultadoRevelado}

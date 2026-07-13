@@ -77,6 +77,8 @@ export interface Player {
   emPrisao?: boolean;
   turnosPrisao?: number;
   rodadasDevendo?: number;
+  creditoVisao?: number;
+  creditoRecargaEm?: number;
 }
 
 export interface SorteRevesCard {

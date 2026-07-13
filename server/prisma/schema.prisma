@@ -253,6 +253,8 @@ model SessionPlayer {
   pularProximaRodada Boolean  @default(false) // feriado
   rodadasDevendo     Int      @default(0)   // contador de falência
   dividaBanco        Int      @default(0)   // valor devido ao banco
+  creditoVisao       Int      @default(2)   // créditos para ver dados antes de escolher (Mecânica 3)
+  creditoRecargaEm   Int      @default(0)   // rodada em que os créditos são recarregados (0 = sem pendência)
 
   @@index([userId])
   @@index([sessionId])

@@ -135,6 +135,7 @@ export const turnoRepository = {
         id: true, sessionId: true, nome: true, posicao: true, saldo: true,
         emPrisao: true, desistiu: true, pularProximaRodada: true,
         turnosPrisao: true, tentativasPrisao: true, userId: true,
+        creditoVisao: true, creditoRecargaEm: true,
       },
     }),
 
@@ -147,8 +148,27 @@ export const turnoRepository = {
   moverPlayer: (playerId: number, data: {
     posicao?: number; saldo?: number; emPrisao?: boolean; turnosPrisao?: number;
     tentativasPrisao?: number; pularProximaRodada?: boolean;
+    creditoVisao?: number; creditoRecargaEm?: number;
   }) =>
     prisma.sessionPlayer.update({ where: { id: playerId }, data }),
+
+  usarCreditoVisao: (playerId: number) =>
+    prisma.sessionPlayer.update({
+      where: { id: playerId },
+      data: { creditoVisao: { decrement: 1 } },
+    }),
+
+  setCreditoRecargaEm: (playerId: number, rodada: number) =>
+    prisma.sessionPlayer.update({
+      where: { id: playerId },
+      data: { creditoRecargaEm: rodada },
+    }),
+
+  resetarCreditosVisao: (playerId: number) =>
+    prisma.sessionPlayer.update({
+      where: { id: playerId },
+      data: { creditoVisao: 2, creditoRecargaEm: 0 },
+    }),
 
   registrarDados: (sessionId: number, data: {
     ultimoDado1?: number; ultimoDado2?: number;

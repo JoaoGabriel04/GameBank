@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
+import { Loader2 } from "lucide-react"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
@@ -52,6 +53,8 @@ function MysteryFace() {
   )
 }
 
+type AcaoCompra = "comprando" | "recusando" | null
+
 type TurnoModalProps = {
   aberto: boolean
   resultado: RolarDadosResult | null
@@ -59,10 +62,15 @@ type TurnoModalProps = {
   nomeCasa?: string
   // Erro de compra (ex.: saldo insuficiente) — exibido dentro do modal
   erroCompra?: string | null
+  // Ação de compra/recusa em andamento (feedback de loading)
+  acaoEmCurso?: AcaoCompra
   // Callbacks de ação
   onComprar: () => void
   onRecusar: () => void
   onFechar: () => void
+  // FIX_COMPRA_TRAVADA_LOADING: separado de onFechar para que Board
+  // saiba quando o jogador minimizou deliberadamente a compra pendente.
+  onDecidirDepois?: () => void
   // Se duplo, o modal avisa e ao fechar prepara nova rolagem
   onJogarNovamente?: () => void
   // Chamado no exato momento em que os dados param de girar e mostram o
@@ -88,8 +96,8 @@ type TurnoModalProps = {
 type FaseTurno = "rolando" | "resultado" | "escolha" | "extrato-inicio" | "desfecho" | "acao"
 
 export default function TurnoModal({
-  aberto, resultado, nomeCasa, erroCompra,
-  onComprar, onRecusar, onFechar, onJogarNovamente, onDadosParados, onResultadoRevelado,
+  aberto, resultado, nomeCasa, erroCompra, acaoEmCurso,
+  onComprar, onRecusar, onFechar, onDecidirDepois, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
   onEscolherMovimento,
 }: TurnoModalProps) {
@@ -334,10 +342,10 @@ export default function TurnoModal({
              elementos assim que a escolha é enviada. ── */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <div ref={dado1Ref}>
-            {fase === "escolha" ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
+            {fase === "escolha" && !resultado.dado1 ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
           </div>
           <div ref={dado2Ref}>
-            {fase === "escolha" ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
+            {fase === "escolha" && !resultado.dado2 ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
           </div>
         </div>
 
@@ -365,10 +373,31 @@ export default function TurnoModal({
              decidido ANTES de saber os valores) ── */}
         {fase === "escolha" && (
           <div ref={desfechoRef}>
-            <p className="font-jaro text-lg text-zinc-100 mb-1">Escolha antes de ver o resultado</p>
-            <p className="font-inconsolata text-xs text-zinc-500 mb-3">
-              Assim ninguém escolhe pra onde ir — o risco é real.
-            </p>
+            {resultado.dado1 != null ? (
+              <>
+                <p className="font-jaro text-lg text-zinc-100 mb-1">Você viu o resultado!</p>
+                <p className="font-inconsolata text-xs text-zinc-500 mb-1">
+                  Agora escolha o movimento com base nos valores.
+                </p>
+                {resultado.creditosRestantes != null && (
+                  <p className="font-inconsolata text-[11px] text-cyan-400 mb-3">
+                    {'👁'} Créditos de visão restantes: {resultado.creditosRestantes}/2
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-jaro text-lg text-zinc-100 mb-1">Escolha antes de ver o resultado</p>
+                <p className="font-inconsolata text-xs text-zinc-500 mb-3">
+                  Assim ninguém escolhe pra onde ir — o risco é real.
+                </p>
+                {resultado.creditosRestantes != null && resultado.creditosRestantes === 0 && (
+                  <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
+                    {'👁'} Sem créditos de visão — recarregam em 3 rodadas.
+                  </p>
+                )}
+              </>
+            )}
 
             {resultado.duplo && (
               <p className="font-inconsolata text-[11px] text-amber-400 mb-3">
@@ -505,15 +534,27 @@ export default function TurnoModal({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={onRecusar}
-                className="py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-inconsolata text-sm rounded-xl cursor-pointer"
+                disabled={acaoEmCurso !== null}
+                className="py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-inconsolata text-sm rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
               >
-                Recusar
+                {acaoEmCurso === "recusando" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Recusando...
+                  </span>
+                ) : "Recusar"}
               </button>
               <button
                 onClick={onComprar}
-                className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-inconsolata text-sm rounded-xl cursor-pointer"
+                disabled={acaoEmCurso !== null}
+                className="py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-inconsolata text-sm rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
               >
-                Comprar
+                {acaoEmCurso === "comprando" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Comprando...
+                  </span>
+                ) : `Comprar por R$ ${resultado.compraDisponivel.preco?.toLocaleString("pt-BR")}`}
               </button>
             </div>
 
@@ -522,8 +563,9 @@ export default function TurnoModal({
                 ele ir vender casas/hipotecar propriedades e conseguir o
                 dinheiro antes de comprar. */}
             <button
-              onClick={onFechar}
-              className="mt-3 w-full py-1.5 text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 underline decoration-dotted cursor-pointer"
+              onClick={onDecidirDepois}
+              disabled={acaoEmCurso !== null}
+              className="mt-3 w-full py-1.5 text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 underline decoration-dotted cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             >
               Decidir depois (fecha sem recusar — venda algo pra ter mais dinheiro)
             </button>

@@ -52,6 +52,10 @@ export interface RolarDadosResult {
   escolha?: EscolhaMovimento
   passos?: number
   duploValido?: boolean
+  // Crédito de Visão: quantos créditos restam para ver os dados antes de
+  // escolher. Ausente/undefined = sem crédito disponível (escolha às cegas).
+  // Quando > 0, dado1/dado2 são revelados na resposta de rolarDados.
+  creditosRestantes?: number
 }
 
 export const turnoApi = {

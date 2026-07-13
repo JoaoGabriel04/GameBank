@@ -9,7 +9,8 @@ import { useToast } from "@/components/Toast"
 import Button1 from "../Button01"
 import { toApiErr } from "@/lib/api-error"
 import { getEvento } from "@/constants/eventos"
-import { aplicarMod } from "@/shared/economia-core"
+import { aplicarMod, calcularAluguel } from "@/shared/economia-core"
+import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS } from "@/constants/economia"
 
 const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16",
@@ -72,6 +73,22 @@ export default function PropertyDetailModal({
   // Mercado — mesma regra de propriedade.service.ts (venda usa custo base).
   const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1
   const custoCasaAtual = aplicarMod(propriedade.custo_casa, custoConstrucaoMult)
+
+  // Renda passiva, manutenção e IPTU: mesma fórmula por propriedade usada
+  // no servidor (rodada.service.ts / economia.service.ts) — ações e
+  // propriedades hipotecadas não geram nenhum dos três.
+  const mods = getEvento(currentSession?.eventoAtual)?.efeito ?? {}
+  const elegivel = !isHipotecada && propriedade.tipo !== 'ação'
+  const casasEquivalentes = sessionPropriedade.casas >= 5 ? HOTEL_EQUIVALE_CASAS : sessionPropriedade.casas
+  const rendaPassiva = elegivel
+    ? aplicarMod(calcularAluguel(propriedade, sessionPropriedade.casas) * RENDA_PASSIVA_PCT, mods.rendaPassivaMult)
+    : 0
+  const manutencao = elegivel
+    ? aplicarMod(propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes, mods.manutencaoMult)
+    : 0
+  const iptu = elegivel
+    ? aplicarMod(propriedade.custo_compra * IPTU_PCT, mods.iptuMult)
+    : 0
 
   const handleConfirm = async () => {
     if (!confirmAction) return
@@ -184,6 +201,35 @@ export default function PropertyDetailModal({
                 <p className="text-sm font-jaro text-zinc-300">R$ {propriedade.hipoteca.toLocaleString('pt-BR')}</p>
               </div>
             </div>
+          </div>
+
+          {/* Economia por rodada */}
+          <div className="border-t border-zinc-800 pt-4">
+            <p className="text-xs font-inconsolata text-zinc-500 uppercase tracking-wide mb-3">
+              Economia por Rodada
+            </p>
+            {elegivel ? (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Renda Passiva</p>
+                  <p className="text-sm font-jaro text-emerald-400">+R$ {rendaPassiva.toLocaleString('pt-BR')}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Manutenção</p>
+                  <p className="text-sm font-jaro text-red-400">−R$ {manutencao.toLocaleString('pt-BR')}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">IPTU (no Início)</p>
+                  <p className="text-sm font-jaro text-red-400">−R$ {iptu.toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs font-inconsolata text-zinc-500 italic">
+                {isHipotecada
+                  ? 'Propriedade hipotecada não gera renda, manutenção ou IPTU.'
+                  : 'Ações não geram renda passiva, manutenção ou IPTU.'}
+              </p>
+            )}
           </div>
 
           {/* Actions */}

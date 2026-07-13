@@ -292,7 +292,7 @@ export default function Regras() {
 
         <Secao id="economia" icon={faMoneyBillTransfer} title="Economia (Modo Tabuleiro)" color="purple">
           <ul className="list-disc list-inside space-y-1">
-            <li>Ao passar pelo Início: <strong>+R$ 2.000 − IPTU</strong> das suas propriedades (25% do valor de compra)</li>
+            <li>Ao passar pelo Início: <strong>+R$ 2.000 − IPTU</strong> das suas propriedades (15% do valor de compra)</li>
             <li>A cada rodada: <strong>renda passiva − manutenção</strong> das suas propriedades</li>
             <li><strong>Renda passiva</strong> — 35% do aluguel atual (quanto mais casas, mais renda)</li>
             <li><strong>Manutenção</strong> — 12% do custo da casa, por casa construída (hotel = 5 casas)</li>
