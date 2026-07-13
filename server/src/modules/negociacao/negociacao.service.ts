@@ -247,20 +247,27 @@ export class NegociacaoService {
         }
       }
 
+      // Race condition (FIX_RACE_CONDITION_SALDO): o lock
+      // `negociacao:${negotiationId}` serializa aceites concorrentes desta
+      // MESMA negociação, mas não protege contra o mesmo jogador aceitando
+      // duas negociações DIFERENTES ao mesmo tempo. `updateMany`
+      // condicional torna a checagem e o decremento atômicos.
       if (netMoney > 0) {
-        await tx.sessionPlayer.update({
-          where: { id: negotiation.fromPlayerId },
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: negotiation.fromPlayerId, saldo: { gte: netMoney } },
           data: { saldo: { decrement: netMoney } },
         });
+        if (debitado.count === 0) throw new AppError(400, "Proponente não tem saldo suficiente!");
         await tx.sessionPlayer.update({
           where: { id: negotiation.toPlayerId },
           data: { saldo: { increment: netMoney } },
         });
       } else if (netMoney < 0) {
-        await tx.sessionPlayer.update({
-          where: { id: negotiation.toPlayerId },
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: negotiation.toPlayerId, saldo: { gte: Math.abs(netMoney) } },
           data: { saldo: { decrement: Math.abs(netMoney) } },
         });
+        if (debitado.count === 0) throw new AppError(400, "Alvo não tem saldo suficiente!");
         await tx.sessionPlayer.update({
           where: { id: negotiation.fromPlayerId },
           data: { saldo: { increment: Math.abs(netMoney) } },

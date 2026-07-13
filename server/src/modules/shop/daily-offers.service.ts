@@ -167,18 +167,22 @@ export class DailyOffersService {
 
     let fragmentosAtuais = 0;
 
+    // Race condition (FIX_RACE_CONDITION_SALDO): duas corridas — coins
+    // insuficientes E a mesma oferta sendo comprada duas vezes em
+    // paralelo (`purchased`). As duas viram `updateMany` condicional
+    // dentro da mesma transação, mesmo template de divida.service.ts.
     await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { coins: true },
-      });
-      if (!user) throw new AppError(404, "Usuário não encontrado");
-      if (user.coins < offer.preco) throw new AppError(400, "Coins insuficientes");
-
-      await tx.user.update({
-        where: { id: userId },
+      const debitado = await tx.user.updateMany({
+        where: { id: userId, coins: { gte: offer.preco } },
         data: { coins: { decrement: offer.preco } },
       });
+      if (debitado.count === 0) throw new AppError(400, "Coins insuficientes");
+
+      const marcada = await tx.userDailyOffer.updateMany({
+        where: { id: offerId, purchased: false },
+        data: { purchased: true },
+      });
+      if (marcada.count === 0) throw new AppError(400, "Oferta já foi comprada");
 
       const frag = await tx.userFragment.upsert({
         where: { userId_itemId: { userId, itemId: offer.itemId } },
@@ -187,8 +191,6 @@ export class DailyOffersService {
       });
 
       fragmentosAtuais = frag.quantidade;
-
-      await dailyOffersRepository.markPurchased(offerId);
     }, { timeout: 15000, maxWait: 10000 });
 
     return {

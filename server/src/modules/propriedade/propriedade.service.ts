@@ -42,32 +42,35 @@ export class PropriedadeService {
       // custo_compra base, senão o jogador pode ficar com saldo negativo.
       const valorCompra = sessionPosses.hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
 
-      if (player.saldo < valorCompra) {
-        throw new AppError(400, "Saldo insuficiente");
-      }
+      // Race condition (FIX_RACE_CONDITION_SALDO): o lock `prop:${propId}`
+      // serializa duas compras da MESMA propriedade, mas não protege o
+      // saldo do jogador contra uma corrida cruzada (comprar duas
+      // propriedades DIFERENTES ao mesmo tempo). `updateMany` condicional
+      // torna a checagem e o decremento atômicos independente do lock.
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: userId, saldo: { gte: valorCompra } },
+          data: { saldo: { decrement: valorCompra } },
+        });
+        if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente");
 
-      await prisma.$transaction([
-        prisma.sessionPosses.updateMany({
+        await tx.sessionPosses.updateMany({
           where: { sessionId, propId },
           // Limpa hipotecada/lastOwnerId — a compra normal (ao cair na casa)
           // de uma propriedade sem dono e hipotecada precisa devolvê-la ao
           // estado normal, senão ela fica presa como "hipotecada" mesmo já
           // tendo um dono novo e pago.
           data: { playerId: userId, hipotecada: false, lastOwnerId: null },
-        }),
-        prisma.sessionPlayer.update({
-          where: { id: userId },
-          data: { saldo: { decrement: valorCompra } },
-        }),
-        prisma.historico.create({
+        });
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_PROPRIEDADE",
             detalhes: `${player.nome} comprou a propriedade em ${propriedade.nome} por R$ ${valorCompra}`,
           },
-        }),
-      ]);
+        });
+      });
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "properties_bought", 1); } catch {}
@@ -94,19 +97,30 @@ export class PropriedadeService {
       const propriedade = sessionPosses.propriedade;
       if (!propriedade) throw new AppError(404, "Dados da propriedade não encontrados");
 
-      const pago = Math.min(player.saldo, valor);
-      const debtValor = valor - pago;
+      // Race condition (FIX_RACE_CONDITION_SALDO): mesmo padrão de
+      // carta.service.ts perder_dinheiro — `pago` continua calculado do
+      // mesmo jeito (Math.min), só o decremento vira atômico. Como o lance
+      // é vinculante e NUNCA bloqueia a transferência, se a corrida
+      // (extremamente rara) fizer o `updateMany` falhar, o valor inteiro
+      // vira dívida em vez de travar — mesma filosofia do método.
+      const pagoDesejado = Math.min(player.saldo, valor);
 
-      await prisma.$transaction([
-        prisma.sessionPosses.updateMany({
+      await prisma.$transaction(async (tx) => {
+        let pago = 0;
+        if (pagoDesejado > 0) {
+          const debitado = await tx.sessionPlayer.updateMany({
+            where: { id: playerId, saldo: { gte: pagoDesejado } },
+            data: { saldo: { decrement: pagoDesejado } },
+          });
+          pago = debitado.count > 0 ? pagoDesejado : 0;
+        }
+        const debtValor = valor - pago;
+
+        await tx.sessionPosses.updateMany({
           where: { sessionId, propId },
           data: { playerId, hipotecada: false, lastOwnerId: null },
-        }),
-        prisma.sessionPlayer.update({
-          where: { id: playerId },
-          data: { saldo: { decrement: pago } },
-        }),
-        prisma.historico.create({
+        });
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
@@ -114,13 +128,13 @@ export class PropriedadeService {
             detalhes: `${player.nome} arrematou ${propriedade.nome} no leilão por R$ ${valor}` +
               (debtValor > 0 ? ` (R$ ${debtValor} viraram dívida)` : ""),
           },
-        }),
-        ...(debtValor > 0
-          ? [prisma.debt.create({
-              data: { sessionId, playerId, valor: debtValor, descricao: `Leilão de ${propriedade.nome} (dívida)` },
-            })]
-          : []),
-      ]);
+        });
+        if (debtValor > 0) {
+          await tx.debt.create({
+            data: { sessionId, playerId, valor: debtValor, descricao: `Leilão de ${propriedade.nome} (dívida)` },
+          });
+        }
+      });
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "properties_bought", 1); } catch {}
@@ -160,9 +174,6 @@ export class PropriedadeService {
       // já que eventoAtual só é definido nessas sessões.
       const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
       const custoCasa = aplicarMod(propriedade.propriedade.custo_casa, custoConstrucaoMult);
-      if (player.saldo < custoCasa) {
-        throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
-      }
 
       if (propriedade.casas >= 5) {
         throw new AppError(400, "Esta propriedade já possui o número máximo de casas!");
@@ -179,24 +190,29 @@ export class PropriedadeService {
       if (!jaConstruiu) construcoesNesteTurno.set(key, new Set([propriedadeId]));
       else jaConstruiu.add(propriedadeId);
 
-      await prisma.$transaction([
-        prisma.sessionPosses.update({
+      // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
+      // atômicos — o lock `prop:${propriedadeId}` não protege contra
+      // comprar casas em DUAS propriedades diferentes ao mesmo tempo.
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: userId, saldo: { gte: custoCasa } },
+          data: { saldo: { decrement: custoCasa } },
+        });
+        if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
+
+        await tx.sessionPosses.update({
           where: { id: propriedade.id },
           data: { casas: { increment: 1 } },
-        }),
-        prisma.sessionPlayer.update({
-          where: { id: userId },
-          data: { saldo: { decrement: custoCasa } },
-        }),
-        prisma.historico.create({
+        });
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_CASA",
             detalhes: `${player.nome} comprou uma casa em ${propriedade.propriedade.nome} por R$ ${custoCasa}`,
           },
-        }),
-      ]);
+        });
+      });
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "houses_built", 1); } catch {}
@@ -257,36 +273,34 @@ export class PropriedadeService {
         nomes.push(prop.propriedade.nome);
       }
 
-      if (player.saldo < totalCost) {
-        throw new AppError(400, "Saldo insuficiente para comprar as casas");
-      }
-
       // Marca no tracking em memória
       if (!jaConstruiu) construcoesNesteTurno.set(key, new Set(properties.map(p => p.propriedade.id)));
       else properties.forEach(p => jaConstruiu!.add(p.propriedade.id));
 
-      const updateQueries = properties.map((prop) =>
-        prisma.sessionPosses.update({
-          where: { id: prop.id },
-          data: { casas: { increment: 1 } },
-        })
-      );
-
-      await prisma.$transaction([
-        ...updateQueries,
-        prisma.sessionPlayer.update({
-          where: { id: userId },
+      // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
+      // atômicos.
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: userId, saldo: { gte: totalCost } },
           data: { saldo: { decrement: totalCost } },
-        }),
-        prisma.historico.create({
+        });
+        if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar as casas");
+
+        for (const prop of properties) {
+          await tx.sessionPosses.update({
+            where: { id: prop.id },
+            data: { casas: { increment: 1 } },
+          });
+        }
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_CASA_LOTE",
             detalhes: `${player.nome} comprou ${properties.length} casa(s): ${nomes.join(", ")} por R$ ${totalCost}`,
           },
-        }),
-      ]);
+        });
+      });
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "houses_built", properties.length); } catch {}
@@ -519,56 +533,58 @@ export class PropriedadeService {
     const valor = sp.propriedade.hipoteca;
     const valorComJuros = Math.round(valor * 1.1);
 
-    if (comprador.saldo < valorComJuros) {
-      throw new AppError(400, "Saldo insuficiente para comprar a hipoteca");
-    }
-
     const originalOwnerId = sp.lastOwnerId;
 
     // Se o comprador é o dono original, executa direto (sem notificação)
     if (originalOwnerId === compradorId) {
-      await prisma.$transaction([
-        prisma.sessionPosses.update({
+      // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
+      // atômicos.
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: compradorId, saldo: { gte: valorComJuros } },
+          data: { saldo: { decrement: valorComJuros } },
+        });
+        if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar a hipoteca");
+
+        await tx.sessionPosses.update({
           where: { id: sessionPossesId },
           data: { playerId: compradorId, lastOwnerId: null, hipotecada: false },
-        }),
-        prisma.sessionPlayer.update({
-          where: { id: compradorId },
-          data: { saldo: { decrement: valorComJuros } },
-        }),
-        prisma.historico.create({
+        });
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "DESHIPOTECA",
             detalhes: `${comprador.nome} quitou a hipoteca de ${sp.propriedade.nome} por R$ ${valorComJuros}`,
           },
-        }),
-      ]);
+        });
+      });
       return { direto: true };
     }
 
     // Outro jogador comprando — precisa de aprovação do dono original
     if (!originalOwnerId) {
       // Propriedade hipotecada antes da migration de lastOwnerId: permite compra direta
-      await prisma.$transaction([
-        prisma.sessionPosses.update({
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: compradorId, saldo: { gte: valorComJuros } },
+          data: { saldo: { decrement: valorComJuros } },
+        });
+        if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar a hipoteca");
+
+        await tx.sessionPosses.update({
           where: { id: sessionPossesId },
           data: { playerId: compradorId, lastOwnerId: null, hipotecada: false },
-        }),
-        prisma.sessionPlayer.update({
-          where: { id: compradorId },
-          data: { saldo: { decrement: valorComJuros } },
-        }),
-        prisma.historico.create({
+        });
+        await tx.historico.create({
           data: {
             sessionId: Number(sessionId),
             data: new Date(),
             tipo: "COMPRA_HIPOTECADA",
             detalhes: `${comprador.nome} comprou a hipoteca de ${sp.propriedade.nome} por R$ ${valorComJuros}`,
           },
-        }),
-      ]);
+        });
+      });
       return { direto: true };
     }
 
@@ -615,32 +631,44 @@ export class PropriedadeService {
       throw new AppError(400, "Comprador não tem saldo suficiente");
     }
 
-    await prisma.$transaction([
-      prisma.sessionPosses.update({
-        where: { id: notif.sessionPossesId },
-        data: { playerId: notif.fromPlayerId, lastOwnerId: null, hipotecada: false },
-      }),
-      prisma.sessionPlayer.update({
-        where: { id: notif.fromPlayerId },
-        data: { saldo: { decrement: valorComJuros } },
-      }),
-      prisma.sessionPlayer.update({
-        where: { id: notif.toPlayerId },
-        data: { saldo: { increment: valor } },
-      }),
-      prisma.historico.create({
-        data: {
-          sessionId: Number(notif.sessionId),
-          data: new Date(),
-          tipo: "COMPRA_HIPOTECADA",
-          detalhes: `${comprador.nome} comprou a hipoteca de ${sp.propriedade.nome} de ${notif.toPlayer.nome} por R$ ${valorComJuros}`,
-        },
-      }),
-      prisma.notification.update({
-        where: { id: notificationId },
-        data: { status: "aceita", respondedAt: new Date() },
-      }),
-    ]);
+    // Race condition (FIX_RACE_CONDITION_SALDO): a checagem acima é só uma
+    // rejeição otimista (evita abrir transação à toa) — o decremento real
+    // é atômico aqui dentro, contra o saldo mais atual no banco.
+    try {
+      await prisma.$transaction(async (tx) => {
+        const debitado = await tx.sessionPlayer.updateMany({
+          where: { id: notif.fromPlayerId, saldo: { gte: valorComJuros } },
+          data: { saldo: { decrement: valorComJuros } },
+        });
+        if (debitado.count === 0) throw new AppError(400, "Comprador não tem saldo suficiente");
+
+        await tx.sessionPosses.update({
+          where: { id: notif.sessionPossesId },
+          data: { playerId: notif.fromPlayerId, lastOwnerId: null, hipotecada: false },
+        });
+        await tx.sessionPlayer.update({
+          where: { id: notif.toPlayerId },
+          data: { saldo: { increment: valor } },
+        });
+        await tx.historico.create({
+          data: {
+            sessionId: Number(notif.sessionId),
+            data: new Date(),
+            tipo: "COMPRA_HIPOTECADA",
+            detalhes: `${comprador.nome} comprou a hipoteca de ${sp.propriedade.nome} de ${notif.toPlayer.nome} por R$ ${valorComJuros}`,
+          },
+        });
+        await tx.notification.update({
+          where: { id: notificationId },
+          data: { status: "aceita", respondedAt: new Date() },
+        });
+      });
+    } catch (err) {
+      if (err instanceof AppError && err.statusCode === 400) {
+        await this.repo.updateNotification(notificationId, { status: "recusada", respondedAt: new Date() });
+      }
+      throw err;
+    }
 
     return { aceita: true, fromPlayerId: notif.fromPlayerId, toPlayerId: notif.toPlayerId };
   }

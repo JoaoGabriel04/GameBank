@@ -1,6 +1,7 @@
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { shopRepository, resolveShopItem, parseUserItems, type UserItemRef } from "./shop.repository.js";
 import { prisma } from "../../lib/prisma.js";
+import { withLock } from "../../middleware/lock.middleware.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { getRedis } from "../../lib/redis.js";
 import { shopLogger } from "../../lib/logger.js";
@@ -14,6 +15,13 @@ export class ShopService {
     return shopRepository.findAvailableItems();
   }
 
+  // Race condition (FIX_RACE_CONDITION_SALDO): duas corridas numa só —
+  // coins insuficientes (resolvida pelo `updateMany` condicional abaixo) E
+  // `user_items` (array JSON lido, alterado em memória e reescrito por
+  // inteiro — duas compras concorrentes de itens DIFERENTES podem ambas
+  // ler a mesma lista antiga e uma sobrescrever o item que a outra acabou
+  // de adicionar). `withLock` por usuário serializa as duas compras,
+  // resolvendo os dois problemas de uma vez só.
   async buyItem(userId: number, itemId: number) {
     if (itemId === 0) {
       throw new AppError(400, "Não é possível comprar o banner padrão.");
@@ -24,39 +32,38 @@ export class ShopService {
       throw new AppError(404, "Item não encontrado");
     }
 
-    await prisma.$transaction(
-      async (tx) => {
-        const user = await tx.user.findUnique({
-          where: { id: userId },
-          select: { coins: true, user_items: true },
-        });
-        if (!user) throw new AppError(404, "Usuário não encontrado");
+    await withLock(`shop:${userId}`, async () => {
+      await prisma.$transaction(
+        async (tx) => {
+          const user = await tx.user.findUnique({
+            where: { id: userId },
+            select: { coins: true, user_items: true },
+          });
+          if (!user) throw new AppError(404, "Usuário não encontrado");
 
-        const refs = parseUserItems(user.user_items);
-        if (refs.some((r) => r.item_id === itemId)) {
-          throw new AppError(400, "Você já possui este item");
-        }
+          const refs = parseUserItems(user.user_items);
+          if (refs.some((r) => r.item_id === itemId)) {
+            throw new AppError(400, "Você já possui este item");
+          }
 
-        if (user.coins < shopItem.price) {
-          throw new AppError(400, "Coins insuficientes");
-        }
+          const newRef: UserItemRef = {
+            item_id: shopItem.id,
+            equipped: false,
+            acquiredAt: new Date().toISOString(),
+          };
 
-        const newRef: UserItemRef = {
-          item_id: shopItem.id,
-          equipped: false,
-          acquiredAt: new Date().toISOString(),
-        };
-
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            coins: { decrement: shopItem.price },
-            user_items: [...refs, newRef] as any,
-          },
-        });
-      },
-      { timeout: 15000, maxWait: 10000 }
-    );
+          const comprado = await tx.user.updateMany({
+            where: { id: userId, coins: { gte: shopItem.price } },
+            data: {
+              coins: { decrement: shopItem.price },
+              user_items: [...refs, newRef] as any,
+            },
+          });
+          if (comprado.count === 0) throw new AppError(400, "Coins insuficientes");
+        },
+        { timeout: 15000, maxWait: 10000 }
+      );
+    });
 
     await this.rankingService.invalidateCache();
     return { message: "Item comprado com sucesso", item: shopItem };
@@ -288,27 +295,21 @@ export class ShopService {
     d6: { diamonds: 8000 },
   };
 
+  // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento de
+  // diamonds viram uma operação atômica (`updateMany` condicional).
   async buyCoinsWithDiamonds(userId: number, packId: string) {
     const pack = this.COIN_PACKS[packId];
     if (!pack) throw new AppError(400, "Pacote de coins inválido.");
 
     await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { diamonds: true },
-      });
-      if (!user) throw new AppError(404, "Usuário não encontrado");
-      if (user.diamonds < pack.price) {
-        throw new AppError(400, "Diamantes insuficientes.");
-      }
-
-      await tx.user.update({
-        where: { id: userId },
+      const gasto = await tx.user.updateMany({
+        where: { id: userId, diamonds: { gte: pack.price } },
         data: {
           diamonds: { decrement: pack.price },
           coins: { increment: pack.coins },
         },
       });
+      if (gasto.count === 0) throw new AppError(400, "Diamantes insuficientes.");
 
       await tx.diamondTransaction.create({
         data: {
@@ -354,50 +355,53 @@ export class ShopService {
     return { message: `${pack.diamonds} 💎 adicionados.` };
   }
 
+  // Race condition (FIX_RACE_CONDITION_SALDO): mesmas duas corridas de
+  // buyItem (diamonds + array user_items) — mesmo fix: withLock por
+  // usuário + updateMany condicional.
   async comprarItemComDiamantes(userId: number, itemId: number) {
     const item = await prisma.shopItem.findUnique({ where: { id: itemId } });
 
     if (!item) throw new AppError(404, "Item não encontrado");
     if (!item.diamondPrice) throw new AppError(400, "Item não disponível por diamantes");
 
-    await prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: { diamonds: true, user_items: true },
-      });
+    await withLock(`shop:${userId}`, async () => {
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { diamonds: true, user_items: true },
+        });
+        if (!user) throw new AppError(404, "Usuário não encontrado");
 
-      if (!user || user.diamonds < item.diamondPrice!) {
-        throw new AppError(400, "Diamantes insuficientes");
-      }
+        const refs = parseUserItems(user.user_items);
+        if (refs.some((r) => r.item_id === itemId)) {
+          throw new AppError(400, "Item já possuído");
+        }
 
-      const refs = parseUserItems(user.user_items);
-      if (refs.some((r) => r.item_id === itemId)) {
-        throw new AppError(400, "Item já possuído");
-      }
+        const newRef: UserItemRef = {
+          item_id: item.id,
+          equipped: false,
+          acquiredAt: new Date().toISOString(),
+        };
 
-      const newRef: UserItemRef = {
-        item_id: item.id,
-        equipped: false,
-        acquiredAt: new Date().toISOString(),
-      };
+        const comprado = await tx.user.updateMany({
+          where: { id: userId, diamonds: { gte: item.diamondPrice! } },
+          data: {
+            diamonds: { decrement: item.diamondPrice! },
+            user_items: [...refs, newRef] as any,
+          },
+        });
+        if (comprado.count === 0) throw new AppError(400, "Diamantes insuficientes");
 
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          diamonds: { decrement: item.diamondPrice! },
-          user_items: [...refs, newRef] as any,
-        },
-      });
-
-      await tx.diamondTransaction.create({
-        data: {
-          userId,
-          quantidade: -item.diamondPrice!,
-          tipo: "GASTO_LOJA",
-          itemId,
-        },
-      });
-    }, { timeout: 15000, maxWait: 10000 });
+        await tx.diamondTransaction.create({
+          data: {
+            userId,
+            quantidade: -item.diamondPrice!,
+            tipo: "GASTO_LOJA",
+            itemId,
+          },
+        });
+      }, { timeout: 15000, maxWait: 10000 });
+    });
 
     await this.rankingService.invalidateCache();
     return { message: "Item comprado com sucesso", item };

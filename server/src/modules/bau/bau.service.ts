@@ -69,25 +69,32 @@ export class BauService {
     return bauRepository.findAllAtivos()
   }
 
+  // Race condition (FIX_RACE_CONDITION_SALDO): diferente de `abrirMultiplo`
+  // (mais abaixo), este método não tinha NENHUM lock — dois cliques
+  // rápidos em "abrir baú" liam o mesmo saldo de coins/diamonds antes de
+  // qualquer decremento aplicar. Mesma chave `bau:${userId}` do
+  // `abrirMultiplo` — serializa os dois caminhos entre si também.
   async abrir(userId: number, tipo: TipoBau, skipPayment = false) {
-    const config = BAU_CONFIG[tipo]
-    if (!config) throw new AppError(400, "Tipo de baú inválido")
+    return withLock(`bau:${userId}`, async () => {
+      const config = BAU_CONFIG[tipo]
+      if (!config) throw new AppError(400, "Tipo de baú inválido")
 
-    if (!skipPayment) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { coins: true, diamonds: true },
-      })
-      if (!user) throw new AppError(404, "Usuário não encontrado")
-      if (config.precoCoins && user.coins < config.precoCoins) {
-        throw new AppError(400, `Coins insuficientes. Necessário: ${config.precoCoins}`)
+      if (!skipPayment) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { coins: true, diamonds: true },
+        })
+        if (!user) throw new AppError(404, "Usuário não encontrado")
+        if (config.precoCoins && user.coins < config.precoCoins) {
+          throw new AppError(400, `Coins insuficientes. Necessário: ${config.precoCoins}`)
+        }
+        if (config.precoDiamonds && user.diamonds < config.precoDiamonds) {
+          throw new AppError(400, `Diamantes insuficientes. Necessário: ${config.precoDiamonds}`)
+        }
       }
-      if (config.precoDiamonds && user.diamonds < config.precoDiamonds) {
-        throw new AppError(400, `Diamantes insuficientes. Necessário: ${config.precoDiamonds}`)
-      }
-    }
 
-    return this.executarAbertura(userId, tipo, config, bauRepository, skipPayment)
+      return this.executarAbertura(userId, tipo, config, bauRepository, skipPayment)
+    })
   }
 
   private async executarAbertura(
@@ -170,18 +177,24 @@ export class BauService {
     const itensCompletos: number[] = []
 
     await prisma.$transaction(async (tx) => {
+      // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
+      // atômicos — o `withLock` em `abrir()` já serializa por usuário, mas
+      // isso é defesa em profundidade contra qualquer outro caminho que
+      // altere coins/diamonds no meio da abertura.
       if (!skipPayment) {
         if (config.precoCoins) {
-          await tx.user.update({
-            where: { id: userId },
+          const debitado = await tx.user.updateMany({
+            where: { id: userId, coins: { gte: config.precoCoins } },
             data: { coins: { decrement: config.precoCoins } },
           })
+          if (debitado.count === 0) throw new AppError(400, `Coins insuficientes. Necessário: ${config.precoCoins}`)
         }
         if (config.precoDiamonds) {
-          await tx.user.update({
-            where: { id: userId },
+          const debitado = await tx.user.updateMany({
+            where: { id: userId, diamonds: { gte: config.precoDiamonds } },
             data: { diamonds: { decrement: config.precoDiamonds } },
           })
+          if (debitado.count === 0) throw new AppError(400, `Diamantes insuficientes. Necessário: ${config.precoDiamonds}`)
         }
       }
 
@@ -365,13 +378,23 @@ export class BauService {
     const bau = await bauRepository.findBauByTipo(tipo)
     if (!bau) throw new AppError(500, "Baú não encontrado no banco")
 
-    // Deduz pagamento antes de abrir os baús
+    // Deduz pagamento antes de abrir os baús. Race condition
+    // (FIX_RACE_CONDITION_SALDO): `updateMany` condicional — defesa em
+    // profundidade além do `withLock` já feito em `abrirMultiplo`.
     await prisma.$transaction(async (tx) => {
       if (totalCoins) {
-        await tx.user.update({ where: { id: userId }, data: { coins: { decrement: totalCoins } } })
+        const debitado = await tx.user.updateMany({
+          where: { id: userId, coins: { gte: totalCoins } },
+          data: { coins: { decrement: totalCoins } },
+        })
+        if (debitado.count === 0) throw new AppError(400, `Coins insuficientes. Necessário: ${totalCoins.toLocaleString("pt-BR")}`)
       }
       if (totalDiamonds) {
-        await tx.user.update({ where: { id: userId }, data: { diamonds: { decrement: totalDiamonds } } })
+        const debitado = await tx.user.updateMany({
+          where: { id: userId, diamonds: { gte: totalDiamonds } },
+          data: { diamonds: { decrement: totalDiamonds } },
+        })
+        if (debitado.count === 0) throw new AppError(400, `Diamantes insuficientes. Necessário: ${totalDiamonds.toLocaleString("pt-BR")}`)
       }
     })
 
