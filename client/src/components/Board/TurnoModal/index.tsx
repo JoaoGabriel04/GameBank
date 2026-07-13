@@ -91,6 +91,9 @@ type TurnoModalProps = {
   // saber o valor. Não recebe mais opções com destino/casa — só o
   // callback pra enviar a escolha.
   onEscolherMovimento?: (escolha: EscolhaMovimento) => void
+  // Revelar dados (Crédito de Visão): opcional, gasta um crédito para ver
+  // os valores dos dados antes de escolher o movimento.
+  onRevelarDados?: () => void
 }
 
 type FaseTurno = "rolando" | "resultado" | "escolha" | "extrato-inicio" | "desfecho" | "acao"
@@ -99,7 +102,7 @@ export default function TurnoModal({
   aberto, resultado, nomeCasa, erroCompra, acaoEmCurso,
   onComprar, onRecusar, onFechar, onDecidirDepois, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
-  onEscolherMovimento,
+  onEscolherMovimento, onRevelarDados,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
@@ -380,19 +383,26 @@ export default function TurnoModal({
                   Agora escolha o movimento com base nos valores.
                 </p>
                 {resultado.creditosRestantes != null && (
-                  <p className="font-inconsolata text-[11px] text-cyan-400 mb-3">
-                    {'👁'} Créditos de visão restantes: {resultado.creditosRestantes}/2
+                  <p className="font-inconsolata text-[11px] text-cyan-400 mb-2">
+                    {'👁'} Créditos restantes: {resultado.creditosRestantes}/2
                   </p>
                 )}
               </>
             ) : (
               <>
                 <p className="font-jaro text-lg text-zinc-100 mb-1">Escolha antes de ver o resultado</p>
-                <p className="font-inconsolata text-xs text-zinc-500 mb-3">
+                <p className="font-inconsolata text-xs text-zinc-500 mb-2">
                   Assim ninguém escolhe pra onde ir — o risco é real.
                 </p>
-                {resultado.creditosRestantes != null && resultado.creditosRestantes === 0 && (
-                  <p className="font-inconsolata text-[11px] text-zinc-500 mb-3">
+                {resultado.creditosRestantes != null && resultado.creditosRestantes > 0 ? (
+                  <button
+                    onClick={onRevelarDados}
+                    className="mb-2 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-inconsolata text-sm cursor-pointer transition-colors"
+                  >
+                    {'👁'} Revelar dados (1 crédito) — restantes: {resultado.creditosRestantes}/2
+                  </button>
+                ) : resultado.creditosRestantes === 0 && (
+                  <p className="font-inconsolata text-[11px] text-zinc-500 mb-2">
                     {'👁'} Sem créditos de visão — recarregam em 3 rodadas.
                   </p>
                 )}

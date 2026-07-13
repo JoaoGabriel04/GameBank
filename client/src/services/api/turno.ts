@@ -76,6 +76,9 @@ export const turnoApi = {
 
   escolherMovimento: (sessionId: number, escolha: EscolhaMovimento) =>
     api.post<RolarDadosResult>(`/turno/${sessionId}/escolher-movimento`, { escolha }),
+
+  revelarDados: (sessionId: number) =>
+    api.post<{ dado1: number; dado2: number; creditosRestantes: number }>(`/turno/${sessionId}/revelar-dados`),
 }
 
 export const passarVezApi = (sessionId: number) =>
@@ -95,3 +98,6 @@ export const sairPrisaoComCartaApi = (sessionId: number) =>
 
 export const escolherMovimentoApi = (sessionId: number, escolha: EscolhaMovimento) =>
   turnoApi.escolherMovimento(sessionId, escolha).then(res => res.data)
+
+export const revelarDadosApi = (sessionId: number) =>
+  turnoApi.revelarDados(sessionId).then(res => res.data)

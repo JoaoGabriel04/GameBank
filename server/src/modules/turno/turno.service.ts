@@ -136,6 +136,52 @@ class TurnoService {
     });
   }
 
+  async revelarDados(sessionId: number, playerId: number) {
+    return withLock(`turno:${sessionId}`, async () => {
+      const session = await this.validarESessaoAtiva(sessionId);
+
+      if (session.turnoAtualPlayerId !== playerId) {
+        throw new AppError(403, "Não é sua vez de jogar.");
+      }
+      if (!session.aguardandoEscolha) {
+        throw new AppError(400, "Não há dados pendentes para revelar.");
+      }
+      if (session.ultimoDado1 == null || session.ultimoDado2 == null) {
+        throw new AppError(400, "Nenhum dado foi rolado ainda.");
+      }
+
+      const player = await turnoRepository.findPlayerParaJogada(playerId);
+      if (!player || player.sessionId !== sessionId) throw new AppError(404, "Jogador não encontrado");
+      if (player.desistiu) throw new AppError(403, "Você já saiu desta partida.");
+
+      // Recarrega se a rodada atual já passou do prazo agendado.
+      if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
+        await turnoRepository.resetarCreditosVisao(player.id);
+        player.creditoVisao = 2;
+        player.creditoRecargaEm = 0;
+      }
+
+      if (player.creditoVisao <= 0) {
+        throw new AppError(400, "Sem créditos de visão disponíveis.");
+      }
+
+      // Consome um crédito
+      await turnoRepository.usarCreditoVisao(player.id);
+      const creditosRestantes = player.creditoVisao - 1;
+
+      // Se acabaram os créditos, agenda recarga para 3 rodadas à frente.
+      if (creditosRestantes === 0) {
+        await turnoRepository.setCreditoRecargaEm(player.id, session.rodadaAtual + 3);
+      }
+
+      return {
+        dado1: session.ultimoDado1,
+        dado2: session.ultimoDado2,
+        creditosRestantes,
+      };
+    });
+  }
+
   // Público — chamado por timer.service (falência do jogador que perdeu
   // o timeout).
   async verificarFalencia(

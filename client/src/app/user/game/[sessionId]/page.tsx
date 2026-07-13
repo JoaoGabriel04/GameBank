@@ -77,7 +77,7 @@ export default function Game() {
   const [voteData, setVoteData] = useState<VoteRequestData | null>(null);
   const [voteUpdate, setVoteUpdate] = useState<VoteUpdateData | null>(null);
   const [votingLoading, setVotingLoading] = useState(false);
-  const [rolando, setRolando] = useState(false);
+  // rolando movido para Board/index.tsx — único ponto de controle
   const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const params = useParams();
@@ -313,22 +313,6 @@ export default function Game() {
       }
     }, 5000);
   };
-
-  const handleRolarDados = useCallback(async () => {
-    if (rolando || !sessionId) return;
-    setRolando(true);
-    try {
-      const r = await useGameStore.getState().rolarDados(sessionId);
-      if (r?.falido) {
-        toastError(r.mensagem ?? "Você faliu.");
-      }
-    } catch (err) {
-      const e = toApiErr(err);
-      toastError(e?.response?.data?.message ?? "Erro ao rolar dados");
-    } finally {
-      setRolando(false);
-    }
-  }, [rolando, sessionId, toastError]);
 
   const handleQuit = async () => {
     if (!currentSession) return;
@@ -631,7 +615,7 @@ export default function Game() {
         return (
           <div className="space-y-4 lg:space-y-0 lg:flex lg:items-start lg:gap-4">
             <div className="lg:shrink-0">
-              <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+              <GameShell />
             </div>
             <div className="lg:flex-1 lg:min-w-0">
               <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />
@@ -647,7 +631,7 @@ export default function Game() {
         return (
           <div className="space-y-4 lg:space-y-0 lg:flex lg:items-start lg:gap-4">
             <div className="lg:shrink-0">
-              <GameShell rolando={rolando} onRolarDados={handleRolarDados} />
+              <GameShell />
             </div>
             <div className="lg:flex-1 lg:min-w-0">
               <VisaoSection currentPlayer={currentPlayer} isOwner={isOwner} onNavigate={(tab) => { localStorage.setItem("abaAtual", tab); setAbaAtual(tab); }} />

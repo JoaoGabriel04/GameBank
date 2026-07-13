@@ -14,7 +14,7 @@ import {
   loadSessionApi,
   startSessionApi,
 } from "@/services/api/sessions";
-import { passarVezApi, rolarDadosApi, comprarCasaAtualApi, recusarCompraApi, sairPrisaoComCartaApi, escolherMovimentoApi, type RolarDadosResult, type EscolhaMovimento } from "@/services/api/turno";
+import { passarVezApi, rolarDadosApi, comprarCasaAtualApi, recusarCompraApi, sairPrisaoComCartaApi, escolherMovimentoApi, revelarDadosApi, type RolarDadosResult, type EscolhaMovimento } from "@/services/api/turno";
 import { darLanceApi, type DarLanceResult } from "@/services/api/leilao";
 import {
   editPlayerApi,
@@ -84,6 +84,7 @@ interface GameStore {
   passarVez: (sessionId: number) => Promise<void>;
   rolarDados: (sessionId: number) => Promise<RolarDadosResult | undefined>;
   escolherMovimento: (sessionId: number, escolha: EscolhaMovimento) => Promise<RolarDadosResult | undefined>;
+  revelarDados: (sessionId: number) => Promise<{ dado1: number; dado2: number; creditosRestantes: number } | undefined>;
   darLance: (sessionId: number, valor: number) => Promise<DarLanceResult | undefined>;
   comprarCasaAtual: (sessionId: number) => Promise<boolean>;
   recusarCompra: (sessionId: number) => Promise<boolean>;
@@ -262,6 +263,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       loadSessionApi(sessionId).then((session) => {
         get().applyOrBufferSession(session);
       }).catch(() => {});
+      return result;
+    } catch (err) {
+      handleError(set, err);
+      return undefined;
+    }
+  },
+
+  revelarDados: async (sessionId) => {
+    try {
+      const result = await revelarDadosApi(sessionId);
       return result;
     } catch (err) {
       handleError(set, err);

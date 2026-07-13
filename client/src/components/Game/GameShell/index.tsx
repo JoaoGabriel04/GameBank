@@ -11,12 +11,9 @@ import AcaoPrincipal from "@/components/Game/AcaoPrincipal";
 import StatsRapidas from "@/components/Game/StatsRapidas";
 import { LoaderCircle } from "lucide-react";
 
-type Props = {
-  rolando: boolean;
-  onRolarDados: () => void;
-};
+type Props = Record<string, never>;
 
-export default function GameShell({ rolando, onRolarDados }: Props) {
+export default function GameShell(_props: Props) {
   const currentSession = useGameStore((s) => s.currentSession);
   const { user: authUser } = useAuthStore();
   const [boardModalOpen, setBoardModalOpen] = useState(false);
@@ -70,11 +67,7 @@ export default function GameShell({ rolando, onRolarDados }: Props) {
 
         <TurnoTimeline meuPlayerId={meuPlayerId} />
 
-        <AcaoPrincipal
-          meuPlayerId={meuPlayerId}
-          rolando={rolando}
-          onRolarDados={onRolarDados}
-        />
+        <AcaoPrincipal meuPlayerId={meuPlayerId} />
 
         <StatsRapidas meuPlayerId={meuPlayerId} />
       </div>

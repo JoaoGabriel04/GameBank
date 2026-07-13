@@ -46,7 +46,7 @@ type Props = {
 }
 
 export default function Board({ tabuleiro, session, meuPlayerId, interativo = true, onMaximize }: Props) {
-  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, setHoldSessionUpdates } = useGameStore()
+  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, revelarDados, setHoldSessionUpdates } = useGameStore()
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })
@@ -509,6 +509,13 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     }
   }, [session.id, escolherMovimento, toastError, setHoldSessionUpdates])
 
+  const handleRevelarDados = useCallback(async () => {
+    const r = await revelarDados(session.id)
+    if (!r) return
+    // Atualiza o resultado local com os dados revelados e créditos restantes
+    setResultado(prev => prev ? { ...prev, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes } : prev)
+  }, [session.id, revelarDados])
+
   // FIX_TURNO_TRAVADO_CONTADOR (BUG A.3): cleanup no unmount — se o
   // jogador trocar de aba/navegar para fora durante uma rolagem, o
   // componente desmonta sem passar pelos handlers acima. Sem isso o hold
@@ -671,6 +678,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
         onDadosParados={handleDadosParados}
         onResultadoRevelado={handleResultadoRevelado}
         onEscolherMovimento={handleEscolherMovimento}
+        onRevelarDados={handleRevelarDados}
       />
       {/* Compra pendente minimizada — o jogador fechou pra ir vender algo
           e conseguir dinheiro. Fica visível até ele decidir ou o tempo

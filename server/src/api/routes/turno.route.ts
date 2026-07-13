@@ -41,6 +41,13 @@ turnoRouter.post(
 );
 
 turnoRouter.post(
+  "/:sessionId/revelar-dados",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  turnoController.revelarDados
+);
+
+turnoRouter.post(
   "/:sessionId/escolher-movimento",
   authenticate,
   authenticateRoom("params", "sessionId"),

@@ -517,19 +517,21 @@ export class SessionService {
       throw new AppError(400, `Você não pode desistir com patrimônio de R$ ${patrimony.toLocaleString("pt-BR")} (limite: R$ ${(DESIST_LIMIT - 1).toLocaleString("pt-BR")}).`);
     }
 
-    // Modo Tabuleiro: dívida ativa com o banco bloqueia desistência voluntária
-    // até ser quitada (regra específica do tabuleiro — não afeta Modo Banca).
+    // Modo Tabuleiro: verifica se o jogador consegue pagar suas dívidas.
+    // Se o patrimônio cobre o total devido, ele precisa pagar antes de
+    // desistir. Se não cobre, não há como pagar — permite desistir.
     if (session.tipoJogo === "tabuleiro") {
-      const dividaAtiva = await prisma.debt.findFirst({ where: { sessionId, playerId: player.id, pago: false } });
-      if (dividaAtiva) {
-        throw new AppError(400, "Você não pode desistir com dívidas pendentes. Quite-as primeiro.");
-      }
-      // Empréstimo ativo também bloqueia desistência
-      const empAtivo = await prisma.emprestimo.findFirst({
+      const dividas = await prisma.debt.findMany({ where: { sessionId, playerId: player.id, pago: false } });
+      const emprestimos = await prisma.emprestimo.findMany({
         where: { sessionId, playerId: player.id, quitado: false },
       });
-      if (empAtivo) {
-        throw new AppError(400, "Você não pode desistir com empréstimo ativo. Quite-o primeiro.");
+
+      const totalDividas = dividas.reduce((acc, d) => acc + d.valor, 0);
+      const totalEmprestimos = emprestimos.reduce((acc, e) => acc + e.valorDevido, 0);
+      const totalDevido = totalDividas + totalEmprestimos;
+
+      if (totalDevido > 0 && patrimony >= totalDevido) {
+        throw new AppError(400, `Você ainda pode pagar suas dívidas (R$ ${totalDevido.toLocaleString("pt-BR")}) com seu patrimônio (R$ ${patrimony.toLocaleString("pt-BR")}). Quite-as primeiro ou venda propriedades antes de desistir.`);
       }
     }
 
