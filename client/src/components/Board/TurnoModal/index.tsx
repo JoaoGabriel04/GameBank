@@ -96,6 +96,11 @@ type TurnoModalProps = {
   // Revelar dados (Crédito de Visão): opcional, gasta um crédito para ver
   // os valores dos dados antes de escolher o movimento.
   onRevelarDados?: () => void
+  // true enquanto a chamada de revelar dados está em voo — sem isso o
+  // botão fica clicável várias vezes seguidas (a resposta demora um pouco
+  // e não há nenhum feedback visual), deixando o jogador gastar os 2
+  // créditos sem querer com cliques repetidos.
+  revelandoDados?: boolean
   // Tabuleiro + posição atual para calcular destinos ao revelar dados
   tabuleiro?: Casa[]
   posicaoAtual?: number
@@ -110,7 +115,7 @@ export default function TurnoModal({
   aberto, resultado, nomeCasa, erroCompra, acaoEmCurso,
   onComprar, onRecusar, onFechar, onDecidirDepois, onJogarNovamente, onDadosParados, onResultadoRevelado,
   faseInicial = "rolando",
-  onEscolherMovimento, onRevelarDados,
+  onEscolherMovimento, onRevelarDados, revelandoDados = false,
   tabuleiro = [], posicaoAtual = 0, session, meuPlayerId,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
@@ -439,9 +444,12 @@ export default function TurnoModal({
                 {resultado.creditosRestantes != null && resultado.creditosRestantes > 0 ? (
                   <button
                     onClick={onRevelarDados}
-                    className="mb-2 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-inconsolata text-sm cursor-pointer transition-colors"
+                    disabled={revelandoDados}
+                    className="mb-2 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-inconsolata text-sm cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-cyan-600/20"
                   >
-                    {'👁'} Revelar dados (1 crédito) — restantes: {resultado.creditosRestantes}/2
+                    {revelandoDados
+                      ? "Revelando..."
+                      : `👁 Revelar dados (1 crédito) — restantes: ${resultado.creditosRestantes}/2`}
                   </button>
                 ) : resultado.creditosRestantes === 0 && (
                   <p className="font-inconsolata text-[11px] text-zinc-500 mb-2">

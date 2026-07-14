@@ -523,12 +523,22 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     }
   }, [session.id, escolherMovimento, toastError, setHoldSessionUpdates])
 
+  // Sem guarda + feedback visual, um duplo-clique (ou o usuário reclicando
+  // por achar que não funcionou, já que a resposta demora) disparava a
+  // requisição mais de uma vez e gastava 2 créditos numa única revelação.
+  const [revelandoDados, setRevelandoDados] = useState(false)
   const handleRevelarDados = useCallback(async () => {
-    const r = await revelarDados(session.id)
-    if (!r) return
-    // Atualiza o resultado local com os dados revelados e créditos restantes
-    setResultado(prev => prev ? { ...prev, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes } : prev)
-  }, [session.id, revelarDados])
+    if (revelandoDados) return
+    setRevelandoDados(true)
+    try {
+      const r = await revelarDados(session.id)
+      if (!r) return
+      // Atualiza o resultado local com os dados revelados e créditos restantes
+      setResultado(prev => prev ? { ...prev, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes } : prev)
+    } finally {
+      setRevelandoDados(false)
+    }
+  }, [session.id, revelarDados, revelandoDados])
 
   // FIX_TURNO_TRAVADO_CONTADOR (BUG A.3): cleanup no unmount — se o
   // jogador trocar de aba/navegar para fora durante uma rolagem, o
@@ -699,6 +709,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
           onResultadoRevelado={handleResultadoRevelado}
           onEscolherMovimento={handleEscolherMovimento}
           onRevelarDados={handleRevelarDados}
+          revelandoDados={revelandoDados}
           tabuleiro={tabuleiro}
           posicaoAtual={jogadorDaVez?.posicao ?? 0}
           session={session}
