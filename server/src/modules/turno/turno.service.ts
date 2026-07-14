@@ -174,6 +174,14 @@ class TurnoService {
         await turnoRepository.setCreditoRecargaEm(player.id, session.rodadaAtual + 3);
       }
 
+      // Sem isso, o cache Redis da sessão (session.service.ts, TTL 60s)
+      // fica com o creditoVisao pré-consumo: um F5 logo em seguida (ou o
+      // próximo "session:updated" recebido por outro jogador) mostra o
+      // crédito como se ainda não tivesse sido gasto, mesmo já decrementado
+      // no banco — parecia que "usar créditos" simplesmente não funcionava.
+      const { emitUpdatedSession } = await import("../socket/socket.handler.js");
+      await emitUpdatedSession(sessionId);
+
       return {
         dado1: session.ultimoDado1,
         dado2: session.ultimoDado2,

@@ -533,8 +533,24 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     try {
       const r = await revelarDados(session.id)
       if (!r) return
-      // Atualiza o resultado local com os dados revelados e créditos restantes
-      setResultado(prev => prev ? { ...prev, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes } : prev)
+      // Atualiza o resultado local com os dados revelados e créditos
+      // restantes. `resultado` (state real) é null sempre que a tela de
+      // escolha está sendo mostrada pelo fallback (F5, reconexão de
+      // socket, alternar compacto/maximizado) — nesse caso, `prev ??
+      // fallbackEscolhaRef.current` usa o objeto sintetizado como base
+      // em vez de descartar a resposta do servidor. Sem isso, o crédito
+      // era consumido no banco mas a revelação nunca aparecia na tela
+      // (o `prev` era sempre null, então a atualização virava um no-op),
+      // e o jogador achava que o botão "não funcionava".
+      setResultado(prev => {
+        const base = prev ?? fallbackEscolhaRef.current
+        return { ...base, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes }
+      })
+      // A partir daqui `resultado` deixa de ser null, então o próximo
+      // render já não passa pelo ramo de fallback que força
+      // modalAbertoFinal=true — sem isto explícito, o modal fecharia
+      // sozinho no instante em que os dados fossem revelados.
+      setModalAberto(true)
     } finally {
       setRevelandoDados(false)
     }
