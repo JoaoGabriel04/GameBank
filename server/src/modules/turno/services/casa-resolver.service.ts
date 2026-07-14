@@ -37,7 +37,17 @@ class CasaResolverService {
         const posse = await propriedadeRepository.findSessionPosses(sessionId, casa.propId);
         if (!posse || !posse.propriedade) break;
 
-        if (!posse.playerId) {
+        // Hipotecada com lastOwnerId ainda tem "dono" pra fins de jogo —
+        // playerId é limpo no momento da hipoteca (hipotecarPropriedade),
+        // então checar só `!posse.playerId` trata isso como propriedade
+        // nunca comprada e deixa QUALQUER jogador comprá-la direto, sem a
+        // aprovação do dono original. A compra dessas só pode acontecer
+        // via comprarHipotecada (Loja), que já implementa a notificação
+        // de aprovação — landing na casa não oferece compra direta.
+        // (lastOwnerId é sempre limpo junto de hipotecada quando o dono
+        // sai da partida — ver turno.service.ts/session.service.ts — então
+        // hipotecada=true aqui sempre implica um lastOwnerId ainda ativo.)
+        if (!posse.playerId && !posse.hipotecada) {
           aguardandoAcao = true;
           compraDisponivel = {
             propId: casa.propId,
@@ -45,6 +55,8 @@ class CasaResolverService {
             nome: posse.propriedade.nome,
             preco: posse.propriedade.custo_compra,
           };
+        } else if (!posse.playerId && posse.hipotecada) {
+          mensagem = `${posse.propriedade.nome} está hipotecada — só pode ser adquirida com aprovação do antigo dono, pela Loja.`;
         } else if (posse.playerId !== player.id && !posse.hipotecada && posse.player) {
           const valor = casa.tipo === "acao"
             ? aplicarMod(500 * numDados, mods.acoesMult)

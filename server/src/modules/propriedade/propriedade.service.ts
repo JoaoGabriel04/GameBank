@@ -33,13 +33,23 @@ export class PropriedadeService {
       const sessionPosses = await this.repo.findSessionPosses(sessionId, propId);
       if (!sessionPosses) throw new AppError(404, "Propriedade não encontrada nesta sessão");
       if (sessionPosses.playerId) throw new AppError(400, "Propriedade já foi comprada");
+      // Hipotecada com lastOwnerId ainda ativo precisa da aprovação do dono
+      // original — isso só existe em comprarHipotecada (Loja), nunca aqui.
+      // lastOwnerId só fica null quando o dono saiu da partida (bankrupt/
+      // desistiu — ver turno.service.ts) OU em registros hipotecados antes
+      // da migration de lastOwnerId; só nesses dois casos a compra direta é
+      // legítima.
+      if (sessionPosses.hipotecada && sessionPosses.lastOwnerId) {
+        throw new AppError(400, "Propriedade hipotecada — precisa da aprovação do antigo dono (compre pela Loja).");
+      }
 
       const propriedade = sessionPosses.propriedade;
       if (!propriedade) throw new AppError(404, "Dados da propriedade não encontrados");
 
-      // Propriedade sem dono mas ainda hipotecada (ex.: dono anterior faliu
-      // ou desistiu) custa 1.2x — checar saldo contra ESSE valor, não o
-      // custo_compra base, senão o jogador pode ficar com saldo negativo.
+      // Propriedade sem dono mas ainda hipotecada (dono anterior faliu,
+      // desistiu, ou registro de antes da migration de lastOwnerId) custa
+      // 1.2x — checar saldo contra ESSE valor, não o custo_compra base,
+      // senão o jogador pode ficar com saldo negativo.
       const valorCompra = sessionPosses.hipotecada ? propriedade.custo_compra * 1.2 : propriedade.custo_compra;
 
       // Race condition (FIX_RACE_CONDITION_SALDO): o lock `prop:${propId}`
@@ -187,9 +197,6 @@ export class PropriedadeService {
         throw new AppError(400, "Você já comprou uma casa nesta propriedade neste turno.");
       }
 
-      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set([propriedadeId]));
-      else jaConstruiu.add(propriedadeId);
-
       // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
       // atômicos — o lock `prop:${propriedadeId}` não protege contra
       // comprar casas em DUAS propriedades diferentes ao mesmo tempo.
@@ -213,6 +220,15 @@ export class PropriedadeService {
           },
         });
       });
+
+      // Só marca "já construiu neste turno" DEPOIS da transação ter
+      // sucesso — antes isso era marcado antes da checagem de saldo, então
+      // uma compra rejeitada por saldo insuficiente deixava a propriedade
+      // marcada como "já recebeu casa neste turno" mesmo sem nada ter sido
+      // comprado, bloqueando qualquer nova tentativa (inclusive com menos
+      // casas) pro resto do turno.
+      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set([propriedadeId]));
+      else jaConstruiu.add(propriedadeId);
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "houses_built", 1); } catch {}
@@ -273,10 +289,6 @@ export class PropriedadeService {
         nomes.push(prop.propriedade.nome);
       }
 
-      // Marca no tracking em memória
-      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set(properties.map(p => p.propriedade.id)));
-      else properties.forEach(p => jaConstruiu!.add(p.propriedade.id));
-
       // Race condition (FIX_RACE_CONDITION_SALDO): checagem e decremento
       // atômicos.
       await prisma.$transaction(async (tx) => {
@@ -301,6 +313,16 @@ export class PropriedadeService {
           },
         });
       });
+
+      // Só marca "já construiu neste turno" DEPOIS da transação ter
+      // sucesso — ver mesmo racional em buyHouse acima. Antes disso, uma
+      // rejeição por saldo insuficiente já deixava as propriedades
+      // selecionadas marcadas como "já receberam casa", bloqueando uma
+      // nova tentativa legítima (ex.: com menos propriedades/casas) pelo
+      // resto do turno com "X já recebeu uma casa neste turno" mesmo sem
+      // nada ter sido comprado.
+      if (!jaConstruiu) construcoesNesteTurno.set(key, new Set(properties.map(p => p.propriedade.id)));
+      else properties.forEach(p => jaConstruiu!.add(p.propriedade.id));
 
       if (player.userId) {
         try { await this.missionService.track(player.userId, "houses_built", properties.length); } catch {}
