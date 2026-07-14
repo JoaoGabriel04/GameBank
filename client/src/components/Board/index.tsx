@@ -83,9 +83,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // escolha de movimento, para o efeito de timeout não exibir o toast.
   const escolhaFeitaRef = useRef(false)
   // Resultado sintetizado para a fase "escolha" às cegas (Mecânica 3) —
-  // sempre o mesmo objeto (nada varia: não há dado1/dado2/opcoes pra
-  // reconstruir), criado uma única vez pra manter a MESMA referência
-  // entre renders.
+  // nada varia entre renders (não há dado1/dado2/opcoes pra reconstruir)
+  // EXCETO creditosRestantes, que precisa ser recalculado a partir do
+  // jogador/sessão atuais (ver uso abaixo) — sem isso o botão "Revelar
+  // dados" some sempre que o Board remonta em meio à escolha (troca
+  // compacto/maximizado, refresh, reconexão de socket), mesmo que o
+  // jogador ainda tenha créditos no servidor.
   const fallbackEscolhaRef = useRef<RolarDadosResult>({ duplo: false, foiPreso: false, aguardandoEscolha: true })
   // FIX_TURNO_TRAVADO_CONTADOR (BUG A.2/A.3): timer de liberação de
   // segurança do hold — precisa ser cancelável (duplo dentro de 4s não
@@ -347,6 +350,17 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   // "session:updated" recriaria o objeto e o TurnoModal replicaria a
   // animação de entrada do zero.
   if (!resultado && minhaVez && session.aguardandoEscolha && jogadorDaVez) {
+    // Mesma matemática de recarga que o servidor aplica em
+    // dados.service.ts/turno.service.ts antes de calcular creditosRestantes
+    // — sem isso o fallback mostraria sempre "0 créditos" mesmo já tendo
+    // recarregado.
+    const creditoVisao = jogadorDaVez.creditoVisao ?? 0
+    const creditoRecargaEm = jogadorDaVez.creditoRecargaEm ?? 0
+    const rodadaAtual = session.rodadaAtual ?? 0
+    const creditosRestantes = creditoRecargaEm > 0 && rodadaAtual >= creditoRecargaEm ? 2 : creditoVisao
+    if (fallbackEscolhaRef.current.creditosRestantes !== creditosRestantes) {
+      fallbackEscolhaRef.current = { ...fallbackEscolhaRef.current, creditosRestantes }
+    }
     resultadoModal = fallbackEscolhaRef.current
     modalAbertoFinal = true
     faseInicialModal = "escolha"
@@ -658,7 +672,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
         <div className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 font-inconsolata text-sm">
           🔨 Leilão em andamento — o turno retoma assim que todos decidirem
         </div>
-      ) : session.turnoAtualPlayerId != null && (
+      ) : !interativo && session.turnoAtualPlayerId != null && (
+        // TurnoModal (abaixo) só existe na instância !interativo — deixar
+        // este botão ativo na instância interativa (BoardModal maximizado)
+        // dispara handleRolarDados/setModalAberto num Board que nunca
+        // renderiza o modal, deixando o jogador sem feedback visual até
+        // um F5 remontar só a instância correta.
         <TurnoBanner session={session} meuPlayerId={meuPlayerId} rolando={rolando} onRolarDados={handleRolarDados} />
       )}
       <LeilaoModal session={session} meuPlayerId={meuPlayerId} />
@@ -689,7 +708,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       {/* Compra pendente minimizada — o jogador fechou pra ir vender algo
           e conseguir dinheiro. Fica visível até ele decidir ou o tempo
           da rodada acabar (o backend recusa automaticamente no timeout). */}
-      {minhaVez && session.aguardandoAcao && !modalAbertoFinal && resultadoModal?.compraDisponivel && (
+      {!interativo && minhaVez && session.aguardandoAcao && !modalAbertoFinal && resultadoModal?.compraDisponivel && (
         <button
           onClick={() => setModalAberto(true)}
           className="mb-3 w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-amber-500/50 bg-amber-500/10 text-amber-300 font-inconsolata text-sm hover:bg-amber-500/20 transition-colors cursor-pointer"

@@ -48,16 +48,19 @@ class DadosService {
     await turnoRepository.updateTurno(sessionId, { turnoIniciadoEm: agoraEscolha });
     await timerService.agendarTimeout(sessionId, agoraEscolha);
 
-    const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
-    await emitUpdatedSession(sessionId);
-
     // ── Crédito de Visão ────────────────────────────────────────────────
-    // Recarrega se a rodada atual já passou do prazo agendado.
+    // Recarrega se a rodada atual já passou do prazo agendado. Precisa
+    // acontecer ANTES do emitUpdatedSession abaixo — senão o broadcast
+    // (lido por outros clientes via session.jogadores[].creditoVisao)
+    // carrega o valor pré-recarga, ainda não persistido no banco.
     if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
       await turnoRepository.resetarCreditosVisao(player.id);
       player.creditoVisao = 2;
       player.creditoRecargaEm = 0;
     }
+
+    const { emitUpdatedSession } = await import("../../socket/socket.handler.js");
+    await emitUpdatedSession(sessionId);
 
     // Sempre retorna às cegas — o jogador escolhe se quer revelar usando
     // um crédito (endpoint separado revelarDados). Apenas informa quantos
