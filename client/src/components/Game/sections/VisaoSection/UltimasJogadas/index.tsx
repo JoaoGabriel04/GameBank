@@ -26,13 +26,21 @@ function getTipoIcon(tipo: string) {
   }
 }
 
-function extrairValor(detalhes: string): number | null {
-  const matches = detalhes.match(/R\$ ?([0-9.]+)/g);
+// Pega o ÚLTIMO valor "R$ ..." mencionado em `detalhes` (heurística: em
+// mensagens com um resumo final tipo "... = R$ +395", esse é o total
+// líquido; em mensagens com um único valor, é o próprio valor). O sinal
+// (+/−) precisa fazer parte da classe de caracteres do regex — sem isso,
+// um trecho como "R$ +395" simplesmente não casa e o match cai de volta
+// pro penúltimo valor da string (ex.: a parcela de IPTU), resultando num
+// valor e sinal completamente errados.
+function extrairValor(detalhes: string): { valor: number; sinal: "+" | "-" | null } | null {
+  const matches = detalhes.match(/R\$ ?([+−-]?[0-9.]+)/g);
   if (!matches || matches.length === 0) return null;
-  const lastRaw = matches[matches.length - 1];
-  const valor = parseFloat(lastRaw.replace("R$", "").replace(/\./g, "").trim());
+  const lastRaw = matches[matches.length - 1].replace("R$", "").trim();
+  const sinal = lastRaw.startsWith("+") ? "+" : lastRaw.startsWith("−") || lastRaw.startsWith("-") ? "-" : null;
+  const valor = parseFloat(lastRaw.replace(/^[+−-]/, "").replace(/\./g, ""));
   if (isNaN(valor)) return null;
-  return valor;
+  return { valor, sinal };
 }
 
 function isPositive(detalhes: string, tipo: string): boolean {
@@ -68,8 +76,13 @@ export default function UltimasJogadas({ historico }: Props) {
       </h3>
       <div className="space-y-2">
         {ultimas.map((h) => {
-          const valor = extrairValor(h.detalhes);
-          const positivo = isPositive(h.detalhes, h.tipo);
+          const extraido = extrairValor(h.detalhes);
+          const valor = extraido?.valor ?? null;
+          // Prioriza o sinal do próprio valor extraído (mais confiável que
+          // a heurística por tipo/palavras-chave abaixo) — ex.: um
+          // PASSAGEM_INICIO com líquido negativo (IPTU > crédito) precisa
+          // aparecer em vermelho, não sempre em verde.
+          const positivo = extraido?.sinal ? extraido.sinal === "+" : isPositive(h.detalhes, h.tipo);
           return (
             <div key={h.id} className="flex items-start gap-2.5 text-xs font-inconsolata">
               <span className={`shrink-0 mt-0.5 ${
