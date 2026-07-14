@@ -511,6 +511,16 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       setResultado(r)
     } catch (err: any) {
       toastError(err?.response?.data?.message || "Erro ao mover")
+      // Se escolherMovimento falhar (ex.: perdeu a corrida pro timeout de
+      // 60s do servidor, que já pode ter resolvido esta MESMA escolha
+      // pendente com "soma" e avançado o turno — ver turno.service.ts),
+      // `resultado` continua com aguardandoEscolha=true e o modal fica
+      // travado na tela de escolha pra sempre, já que escolhaFeitaRef
+      // (setado true no início desta função) desarma o efeito de
+      // recuperação por timeout abaixo. Resetar aqui deixa esse efeito
+      // fechar o modal sozinho assim que o socket confirmar que não há
+      // mais nada pendente, sem precisar de F5.
+      escolhaFeitaRef.current = false
     } finally {
       // FIX_TURNO_TRAVADO_CONTADOR (BUG A.1): antes só liberava dentro do
       // try/catch — se a promise nunca resolvesse nem rejeitasse (servidor

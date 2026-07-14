@@ -121,19 +121,39 @@ class TurnoService {
     playerId: number,
     escolha: "dado1" | "dado2" | "soma"
   ) {
-    return withLock(`turno:${sessionId}`, async () => {
-      const session = await this.validarESessaoAtiva(sessionId);
+    try {
+      return await withLock(`turno:${sessionId}`, async () => {
+        const session = await this.validarESessaoAtiva(sessionId);
 
-      if (session.turnoAtualPlayerId !== playerId) {
-        throw new AppError(403, "Não é sua vez de jogar.");
+        if (session.turnoAtualPlayerId !== playerId) {
+          throw new AppError(403, "Não é sua vez de jogar.");
+        }
+
+        // Busca os modificadores de evento UMA VEZ e repassa — os serviços
+        // extraídos nunca buscam por conta própria (evita import circular
+        // entre economia.service e rodada.service).
+        const mods = await rodadaService.getModificadores(sessionId);
+        return movimentoService.escolherMovimentoInterno(sessionId, session, escolha, mods);
+      });
+    } catch (err) {
+      // Corrida contra o timeout de 60s (timer.service.ts avancarPorTimeout):
+      // se o jogador demora perto do limite pra escolher (ex.: gastou tempo
+      // revelando os dados antes), o timeout em memória pode disparar e
+      // resolver a MESMA escolha pendente (com "soma") ANTES do clique do
+      // jogador conseguir o lock — o clique então recebe um 423 genérico
+      // "Recurso ocupado", mesmo já não havendo mais nada pendente (o
+      // servidor já moveu o jogador e avançou o turno). Sem isto, o
+      // jogador via um erro que soa como "tente de novo" quando na
+      // verdade sua vez já tinha sido resolvida — só percebia isso depois
+      // de dar F5.
+      if (err instanceof AppError && err.statusCode === 423) {
+        const atual = await turnoRepository.findSessionComJogadores(sessionId);
+        if (atual && !atual.aguardandoEscolha) {
+          throw new AppError(409, "O tempo para escolher esgotou e o movimento padrão (soma) foi aplicado automaticamente — sua vez já passou.");
+        }
       }
-
-      // Busca os modificadores de evento UMA VEZ e repassa — os serviços
-      // extraídos nunca buscam por conta própria (evita import circular
-      // entre economia.service e rodada.service).
-      const mods = await rodadaService.getModificadores(sessionId);
-      return movimentoService.escolherMovimentoInterno(sessionId, session, escolha, mods);
-    });
+      throw err;
+    }
   }
 
   async revelarDados(sessionId: number, playerId: number) {
