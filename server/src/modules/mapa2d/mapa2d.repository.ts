@@ -62,14 +62,29 @@ export const mapa2dRepository = {
 
   updateSession: (
     sessionId: number,
-    data: { rodadaAtual?: number; fecharMesEm?: Date | null; status?: string }
+    data: {
+      rodadaAtual?: number;
+      fecharMesEm?: Date | null;
+      status?: string;
+      eventoAtual?: string | null;
+      eventoProximo?: string | null;
+    }
   ) => prisma.session.update({ where: { id: sessionId }, data }),
+
+  incrementarInflacaoAcumulada: (sessionId: number, incremento: number) =>
+    prisma.session.update({
+      where: { id: sessionId },
+      data: { inflacaoAcumuladaMapa2D: { increment: incremento } },
+    }),
 
   updatePlayerSaldo: (playerId: number, delta: number) =>
     prisma.sessionPlayer.update({
       where: { id: playerId },
       data: { saldo: { increment: delta } },
     }),
+
+  updatePlayerReputacao: (playerId: number, reputacao: number) =>
+    prisma.sessionPlayer.update({ where: { id: playerId }, data: { reputacao } }),
 
   findDebtAberta: (sessionId: number, playerId: number) =>
     prisma.debt.findFirst({ where: { sessionId, playerId, pago: false } }),
@@ -103,6 +118,21 @@ export const mapa2dRepository = {
   findSessionTerrenosComDono: (sessionId: number, playerId: number) =>
     prisma.sessionTerreno.findMany({
       where: { sessionId, donoId: playerId },
-      include: { construcao: true },
+      include: { construcao: true, terreno: true, emprestimoGarantia: true },
     }),
+
+  // --- Fatia 2: Empréstimo (EmprestimoMapa) ---
+  findEmprestimoAtivo: (sessionId: number, playerId: number) =>
+    prisma.emprestimoMapa.findFirst({
+      where: { sessionId, playerId, quitado: false, executado: false },
+    }),
+
+  atualizarEmprestimoDevido: (emprestimoId: number, novoDevido: number) =>
+    prisma.emprestimoMapa.update({ where: { id: emprestimoId }, data: { valorDevido: novoDevido } }),
+
+  marcarEmprestimoExecutado: (emprestimoId: number) =>
+    prisma.emprestimoMapa.update({ where: { id: emprestimoId }, data: { executado: true } }),
+
+  marcarEmprestimoQuitado: (emprestimoId: number) =>
+    prisma.emprestimoMapa.update({ where: { id: emprestimoId }, data: { quitado: true, quitadoEm: new Date() } }),
 };

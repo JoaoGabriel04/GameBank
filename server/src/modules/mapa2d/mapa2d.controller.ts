@@ -5,6 +5,7 @@ import { AppError } from "../../middleware/error-handler.middleware.js";
 import { parseError } from "../../middleware/error-handler.middleware.js";
 import { terrenoMapa2DService } from "./services/terreno.service.js";
 import { construcaoMapa2DService } from "./services/construcao.service.js";
+import { emprestimoMapa2DService } from "./services/emprestimo.service.js";
 import { mapa2dService } from "./mapa2d.service.js";
 import type { TipoConstrucao } from "../../../generated/prisma/index.js";
 
@@ -16,6 +17,10 @@ const ConstruirSchema = z.object({
 
 const PrecificarSchema = z.object({
   aluguelPedido: z.number().int().nonnegative(),
+});
+
+const PegarEmprestimoSchema = z.object({
+  valor: z.number().int().positive(),
 });
 
 async function getPlayerOuFalha(sessionId: number, userId: number) {
@@ -68,6 +73,41 @@ export const mapa2dController = {
       const sessionId = z.coerce.number().int().positive().parse(req.params.sessionId);
       const player = await getPlayerOuFalha(sessionId, req.user!.userId);
       const result = await mapa2dService.getEstado(sessionId, player.id);
+      return res.status(200).json(result);
+    } catch (err) {
+      return parseError(res, err);
+    }
+  },
+
+  subirNivel: async (req: Request, res: Response) => {
+    try {
+      const sessionId = z.coerce.number().int().positive().parse(req.params.sessionId);
+      const construcaoId = z.coerce.number().int().positive().parse(req.params.construcaoId);
+      const player = await getPlayerOuFalha(sessionId, req.user!.userId);
+      const result = await construcaoMapa2DService.subirNivel(sessionId, player.id, construcaoId);
+      return res.status(200).json(result);
+    } catch (err) {
+      return parseError(res, err);
+    }
+  },
+
+  pegarEmprestimo: async (req: Request, res: Response) => {
+    try {
+      const sessionId = z.coerce.number().int().positive().parse(req.params.sessionId);
+      const player = await getPlayerOuFalha(sessionId, req.user!.userId);
+      const { valor } = PegarEmprestimoSchema.parse(req.body);
+      const result = await emprestimoMapa2DService.pegarEmprestimo(sessionId, player.id, valor);
+      return res.status(200).json(result);
+    } catch (err) {
+      return parseError(res, err);
+    }
+  },
+
+  quitarEmprestimo: async (req: Request, res: Response) => {
+    try {
+      const sessionId = z.coerce.number().int().positive().parse(req.params.sessionId);
+      const player = await getPlayerOuFalha(sessionId, req.user!.userId);
+      const result = await emprestimoMapa2DService.quitarEmprestimo(sessionId, player.id);
       return res.status(200).json(result);
     } catch (err) {
       return parseError(res, err);

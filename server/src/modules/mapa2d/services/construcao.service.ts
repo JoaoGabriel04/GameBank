@@ -3,7 +3,8 @@ import { prisma } from "../../../lib/prisma.js";
 import { AppError } from "../../../middleware/error-handler.middleware.js";
 import { emitToRoom } from "../../../lib/socket.js";
 import { mapa2dRepository } from "../mapa2d.repository.js";
-import { CUSTO_POR_SLOT, SLOTS_CONSTRUCAO } from "../../../constants/economiaMapa2D.js";
+import { getEventoMapa2D } from "../../../constants/eventosMapa2D.js";
+import { CUSTO_POR_SLOT, CUSTO_UPGRADE_MULT, NIVEL_MAX, SLOTS_CONSTRUCAO } from "../../../constants/economiaMapa2D.js";
 import { economiaMapa2DService } from "./economia.service.js";
 
 const TIPOS_VALIDOS = Object.keys(SLOTS_CONSTRUCAO) as TipoConstrucao[];
@@ -18,7 +19,11 @@ class ConstrucaoMapa2DService {
     if (st.donoId !== playerId) throw new AppError(403, "Você não é dono deste terreno.");
     if (st.construcao) throw new AppError(400, "Este terreno já tem uma construção.");
 
-    const custo = SLOTS_CONSTRUCAO[tipo] * CUSTO_POR_SLOT;
+    const session = await mapa2dRepository.findSessionAtiva(sessionId);
+    const evento = getEventoMapa2D(session?.eventoAtual);
+    const custoBase = SLOTS_CONSTRUCAO[tipo] * CUSTO_POR_SLOT;
+    const custo = Math.round(custoBase * (evento?.efeito.custoConstrucaoMult ?? 1.0));
+
     const player = await mapa2dRepository.findPlayer(playerId);
     if (!player) throw new AppError(404, "Jogador não encontrado.");
     if (player.saldo < custo) throw new AppError(400, "Saldo insuficiente.");
@@ -67,10 +72,62 @@ class ConstrucaoMapa2DService {
   }
 
   /** Aluguel recomendado — para exibir na UI antes do jogador decidir. */
-  async getAluguelRecomendado(sessionTerrenoId: number, tipo: TipoConstrucao) {
+  async getAluguelRecomendado(sessionId: number, sessionTerrenoId: number, tipo: TipoConstrucao) {
     const st = await mapa2dRepository.findSessionTerrenoById(sessionTerrenoId);
     if (!st) throw new AppError(404, "Terreno não encontrado.");
-    return economiaMapa2DService.calcularAluguelRecomendado(st.terreno.multiplicador, tipo);
+    const session = await mapa2dRepository.findSessionAtiva(sessionId);
+    const evento = getEventoMapa2D(session?.eventoAtual);
+    return economiaMapa2DService.calcularAluguelRecomendado(
+      st.terreno.multiplicador,
+      tipo,
+      evento?.efeito.mercadoMult ?? 1.0,
+      session?.inflacaoAcumuladaMapa2D ?? 0
+    );
+  }
+
+  /**
+   * Sobe 1 nível da construção. Atômico via `updateMany WHERE nivel: atual`
+   * — MESMA garantia não-negociável da compra de terreno (GDD Seção 9):
+   * evita que um duplo-clique pague dois upgrades e só aplique um (ou vice-versa).
+   */
+  async subirNivel(sessionId: number, playerId: number, construcaoId: number) {
+    const construcao = await mapa2dRepository.findConstrucaoDoJogador(construcaoId, playerId);
+    if (!construcao || construcao.sessionTerreno.sessionId !== sessionId) {
+      throw new AppError(404, "Construção não encontrada.");
+    }
+
+    const max = NIVEL_MAX[construcao.tipo];
+    if (construcao.nivel >= max) throw new AppError(400, "Esta construção já está no nível máximo.");
+
+    const custoBase = SLOTS_CONSTRUCAO[construcao.tipo] * CUSTO_POR_SLOT;
+    const custoUpgrade = Math.round(custoBase * Math.pow(CUSTO_UPGRADE_MULT, construcao.nivel));
+
+    const session = await mapa2dRepository.findSessionAtiva(sessionId);
+    const evento = getEventoMapa2D(session?.eventoAtual);
+    const custoFinal = Math.round(custoUpgrade * (evento?.efeito.custoConstrucaoMult ?? 1.0));
+
+    const player = await mapa2dRepository.findPlayer(playerId);
+    if (!player) throw new AppError(404, "Jogador não encontrado.");
+    if (player.saldo < custoFinal) throw new AppError(400, "Saldo insuficiente para o upgrade.");
+
+    // ATÔMICO — só sobe se ainda estiver no nível esperado (evita corrida de duplo-clique).
+    const resultado = await prisma.construcao.updateMany({
+      where: { id: construcaoId, nivel: construcao.nivel },
+      data: { nivel: { increment: 1 } },
+    });
+    if (resultado.count === 0) throw new AppError(409, "O nível já mudou — tente novamente.");
+
+    await mapa2dRepository.updatePlayerSaldo(playerId, -custoFinal);
+
+    await mapa2dRepository.criarHistorico(
+      sessionId,
+      "MAPA2D_UPGRADE_NIVEL",
+      `${player.nome} subiu ${construcao.tipo} de ${construcao.sessionTerreno.terreno.codigo} para o nível ${construcao.nivel + 1} por R$ ${custoFinal}`
+    );
+
+    emitToRoom(sessionId, "mapa2d:nivel_subiu", { construcaoId, novoNivel: construcao.nivel + 1, custo: custoFinal });
+
+    return { sucesso: true, novoNivel: construcao.nivel + 1, custo: custoFinal };
   }
 }
 

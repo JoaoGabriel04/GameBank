@@ -3,7 +3,11 @@ import { emitToRoom } from "../../lib/socket.js";
 import { mapa2dRepository } from "./mapa2d.repository.js";
 import { economiaMapa2DService } from "./services/economia.service.js";
 import { timerMapa2DService } from "./services/timer.service.js";
-import { SALDO_INICIAL_MAPA2D } from "../../constants/economiaMapa2D.js";
+import {
+  LIMIAR_DESEMPATE_REPUTACAO_PCT,
+  REPUTACAO_LIMIAR_VITORIA,
+  SALDO_INICIAL_MAPA2D,
+} from "../../constants/economiaMapa2D.js";
 
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -42,7 +46,10 @@ class Mapa2DService {
     await timerMapa2DService.agendarFechamento(sessionId);
   }
 
-  /** Fim de partida: vitória por patrimônio líquido apenas (sem Reputação — entra na Fatia 2). */
+  /**
+   * Fim de partida: ranking por patrimônio líquido, com desempate por
+   * Reputação quando o 1º e o 2º colocado estão próximos (GDD Seção 3).
+   */
   async encerrarPartida(sessionId: number) {
     const { cancelFechamentoTimer } = await import("./services/timer.service.js");
     cancelFechamentoTimer(sessionId);
@@ -56,6 +63,28 @@ class Mapa2DService {
       }))
     );
     ranking.sort((a, b) => b.patrimonio - a.patrimonio);
+
+    if (ranking.length >= 2) {
+      const [primeiro, segundo] = ranking;
+      const limiar = primeiro.patrimonio * LIMIAR_DESEMPATE_REPUTACAO_PCT;
+
+      if (primeiro.patrimonio - segundo.patrimonio < limiar) {
+        const jogadorPrimeiro = await mapa2dRepository.findPlayer(primeiro.playerId);
+        const jogadorSegundo = await mapa2dRepository.findPlayer(segundo.playerId);
+        const repPrimeiro = jogadorPrimeiro?.reputacao ?? 0;
+        const repSegundo = jogadorSegundo?.reputacao ?? 0;
+
+        const primeiroQualifica = repPrimeiro >= REPUTACAO_LIMIAR_VITORIA;
+        const segundoQualifica = repSegundo >= REPUTACAO_LIMIAR_VITORIA;
+
+        if (segundoQualifica && !primeiroQualifica) {
+          [ranking[0], ranking[1]] = [ranking[1], ranking[0]]; // 2º assume 1º lugar
+        } else if (primeiroQualifica && segundoQualifica && repSegundo > repPrimeiro) {
+          [ranking[0], ranking[1]] = [ranking[1], ranking[0]];
+        }
+        // Se nenhum qualifica, ou só o 1º qualifica: mantém a ordem por patrimônio
+      }
+    }
 
     await mapa2dRepository.updateSession(sessionId, { status: "Finalizada" });
     await mapa2dRepository.criarHistorico(

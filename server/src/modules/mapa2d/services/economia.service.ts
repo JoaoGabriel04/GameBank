@@ -1,14 +1,17 @@
 import type { TipoConstrucao } from "../../../../generated/prisma/index.js";
 import { mapa2dRepository } from "../mapa2d.repository.js";
 import {
+  ALUGUEL_GANHO_POR_NIVEL,
   CUSTO_POR_SLOT,
   FAIXAS_IMPOSTO,
   IPTU_PCT,
   MULT_CONSTRUCAO,
   OCUPACAO_LIMIAR_INFERIOR,
   OCUPACAO_PROB_MINIMA,
+  REPUTACAO_AJUSTE_OCUPACAO_POR_PONTO,
   RENDA_BASE_REF,
   SLOTS_CONSTRUCAO,
+  manutencaoGanhoPorNivel,
   sensibilidadeRegiao,
 } from "../../../constants/economiaMapa2D.js";
 
@@ -37,16 +40,45 @@ class EconomiaMapa2DService {
     return ativos - (debt?.valor ?? 0);
   }
 
-  /** Aluguel recomendado — mercado e inflação fixos em 1.0 nesta fatia (sem eventos ainda). */
-  calcularAluguelRecomendado(multiplicadorRegiao: number, tipo: TipoConstrucao): number {
+  /** Aluguel recomendado no nível 1 — mercado e inflação vêm do evento ativo da sessão (Fatia 2). */
+  calcularAluguelRecomendado(
+    multiplicadorRegiao: number,
+    tipo: TipoConstrucao,
+    mercadoMult: number,
+    inflacaoAcumulada: number
+  ): number {
     const base = RENDA_BASE_REF * multiplicadorRegiao;
-    return Math.round(base * MULT_CONSTRUCAO[tipo] * 1.0 * 1.0);
+    const fatorInflacao = 1 + inflacaoAcumulada;
+    return Math.round(base * MULT_CONSTRUCAO[tipo] * mercadoMult * fatorInflacao);
   }
 
-  /** Curva de ocupação validada por simulação (GDD Seção 5). */
-  calcularOcupacao(aluguelPedido: number, recomendado: number, categoria: "comum" | "mediana" | "rica"): boolean {
+  /** Aplica o ganho de +55%/nível (composto) sobre um valor de referência de nível 1. */
+  aluguelNoNivel(baseNivel1: number, nivel: number): number {
+    let v = baseNivel1;
+    for (let n = 1; n < nivel; n++) v = Math.round(v * (1 + ALUGUEL_GANHO_POR_NIVEL));
+    return v;
+  }
+
+  /** Manutenção cresce mais rápido por nível quanto mais rica a região (GDD Seção 4). */
+  manutencaoNoNivel(baseNivel1: number, nivel: number, multiplicadorRegiao: number): number {
+    const ganho = manutencaoGanhoPorNivel(multiplicadorRegiao);
+    let v = baseNivel1;
+    for (let n = 1; n < nivel; n++) v = Math.round(v * (1 + ganho));
+    return v;
+  }
+
+  /** Curva de ocupação validada por simulação (GDD Seção 5) — Reputação ajusta a sensibilidade (Fatia 2). */
+  calcularOcupacao(
+    aluguelPedido: number,
+    recomendado: number,
+    categoria: "comum" | "mediana" | "rica",
+    reputacaoDono: number
+  ): boolean {
     if (recomendado <= 0) return false;
-    const sens = sensibilidadeRegiao(categoria);
+    const sensBase = sensibilidadeRegiao(categoria);
+    // Reputação 3.0 = neutro (sem ajuste). Cada ponto acima/abaixo ajusta a tolerância de preço.
+    const ajusteReputacao = (reputacaoDono - 3.0) * REPUTACAO_AJUSTE_OCUPACAO_POR_PONTO;
+    const sens = Math.max(0.05, sensBase + ajusteReputacao);
     const razao = aluguelPedido / recomendado;
 
     let prob: number;

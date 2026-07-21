@@ -33,4 +33,25 @@ mapa2dRouter.post(
   mapa2dController.precificar
 );
 
+mapa2dRouter.post(
+  "/:sessionId/construcao/:construcaoId/subir-nivel",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  mapa2dController.subirNivel
+);
+
+mapa2dRouter.post(
+  "/:sessionId/emprestimo/pegar",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  mapa2dController.pegarEmprestimo
+);
+
+mapa2dRouter.post(
+  "/:sessionId/emprestimo/quitar",
+  authenticate,
+  authenticateRoom("params", "sessionId"),
+  mapa2dController.quitarEmprestimo
+);
+
 export default mapa2dRouter;

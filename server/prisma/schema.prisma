@@ -211,6 +211,7 @@ model Session {
 
   // --- Mapa 2D (mapa2d) ---
   fecharMesEm DateTime? // timestamp do próximo fechamento de mês — timer resiliente (mesmo padrão do turno)
+  inflacaoAcumuladaMapa2D Float @default(0) // cumulativa mês a mês (distinto de mercadoMult, que vale só o mês corrente)
 
   // --- Leilão Cego ---
   emLeilao          Boolean   @default(false)
@@ -231,6 +232,7 @@ model Session {
   coinTransactions CoinTransaction[]
   bauAdquiridos    BauAdquirido[]
   sessionTerrenos  SessionTerreno[]
+  emprestimosMapa2D EmprestimoMapa[]
 
   @@index([ownerId])
   @@map("sessions")
@@ -281,6 +283,7 @@ model SessionPlayer {
   reputacao Float @default(3.0) // índice 0.0-5.0, só usado quando tipoJogo=mapa2d; não usado na Fatia 1
 
   sessionTerrenos SessionTerreno[]
+  emprestimosMapa2D EmprestimoMapa[]
 
   @@index([userId])
   @@index([sessionId])
@@ -863,6 +866,7 @@ model SessionTerreno {
   adquiridoEm DateTime?
 
   construcao Construcao?
+  emprestimoGarantia EmprestimoMapa?
 
   @@unique([sessionId, terrenoId]) // REQUISITO DE SEGURANÇA — compra atômica via updateMany WHERE donoId: null
   @@index([sessionId])
@@ -876,10 +880,34 @@ model Construcao {
   sessionTerreno   SessionTerreno @relation(fields: [sessionTerrenoId], references: [id], onDelete: Cascade)
 
   tipo          TipoConstrucao
-  nivel         Int      @default(1) // fixo em 1 na Fatia 1 — sem upgrade
+  nivel         Int      @default(1) // sobe via subirNivel() — atômico (updateMany WHERE nivel: atual)
   aluguelPedido Int      @default(0)
   ocupado       Boolean  @default(false)
   construidoEm  DateTime @default(now())
 
   @@map("construcoes_mapa2d")
+}
+
+/// Empréstimo do Mapa 2D — modelo distinto do `Emprestimo` do Modo Tabuleiro
+/// (domínios diferentes: garantia é uma SessionTerreno/Construcao, não um
+/// grupo de cor de propriedade). Não reutilizar `Emprestimo`.
+model EmprestimoMapa {
+  id        Int     @id @default(autoincrement())
+  sessionId Int
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  playerId  Int
+  player    SessionPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  valorOriginal Int
+  valorDevido   Int
+  garantiaSessionTerrenoId Int            @unique
+  garantiaSessionTerreno   SessionTerreno @relation(fields: [garantiaSessionTerrenoId], references: [id])
+
+  quitado   Boolean   @default(false)
+  executado Boolean   @default(false)
+  criadoEm  DateTime  @default(now())
+  quitadoEm DateTime?
+
+  @@index([sessionId, playerId])
+  @@map("emprestimos_mapa2d")
 }
