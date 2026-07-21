@@ -121,7 +121,7 @@ export interface GameSession {
   id: number;
   nome?: string;
   modo?: 'individual' | 'duplas';
-  tipoJogo?: 'banca' | 'tabuleiro';
+  tipoJogo?: 'banca' | 'tabuleiro' | 'mapa2d';
   tabuleiro?: Casa[]; // presente apenas quando tipoJogo === 'tabuleiro'
   turnoAtualPlayerId?: number | null;
   turnoIniciadoEm?: string | null;

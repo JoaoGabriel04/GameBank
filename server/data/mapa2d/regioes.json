@@ -1,0 +1,20 @@
+[
+  { "nome": "Vila Nova", "categoria": "comum", "multiplicador": 0.60, "terrenos": 5 },
+  { "nome": "Trizidela", "categoria": "comum", "multiplicador": 0.70, "terrenos": 4 },
+  { "nome": "Formosa", "categoria": "comum", "multiplicador": 0.65, "terrenos": 5 },
+  { "nome": "Boa Vista", "categoria": "comum", "multiplicador": 0.55, "terrenos": 4 },
+  { "nome": "Santa Cruz", "categoria": "comum", "multiplicador": 0.72, "terrenos": 5 },
+  { "nome": "Vila Operária", "categoria": "comum", "multiplicador": 0.68, "terrenos": 5 },
+  { "nome": "Mascherano", "categoria": "mediana", "multiplicador": 1.30, "terrenos": 5 },
+  { "nome": "Duque de Caxias", "categoria": "mediana", "multiplicador": 1.50, "terrenos": 4 },
+  { "nome": "Vila Esperança", "categoria": "mediana", "multiplicador": 1.10, "terrenos": 4 },
+  { "nome": "Paulo Feto", "categoria": "mediana", "multiplicador": 1.40, "terrenos": 4 },
+  { "nome": "Jardim das Flores", "categoria": "mediana", "multiplicador": 1.20, "terrenos": 5 },
+  { "nome": "Vila Progresso", "categoria": "mediana", "multiplicador": 1.15, "terrenos": 4 },
+  { "nome": "Nova Aliança", "categoria": "mediana", "multiplicador": 1.45, "terrenos": 4 },
+  { "nome": "Alphaville", "categoria": "rica", "multiplicador": 3.50, "terrenos": 3 },
+  { "nome": "Lagoa de Pedra", "categoria": "rica", "multiplicador": 2.80, "terrenos": 4 },
+  { "nome": "Três Poderes", "categoria": "rica", "multiplicador": 3.20, "terrenos": 4 },
+  { "nome": "Jardins Altos", "categoria": "rica", "multiplicador": 3.70, "terrenos": 3 },
+  { "nome": "Riviera", "categoria": "rica", "multiplicador": 3.00, "terrenos": 4 }
+]

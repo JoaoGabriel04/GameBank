@@ -2,6 +2,7 @@ import { prisma } from "../lib/prisma.js";
 import type { Prisma } from "../../generated/prisma/index.js";
 import propriedades from "../../data/propriedades.json"
 import { logger } from "../lib/logger.js";
+import { seedMapa2D } from "./seed-mapa2d.js";
 
 const shopItems = [
   { name: "Título Investidor",    description: "Mostre que você investe bem",          price: 200,  icon: "faChartLine",   type: "title", value: '{"title":"Investidor"}',  raridade: "COMUM",    fragmentavel: true, fragmentosTotal: 5  },
@@ -41,5 +42,16 @@ export async function ensureGameData() {
     })
 
     logger.info({ count: shopItems.length }, "seed itens da loja criados")
+  }
+
+  // 3️⃣ Popular terrenos do mapa 2D se estiverem vazios (idempotente via upsert)
+  const countTerrenos = await prisma.terreno.count()
+
+  if (countTerrenos === 0) {
+    logger.info("seed inserindo terrenos do mapa2d")
+
+    await seedMapa2D(prisma)
+
+    logger.info("seed terrenos do mapa2d criados")
   }
 }

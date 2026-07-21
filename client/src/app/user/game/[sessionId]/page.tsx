@@ -4,6 +4,7 @@
 import Loja from "@/components/Loja";
 import Board from "@/components/Board";
 import GameShell from "@/components/Game/GameShell";
+import Mapa2DShell from "@/components/Game/Mapa2D";
 import VisaoSection from "@/components/Game/sections/VisaoSection";
 import ImoveisSection from "@/components/Game/sections/ImoveisSection";
 import BancoSection from "@/components/Game/sections/BancoSection";
@@ -610,6 +611,10 @@ export default function Game() {
       return renderWaitingRoom();
     }
 
+    if (currentSession.tipoJogo === "mapa2d") {
+      return <Mapa2DShell sessionId={currentSession.id} />;
+    }
+
     switch (abaAtual) {
       case "Visão":
         return (
@@ -685,7 +690,8 @@ export default function Game() {
   }
 
   const isWaiting = currentSession.status === "Esperando";
-  const linksNav = currentSession.tipoJogo === "tabuleiro" ? linksNavTabuleiro : linksNavBanca;
+  const isMapa2D = currentSession.tipoJogo === "mapa2d";
+  const linksNav = isMapa2D ? [] : currentSession.tipoJogo === "tabuleiro" ? linksNavTabuleiro : linksNavBanca;
   const currentPlayer = currentSession?.jogadores?.find(
     (p) => p.userId === authUser?.id
   );

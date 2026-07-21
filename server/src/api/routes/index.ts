@@ -19,6 +19,7 @@ import bauRouter from "./bau.route.js"
 import turnoRouter from "./turno.route.js"
 import leilaoRouter from "./leilao.route.js"
 import emprestimoRouter from "./emprestimo.route.js"
+import mapa2dRouter from "./mapa2d.route.js"
 
 const apiRouter = Router()
 
@@ -42,5 +43,6 @@ apiRouter.use("/baus", bauRouter)
 apiRouter.use("/turno", turnoRouter)
 apiRouter.use("/leilao", leilaoRouter)
 apiRouter.use("/emprestimos", emprestimoRouter)
+apiRouter.use("/mapa2d", mapa2dRouter)
 
 export default apiRouter

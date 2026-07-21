@@ -257,6 +257,16 @@ export class SessionService {
       }
     }
 
+    if (session.tipoJogo === "mapa2d") {
+      // Mapa 2D tem seu próprio setup (terrenos + saldo inicial fixo) —
+      // não usa SessionPosses (tabuleiro) nem session.saldoInicial.
+      await this.repo.updateStatus(session.id, "Em Andamento");
+      const { mapa2dService } = await import("../mapa2d/mapa2d.service.js");
+      await mapa2dService.iniciarPartida(session.id, activePlayers.map((p) => p.id));
+      await this.invalidateCache(session.id);
+      return this.repo.findById(session.id);
+    }
+
     // Create session posses (properties)
     const possesBase = await this.repo.findAllPosses();
     const sessionPossesData = possesBase.map((p) => ({

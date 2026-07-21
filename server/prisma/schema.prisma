@@ -91,6 +91,23 @@ enum SessionModo {
 enum TipoJogo {
   banca     // modo atual — só gerencia dinheiro (tabuleiro físico)
   tabuleiro // jogo completo com tabuleiro digital
+  mapa2d    // tycoon imobiliário em mapa 2D (GameBank 2D, Fatia 1)
+}
+
+enum CategoriaRegiao {
+  comum
+  mediana
+  rica
+}
+
+enum TipoConstrucao {
+  casa
+  sobrado
+  comercio
+  apartamento
+  centro_comercial
+  hotel
+  corporativo
 }
 
 model Propriedade {
@@ -192,6 +209,9 @@ model Session {
   eventoProximo      String?   // código do evento anunciado para a próxima rodada de evento
   eventoRodadasRestantes Int   @default(0) // rodadas restantes do eventoAtual (0 = nenhum ativo)
 
+  // --- Mapa 2D (mapa2d) ---
+  fecharMesEm DateTime? // timestamp do próximo fechamento de mês — timer resiliente (mesmo padrão do turno)
+
   // --- Leilão Cego ---
   emLeilao          Boolean   @default(false)
   leilaoPropId      Int?      // propriedade sendo leiloada
@@ -210,6 +230,7 @@ model Session {
   emprestimos  Emprestimo[]
   coinTransactions CoinTransaction[]
   bauAdquiridos    BauAdquirido[]
+  sessionTerrenos  SessionTerreno[]
 
   @@index([ownerId])
   @@map("sessions")
@@ -255,6 +276,11 @@ model SessionPlayer {
   dividaBanco        Int      @default(0)   // valor devido ao banco
   creditoVisao       Int      @default(2)   // créditos para ver dados antes de escolher (Mecânica 3)
   creditoRecargaEm   Int      @default(0)   // rodada em que os créditos são recarregados (0 = sem pendência)
+
+  // --- Mapa 2D (mapa2d) ---
+  reputacao Float @default(3.0) // índice 0.0-5.0, só usado quando tipoJogo=mapa2d; não usado na Fatia 1
+
+  sessionTerrenos SessionTerreno[]
 
   @@index([userId])
   @@index([sessionId])
@@ -799,4 +825,61 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@map("audit_logs")
+}
+
+// ── GameBank 2D (mapa2d) — Fatia 1 ──────────────────────────────────────────
+// Ver GAMEBANK_2D_GDD.md e GAMEBANK_2D_UML.md. Espelha o padrão
+// Propriedade (estático) + SessionPosses (dinâmico) do Modo Tabuleiro.
+
+/// Referência ESTÁTICA — populada uma vez no startup a partir de
+/// server/data/mapa2d/regioes.json, nunca por sessão.
+model Terreno {
+  id            Int             @id @default(autoincrement())
+  codigo        String          @unique
+  regiaoNome    String
+  categoria     CategoriaRegiao
+  multiplicador Float
+  slots         Int             @default(1) // reservado p/ Fatia 3; hoje sempre 1 construção
+  precoBase     Int
+
+  sessionTerrenos SessionTerreno[]
+
+  @@map("terrenos_mapa2d")
+}
+
+/// Dinâmico por sessão — espelha SessionPosses.
+model SessionTerreno {
+  id        Int     @id @default(autoincrement())
+  sessionId Int
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  terrenoId Int
+  terreno   Terreno @relation(fields: [terrenoId], references: [id])
+
+  donoId Int?
+  dono   SessionPlayer? @relation(fields: [donoId], references: [id])
+
+  precoPago   Int?
+  adquiridoEm DateTime?
+
+  construcao Construcao?
+
+  @@unique([sessionId, terrenoId]) // REQUISITO DE SEGURANÇA — compra atômica via updateMany WHERE donoId: null
+  @@index([sessionId])
+  @@index([donoId])
+  @@map("session_terrenos_mapa2d")
+}
+
+model Construcao {
+  id               Int            @id @default(autoincrement())
+  sessionTerrenoId Int            @unique
+  sessionTerreno   SessionTerreno @relation(fields: [sessionTerrenoId], references: [id], onDelete: Cascade)
+
+  tipo          TipoConstrucao
+  nivel         Int      @default(1) // fixo em 1 na Fatia 1 — sem upgrade
+  aluguelPedido Int      @default(0)
+  ocupado       Boolean  @default(false)
+  construidoEm  DateTime @default(now())
+
+  @@map("construcoes_mapa2d")
 }

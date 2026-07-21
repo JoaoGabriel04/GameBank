@@ -18,6 +18,7 @@ import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket, getIO } from "./lib/socket.js";
 import { turnoService } from "./modules/turno/turno.service.js";
 import { leilaoService } from "./modules/leilao/leilao.service.js";
+import { timerMapa2DService } from "./modules/mapa2d/services/timer.service.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
 import { logger } from "./lib/logger.js";
@@ -149,6 +150,11 @@ async function start() {
   turnoService.recoverStuckSessions().catch(err => {
     logger.error({ err }, "erro ao recuperar sessões travadas no startup");
   });
+  // Mapa 2D: mesmo racional do BUG 6 do Modo Tabuleiro, para o fechamento
+  // de mês (timer resiliente — ver mapa2d/services/timer.service.ts).
+  timerMapa2DService.recoverStuckSessions().catch(err => {
+    logger.error({ err }, "erro ao recuperar fechamentos de mês travados do mapa2d no startup");
+  });
   // BUG 6: varredura periódica pra recuperar turnos travados por timers
   // perdidos (hibernação/restart do free tier) enquanto o processo roda.
   setInterval(() => {
@@ -160,6 +166,9 @@ async function start() {
     // o turno fica pausado enquanto emLeilao for true.
     leilaoService.varrerLeiloesExpirados().catch(err => {
       logger.error({ err }, "erro na varredura de leilões expirados");
+    });
+    timerMapa2DService.varrerFechamentosExpirados().catch(err => {
+      logger.error({ err }, "erro na varredura de fechamentos de mês do mapa2d");
     });
   }, 15_000);
   startCronJobs();

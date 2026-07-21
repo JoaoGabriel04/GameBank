@@ -33,7 +33,7 @@ export default function NewSession() {
   const [reqLoading, setReqLoading] = useState(false);
   const { loadFromStorage } = useAuthStore();
   const [modo, setModo] = useState<'individual' | 'duplas'>('individual');
-  const [tipoJogo, setTipoJogo] = useState<'banca' | 'tabuleiro'>('banca');
+  const [tipoJogo, setTipoJogo] = useState<'banca' | 'tabuleiro' | 'mapa2d'>('banca');
   const [sessionName, setSessionName] = useState("");
   const [senha, setSenha] = useState("");
   const [maxJogadores, setMaxJogadores] = useState(6);
@@ -221,6 +221,16 @@ export default function NewSession() {
               >
                 <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Modo Tabuleiro</div>
                 <p className="text-sm text-zinc-500 font-inconsolata">Jogue tudo no app, com tabuleiro digital</p>
+              </button>
+              <button
+                onClick={() => setTipoJogo('mapa2d')}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all cursor-pointer ${tipoJogo === 'mapa2d'
+                  ? 'border-amber-400 bg-amber-400/10'
+                  : 'border-zinc-700 bg-zinc-950/50 hover:border-zinc-500'
+                }`}
+              >
+                <div className="text-lg font-semibold font-jaro text-zinc-100 mb-1">Mapa 2D <span className="text-xs text-zinc-500">(beta)</span></div>
+                <p className="text-sm text-zinc-500 font-inconsolata">Tycoon imobiliário em mapa compartilhado, rodadas simultâneas</p>
               </button>
             </div>
           </div>
@@ -443,7 +453,7 @@ export default function NewSession() {
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 font-inconsolata">Tipo:</span>
                 <span className="text-lg font-semibold text-zinc-100 font-inconsolata">
-                  {tipoJogo === 'banca' ? 'Modo Banca' : 'Modo Tabuleiro'}
+                  {tipoJogo === 'banca' ? 'Modo Banca' : tipoJogo === 'tabuleiro' ? 'Modo Tabuleiro' : 'Mapa 2D'}
                 </span>
               </div>
 

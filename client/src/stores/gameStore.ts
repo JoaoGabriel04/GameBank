@@ -78,7 +78,7 @@ interface GameStore {
   error: string | null;
   propertiesCache: Record<number, Propriedade>;
 
-  createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number, tipoJogo?: 'banca' | 'tabuleiro') => Promise<number | undefined>;
+  createSession: (nome: string, senha?: string, modo?: 'individual' | 'duplas', maxJogadores?: number, saldoInicial?: number, times?: { nome: string; cor: string }[], criadorNome?: string, criadorCor?: string, criadorTeamIndex?: number, tipoJogo?: 'banca' | 'tabuleiro' | 'mapa2d') => Promise<number | undefined>;
   loadSession: (sessionId: number) => Promise<void>;
   startSession: (sessionId: number) => Promise<void>;
   passarVez: (sessionId: number) => Promise<void>;
