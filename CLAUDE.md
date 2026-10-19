@@ -194,19 +194,7 @@ Specs, design docs and fix plans live in `docs/` (`docs/mapa-2d/` for the 2D map
 
 | File | Reason kept |
 |---|---|
-| `client/src/components/BadgeCollection/index.tsx` | Replaced by Cofre (`/user/cofre`) |
-| `client/src/components/Header/index.tsx` | Replaced by `UserNav` + `LandingHeader` |
-| `client/src/components/MobileMenu/index.tsx` | Unused |
 | `client/src/components/PlayerCard/index.tsx` | Replaced by local version in game page |
-| `client/src/components/Title1/index.tsx` | Unused |
-| `client/src/components/ui/button.tsx` | shadcn/ui — unused |
-| `client/src/components/ui/dropdown-menu.tsx` | shadcn/ui — unused |
-| `client/src/components/ui/select.tsx` | shadcn/ui — unused |
-| `client/src/lib/asyncAction.ts` | Never imported |
-| `client/src/hooks/useBannerCatalog.ts` | Never imported |
-| `client/src/constants/badges.ts` | Never imported |
-| `GameBank Design System/` (root) | Design mockups |
-| `screenshots/` (root) | Unreferenced screenshots |
 
 ## Conventions
 
