@@ -58,7 +58,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
-        if (!res.ok) {
+        // Só 401 significa token inválido. 429/5xx são transitórios e não
+        // devem deslogar.
+        if (res.status === 401) {
           logout();
           router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
         }

@@ -108,6 +108,9 @@ function createAuthLimiter() {
     ...baseRateLimit,
     windowMs: 15 * 60 * 1000,
     max: 20,
+    // O limite é contra força bruta em login/cadastro. O GET /me já exige JWT,
+    // roda a cada carga de página e fica só no limiter geral da API.
+    skip: (req) => req.method === "GET" && req.path === "/me",
     message: { message: "Muitas requisições. Tente novamente em 15 minutos." },
   });
 }
