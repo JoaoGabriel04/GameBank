@@ -43,3 +43,10 @@ export const OCIOSA_PCT = 0.03;
 
 /** Terreno ocioso: degrau máximo (teto = OCIOSA_PCT × OCIOSA_DEGRAUS_MAX). */
 export const OCIOSA_DEGRAUS_MAX = 4;
+
+/** Regra do terreno ocioso no formato de calcularCustoOciosa (economia-core). */
+export const OCIOSA_REGRA = {
+  carenciaRodadas: OCIOSA_CARENCIA_RODADAS,
+  pct: OCIOSA_PCT,
+  degrausMax: OCIOSA_DEGRAUS_MAX,
+};

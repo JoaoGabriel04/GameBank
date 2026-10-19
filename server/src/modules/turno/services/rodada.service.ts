@@ -1,7 +1,7 @@
 import { turnoRepository } from "../turno.repository.js";
 import { getEvento, sortearEvento, EVENTO_DURACAO_RODADAS, type EventoEfeito } from "../../../constants/eventos.js";
-import { RENDA_PASSIVA_PCT, MANUTENCAO_PCT, HOTEL_EQUIVALE_CASAS } from "../../../constants/economia.js";
-import { calcularAluguel, aplicarMod } from "../../../shared/economia-core.js";
+import { RENDA_PASSIVA_PCT, MANUTENCAO_PCT, HOTEL_EQUIVALE_CASAS, OCIOSA_REGRA } from "../../../constants/economia.js";
+import { calcularAluguel, aplicarMod, calcularCustoOciosa } from "../../../shared/economia-core.js";
 import { economiaService } from "./economia.service.js";
 
 class RodadaService {
@@ -117,6 +117,10 @@ class RodadaService {
     for (const jogador of jogadores) {
       let renda = 0;
       let manutencao = 0;
+      // Terreno ocioso: cobrado junto da manutenção, mas registrado à parte
+      // (por propriedade) para o jogador entender de onde veio o custo.
+      let ociosa = 0;
+      const ociosas: { nome: string; rodadas: number; custo: number }[] = [];
       for (const posse of jogador.sessionPosses) {
         if (posse.hipotecada || !posse.propriedade) continue;
         if (posse.propriedade.tipo === "ação") continue;
@@ -125,9 +129,28 @@ class RodadaService {
         const aluguelAtual = calcularAluguel(posse.propriedade, casas);
         renda += aplicarMod(aluguelAtual * RENDA_PASSIVA_PCT, mods.rendaPassivaMult);
         manutencao += aplicarMod(posse.propriedade.custo_casa * MANUTENCAO_PCT * casasEquivalentes, mods.manutencaoMult);
+
+        const rodadasOciosa = novaRodada - posse.ultimaAtividadeRodada;
+        const custoOciosa = calcularCustoOciosa(posse.propriedade, casas, posse.hipotecada, rodadasOciosa, mods, OCIOSA_REGRA);
+        if (custoOciosa > 0) {
+          ociosa += custoOciosa;
+          ociosas.push({ nome: posse.propriedade.nome, rodadas: rodadasOciosa, custo: custoOciosa });
+        }
       }
 
-      const liquido = renda - manutencao;
+      for (const o of ociosas) {
+        await turnoRepository.criarHistorico({
+          sessionId,
+          tipo: "TERRENO_OCIOSO",
+          detalhes: `Terreno ocioso: ${o.nome} (${o.rodadas} rodadas sem visita) R$ ${o.custo} — ${jogador.nome}.`,
+        });
+      }
+
+      const despesa = manutencao + ociosa;
+      const despesaTexto = ociosa > 0
+        ? `R$ ${manutencao} manutenção − R$ ${ociosa} terreno ocioso`
+        : `R$ ${manutencao} manutenção`;
+      const liquido = renda - despesa;
       if (liquido === 0) continue;
 
       if (liquido > 0) {
@@ -135,7 +158,7 @@ class RodadaService {
         await turnoRepository.criarHistorico({
           sessionId,
           tipo: "RENDA_PASSIVA",
-          detalhes: `${jogador.nome} recebeu R$ ${liquido} líquido de renda passiva (R$ ${renda} renda − R$ ${manutencao} manutenção) na rodada ${novaRodada}.`,
+          detalhes: `${jogador.nome} recebeu R$ ${liquido} líquido de renda passiva (R$ ${renda} renda − ${despesaTexto}) na rodada ${novaRodada}.`,
         });
       } else {
         const saldoComReceita = jogador.saldo + renda;
@@ -143,9 +166,9 @@ class RodadaService {
         await economiaService.cobrarComFallbackDivida(
           sessionId,
           { id: jogador.id, nome: jogador.nome, saldo: saldoComReceita },
-          manutencao,
+          despesa,
           null,
-          `Manutenção das propriedades (rodada ${novaRodada}) — renda passiva de R$ ${renda} não cobriu o custo`
+          `${ociosa > 0 ? `Manutenção e terreno ocioso (R$ ${ociosa})` : "Manutenção das propriedades"} (rodada ${novaRodada}) — renda passiva de R$ ${renda} não cobriu o custo`
         );
       }
     }

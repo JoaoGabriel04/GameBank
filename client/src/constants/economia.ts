@@ -12,3 +12,8 @@ export const VISAO_RECARGA_RODADAS = 4;
 export const OCIOSA_CARENCIA_RODADAS = 8;
 export const OCIOSA_PCT = 0.03;
 export const OCIOSA_DEGRAUS_MAX = 4;
+export const OCIOSA_REGRA = {
+  carenciaRodadas: OCIOSA_CARENCIA_RODADAS,
+  pct: OCIOSA_PCT,
+  degrausMax: OCIOSA_DEGRAUS_MAX,
+};

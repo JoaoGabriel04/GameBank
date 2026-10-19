@@ -117,6 +117,7 @@ export const turnoRepository = {
           select: {
             casas: true,
             hipotecada: true,
+            ultimaAtividadeRodada: true,
             propriedade: true,
           },
         },

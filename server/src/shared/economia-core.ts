@@ -43,3 +43,25 @@ export function calcularPatrimonio(saldo: number, posses: PosseParaPatrimonio[])
 export function aplicarMod(valor: number, mult?: number): number {
   return Math.round(valor * (mult ?? 1));
 }
+
+export type PropriedadeOciosa = { tipo: string; custo_compra: number };
+
+/** Parâmetros do terreno ocioso (valores em constants/economia.ts). */
+export type RegraOciosa = { carenciaRodadas: number; pct: number; degrausMax: number };
+
+/** Terreno ocioso: custo por rodada de uma posse sem atividade há `ociosas`
+ *  rodadas. Só incide em propriedade normal, sem casas e não hipotecada;
+ *  cresce um degrau por rodada após a carência, até o teto. Fonte única. */
+export function calcularCustoOciosa(
+  prop: PropriedadeOciosa,
+  casas: number,
+  hipotecada: boolean,
+  ociosas: number,
+  mods: { manutencaoMult?: number },
+  regra: RegraOciosa
+): number {
+  if (prop.tipo !== "normal" || casas > 0 || hipotecada) return 0;
+  if (ociosas < regra.carenciaRodadas) return 0;
+  const degrau = Math.min(ociosas - regra.carenciaRodadas + 1, regra.degrausMax);
+  return aplicarMod(Math.round(prop.custo_compra * regra.pct * degrau), mods.manutencaoMult);
+}
