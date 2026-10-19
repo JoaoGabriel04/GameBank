@@ -286,7 +286,10 @@ describe("Créditos de visão", () => {
       data: { turnoAtualPlayerId: p1.id, dadosRevelados: true, eventoProximo: null },
     });
 
-    await turnoService.rolarDados(sessao.id, p1.id);
+    const rolagem = await turnoService.rolarDados(sessao.id, p1.id);
+    // Às cegas: nem os valores nem o "duplo" podem sair antes da escolha.
+    expect(rolagem).not.toHaveProperty("dado1");
+    expect(rolagem).not.toHaveProperty("duplo");
     let s = await prisma.session.findUniqueOrThrow({ where: { id: sessao.id } });
     expect(s.aguardandoEscolha).toBe(true);
     expect(s.dadosRevelados).toBe(false);

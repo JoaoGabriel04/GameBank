@@ -32,7 +32,9 @@ export interface RolarDadosResult {
   // de escolher-movimento, depois que a escolha já foi travada no servidor.
   dado1?: number
   dado2?: number
-  duplo: boolean
+  // Ausente na resposta às cegas de rolar-dados (não pode vazar antes da
+  // escolha) — com os dados revelados, use dado1 === dado2.
+  duplo?: boolean
   foiPreso: boolean
   novaPosicao?: number
   passouInicio?: boolean

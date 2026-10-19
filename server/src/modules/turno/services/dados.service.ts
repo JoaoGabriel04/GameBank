@@ -65,9 +65,10 @@ class DadosService {
 
     // Sempre retorna às cegas — o jogador escolhe se quer revelar usando
     // um crédito (endpoint separado revelarDados). Apenas informa quantos
-    // créditos ele tem disponíveis.
+    // créditos ele tem disponíveis. Nem `duplo` sai daqui: saber que os
+    // dados são iguais antes de escolher já é informação sobre o resultado
+    // (o cliente deduz o duplo dos valores, depois de revelar/escolher).
     return {
-      duplo,
       aguardandoEscolha: true,
       creditosRestantes: player.creditoVisao,
     };

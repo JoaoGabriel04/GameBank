@@ -550,7 +550,7 @@ export default function TurnoModal({
               </>
             )}
 
-            {resultado.duplo && !revelandoAnim && (
+            {resultado.dado1 != null && resultado.dado1 === resultado.dado2 && !revelandoAnim && (
               <p className="font-inconsolata text-[11px] text-amber-400 mb-3">
                 ⭐ Os dados vieram iguais — escolher Soma garante uma jogada extra!
               </p>
