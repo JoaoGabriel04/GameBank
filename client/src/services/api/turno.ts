@@ -56,6 +56,9 @@ export interface RolarDadosResult {
   // escolher. Ausente/undefined = sem crédito disponível (escolha às cegas).
   // Quando > 0, dado1/dado2 são revelados na resposta de rolarDados.
   creditosRestantes?: number
+  // Revelação reconstruída (F5/troca de aba): o jogador já tinha visto
+  // estes dados — o TurnoModal não gira de novo.
+  jaRevelado?: boolean
 }
 
 export const turnoApi = {

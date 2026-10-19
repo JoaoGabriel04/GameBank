@@ -123,6 +123,9 @@ export default function TurnoModal({
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
   const [escolhaRestante, setEscolhaRestante] = useState(ESCOLHA_TIMEOUT_S)
   const [escolhendo, setEscolhendo] = useState(false)
+  // Giro da revelação (Crédito de Visão) em andamento: os dados ainda
+  // mostram "?" e as opções ficam travadas até eles pararem.
+  const [revelandoAnim, setRevelandoAnim] = useState(false)
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -130,6 +133,14 @@ export default function TurnoModal({
   const dado2Ref = useRef<HTMLDivElement>(null)
   const desfechoRef = useRef<HTMLDivElement>(null)
   const barraRef = useRef<HTMLDivElement>(null)
+  // Resultado da execução anterior do useGSAP — distingue "acabou de
+  // revelar" (anterior às cegas → atual com dados) de uma reexecução com o
+  // mesmo resultado. Zerado quando o modal fecha (o card sai do DOM).
+  const prevResultadoRef = useRef<RolarDadosResult | null>(null)
+  // true quando o jogador já viu os dados nesta escolha (revelou): a
+  // resposta de escolherMovimento não gira os dados de novo nem toca o SFX.
+  const dadosJaReveladosRef = useRef(false)
+  const revelacaoTlRef = useRef<gsap.core.Timeline | null>(null)
 
   // Determinar se a casa exige ação (comprar) ou é só informativa
   const exigeAcao = resultado?.aguardandoAcao && resultado?.compraDisponivel
@@ -153,29 +164,48 @@ export default function TurnoModal({
   // SÓ ENTÃO o servidor revela dado1/dado2 na resposta de
   // escolherMovimento → rolando (anima) → resultado (revela) → desfecho.
   useGSAP(() => {
-    if (!aberto || !resultado) return
+    if (!aberto || !resultado) {
+      // Modal fechou (timeout, F5 de outro fluxo) no meio do giro da
+      // revelação: mata a timeline para o SFX/estado não dispararem depois.
+      prevResultadoRef.current = null
+      revelacaoTlRef.current?.kill()
+      revelacaoTlRef.current = null
+      setRevelandoAnim(false)
+      return
+    }
+    const anterior = prevResultadoRef.current
+    prevResultadoRef.current = resultado
 
     // Escolha de movimento já resolvida (chegou o resultado final da 2ª
     // chamada, escolherMovimento) — é AQUI que os dados existem pela
     // primeira vez. Roda a mesma animação de giro que antes aconteciaна
     // rolagem inicial, só que agora depois da escolha.
     if (resultado.escolha != null) {
-      setFase("rolando")
+      revelacaoTlRef.current?.kill()
+      revelacaoTlRef.current = null
+      setRevelandoAnim(false)
+      // Com visão, os dados já giraram (e o SFX já tocou) na revelação —
+      // vai direto pro "resultado", sem nova rolagem.
+      const jaRevelados = dadosJaReveladosRef.current
+      dadosJaReveladosRef.current = false
+      setFase(jaRevelados ? "resultado" : "rolando")
       setCountdown(COUNTDOWN_SEGUNDOS)
 
       const tl = gsap.timeline()
-      if (dado1Ref.current && dado2Ref.current) {
-        tl.to([dado1Ref.current, dado2Ref.current], {
-          rotation: 360,
-          duration: 0.3,
-          repeat: 3,
-          ease: "none",
+      if (!jaRevelados) {
+        if (dado1Ref.current && dado2Ref.current) {
+          tl.to([dado1Ref.current, dado2Ref.current], {
+            rotation: 360,
+            duration: 0.3,
+            repeat: 3,
+            ease: "none",
+          })
+        }
+        tl.call(() => {
+          setFase("resultado")
+          onDadosParados?.()
         })
       }
-      tl.call(() => {
-        setFase("resultado")
-        onDadosParados?.()
-      })
       tl.to({}, { duration: 1 })
       tl.call(() => {
         onResultadoRevelado?.()
@@ -188,6 +218,45 @@ export default function TurnoModal({
         }
       })
       return
+    }
+
+    if (resultado.aguardandoEscolha) {
+      if (resultado.dado1 == null) {
+        // Escolha às cegas (nova rolagem): nada revelado ainda.
+        dadosJaReveladosRef.current = false
+        revelacaoTlRef.current?.kill()
+        revelacaoTlRef.current = null
+        setRevelandoAnim(false)
+      } else {
+        dadosJaReveladosRef.current = true
+        // Acabou de revelar (anterior era às cegas): gira os "?" agora,
+        // com o SFX ao parar — e não depois da escolha. `jaRevelado` vem
+        // do servidor quando a revelação é só reconstruída (F5/troca de
+        // aba): o jogador já viu esses dados, então não gira de novo.
+        const acabouDeRevelar = anterior != null && anterior !== resultado
+          && !!anterior.aguardandoEscolha && anterior.dado1 == null
+        if (acabouDeRevelar && !resultado.jaRevelado) {
+          setRevelandoAnim(true)
+          revelacaoTlRef.current?.kill()
+          const tl = gsap.timeline()
+          if (dado1Ref.current && dado2Ref.current) {
+            tl.to([dado1Ref.current, dado2Ref.current], {
+              rotation: 360,
+              duration: 0.3,
+              repeat: 3,
+              ease: "none",
+            })
+          }
+          tl.call(() => {
+            setRevelandoAnim(false)
+            onDadosParados?.()
+          })
+          revelacaoTlRef.current = tl
+          return
+        }
+        // Card já visível (só trocou o resultado): sem reanimar a entrada.
+        if (anterior != null) return
+      }
     }
 
     // Entrada do modal (1ª resposta ou reabertura de uma decisão pendente)
@@ -401,10 +470,10 @@ export default function TurnoModal({
              elementos assim que a escolha é enviada. ── */}
         <div className="flex items-center justify-center gap-4 mb-4">
           <div ref={dado1Ref}>
-            {fase === "escolha" && !resultado.dado1 ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
+            {fase === "escolha" && (!resultado.dado1 || revelandoAnim) ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
           </div>
           <div ref={dado2Ref}>
-            {fase === "escolha" && !resultado.dado2 ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
+            {fase === "escolha" && (!resultado.dado2 || revelandoAnim) ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
           </div>
         </div>
 
@@ -418,12 +487,20 @@ export default function TurnoModal({
         {/* ── Fase: resultado ── */}
         {fase === "resultado" && (
           <div>
-            <p className="font-jaro text-2xl text-zinc-100">
-              Você tirou {(resultado.dado1 ?? 0) + (resultado.dado2 ?? 0)}
-            </p>
+            {resultado.escolha != null && resultado.passos != null ? (
+              <p className="font-jaro text-2xl text-zinc-100">
+                {resultado.escolha === "soma" ? "Você escolheu a Soma" : `Você escolheu o ${resultado.escolha === "dado1" ? "Dado 1" : "Dado 2"}`}
+                {" "}e andou {resultado.passos} {resultado.passos === 1 ? "casa" : "casas"}
+              </p>
+            ) : (
+              <p className="font-jaro text-2xl text-zinc-100">
+                Você tirou {(resultado.dado1 ?? 0) + (resultado.dado2 ?? 0)}
+              </p>
+            )}
             <p className="font-inconsolata text-xs text-zinc-500 mt-1">
               ({resultado.dado1} + {resultado.dado2})
               {resultado.duplo && " — Dados iguais!"}
+              {resultado.duploValido && " Jogada extra!"}
             </p>
           </div>
         )}
@@ -432,7 +509,11 @@ export default function TurnoModal({
              decidido ANTES de saber os valores) ── */}
         {fase === "escolha" && (
           <div ref={desfechoRef}>
-            {resultado.dado1 != null ? (
+            {revelandoAnim ? (
+              <p className="font-inconsolata text-sm text-zinc-500 mb-3">
+                Rolando os dados...
+              </p>
+            ) : resultado.dado1 != null ? (
               <>
                 <p className="font-jaro text-lg text-zinc-100 mb-1">Você viu o resultado!</p>
                 <p className="font-inconsolata text-xs text-zinc-500 mb-1">
@@ -469,7 +550,7 @@ export default function TurnoModal({
               </>
             )}
 
-            {resultado.duplo && (
+            {resultado.duplo && !revelandoAnim && (
               <p className="font-inconsolata text-[11px] text-amber-400 mb-3">
                 ⭐ Os dados vieram iguais — escolher Soma garante uma jogada extra!
               </p>
@@ -477,13 +558,15 @@ export default function TurnoModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {(["dado1", "dado2", "soma"] as const).map((op) => {
-                const destino = destinos?.[op]
+                // Destinos só aparecem depois que os dados param de girar.
+                const destino = revelandoAnim ? undefined : destinos?.[op]
+                const travado = escolhendo || revelandoDados || revelandoAnim
                 return (
                   <button
                     key={op}
-                    disabled={escolhendo}
+                    disabled={travado}
                     onClick={() => {
-                      if (escolhendo) return
+                      if (travado) return
                       setEscolhendo(true)
                       onEscolherMovimento?.(op)
                     }}

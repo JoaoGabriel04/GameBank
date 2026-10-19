@@ -542,7 +542,9 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     if (revelandoDados) return
     setRevelandoDados(true)
     try {
-      const r = await revelarDados(session.id)
+      // Timeout: sem isso, uma requisição pendurada (servidor hibernando)
+      // deixava o botão em "Revelando..." e as opções travadas para sempre.
+      const r = await withTimeout(revelarDados(session.id), 15000)
       if (!r) return
       // Atualiza o resultado local com os dados revelados e créditos
       // restantes. `resultado` (state real) é null sempre que a tela de
@@ -562,10 +564,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       // modalAbertoFinal=true — sem isto explícito, o modal fecharia
       // sozinho no instante em que os dados fossem revelados.
       setModalAberto(true)
+    } catch {
+      toastError("Não foi possível revelar os dados — tente de novo.")
     } finally {
       setRevelandoDados(false)
     }
-  }, [session.id, revelarDados, revelandoDados])
+  }, [session.id, revelarDados, revelandoDados, toastError])
 
   // FIX_TURNO_TRAVADO_CONTADOR (BUG A.3): cleanup no unmount — se o
   // jogador trocar de aba/navegar para fora durante uma rolagem, o
