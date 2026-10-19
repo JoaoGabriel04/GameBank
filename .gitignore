@@ -22,3 +22,6 @@ Thumbs.db
 *.swp
 *.swo
 .next/
+
+# Metadados do Windows (WSL) ao copiar arquivos
+*:Zone.Identifier
