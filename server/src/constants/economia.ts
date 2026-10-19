@@ -28,3 +28,18 @@ export const EMPRESTIMO_LIMITE_PCT = 0.50;
 
 /** Juros compostos por rodada. */
 export const EMPRESTIMO_JUROS_PCT = 0.05;
+
+/** Créditos de visão: quantos o jogador tem por ciclo. */
+export const VISAO_CREDITOS_MAX = 1;
+
+/** Rodadas de espera após zerar os créditos, até a recarga. */
+export const VISAO_RECARGA_RODADAS = 4;
+
+/** Terreno ocioso: rodadas sem atividade até começar a cobrar. */
+export const OCIOSA_CARENCIA_RODADAS = 8;
+
+/** Terreno ocioso: % do custo_compra cobrado por degrau, por rodada. */
+export const OCIOSA_PCT = 0.03;
+
+/** Terreno ocioso: degrau máximo (teto = OCIOSA_PCT × OCIOSA_DEGRAUS_MAX). */
+export const OCIOSA_DEGRAUS_MAX = 4;
