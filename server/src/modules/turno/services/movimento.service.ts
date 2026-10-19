@@ -53,6 +53,7 @@ class MovimentoService {
     await turnoRepository.registrarDados(sessionId, {
       aguardandoEscolha: false,
       aguardandoAcao: true,
+      dadosRevelados: false,
     });
 
     const { novaPosicao, passouInicio, resolucao, extratoInicio } =

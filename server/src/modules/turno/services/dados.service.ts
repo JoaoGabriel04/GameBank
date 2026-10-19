@@ -28,7 +28,7 @@ class DadosService {
       await turnoRepository.moverPlayer(player.id, { posicao: POS_PRISAO, emPrisao: true, turnosPrisao: 3 });
       await turnoRepository.registrarDados(sessionId, {
         ultimoDado1: dado1, ultimoDado2: dado2,
-        aguardandoAcao: false, aguardandoEscolha: false,
+        aguardandoAcao: false, aguardandoEscolha: false, dadosRevelados: false,
       });
 
       const { turnoService } = await import("../turno.service.js");
@@ -39,7 +39,7 @@ class DadosService {
     // Guarda os dados e entra em estado de escolha — NÃO move ainda.
     await turnoRepository.registrarDados(sessionId, {
       ultimoDado1: dado1, ultimoDado2: dado2,
-      aguardandoAcao: false, aguardandoEscolha: true,
+      aguardandoAcao: false, aguardandoEscolha: true, dadosRevelados: false,
     });
 
     // Reset do timer: o jogador tem os 60s para escolher o movimento.

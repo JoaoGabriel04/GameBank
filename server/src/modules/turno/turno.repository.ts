@@ -31,6 +31,7 @@ export const turnoRepository = {
         turnoIniciadoEm: true,
         aguardandoAcao: true,
         aguardandoEscolha: true,
+        dadosRevelados: true,
         ultimoDado1: true,
         ultimoDado2: true,
         rodadaAtual: true,
@@ -176,9 +177,21 @@ export const turnoRepository = {
       data: { creditoVisao: VISAO_CREDITOS_MAX, creditoRecargaEm: 0 },
     }),
 
+  // Revelação idempotente: só um chamador marca (count 1) e paga o crédito;
+  // os demais da mesma rolagem (F5, troca de aba, clique duplo) recebem
+  // count 0 e devolvem os dados sem cobrar.
+  marcarDadosRevelados: (sessionId: number) =>
+    prisma.session.updateMany({
+      where: { id: sessionId, dadosRevelados: false },
+      data: { dadosRevelados: true },
+    }),
+
+  desmarcarDadosRevelados: (sessionId: number) =>
+    prisma.session.update({ where: { id: sessionId }, data: { dadosRevelados: false } }),
+
   registrarDados: (sessionId: number, data: {
     ultimoDado1?: number; ultimoDado2?: number;
-    aguardandoAcao?: boolean; aguardandoEscolha?: boolean;
+    aguardandoAcao?: boolean; aguardandoEscolha?: boolean; dadosRevelados?: boolean;
   }) =>
     prisma.session.update({ where: { id: sessionId }, data }),
 

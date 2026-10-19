@@ -84,7 +84,7 @@ interface GameStore {
   passarVez: (sessionId: number) => Promise<void>;
   rolarDados: (sessionId: number) => Promise<RolarDadosResult | undefined>;
   escolherMovimento: (sessionId: number, escolha: EscolhaMovimento) => Promise<RolarDadosResult | undefined>;
-  revelarDados: (sessionId: number) => Promise<{ dado1: number; dado2: number; creditosRestantes: number } | undefined>;
+  revelarDados: (sessionId: number) => Promise<{ dado1: number; dado2: number; creditosRestantes: number; jaRevelado?: boolean } | undefined>;
   darLance: (sessionId: number, valor: number) => Promise<DarLanceResult | undefined>;
   comprarCasaAtual: (sessionId: number) => Promise<boolean>;
   recusarCompra: (sessionId: number) => Promise<boolean>;

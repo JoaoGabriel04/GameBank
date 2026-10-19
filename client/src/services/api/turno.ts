@@ -81,7 +81,7 @@ export const turnoApi = {
     api.post<RolarDadosResult>(`/turno/${sessionId}/escolher-movimento`, { escolha }),
 
   revelarDados: (sessionId: number) =>
-    api.post<{ dado1: number; dado2: number; creditosRestantes: number }>(`/turno/${sessionId}/revelar-dados`),
+    api.post<{ dado1: number; dado2: number; creditosRestantes: number; jaRevelado?: boolean }>(`/turno/${sessionId}/revelar-dados`),
 }
 
 export const passarVezApi = (sessionId: number) =>

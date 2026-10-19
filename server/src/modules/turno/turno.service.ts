@@ -182,13 +182,25 @@ class TurnoService {
         player.creditoRecargaEm = 0;
       }
 
-      if (player.creditoVisao <= 0) {
-        throw new AppError(400, "Sem créditos de visão disponíveis.");
+      // Idempotente por rolagem: se esta rolagem já foi revelada (F5, troca
+      // de aba, clique duplo), devolve os mesmos dados sem cobrar outro
+      // crédito. A flag é zerada ao rolar e ao resolver a escolha.
+      const marcou = await turnoRepository.marcarDadosRevelados(sessionId);
+      if (marcou.count === 0) {
+        return {
+          dado1: session.ultimoDado1,
+          dado2: session.ultimoDado2,
+          creditosRestantes: player.creditoVisao,
+          jaRevelado: true,
+        };
       }
 
       // Consome um crédito — dois cliques simultâneos não gastam dois.
-      const consumido = await turnoRepository.usarCreditoVisao(player.id);
+      const consumido = player.creditoVisao > 0
+        ? await turnoRepository.usarCreditoVisao(player.id)
+        : { count: 0 };
       if (consumido.count === 0) {
+        await turnoRepository.desmarcarDadosRevelados(sessionId);
         throw new AppError(400, "Sem créditos de visão disponíveis.");
       }
       const creditosRestantes = player.creditoVisao - 1;

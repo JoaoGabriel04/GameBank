@@ -203,6 +203,7 @@ model Session {
   ultimoDado2        Int?
   aguardandoAcao     Boolean   @default(false) // esperando decisão do jogador
   aguardandoEscolha  Boolean   @default(false) // dados rolados, esperando escolha de movimento
+  dadosRevelados     Boolean   @default(false) // jogador da vez já usou crédito de visão nesta rolagem (revelar é idempotente)
   turnoIniciadoEm    DateTime? // para timeout de 60s
   rodadaAtual        Int       @default(1)   // contador de rodadas completadas
   eventoAtual        String?   // código do evento econômico ativo nesta rodada

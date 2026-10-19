@@ -241,7 +241,12 @@ describe("Créditos de visão", () => {
     expect(jogador.creditoVisao).toBe(0);
     expect(jogador.creditoRecargaEm).toBe(5 + VISAO_RECARGA_RODADAS);
 
-    // Antes da recarga: sem crédito.
+    // Mesma rolagem (F5/troca de aba): devolve os dados sem cobrar.
+    const repetido = await turnoService.revelarDados(sessao.id, p1.id);
+    expect(repetido).toMatchObject({ dado1: 3, dado2: 4, jaRevelado: true });
+
+    // Nova rolagem, antes da recarga: sem crédito.
+    await prisma.session.update({ where: { id: sessao.id }, data: { dadosRevelados: false } });
     await expect(turnoService.revelarDados(sessao.id, p1.id)).rejects.toMatchObject({ statusCode: 400 });
 
     // Na rodada da recarga: recarrega e consome de novo.
@@ -260,8 +265,54 @@ describe("Créditos de visão", () => {
       turnoService.revelarDados(sessao.id, p1.id),
     ]);
 
-    expect(resultados.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    // Os dois recebem os dados; só um paga (o outro vem como jaRevelado).
+    const ok = resultados.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+    expect(ok).toHaveLength(2);
+    expect(ok.filter((r) => "jaRevelado" in r && r.jaRevelado)).toHaveLength(1);
     const jogador = await prisma.sessionPlayer.findUniqueOrThrow({ where: { id: p1.id } });
     expect(jogador.creditoVisao).toBe(0);
+  });
+
+  it("revelar duas vezes na mesma rolagem consome 1 crédito; a flag zera ao rolar e ao escolher", async () => {
+    const owner = await criarUsuario();
+    const sessao = await criarSessao(owner.id);
+    await prisma.session.update({ where: { id: sessao.id }, data: { tipoJogo: "tabuleiro" } });
+    const p1 = await criarPlayer(sessao.id, owner.id, { nome: "P1" });
+    const p2 = await criarPlayer(sessao.id, null, { nome: "P2", cor: "Vermelho" });
+    await turnoService.iniciarTurnos(sessao.id, [p1.id, p2.id]);
+    // Flag "suja" de antes, e a vez com P1.
+    await prisma.session.update({
+      where: { id: sessao.id },
+      data: { turnoAtualPlayerId: p1.id, dadosRevelados: true, eventoProximo: null },
+    });
+
+    await turnoService.rolarDados(sessao.id, p1.id);
+    let s = await prisma.session.findUniqueOrThrow({ where: { id: sessao.id } });
+    expect(s.aguardandoEscolha).toBe(true);
+    expect(s.dadosRevelados).toBe(false);
+
+    const primeiro = await turnoService.revelarDados(sessao.id, p1.id);
+    const segundo = await turnoService.revelarDados(sessao.id, p1.id);
+    expect(segundo).toMatchObject({ dado1: primeiro.dado1, dado2: primeiro.dado2, jaRevelado: true });
+    const jogador = await prisma.sessionPlayer.findUniqueOrThrow({ where: { id: p1.id } });
+    expect(jogador.creditoVisao).toBe(VISAO_CREDITOS_MAX - 1);
+
+    await turnoService.escolherMovimento(sessao.id, p1.id, "soma");
+    s = await prisma.session.findUniqueOrThrow({ where: { id: sessao.id } });
+    expect(s.aguardandoEscolha).toBe(false);
+    expect(s.dadosRevelados).toBe(false);
+  });
+
+  it("o payload da sessão continua mascarando os dados mesmo depois de revelar", async () => {
+    const { sessao, p1 } = await sessaoAguardandoEscolha(2);
+    await turnoService.revelarDados(sessao.id, p1.id);
+
+    const { SessionService } = await import("../../modules/session/session.service.js");
+    const svc = new SessionService();
+    await svc.invalidateCache(sessao.id);
+    const payload = await svc.loadSession(sessao.id);
+    expect(payload.dadosRevelados).toBe(true);
+    expect(payload.ultimoDado1).toBeNull();
+    expect(payload.ultimoDado2).toBeNull();
   });
 });

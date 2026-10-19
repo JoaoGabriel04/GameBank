@@ -557,7 +557,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       // e o jogador achava que o botão "não funcionava".
       setResultado(prev => {
         const base = prev ?? fallbackEscolhaRef.current
-        return { ...base, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes }
+        return { ...base, dado1: r.dado1, dado2: r.dado2, creditosRestantes: r.creditosRestantes, jaRevelado: r.jaRevelado }
       })
       // A partir daqui `resultado` deixa de ser null, então o próximo
       // render já não passa pelo ramo de fallback que força
@@ -570,6 +570,23 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       setRevelandoDados(false)
     }
   }, [session.id, revelarDados, revelandoDados, toastError])
+
+  // Revelação reconstruída: F5 ou troca de aba no meio de uma escolha já
+  // revelada deixava o jogador às cegas (os dados vêm mascarados no
+  // payload da sessão). Como revelar é idempotente por rolagem no
+  // servidor, pedir de novo devolve os mesmos dados sem cobrar crédito —
+  // e com jaRevelado o TurnoModal não gira os dados outra vez.
+  const reconstruindoRevelacaoRef = useRef(false)
+  useEffect(() => {
+    if (!session.aguardandoEscolha) {
+      reconstruindoRevelacaoRef.current = false
+      return
+    }
+    if (!minhaVez || !session.dadosRevelados || resultado?.dado1 != null) return
+    if (revelandoDados || reconstruindoRevelacaoRef.current) return
+    reconstruindoRevelacaoRef.current = true
+    handleRevelarDados()
+  }, [session.aguardandoEscolha, session.dadosRevelados, minhaVez, resultado?.dado1, revelandoDados, handleRevelarDados])
 
   // FIX_TURNO_TRAVADO_CONTADOR (BUG A.3): cleanup no unmount — se o
   // jogador trocar de aba/navegar para fora durante uma rolagem, o

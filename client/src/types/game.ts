@@ -130,6 +130,7 @@ export interface GameSession {
   serverTime?: string;
   aguardandoAcao?: boolean;
   aguardandoEscolha?: boolean;
+  dadosRevelados?: boolean; // jogador da vez já revelou os dados desta rolagem (valores seguem mascarados)
   ultimoDado1?: number | null;
   ultimoDado2?: number | null;
   ordemTurnos?: string | null; // JSON array de playerIds
