@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle, animateStaggerIn } from "@/lib/animations";
@@ -24,7 +25,11 @@ import { getDailyOffersApi, buyDailyOfferApi } from "@/services/api/shop";
 import type { DailyOffer } from "@/services/api/shop";
 import BauCard from "@/components/BauCard";
 import BauDetailModal from "@/components/BauDetailModal";
-import BauAbertura from "@/components/BauAbertura";
+
+// A abertura de baú (GSAP + 900 linhas) só aparece depois de abrir um baú:
+// fica fora do bundle da página e o chunk é pedido junto com a API de abrir.
+const carregarBauAbertura = () => import("@/components/BauAbertura");
+const BauAbertura = dynamic(carregarBauAbertura, { ssr: false });
 
 /* --- Types --------------------------------------------------------------- */
 type ItemType = "title" | "badge" | "banner" | "frame";
@@ -1218,6 +1223,7 @@ export default function LojaPage() {
     if (abrindo) return;
     setAbrindo(tipo);
     setBauDetalhes(null);
+    carregarBauAbertura();
     try {
       const res = quantidade > 1
         ? await abrirBauMultiploApi(tipo, quantidade)
@@ -1620,10 +1626,12 @@ export default function LojaPage() {
         abrindo={abrindo !== null}
       />
 
-      <BauAbertura
-        resultado={resultado}
-        onClose={() => setResultado(null)}
-      />
+      {resultado && (
+        <BauAbertura
+          resultado={resultado}
+          onClose={() => setResultado(null)}
+        />
+      )}
     </div>
   );
 }

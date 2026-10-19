@@ -1,6 +1,7 @@
 /* eslint-disable */
 'use client';
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { slideUp, animateStaggerIn } from "@/lib/animations";
@@ -27,8 +28,12 @@ import {
 import type { GameSession } from "@/types/game";
 import type { GameResult } from "@/types/shop";
 import type { BauResultado } from "@/components/BauAbertura";
-import BauAbertura from "@/components/BauAbertura";
 import BauAdquiridoCard from "@/components/BauAdquiridoCard";
+
+// A abertura de baú (GSAP + 900 linhas) só aparece depois de abrir um baú:
+// fica fora do bundle da página e o chunk é pedido junto com a API de abrir.
+const carregarBauAbertura = () => import("@/components/BauAbertura");
+const BauAbertura = dynamic(carregarBauAbertura, { ssr: false });
 
 /* --- Profile hero -------------------------------------------------------- */
 function ProfileHero() {
@@ -383,6 +388,7 @@ function CofresSection() {
                   bau={b}
                   abrindo={abrindoId === b.id}
                   onAbrir={async () => {
+                    carregarBauAbertura();
                     try {
                       const res = await abrirAdquirido(b.id);
                       setResultado(res);
