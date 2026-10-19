@@ -11,10 +11,12 @@ export const metadata: Metadata = {
 
 const jaro = Jaro({
   subsets: ['latin'],
+  variable: '--font-jaro-next',
 })
 
 const inconsolata = Inconsolata({
   subsets: ['latin'],
+  variable: '--font-inconsolata-next',
 })
 
 export default function RootLayout({
@@ -23,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${jaro.className} ${inconsolata.className}`}>
+    <html lang="pt-BR" className={`dark ${jaro.variable} ${inconsolata.variable}`}>
       <body>
         <ToastProvider>
           <MusicProvider />
