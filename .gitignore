@@ -25,3 +25,6 @@ Thumbs.db
 
 # Metadados do Windows (WSL) ao copiar arquivos
 *:Zone.Identifier
+
+# Saídas temporárias dos scripts de medição (contêm tokens JWT)
+scripts/otimizacao/.*.json

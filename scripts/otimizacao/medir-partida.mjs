@@ -19,6 +19,7 @@
 // das jogadas e o crescimento do payload, não a economia.
 
 import { createRequire } from "node:module";
+import { writeFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 const require = createRequire(new URL("../../client/package.json", import.meta.url));
@@ -145,6 +146,12 @@ async function main() {
     if (bot) porPlayerId.set(j.id, bot);
   }
   log(`sessão ${sessionId} iniciada`);
+  // Permite abrir a partida num navegador enquanto ela roda (smoke-navegador.mjs).
+  if (process.env.CREDENCIAIS_ARQ) {
+    writeFileSync(process.env.CREDENCIAIS_ARQ, JSON.stringify({
+      sessionId, credenciais: bots.map(({ token, user }) => ({ token, user })),
+    }));
+  }
 
   const inicioJogo = Date.now();
   let erros = 0;
