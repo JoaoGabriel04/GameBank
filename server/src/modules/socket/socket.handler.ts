@@ -1,5 +1,6 @@
 import { getIO } from "../../lib/socket.js";
 import { emitirOuEnfileirar, enfileirarSnapshot } from "../../lib/fila-de-emits.js";
+import { socketLogger } from "../../lib/logger.js";
 import { SessionService } from "../session/session.service.js";
 
 const sessionService = new SessionService();
@@ -35,6 +36,10 @@ function semCatalogoEstatico(data: unknown) {
   return resto;
 }
 
+// Limites para avisar no log (meta da otimização: broadcast típico < 15 KB).
+const BROADCAST_LENTO_MS = 500;
+const BROADCAST_GRANDE_BYTES = 30 * 1024;
+
 export function emitSessionUpdated(sessionId: number, data: unknown) {
   paraSala(sessionId, "session:updated", semCatalogoEstatico(data));
 }
@@ -62,9 +67,21 @@ export async function emitUpdatedSession(sessionId: number) {
 // Reconstrói e emite a sessão. Invalida de novo: entre o enfileiramento e a
 // descarga, uma leitura REST pode ter repovoado o cache com estado antigo.
 export async function emitirSnapshotAgora(sessionId: number) {
+  const inicio = performance.now();
   await sessionService.invalidateCache(sessionId);
   const session = await sessionService.loadSession(sessionId);
-  emitSessionUpdated(sessionId, session);
+  const payload = semCatalogoEstatico(session);
+  const ms = Math.round(performance.now() - inicio);
+  // Tamanho aproximado do que vai pela rede (o socket.io serializa de novo).
+  const bytes = Buffer.byteLength(JSON.stringify(payload));
+  paraSala(sessionId, "session:updated", payload);
+
+  const metricas = { sessionId, ms, bytes };
+  if (ms > BROADCAST_LENTO_MS || bytes > BROADCAST_GRANDE_BYTES) {
+    socketLogger.warn(metricas, "broadcast da sessão lento ou grande");
+  } else {
+    socketLogger.debug(metricas, "broadcast da sessão");
+  }
 }
 
 export function emitPlayerUpdated(sessionId: number, data: PlayerUpdateData) {
