@@ -186,6 +186,10 @@ Reusable Framer Motion variants (`backdrop`, `modalBox`, `slideUp`, `fadeIn`, `s
 
 New full-screen overlays must use `z-[200]`. Using `z-50` will place them behind the Header.
 
+## Design and fix documents
+
+Specs, design docs and fix plans live in `docs/` (`docs/mapa-2d/` for the 2D map, `docs/modo-tabuleiro/` for Board Mode). Put new ones there, not in the repo root.
+
 ## Dead files (do not delete — kept for reference)
 
 | File | Reason kept |

@@ -1,6 +1,6 @@
 // Constantes econômicas do GameBank 2D (tipoJogo=mapa2d), Fatia 1.
 // Domínio separado de economia.ts (Modo Tabuleiro) — valores e fórmulas
-// diferentes, calibrados por simulação (ver GAMEBANK_2D_GDD.md).
+// diferentes, calibrados por simulação (ver docs/mapa-2d/GAMEBANK_2D_GDD.md).
 
 export const SALDO_INICIAL_MAPA2D = 1000;
 export const CUSTO_POR_SLOT = 120;
