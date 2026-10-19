@@ -24,4 +24,5 @@ COPY --from=build /app/prisma.config.ts ./
 COPY --from=build /app/data ./data
 EXPOSE 7000
 COPY --from=build /app/scripts/entrypoint.prod.sh ./scripts/entrypoint.prod.sh
+COPY --from=build /app/scripts/alertar-falha-boot.mjs ./scripts/alertar-falha-boot.mjs
 CMD ["sh", "-c", "sh ./scripts/entrypoint.prod.sh"]
