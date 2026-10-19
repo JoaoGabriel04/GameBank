@@ -1,6 +1,19 @@
 import { prisma } from "../../lib/prisma.js";
 import type { Prisma } from "../../../generated/prisma/index.js";
 
+// O payload da sessão (REST + cada broadcast "session:updated") leva só as
+// últimas entradas do histórico — antes ia a partida inteira (~126 KB na
+// rodada 50). A aba Histórico busca o resto paginado em GET /historico/:id.
+export const HISTORICO_NO_PAYLOAD = 30;
+const ultimasDoHistorico = { orderBy: { id: "desc" }, take: HISTORICO_NO_PAYLOAD } as const;
+
+// Busca as últimas N (desc) e devolve em ordem cronológica crescente, como o
+// cliente sempre recebeu.
+function historicoCrescente<T extends { historico: unknown[] } | null>(session: T): T {
+  session?.historico.reverse();
+  return session;
+}
+
 export class SessionRepository {
   async findAll() {
     const sessions = await prisma.session.findMany({
@@ -35,7 +48,6 @@ export class SessionRepository {
             player: true,
           },
         },
-        historico: true,
       },
       orderBy: { id: "asc" },
     });
@@ -47,7 +59,7 @@ export class SessionRepository {
   }
 
   async findById(id: number) {
-    return prisma.session.findUnique({
+    return historicoCrescente(await prisma.session.findUnique({
       where: { id },
       select: {
         id: true,
@@ -93,13 +105,13 @@ export class SessionRepository {
             player: true,
           },
         },
-        historico: true,
+        historico: ultimasDoHistorico,
       },
-    });
+    }));
   }
 
   async findByIdSimple(id: number) {
-    return prisma.session.findUnique({
+    return historicoCrescente(await prisma.session.findUnique({
       where: { id },
       select: {
         id: true,
@@ -147,13 +159,13 @@ export class SessionRepository {
             player: true,
           },
         },
-        historico: true,
+        historico: ultimasDoHistorico,
         debts: {
           where: { pago: false },
           include: { player: { select: { id: true, nome: true } } },
         },
       },
-    });
+    }));
   }
 
   async findBySenhaWithStatus(sessionId: number) {

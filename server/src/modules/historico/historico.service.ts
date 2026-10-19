@@ -1,14 +1,16 @@
 import { HistoricoRepository } from "./historico.repository.js";
-import { AppError } from "../../middleware/error-handler.middleware.js";
 
 export class HistoricoService {
   constructor(private repo = new HistoricoRepository()) {}
 
-  async listBySession(sessionId: number) {
-    const historico = await this.repo.findBySessionId(sessionId);
-    if (!historico || historico.length === 0) {
-      throw new AppError(404, "Nenhum histórico encontrado para esta sessão");
-    }
-    return historico;
+  // Página do histórico completo (aba Histórico). O payload da sessão só
+  // leva as últimas entradas; o resto vem daqui, sob demanda.
+  async listarPagina(sessionId: number, limite: number, antesDeId?: number) {
+    const linhas = await this.repo.findBySessionId(sessionId, limite + 1, antesDeId);
+    const itens = linhas.slice(0, limite);
+    return {
+      itens,
+      proximoCursor: linhas.length > limite ? itens[itens.length - 1].id : null,
+    };
   }
 }
