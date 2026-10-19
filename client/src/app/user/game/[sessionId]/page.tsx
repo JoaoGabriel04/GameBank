@@ -95,8 +95,17 @@ export default function Game() {
   // Carrega authUser do localStorage (substitui o auto-load removido do authStore)
   useEffect(() => { loadAuth(); }, [loadAuth]);
 
-  // Pré-carrega os SFX do Modo Tabuleiro para evitar latência no primeiro toque
-  useEffect(() => { preloadSfx(); }, []);
+  // Pré-carrega os SFX do Modo Tabuleiro para evitar latência no primeiro
+  // toque — quando a página ficar ociosa, para não disputar banda com o
+  // tabuleiro no primeiro carregamento (no 4G lento atrasava o LCP).
+  useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(() => { preloadSfx(); }, { timeout: 5000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(() => { preloadSfx(); }, 3000);
+    return () => clearTimeout(id);
+  }, []);
 
   const isOwner = !!currentSession?.ownerId && !!authUser?.id && currentSession.ownerId === authUser.id;
 
