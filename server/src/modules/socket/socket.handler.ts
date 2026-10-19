@@ -1,7 +1,14 @@
 import { getIO } from "../../lib/socket.js";
+import { emitirOuEnfileirar, enfileirarSnapshot } from "../../lib/fila-de-emits.js";
 import { SessionService } from "../session/session.service.js";
 
 const sessionService = new SessionService();
+
+// Evento para a sala da sessão, respeitando a ordem da fila de emits quando
+// chamado dentro de um withLock (ver lib/fila-de-emits.ts).
+function paraSala(sessionId: number, evento: string, dados: unknown) {
+  emitirOuEnfileirar(() => getIO().of("/game").to(`session:${sessionId}`).emit(evento, dados));
+}
 
 export interface PlayerUpdateData {
   userId: number;
@@ -29,45 +36,55 @@ function semCatalogoEstatico(data: unknown) {
 }
 
 export function emitSessionUpdated(sessionId: number, data: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("session:updated", semCatalogoEstatico(data));
+  paraSala(sessionId, "session:updated", semCatalogoEstatico(data));
 }
 
 export function emitSessionClosed(sessionId: number, ranking?: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("session:closed", { sessionId, ranking });
+  paraSala(sessionId, "session:closed", { sessionId, ranking });
 }
 
 export function emitChatMessage(sessionId: number, data: { id: number; playerId: number; playerNome: string; texto: string; createdAt: string }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("chat:message", data);
+  paraSala(sessionId, "chat:message", data);
 }
 
 export function emitNotificationNew(sessionId: number, data: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("notification:new", data);
+  paraSala(sessionId, "notification:new", data);
 }
 
 export async function emitUpdatedSession(sessionId: number) {
+  // Invalida já: leituras REST da mesma requisição precisam ver o estado novo.
+  await sessionService.invalidateCache(sessionId);
+  // Dentro de um withLock, o broadcast sai uma vez só, no fim do escopo.
+  if (enfileirarSnapshot(sessionId)) return;
+  await emitirSnapshotAgora(sessionId);
+}
+
+// Reconstrói e emite a sessão. Invalida de novo: entre o enfileiramento e a
+// descarga, uma leitura REST pode ter repovoado o cache com estado antigo.
+export async function emitirSnapshotAgora(sessionId: number) {
   await sessionService.invalidateCache(sessionId);
   const session = await sessionService.loadSession(sessionId);
   emitSessionUpdated(sessionId, session);
 }
 
 export function emitPlayerUpdated(sessionId: number, data: PlayerUpdateData) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("player:updated", data);
+  paraSala(sessionId, "player:updated", data);
 }
 
 export function emitTurnoTimeout(sessionId: number, data: { jogadorAnteriorId: number | null }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("turno:timeout", { sessionId, ...data });
+  paraSala(sessionId, "turno:timeout", { sessionId, ...data });
 }
 
 export function emitVoteRequest(sessionId: number, data: { ownerId: number; ownerNome: string; requiredUserIds: number[]; playerNames?: Record<number, string> }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_request", { sessionId, ...data });
+  paraSala(sessionId, "game:vote_request", { sessionId, ...data });
 }
 
 export function emitVoteUpdate(sessionId: number, data: { votes: Record<number, "yes" | "no">; requiredUserIds: number[] }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_update", { sessionId, ...data });
+  paraSala(sessionId, "game:vote_update", { sessionId, ...data });
 }
 
 export function emitVoteCancelled(sessionId: number, cancellerNome?: string) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:vote_cancelled", { sessionId, cancellerNome });
+  paraSala(sessionId, "game:vote_cancelled", { sessionId, cancellerNome });
 }
 
 export function emitKickVoteRequest(sessionId: number, data: {
@@ -77,17 +94,17 @@ export function emitKickVoteRequest(sessionId: number, data: {
   votes: Record<number, "yes" | "no">;
   expiresAt: string;
 }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_request", { sessionId, ...data });
+  paraSala(sessionId, "game:kick_vote_request", { sessionId, ...data });
 }
 
 export function emitKickVoteUpdate(sessionId: number, data: {
   votes: Record<number, "yes" | "no">; requiredUserIds: number[];
 }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_update", { sessionId, ...data });
+  paraSala(sessionId, "game:kick_vote_update", { sessionId, ...data });
 }
 
 export function emitKickVoteResult(sessionId: number, data: {
   passed: boolean; targetNome: string; targetPlayerId: number;
 }) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("game:kick_vote_result", { sessionId, ...data });
+  paraSala(sessionId, "game:kick_vote_result", { sessionId, ...data });
 }

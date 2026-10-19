@@ -6,6 +6,7 @@ import { connectRedis, getRedis } from "./redis.js";
 import { socketLogger } from "./logger.js";
 import { socketRateLimit } from "../middleware/socket-rate-limit.js";
 import { validateSequence } from "../middleware/sequence-validator.js";
+import { emitirOuEnfileirar } from "./fila-de-emits.js";
 
 let io: Server | null = null;
 let gameNsp: ReturnType<Server["of"]> | null = null;
@@ -20,6 +21,10 @@ export function getIO(): Server {
 }
 
 export function emitToPlayer(sessionId: number, playerId: number, event: string, data: unknown) {
+  emitirOuEnfileirar(() => emitirParaJogador(sessionId, playerId, event, data));
+}
+
+function emitirParaJogador(sessionId: number, playerId: number, event: string, data: unknown) {
   const nsp = getIO().of("/game");
   const roomSockets = nsp.adapter.rooms?.get(`session:${sessionId}`);
   if (!roomSockets) return;
@@ -57,9 +62,7 @@ export async function emitToUser(userId: number, event: string, data: unknown) {
 // pois não depende de socket lookup individual que pode estar stale.
 // O cliente filtra por targetUserId no payload.
 export function emitToRoom(sessionId: number, event: string, data: unknown) {
-  const nsp = getIO().of("/game");
-  const roomName = `session:${sessionId}`;
-  nsp.to(roomName).emit(event, data);
+  emitirOuEnfileirar(() => getIO().of("/game").to(`session:${sessionId}`).emit(event, data));
 }
 
 // Emite com retry automático — tenta novamente após 50ms se socket não estiver pronto

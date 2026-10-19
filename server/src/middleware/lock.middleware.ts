@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getRedis } from "../lib/redis.js";
 import { logger } from "../lib/logger.js";
+import { comFilaDeEmits } from "../lib/fila-de-emits.js";
 import { AppError } from "./error-handler.middleware.js";
 
 const LOCK_TTL_MS = 10_000;
@@ -65,7 +66,12 @@ export async function withLock(
 
   const adquiridoEm = Date.now();
   try {
-    return await action();
+    // Broadcasts da ação saem coalescidos no fim do escopo, ainda com o
+    // lock na mão (ver lib/fila-de-emits.ts).
+    return await comFilaDeEmits(action, async (sessionId) => {
+      const { emitirSnapshotAgora } = await import("../modules/socket/socket.handler.js");
+      await emitirSnapshotAgora(sessionId);
+    });
   } finally {
     const duracaoMs = Date.now() - adquiridoEm;
     if (duracaoMs > ttlMs) {
