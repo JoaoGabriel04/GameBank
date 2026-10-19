@@ -5,6 +5,7 @@ import { getCasa } from "../tabuleiro/tabuleiro.data.js";
 import { PropriedadeService } from "../propriedade/propriedade.service.js";
 import { CartaService } from "../carta/carta.service.js";
 import { calcularPatrimonio } from "../../shared/economia-core.js";
+import { VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "../../constants/economia.js";
 import { dadosService } from "./services/dados.service.js";
 import { movimentoService } from "./services/movimento.service.js";
 import { casaResolverService } from "./services/casa-resolver.service.js";
@@ -177,7 +178,7 @@ class TurnoService {
       // Recarrega se a rodada atual já passou do prazo agendado.
       if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
         await turnoRepository.resetarCreditosVisao(player.id);
-        player.creditoVisao = 2;
+        player.creditoVisao = VISAO_CREDITOS_MAX;
         player.creditoRecargaEm = 0;
       }
 
@@ -189,9 +190,9 @@ class TurnoService {
       await turnoRepository.usarCreditoVisao(player.id);
       const creditosRestantes = player.creditoVisao - 1;
 
-      // Se acabaram os créditos, agenda recarga para 3 rodadas à frente.
+      // Se acabaram os créditos, agenda a recarga VISAO_RECARGA_RODADAS à frente.
       if (creditosRestantes === 0) {
-        await turnoRepository.setCreditoRecargaEm(player.id, session.rodadaAtual + 3);
+        await turnoRepository.setCreditoRecargaEm(player.id, session.rodadaAtual + VISAO_RECARGA_RODADAS);
       }
 
       // Sem isso, o cache Redis da sessão (session.service.ts, TTL 60s)

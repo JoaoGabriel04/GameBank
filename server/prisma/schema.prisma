@@ -276,7 +276,7 @@ model SessionPlayer {
   pularProximaRodada Boolean  @default(false) // feriado
   rodadasDevendo     Int      @default(0)   // contador de falência
   dividaBanco        Int      @default(0)   // valor devido ao banco
-  creditoVisao       Int      @default(2)   // créditos para ver dados antes de escolher (Mecânica 3)
+  creditoVisao       Int      @default(1)   // créditos para ver dados antes de escolher (Mecânica 3) — manter igual a VISAO_CREDITOS_MAX
   creditoRecargaEm   Int      @default(0)   // rodada em que os créditos são recarregados (0 = sem pendência)
 
   // --- Mapa 2D (mapa2d) ---

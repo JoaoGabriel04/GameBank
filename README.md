@@ -58,6 +58,8 @@ Gerenciador multiplayer completo para o jogo de tabuleiro **Super Banco Imobili�
 - Duplo só concede jogada extra se o jogador escolher a soma
 - Na prisão a escolha não se aplica (vale sempre a soma)
 - Timeout aplica a soma automaticamente
+- Escolha às cegas: 1 crédito de visão para revelar os dados antes, que
+  recarrega 4 rodadas depois de gasto
 
 ### Modo Tabuleiro — Leilão Cego
 - Propriedade recusada vai a leilão entre todos os jogadores
@@ -306,6 +308,10 @@ feriado...), já refletindo eventos econômicos ativos.
   soma automaticamente
 - A escolha é uma segunda chamada ao servidor (`escolher-movimento`) —
   rolar os dados não move mais o peão sozinho
+- **Créditos de visão**: a escolha é feita **às cegas**. Cada jogador tem
+  **1 crédito** (`VISAO_CREDITOS_MAX`) para revelar os dados antes de
+  escolher; quando zera, recarrega **4 rodadas** depois
+  (`VISAO_RECARGA_RODADAS`, em `server/src/constants/economia.ts`)
 
 ### Modo Tabuleiro — Leilão Cego
 

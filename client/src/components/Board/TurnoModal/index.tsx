@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { useGSAP } from "@gsap/react"
 import { gsap } from "gsap"
-import { Loader2 } from "lucide-react"
+import { Eye, Loader2 } from "lucide-react"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import type { Casa, GameSession } from "@/types/game"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
+import { VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "@/constants/economia"
 
 const COUNTDOWN_SEGUNDOS = 10
 const ESCOLHA_TIMEOUT_S = 60
@@ -328,6 +329,14 @@ export default function TurnoModal({
     return () => clearInterval(interval)
   }, [fase, fecharModal])
 
+  // Rodadas até a recarga dos créditos de visão: usa o prazo agendado pelo
+  // servidor (creditoRecargaEm) quando já existe; senão o ciclo completo.
+  const eu = session?.jogadores.find((j) => j.id === meuPlayerId)
+  const recargaEm = eu?.creditoRecargaEm ?? 0
+  const rodadasParaRecarga = recargaEm > 0
+    ? Math.max(1, recargaEm - (session?.rodadaAtual ?? 0))
+    : VISAO_RECARGA_RODADAS
+
   // ── Destinos revelados (calculados quando o jogador usou crédito de visão) ──
   const destinos = useMemo(() => {
     if (!resultado?.dado1 || tabuleiro.length === 0) return null
@@ -430,8 +439,8 @@ export default function TurnoModal({
                   Agora escolha o movimento com base nos valores.
                 </p>
                 {resultado.creditosRestantes != null && (
-                  <p className="font-inconsolata text-[11px] text-cyan-400 mb-2">
-                    {'👁'} Créditos restantes: {resultado.creditosRestantes}/2
+                  <p className="font-inconsolata text-[11px] text-cyan-400 mb-2 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 shrink-0" /> Créditos restantes: {resultado.creditosRestantes}/{VISAO_CREDITOS_MAX}
                   </p>
                 )}
               </>
@@ -447,13 +456,14 @@ export default function TurnoModal({
                     disabled={revelandoDados}
                     className="mb-2 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 font-inconsolata text-sm cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-cyan-600/20"
                   >
+                    {!revelandoDados && <Eye className="w-4 h-4 shrink-0" />}
                     {revelandoDados
                       ? "Revelando..."
-                      : `👁 Revelar dados (1 crédito) — restantes: ${resultado.creditosRestantes}/2`}
+                      : `Revelar dados (1 crédito) — restantes: ${resultado.creditosRestantes}/${VISAO_CREDITOS_MAX}`}
                   </button>
                 ) : resultado.creditosRestantes === 0 && (
-                  <p className="font-inconsolata text-[11px] text-zinc-500 mb-2">
-                    {'👁'} Sem créditos de visão — recarregam em 3 rodadas.
+                  <p className="font-inconsolata text-[11px] text-zinc-500 mb-2 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 shrink-0" /> Sem créditos de visão — recarregam em {rodadasParaRecarga} {rodadasParaRecarga === 1 ? "rodada" : "rodadas"}.
                   </p>
                 )}
               </>

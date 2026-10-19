@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { VISAO_CREDITOS_MAX } from "../../constants/economia.js";
 
 export const turnoRepository = {
   findSessionsStuck: () =>
@@ -167,7 +168,7 @@ export const turnoRepository = {
   resetarCreditosVisao: (playerId: number) =>
     prisma.sessionPlayer.update({
       where: { id: playerId },
-      data: { creditoVisao: 2, creditoRecargaEm: 0 },
+      data: { creditoVisao: VISAO_CREDITOS_MAX, creditoRecargaEm: 0 },
     }),
 
   registrarDados: (sessionId: number, data: {

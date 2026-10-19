@@ -14,6 +14,7 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect } from "react";
+import { VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "@/constants/economia";
 
 interface SecaoProps {
   id: string;
@@ -335,6 +336,11 @@ export default function Regras() {
             <li><strong>Na prisão não há escolha</strong> — vale sempre a soma</li>
             <li><strong>3 duplos seguidos</strong> vão direto para a prisão</li>
             <li><strong>Timeout</strong> aplica a soma automaticamente</li>
+            <li>
+              A escolha é feita <strong>às cegas</strong>. Cada jogador tem{" "}
+              <strong>{VISAO_CREDITOS_MAX} crédito de visão</strong> para revelar os dados antes de escolher;
+              ao gastá-lo, ele recarrega em <strong>{VISAO_RECARGA_RODADAS} rodadas</strong>
+            </li>
           </ul>
         </Secao>
 

@@ -17,6 +17,7 @@ import { useGameStore } from "@/stores/gameStore"
 import { useToast } from "@/components/Toast"
 import { useEventoStore } from "@/stores/socketStore"
 import { getEvento } from "@/constants/eventos"
+import { VISAO_CREDITOS_MAX } from "@/constants/economia"
 import { playSfx, stopSfx } from "@/utils/sfx"
 import { withTimeout } from "@/utils/withTimeout"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
@@ -357,7 +358,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
     const creditoVisao = jogadorDaVez.creditoVisao ?? 0
     const creditoRecargaEm = jogadorDaVez.creditoRecargaEm ?? 0
     const rodadaAtual = session.rodadaAtual ?? 0
-    const creditosRestantes = creditoRecargaEm > 0 && rodadaAtual >= creditoRecargaEm ? 2 : creditoVisao
+    const creditosRestantes = creditoRecargaEm > 0 && rodadaAtual >= creditoRecargaEm ? VISAO_CREDITOS_MAX : creditoVisao
     if (fallbackEscolhaRef.current.creditosRestantes !== creditosRestantes) {
       fallbackEscolhaRef.current = { ...fallbackEscolhaRef.current, creditosRestantes }
     }

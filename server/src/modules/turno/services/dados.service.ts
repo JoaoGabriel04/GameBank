@@ -1,4 +1,5 @@
 import { turnoRepository } from "../turno.repository.js";
+import { VISAO_CREDITOS_MAX } from "../../../constants/economia.js";
 import { POS_PRISAO } from "../../tabuleiro/tabuleiro.data.js";
 import { timerService, duplosConsecutivos } from "./timer.service.js";
 
@@ -55,7 +56,7 @@ class DadosService {
     // carrega o valor pré-recarga, ainda não persistido no banco.
     if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
       await turnoRepository.resetarCreditosVisao(player.id);
-      player.creditoVisao = 2;
+      player.creditoVisao = VISAO_CREDITOS_MAX;
       player.creditoRecargaEm = 0;
     }
 
