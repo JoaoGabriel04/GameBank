@@ -84,8 +84,12 @@ function medir(url) {
   const soma = (tipo) => reqs.filter((x) => x.resourceType === tipo).reduce((s, x) => s + (x.transferSize ?? 0), 0);
   const maiores = [...reqs].sort((x, y) => (y.transferSize ?? 0) - (x.transferSize ?? 0)).slice(0, 6)
     .map((x) => `${new URL(x.url).pathname.split("/").pop() || x.url} (${x.resourceType}, ${((x.transferSize ?? 0) / 1024).toFixed(0)} KB)`);
+  // Elemento de LCP (para saber o que otimizar): o snippet do nó.
+  const lcpItens = a["largest-contentful-paint-element"]?.details?.items ?? [];
+  const lcpNo = lcpItens.flatMap((i) => i.items ?? [i]).find((i) => i.node)?.node;
   return {
     maiores,
+    lcpElemento: lcpNo ? `${lcpNo.snippet?.slice(0, 140)}` : "?",
     url: r.finalDisplayedUrl,
     score: Math.round((r.categories.performance.score ?? 0) * 100),
     fcp: a["first-contentful-paint"].numericValue,
@@ -121,7 +125,7 @@ try {
     }
     const m = (k) => mediana(rs.map((r) => r[k]));
     const final = new URL(rs[0].url).pathname;
-    maioresPorPagina.push(`- **${nome}**: ${rs[0].maiores.join(", ")}`);
+    maioresPorPagina.push(`- **${nome}**: ${rs[0].maiores.join(", ")}\n  - LCP: \`${rs[0].lcpElemento}\``);
     console.log(`| ${nome} | ${final} | ${m("score")} | ${(m("fcp") / 1000).toFixed(1)} | ${(m("lcp") / 1000).toFixed(1)} | ${m("tbt").toFixed(0)} | ${m("cls").toFixed(3)} | ${(m("js") / 1024).toFixed(0)} | ${(m("img") / 1024).toFixed(0)} | ${(m("midia") / 1024).toFixed(0)} | ${(m("total") / 1024).toFixed(0)} |`);
   }
   console.log("\nMaiores recursos por página (1ª execução):\n");
