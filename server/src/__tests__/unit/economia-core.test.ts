@@ -1,4 +1,5 @@
-import { calcularAluguel, calcularPatrimonio, aplicarMod } from "../../shared/economia-core.js";
+import { calcularAluguel, calcularPatrimonio, aplicarMod, calcularCustoOciosa } from "../../shared/economia-core.js";
+import { OCIOSA_REGRA, OCIOSA_CARENCIA_RODADAS, OCIOSA_PCT, OCIOSA_DEGRAUS_MAX } from "../../constants/economia.js";
 
 describe("calcularAluguel", () => {
   const prop = {
@@ -61,5 +62,51 @@ describe("aplicarMod", () => {
 
   test("arredonda corretamente valores fracionários", () => {
     expect(aplicarMod(333, 0.5)).toBe(167); // 166.5 -> 167 (round half up)
+  });
+});
+
+describe("calcularCustoOciosa", () => {
+  // Regra fixa no teste (não OCIOSA_REGRA) para os valores esperados não
+  // mudarem quando o balanceamento for ajustado em economia.ts.
+  const regra = { carenciaRodadas: 8, pct: 0.03, degrausMax: 4 };
+  const prop = { tipo: "normal", custo_compra: 2400 };
+
+  test("antes da carência não cobra", () => {
+    expect(calcularCustoOciosa(prop, 0, false, 7, {}, regra)).toBe(0);
+  });
+
+  test.each([
+    [8, 72],   // degrau 1 = 3%
+    [9, 144],  // degrau 2
+    [10, 216], // degrau 3
+    [11, 288], // degrau 4 = teto
+    [12, 288], // degrau 5+ continua no teto
+    [30, 288],
+  ])("com %i rodadas ociosas cobra %i", (ociosas, esperado) => {
+    expect(calcularCustoOciosa(prop, 0, false, ociosas, {}, regra)).toBe(esperado);
+  });
+
+  test("com casas não cobra", () => {
+    expect(calcularCustoOciosa(prop, 1, false, 20, {}, regra)).toBe(0);
+  });
+
+  test("hipotecada não cobra", () => {
+    expect(calcularCustoOciosa(prop, 0, true, 20, {}, regra)).toBe(0);
+  });
+
+  test("ação não cobra", () => {
+    expect(calcularCustoOciosa({ tipo: "ação", custo_compra: 2400 }, 0, false, 20, {}, regra)).toBe(0);
+  });
+
+  test("Inflação (manutencaoMult 1,5) também encarece o terreno ocioso", () => {
+    expect(calcularCustoOciosa(prop, 0, false, 8, { manutencaoMult: 1.5 }, regra)).toBe(108);
+  });
+
+  test("OCIOSA_REGRA segue as constantes de economia.ts", () => {
+    expect(OCIOSA_REGRA).toEqual({
+      carenciaRodadas: OCIOSA_CARENCIA_RODADAS,
+      pct: OCIOSA_PCT,
+      degrausMax: OCIOSA_DEGRAUS_MAX,
+    });
   });
 });
