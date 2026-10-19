@@ -154,9 +154,11 @@ export const turnoRepository = {
   }) =>
     prisma.sessionPlayer.update({ where: { id: playerId }, data }),
 
+  // Decremento condicional (checagem e consumo atômicos): count 0 = não
+  // havia crédito. Não depende do withLock, que sem Redis não trava nada.
   usarCreditoVisao: (playerId: number) =>
-    prisma.sessionPlayer.update({
-      where: { id: playerId },
+    prisma.sessionPlayer.updateMany({
+      where: { id: playerId, creditoVisao: { gt: 0 } },
       data: { creditoVisao: { decrement: 1 } },
     }),
 
@@ -166,9 +168,11 @@ export const turnoRepository = {
       data: { creditoRecargaEm: rodada },
     }),
 
-  resetarCreditosVisao: (playerId: number) =>
-    prisma.sessionPlayer.update({
-      where: { id: playerId },
+  // Condicional ao prazo lido: se outra requisição já recarregou (e talvez
+  // consumiu e reagendou), esta não recarrega de novo.
+  resetarCreditosVisao: (playerId: number, recargaEmLido: number) =>
+    prisma.sessionPlayer.updateMany({
+      where: { id: playerId, creditoRecargaEm: recargaEmLido },
       data: { creditoVisao: VISAO_CREDITOS_MAX, creditoRecargaEm: 0 },
     }),
 

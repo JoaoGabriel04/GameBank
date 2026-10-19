@@ -177,7 +177,7 @@ class TurnoService {
 
       // Recarrega se a rodada atual já passou do prazo agendado.
       if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
-        await turnoRepository.resetarCreditosVisao(player.id);
+        await turnoRepository.resetarCreditosVisao(player.id, player.creditoRecargaEm);
         player.creditoVisao = VISAO_CREDITOS_MAX;
         player.creditoRecargaEm = 0;
       }
@@ -186,8 +186,11 @@ class TurnoService {
         throw new AppError(400, "Sem créditos de visão disponíveis.");
       }
 
-      // Consome um crédito
-      await turnoRepository.usarCreditoVisao(player.id);
+      // Consome um crédito — dois cliques simultâneos não gastam dois.
+      const consumido = await turnoRepository.usarCreditoVisao(player.id);
+      if (consumido.count === 0) {
+        throw new AppError(400, "Sem créditos de visão disponíveis.");
+      }
       const creditosRestantes = player.creditoVisao - 1;
 
       // Se acabaram os créditos, agenda a recarga VISAO_RECARGA_RODADAS à frente.

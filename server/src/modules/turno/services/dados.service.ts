@@ -55,7 +55,7 @@ class DadosService {
     // (lido por outros clientes via session.jogadores[].creditoVisao)
     // carrega o valor pré-recarga, ainda não persistido no banco.
     if (player.creditoRecargaEm > 0 && session.rodadaAtual >= player.creditoRecargaEm) {
-      await turnoRepository.resetarCreditosVisao(player.id);
+      await turnoRepository.resetarCreditosVisao(player.id, player.creditoRecargaEm);
       player.creditoVisao = VISAO_CREDITOS_MAX;
       player.creditoRecargaEm = 0;
     }
