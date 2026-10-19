@@ -5,10 +5,23 @@ import { requireAdmin } from "../../middleware/admin.middleware.js";
 import { bannerUpload, badgeUpload, frameUpload } from "../../middleware/upload.middleware.js";
 import { bannerAdminLimiter } from "../../config/rate-limiters.js";
 import { diamondAdminController } from "../../modules/diamonds/diamond-admin.controller.js";
+import { invalidarCatalogoCosmeticos } from "../../modules/shop/shop.repository.js";
 
 const adminRouter = Router();
 
 adminRouter.use(authenticate, requireAdmin);
+
+// O catálogo de cosméticos (itens, banners, molduras, badges) fica em cache
+// em memória por 60s (shop.repository). Toda escrita do admin que der certo
+// invalida — são raras e é o único caminho que altera o catálogo.
+adminRouter.use((req, res, next) => {
+  if (req.method !== "GET") {
+    res.on("finish", () => {
+      if (res.statusCode < 400) invalidarCatalogoCosmeticos();
+    });
+  }
+  next();
+});
 
 // Dashboard
 adminRouter.get("/dashboard", adminController.getDashboard);

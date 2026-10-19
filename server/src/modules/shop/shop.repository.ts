@@ -1,5 +1,6 @@
 import { raridadeWeight } from "../../constants/raridade.js";
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "../../../generated/prisma/index.js";
 
 export interface UserItemRef {
   item_id: number;
@@ -52,6 +53,75 @@ export function resolveShopItem(item: any) {
   };
 }
 
+// ── Catálogo de cosméticos em cache ────────────────────────────────────
+// loja_itens (+ banner/frame/badge) por id. O catálogo só muda pelo painel
+// admin (que chama invalidarCatalogoCosmeticos); comprar/equipar muda o
+// user_items do usuário, que é sempre lido fresco — então o cache nunca
+// mostra um item equipado errado. TTL curto cobre outras instâncias.
+const CATALOGO_TTL_MS = 60_000;
+type ItemCatalogo = Prisma.ShopItemGetPayload<{ include: { banner: true; frame: true; badge: true } }>;
+const catalogoCache = new Map<number, { item: ItemCatalogo | null; expiraEm: number }>();
+
+export function invalidarCatalogoCosmeticos() {
+  catalogoCache.clear();
+}
+
+async function itensDoCatalogo(ids: number[]): Promise<Map<number, ItemCatalogo>> {
+  const agora = Date.now();
+  const unicos = [...new Set(ids)];
+  const faltando = unicos.filter((id) => (catalogoCache.get(id)?.expiraEm ?? 0) <= agora);
+  if (faltando.length > 0) {
+    const encontrados = await prisma.shopItem.findMany({
+      where: { id: { in: faltando } },
+      include: { banner: true, frame: true, badge: true },
+    });
+    const porId = new Map(encontrados.map((si) => [si.id, si]));
+    // Ids inexistentes também ficam em cache (item apagado), para não
+    // repetir a busca a cada broadcast.
+    for (const id of faltando) catalogoCache.set(id, { item: porId.get(id) ?? null, expiraEm: agora + CATALOGO_TTL_MS });
+  }
+  const resultado = new Map<number, ItemCatalogo>();
+  for (const id of unicos) {
+    const item = catalogoCache.get(id)?.item;
+    if (item) resultado.set(id, item);
+  }
+  return resultado;
+}
+
+function resolverRefs(refs: UserItemRef[], itemMap: Map<number, ItemCatalogo>) {
+  return refs
+    .map((ref) => {
+      const shopItem = itemMap.get(ref.item_id);
+      if (!shopItem) return null;
+      const frame = shopItem.frame;
+      const badge = shopItem.badge;
+
+      let resolvedValue = shopItem.value;
+      if (shopItem.type === "banner" && shopItem.banner) resolvedValue = shopItem.banner.css;
+      if (shopItem.type === "frame" && frame) resolvedValue = frame.css ?? frame.imageUrl;
+
+      const resolvedImageUrl = shopItem.type === "badge" && badge ? badge.imageUrl : shopItem.imageUrl;
+
+      return {
+        id: shopItem.id,
+        name: shopItem.name,
+        icon: shopItem.icon,
+        value: resolvedValue,
+        type: shopItem.type,
+        imageUrl: resolvedImageUrl ?? null,
+        raridade: shopItem.raridade ?? null,
+        animated: shopItem.type === "frame" && frame ? frame.animated : (shopItem.animated ?? false),
+        equipped: ref.equipped,
+        frameId: shopItem.frameId ?? null,
+        frameTipo: shopItem.type === "frame" ? (frame?.tipo ?? null) : null,
+        frameAnimated: shopItem.type === "frame" ? (frame?.animated ?? false) : null,
+        frameScale: shopItem.type === "frame" ? (frame?.scale ?? 145) : null,
+      };
+    })
+    .filter((i): i is NonNullable<typeof i> => i !== null)
+    .sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);
+}
+
 export const shopRepository = {
   findAvailableItems: async () => {
     const items = await prisma.shopItem.findMany({
@@ -75,49 +145,23 @@ export const shopRepository = {
    * Joins user_items refs with ShopItem data.
    */
   resolveUserItems: async (userId: number) => {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { user_items: true } });
     if (!user) return [];
-
     const refs = parseUserItems(user.user_items);
-    if (refs.length === 0) return [];
+    return resolverRefs(refs, await itensDoCatalogo(refs.map((r) => r.item_id)));
+  },
 
-    const shopItems = await prisma.shopItem.findMany({
-      where: { id: { in: refs.map((r) => r.item_id) } },
-      include: { banner: true, frame: true, badge: true },
-    });
-    const itemMap = new Map(shopItems.map((si) => [si.id, si]));
-
-    return refs
-      .map((ref) => {
-        const shopItem = itemMap.get(ref.item_id);
-        if (!shopItem) return null;
-        const frame = shopItem.frame;
-        const badge = shopItem.badge;
-
-        let resolvedValue = shopItem.value;
-        if (shopItem.type === "banner" && shopItem.banner) resolvedValue = shopItem.banner.css;
-        if (shopItem.type === "frame" && frame) resolvedValue = frame.css ?? frame.imageUrl;
-
-        const resolvedImageUrl = shopItem.type === "badge" && badge ? badge.imageUrl : shopItem.imageUrl;
-
-        return {
-          id: shopItem.id,
-          name: shopItem.name,
-          icon: shopItem.icon,
-          value: resolvedValue,
-          type: shopItem.type,
-          imageUrl: resolvedImageUrl ?? null,
-          raridade: shopItem.raridade ?? null,
-          animated: shopItem.type === "frame" && frame ? frame.animated : (shopItem.animated ?? false),
-          equipped: ref.equipped,
-          frameId: shopItem.frameId ?? null,
-          frameTipo: shopItem.type === "frame" ? (frame?.tipo ?? null) : null,
-          frameAnimated: shopItem.type === "frame" ? (frame?.animated ?? false) : null,
-          frameScale: shopItem.type === "frame" ? (frame?.scale ?? 145) : null,
-        };
-      })
-      .filter((i): i is NonNullable<typeof i> => i !== null)
-      .sort((a, b) => raridadeWeight(a.raridade as any) - raridadeWeight(b.raridade as any) || a.id - b.id);
+  /**
+   * resolveUserItems para vários usuários de uma vez (ex.: os jogadores de
+   * uma sessão a cada broadcast): uma única busca no catálogo para todos,
+   * em vez de 1 query de usuário + 4 de catálogo por jogador. Recebe o
+   * user_items que a query de origem já trouxe.
+   */
+  resolveUserItemsEmLote: async (usuarios: { id: number; user_items: unknown }[]) => {
+    const refsPorUsuario = new Map(usuarios.map((u) => [u.id, parseUserItems(u.user_items)]));
+    const ids = [...refsPorUsuario.values()].flatMap((refs) => refs.map((r) => r.item_id));
+    const itemMap = await itensDoCatalogo(ids);
+    return new Map([...refsPorUsuario].map(([userId, refs]) => [userId, resolverRefs(refs, itemMap)]));
   },
 
   saveUserItems: (userId: number, refs: UserItemRef[]) =>
