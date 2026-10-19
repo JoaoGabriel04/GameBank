@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Jaro, Inconsolata } from 'next/font/google'
+import localFont from 'next/font/local'
 import { ToastProvider } from "@/components/Toast";
 import MusicProvider from "@/components/MusicProvider";
 
@@ -9,13 +9,17 @@ export const metadata: Metadata = {
   description: "Gerenciador de partidas do tabuleiro Super Banco Imobiliário",
 };
 
-const jaro = Jaro({
-  subsets: ['latin'],
+// Arquivos locais (subset latin do Google Fonts) para o build não depender
+// de rede: com next/font/google, uma falha no fetch quebra o build.
+const jaro = localFont({
+  src: '../../public/fonts/Jaro-latin.woff2',
+  weight: '400',
   variable: '--font-jaro-next',
 })
 
-const inconsolata = Inconsolata({
-  subsets: ['latin'],
+const inconsolata = localFont({
+  src: '../../public/fonts/Inconsolata-latin-200-900.woff2',
+  weight: '200 900',
   variable: '--font-inconsolata-next',
 })
 
