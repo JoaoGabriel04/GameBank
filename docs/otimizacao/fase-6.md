@@ -11,6 +11,7 @@
 | `4de20b9` + `276f1fb` | higiene | Saem do versionamento: `node_modules/` da raiz (759 arquivos), `package.json` e `package-lock.json` da raiz (só declaravam `dotenv`, `lenis` e `zod`, já declarados no cliente/servidor), `server/client-economia-core.ts` (arquivo vazio criado pelo bind mount do compose de dev) e 5 `*:Zone.Identifier`. O `.gitignore` passa a cobri-los. Os arquivos **continuam no disco**. |
 | `185b2cc` | fontes | `next/font/google` → `next/font/local`. Os woff2 do subset latin (Jaro 400, Inconsolata variável 200–900) ficam em `client/public/fonts`. As variáveis CSS não mudam. |
 | `ed9f249` | boot | `entrypoint.prod.sh` e `npm start` chamam o binário local do Prisma em vez de `npx`. |
+| `db25fc9` | higiene | Remove as imagens sem referência que a Fase 4 deixou para cá: `Arte Central.png`, `Imagem de fundo Tabuleiro.png` e `coin.png` (~4,9 MB). Nenhum dos nomes aparece no código nem no banco de dev; ficam no histórico do Git. |
 | `6052c46` | observabilidade | `emitirSnapshotAgora` loga tempo de reconstrução e bytes do payload de cada `session:updated`: `debug` normalmente, `warn` acima de 500 ms ou 30 KB. |
 
 ## Medições
