@@ -61,6 +61,11 @@ describe("Renda passiva por rodada", () => {
     const { turnoAtualPlayerId } = await turnoService.iniciarTurnos(sessao.id, [p1.id, p2.id]);
     const outroId = turnoAtualPlayerId === p1.id ? p2.id : p1.id;
 
+    // iniciarTurnos sorteia o evento anunciado para a rodada 2 — sem
+    // limpar, a virada ativa um evento aleatório (Dividendos credita
+    // R$ 1.000, Recessão zera a renda) e o saldo final vira loteria.
+    await prisma.session.update({ where: { id: sessao.id }, data: { eventoProximo: null, eventoAtual: null } });
+
     // Com 2 jogadores, 2 passes de vez completam uma volta e viram a rodada.
     await turnoService.passarVez(sessao.id, turnoAtualPlayerId!);
     await turnoService.passarVez(sessao.id, outroId);
