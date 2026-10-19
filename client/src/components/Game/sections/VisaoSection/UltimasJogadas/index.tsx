@@ -4,11 +4,12 @@ import { useMemo } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import type { Transacao } from "@/types/game";
 import { formatCurrency } from "@/utils/format";
-import { Home, Landmark, Gift, Ban, ArrowLeftToLine, Shield, Gavel, TrendingUp } from "lucide-react";
+import { Home, Landmark, Gift, Ban, ArrowLeftToLine, Shield, Gavel, TrendingUp, Hourglass } from "lucide-react";
 
 const TIPOS_RELEVANTES = new Set([
   "PAGAMENTO_ALUGUEL", "COMPRA_PROPRIEDADE", "PASSAGEM_INICIO",
   "SORTE_REVES", "IMPOSTO", "RESTITUICAO", "PRISAO", "LEILAO", "RENDA_PASSIVA",
+  "TERRENO_OCIOSO",
 ]);
 
 function getTipoIcon(tipo: string) {
@@ -22,6 +23,7 @@ function getTipoIcon(tipo: string) {
     case "PRISAO": return <Shield className="w-3.5 h-3.5" />;
     case "LEILAO": return <Gavel className="w-3.5 h-3.5" />;
     case "RENDA_PASSIVA": return <TrendingUp className="w-3.5 h-3.5" />;
+    case "TERRENO_OCIOSO": return <Hourglass className="w-3.5 h-3.5" />;
     default: return <TrendingUp className="w-3.5 h-3.5" />;
   }
 }

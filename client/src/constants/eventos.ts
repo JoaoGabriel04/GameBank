@@ -76,7 +76,7 @@ export const EVENTOS: EventoDef[] = [
     codigo: "INFLACAO",
     nome: "Inflação",
     descricao: "Os custos de manter imóveis dispararam.",
-    dica: "Manutenção +50%. Muitas casas podem virar prejuízo.",
+    dica: "Manutenção +50% (inclusive a de terreno ocioso). Muitas casas podem virar prejuízo.",
     icone: "💸", cor: "vermelho",
     efeito: { manutencaoMult: 1.5 },
   },

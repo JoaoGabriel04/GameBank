@@ -11,6 +11,7 @@ import { toApiErr } from "@/lib/api-error"
 import { getEvento } from "@/constants/eventos"
 import { aplicarMod, calcularAluguel } from "@/shared/economia-core"
 import { IPTU_PCT, MANUTENCAO_PCT, RENDA_PASSIVA_PCT, HOTEL_EQUIVALE_CASAS } from "@/constants/economia"
+import { estadoOciosa } from "@/utils/terreno-ocioso"
 
 const COLOR_HEX: Record<string, string> = {
   lime: "#84cc16",
@@ -89,6 +90,10 @@ export default function PropertyDetailModal({
   const iptu = elegivel
     ? aplicarMod(propriedade.custo_compra * IPTU_PCT, mods.iptuMult)
     : 0
+  // Terreno ocioso: só no Modo Tabuleiro, em posse com dono (rodada.service.ts).
+  const ociosa = currentSession?.tipoJogo === 'tabuleiro' && sessionPropriedade.playerId
+    ? estadoOciosa(sessionPropriedade, propriedade, currentSession.rodadaAtual ?? 0, mods)
+    : null
 
   const handleConfirm = async () => {
     if (!confirmAction) return
@@ -222,6 +227,22 @@ export default function PropertyDetailModal({
                   <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">IPTU (no Início)</p>
                   <p className="text-sm font-jaro text-red-400">−R$ {iptu.toLocaleString('pt-BR')}</p>
                 </div>
+                {ociosa && (
+                  <div className="col-span-3">
+                    <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Terreno Ocioso</p>
+                    {ociosa.faltam <= 0 ? (
+                      <p className="text-sm font-jaro text-red-400">
+                        −R$ {ociosa.custoProximaRodada.toLocaleString('pt-BR')}
+                        <span className="ml-2 text-[11px] font-inconsolata text-zinc-500">ociosa há {ociosa.ociosas} rodadas</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs font-inconsolata text-zinc-400">
+                        Começa a cobrar em {ociosa.faltam} {ociosa.faltam === 1 ? 'rodada' : 'rodadas'} sem visita
+                      </p>
+                    )}
+                    <p className="text-[10px] font-inconsolata text-zinc-500 mt-0.5">Construir uma casa ou receber visita zera o contador.</p>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-xs font-inconsolata text-zinc-500 italic">

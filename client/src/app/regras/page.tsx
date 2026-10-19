@@ -14,7 +14,7 @@ import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useEffect } from "react";
-import { VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "@/constants/economia";
+import { OCIOSA_CARENCIA_RODADAS, OCIOSA_DEGRAUS_MAX, OCIOSA_PCT, VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "@/constants/economia";
 
 interface SecaoProps {
   id: string;
@@ -299,6 +299,13 @@ export default function Regras() {
             <li><strong>Manutenção</strong> — 12% do custo da casa, por casa construída (hotel = 5 casas)</li>
             <li>Propriedades <strong>hipotecadas</strong> não pagam IPTU nem manutenção e não geram renda passiva</li>
             <li><strong>Ações</strong> (grupo Preto) não têm IPTU, manutenção nem renda passiva</li>
+            <li>
+              <strong>Terreno ocioso</strong> — propriedade sem casas e não hipotecada em que ninguém cai há{" "}
+              {OCIOSA_CARENCIA_RODADAS} rodadas passa a cobrar do dono {Math.round(OCIOSA_PCT * 100)}% do valor de compra
+              por rodada, subindo a cada rodada até {Math.round(OCIOSA_PCT * OCIOSA_DEGRAUS_MAX * 100)}%. Visita (de
+              qualquer jogador, inclusive o dono), compra, construir ou vender casa, hipoteca, recompra, troca e
+              leilão zeram o contador. A aba Imóveis avisa 2 rodadas antes
+            </li>
             <li><strong>Terreno parado só gera IPTU.</strong> Desenvolver é o que gera renda — acumular propriedades sem construir leva ao prejuízo</li>
           </ul>
         </Secao>
@@ -316,7 +323,7 @@ export default function Regras() {
               ["Isenção Fiscal", "IPTU zerado"],
               ["Escassez de Material", "Construção +50%"],
               ["Aquecimento do Mercado", "Construção −30%"],
-              ["Inflação", "Manutenção +50%"],
+              ["Inflação", "Manutenção +50% (inclui terreno ocioso)"],
               ["Recessão", "Renda passiva zerada"],
               ["Dividendos Extraordinários", "Ações rendem 2x"],
               ["Injeção de Liquidez", "Todos recebem R$ 1.000 imediatamente"],

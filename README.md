@@ -240,6 +240,18 @@ volta do que paga IPTU:
 - **Propriedades hipotecadas** não pagam IPTU nem manutenção e não
   geram renda passiva — estão com o banco
 - **Ações (grupo Preto)** não têm IPTU, manutenção nem renda passiva
+- **Terreno ocioso** — propriedade normal, com dono, sem casas e não
+  hipotecada em que ninguém termina o movimento há
+  `OCIOSA_CARENCIA_RODADAS` (8) rodadas passa a cobrar do dono, junto da
+  manutenção da rodada, `OCIOSA_PCT` (3%) do custo de compra por degrau,
+  subindo um degrau por rodada até `OCIOSA_DEGRAUS_MAX` (4, teto de 12%).
+  Visita (de qualquer jogador, inclusive o dono), compra, leilão,
+  construir/vender casa, hipotecar, recomprar hipoteca, troca por
+  negociação e execução de garantia zeram o contador
+  (`SessionPosses.ultimaAtividadeRodada`). A Inflação também encarece o
+  terreno ocioso. A aba Imóveis avisa 2 rodadas antes e mostra um badge
+  com o custo quando já está cobrando; cada cobrança vira uma entrada
+  "Terreno ocioso" no histórico
 - **Terreno cru gera IPTU sem renda** — com IPTU de 25%, acumular
   propriedades sem desenvolver pode deixar o líquido da passagem pelo
   Início **negativo**; a UI avisa quando isso acontece (desenvolva ou
@@ -282,7 +294,7 @@ Catálogo (`server/src/constants/eventos.ts`, espelhado em
 | Isenção Fiscal | IPTU zerado |
 | Escassez de Material | Construção +50% |
 | Aquecimento do Mercado | Construção −30% |
-| Inflação | Manutenção +50% |
+| Inflação | Manutenção +50% (inclui terreno ocioso) |
 | Recessão | Renda passiva zerada |
 | Dividendos Extraordinários | Ações (grupo Preto) rendem 2x |
 | Injeção de Liquidez | Todos recebem R$ 1.000 imediatamente |

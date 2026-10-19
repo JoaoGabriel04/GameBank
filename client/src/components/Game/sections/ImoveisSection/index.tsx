@@ -15,11 +15,12 @@ import { formatCurrency } from "@/utils/format";
 import { getEvento } from "@/constants/eventos";
 import { aplicarMod } from "@/shared/economia-core";
 import { toApiErr } from "@/lib/api-error";
+import { estadoOciosa, OCIOSA_AVISO_RODADAS } from "@/utils/terreno-ocioso";
 import UserAvatar from "@/components/UserAvatar";
 import UserBadge from "@/components/UserBadge";
 import PlayerCard from "@/components/PlayerCard";
 import { getAccentHex, COLOR_LABELS } from "@/components/Game/sections/shared";
-import { Home, Receipt, Banknote, Handshake, ShoppingBag } from "lucide-react";
+import { Home, Receipt, Banknote, Handshake, ShoppingBag, Hourglass, TriangleAlert } from "lucide-react";
 import ComprarCasasModal from "./ComprarCasasModal";
 import VenderCasasModal from "./VenderCasasModal";
 import AluguelModal from "./AluguelModal";
@@ -105,6 +106,27 @@ export default function ImoveisSection({ currentPlayer, isOwner, onNavigate }: P
   }, [propertyGroups]);
 
   const custoConstrucaoMult = getEvento(currentSession?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
+
+  // Terreno ocioso (Modo Tabuleiro): estado por posse para os badges e o
+  // aviso prévio. Mesma regra e mesmos mods (Inflação) do servidor.
+  const ociosaPorPosse = useMemo(() => {
+    const mapa = new Map<number, NonNullable<ReturnType<typeof estadoOciosa>>>();
+    if (!isTabuleiro) return mapa;
+    const mods = getEvento(currentSession?.eventoAtual)?.efeito ?? {};
+    const rodadaAtual = currentSession?.rodadaAtual ?? 0;
+    for (const { prop, sessionProp } of myProps) {
+      const estado = estadoOciosa(sessionProp, prop, rodadaAtual, mods);
+      if (estado) mapa.set(sessionProp.id, estado);
+    }
+    return mapa;
+  }, [isTabuleiro, myProps, currentSession?.eventoAtual, currentSession?.rodadaAtual]);
+
+  const avisosOciosa = useMemo(
+    () => myProps
+      .map(({ prop, sessionProp }) => ({ nome: prop.nome, estado: ociosaPorPosse.get(sessionProp.id) }))
+      .filter((a) => a.estado && a.estado.faltam > 0 && a.estado.faltam <= OCIOSA_AVISO_RODADAS),
+    [myProps, ociosaPorPosse]
+  );
   const custoCasaAtual = useCallback(
     (custoBase: number) => aplicarMod(custoBase, custoConstrucaoMult),
     [custoConstrucaoMult]
@@ -338,6 +360,21 @@ export default function ImoveisSection({ currentPlayer, isOwner, onNavigate }: P
           Minhas Propriedades
           <span className="ml-2 text-sm font-inconsolata text-zinc-500">({myProps.length})</span>
         </h2>
+        {avisosOciosa.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+            {avisosOciosa.map((a) => (
+              <p key={a.nome} className="flex items-start gap-2 text-xs font-inconsolata text-amber-300">
+                <TriangleAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  {a.nome} começa a cobrar em {a.estado!.faltam} {a.estado!.faltam === 1 ? "rodada" : "rodadas"} se ninguém cair nela.
+                </span>
+              </p>
+            ))}
+            <p className="text-[10px] font-inconsolata text-amber-400/70 pl-5">
+              Construir uma casa ou receber uma visita zera o contador.
+            </p>
+          </div>
+        )}
         {propertyGroups.length === 0 ? (
           <p className="text-sm font-inconsolata text-zinc-500 italic">Nenhuma propriedade ainda. Vá até a Loja para comprar!</p>
         ) : (
@@ -355,6 +392,7 @@ export default function ImoveisSection({ currentPlayer, isOwner, onNavigate }: P
                   {group.items.map(({ prop, sessionProp }) => {
                     const accent = getAccentHex(prop.grupo_cor);
                     const isHipotecada = sessionProp.hipotecada;
+                    const ociosa = ociosaPorPosse.get(sessionProp.id);
                     return (
                       <button
                         key={sessionProp.id}
@@ -378,6 +416,24 @@ export default function ImoveisSection({ currentPlayer, isOwner, onNavigate }: P
                             R$ {formatCurrency(getAluguel(prop, sessionProp.casas))}
                           </p>
                           <p className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wide">Aluguel Atual</p>
+                          {ociosa && ociosa.faltam <= 0 && (
+                            <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/30 px-2 py-1.5">
+                              <p className="flex items-center gap-1.5 text-[11px] font-inconsolata text-red-300">
+                                <Hourglass className="w-3 h-3 shrink-0" />
+                                Ociosa há {ociosa.ociosas} rodadas · custo R$ {formatCurrency(ociosa.custoProximaRodada)}/rodada
+                              </p>
+                              <p className="text-[10px] font-inconsolata text-zinc-500 mt-0.5">Construir ou receber visita zera.</p>
+                            </div>
+                          )}
+                          {ociosa && ociosa.faltam > 0 && ociosa.faltam <= OCIOSA_AVISO_RODADAS && (
+                            <div className="mt-3 rounded-lg bg-amber-500/10 border border-amber-500/30 px-2 py-1.5">
+                              <p className="flex items-center gap-1.5 text-[11px] font-inconsolata text-amber-300">
+                                <Hourglass className="w-3 h-3 shrink-0" />
+                                Cobra em {ociosa.faltam} {ociosa.faltam === 1 ? "rodada" : "rodadas"}
+                              </p>
+                              <p className="text-[10px] font-inconsolata text-zinc-500 mt-0.5">Construir ou receber visita zera.</p>
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
