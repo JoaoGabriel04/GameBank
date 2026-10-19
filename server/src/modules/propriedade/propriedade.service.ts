@@ -1,4 +1,4 @@
-import { PropriedadeRepository } from "./propriedade.repository.js";
+import { PropriedadeRepository, lerRodadaAtual } from "./propriedade.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
@@ -64,13 +64,14 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente");
 
+        const rodada = await lerRodadaAtual(tx, sessionId);
         await tx.sessionPosses.updateMany({
           where: { sessionId, propId },
           // Limpa hipotecada/lastOwnerId — a compra normal (ao cair na casa)
           // de uma propriedade sem dono e hipotecada precisa devolvê-la ao
           // estado normal, senão ela fica presa como "hipotecada" mesmo já
           // tendo um dono novo e pago.
-          data: { playerId: userId, hipotecada: false, lastOwnerId: null },
+          data: { playerId: userId, hipotecada: false, lastOwnerId: null, ultimaAtividadeRodada: rodada },
         });
         await tx.historico.create({
           data: {
@@ -126,9 +127,10 @@ export class PropriedadeService {
         }
         const debtValor = valor - pago;
 
+        const rodada = await lerRodadaAtual(tx, sessionId);
         await tx.sessionPosses.updateMany({
           where: { sessionId, propId },
-          data: { playerId, hipotecada: false, lastOwnerId: null },
+          data: { playerId, hipotecada: false, lastOwnerId: null, ultimaAtividadeRodada: rodada },
         });
         await tx.historico.create({
           data: {
@@ -207,9 +209,10 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar uma casa!");
 
+        const rodada = await lerRodadaAtual(tx, sessionId);
         await tx.sessionPosses.update({
           where: { id: propriedade.id },
-          data: { casas: { increment: 1 } },
+          data: { casas: { increment: 1 }, ultimaAtividadeRodada: rodada },
         });
         await tx.historico.create({
           data: {
@@ -298,10 +301,11 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar as casas");
 
+        const rodada = await lerRodadaAtual(tx, sessionId);
         for (const prop of properties) {
           await tx.sessionPosses.update({
             where: { id: prop.id },
-            data: { casas: { increment: 1 } },
+            data: { casas: { increment: 1 }, ultimaAtividadeRodada: rodada },
           });
         }
         await tx.historico.create({
@@ -381,10 +385,11 @@ export class PropriedadeService {
         detalhesItens.push(`${item.quantidade} casa(s) de ${prop.propriedade.nome}`);
       }
 
+      const rodada = await lerRodadaAtual(prisma, sessionId);
       const updateQueries = items.map((item) =>
         prisma.sessionPosses.update({
           where: { id: item.sessaoPossesId },
-          data: { casas: { decrement: item.quantidade } },
+          data: { casas: { decrement: item.quantidade }, ultimaAtividadeRodada: rodada },
         })
       );
 
@@ -433,10 +438,11 @@ export class PropriedadeService {
       const custoConstrucaoMult = getEvento(session?.eventoAtual)?.efeito.custoConstrucaoMult ?? 1;
       const valorVenda = aplicarMod(propriedade.propriedade.custo_casa, custoConstrucaoMult);
 
+      const rodada = await lerRodadaAtual(prisma, sessionId);
       await prisma.$transaction([
         prisma.sessionPosses.update({
           where: { id: propriedade.id },
-          data: { casas: { decrement: 1 } },
+          data: { casas: { decrement: 1 }, ultimaAtividadeRodada: rodada },
         }),
         prisma.sessionPlayer.update({
           where: { id: userId },
@@ -484,10 +490,11 @@ export class PropriedadeService {
 
       const valorVenda = propriedade.propriedade.custo_compra;
 
+      const rodada = await lerRodadaAtual(prisma, sessionId);
       await prisma.$transaction([
         prisma.sessionPosses.update({
           where: { id: propriedade.id },
-          data: { playerId: null, casas: 0 },
+          data: { playerId: null, casas: 0, ultimaAtividadeRodada: rodada },
         }),
         prisma.sessionPlayer.update({
           where: { id: userId },
@@ -537,10 +544,11 @@ export class PropriedadeService {
 
       const valorVenda = propriedade.propriedade.hipoteca;
 
+      const rodada = await lerRodadaAtual(prisma, sessionId);
       await prisma.$transaction([
         prisma.sessionPosses.update({
           where: { id: propriedade.id },
-          data: { playerId: null, lastOwnerId: userId, casas: 0, hipotecada: true },
+          data: { playerId: null, lastOwnerId: userId, casas: 0, hipotecada: true, ultimaAtividadeRodada: rodada },
         }),
         prisma.sessionPlayer.update({
           where: { id: userId },
@@ -585,9 +593,10 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar a hipoteca");
 
+        const rodada = await lerRodadaAtual(tx, sp.sessionId);
         await tx.sessionPosses.update({
           where: { id: sessionPossesId },
-          data: { playerId: compradorId, lastOwnerId: null, hipotecada: false },
+          data: { playerId: compradorId, lastOwnerId: null, hipotecada: false, ultimaAtividadeRodada: rodada },
         });
         await tx.historico.create({
           data: {
@@ -611,9 +620,10 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Saldo insuficiente para comprar a hipoteca");
 
+        const rodada = await lerRodadaAtual(tx, sp.sessionId);
         await tx.sessionPosses.update({
           where: { id: sessionPossesId },
-          data: { playerId: compradorId, lastOwnerId: null, hipotecada: false },
+          data: { playerId: compradorId, lastOwnerId: null, hipotecada: false, ultimaAtividadeRodada: rodada },
         });
         await tx.historico.create({
           data: {
@@ -681,9 +691,10 @@ export class PropriedadeService {
         });
         if (debitado.count === 0) throw new AppError(400, "Comprador não tem saldo suficiente");
 
+        const rodada = await lerRodadaAtual(tx, sp.sessionId);
         await tx.sessionPosses.update({
           where: { id: notif.sessionPossesId },
-          data: { playerId: notif.fromPlayerId, lastOwnerId: null, hipotecada: false },
+          data: { playerId: notif.fromPlayerId, lastOwnerId: null, hipotecada: false, ultimaAtividadeRodada: rodada },
         });
         await tx.sessionPlayer.update({
           where: { id: notif.toPlayerId },
@@ -720,10 +731,11 @@ export class PropriedadeService {
       const player = await this.repo.findPlayerById(userId);
       if (!player) throw new AppError(404, "Jogador não encontrado!");
 
+      const rodada = await lerRodadaAtual(prisma, sessionId);
       await prisma.$transaction([
         prisma.sessionPosses.update({
           where: { id: propriedade.id },
-          data: { playerId: player.id, casas: 0 },
+          data: { playerId: player.id, casas: 0, ultimaAtividadeRodada: rodada },
         }),
         prisma.historico.create({
           data: {

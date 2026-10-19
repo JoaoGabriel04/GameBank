@@ -1,4 +1,5 @@
 import { NegociacaoRepository } from "./negociacao.repository.js";
+import { lerRodadaAtual } from "../propriedade/propriedade.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 import { withLock } from "../../middleware/lock.middleware.js";
@@ -223,12 +224,13 @@ export class NegociacaoService {
     }
 
     await prisma.$transaction(async (tx) => {
+      const rodada = await lerRodadaAtual(tx, negotiation.sessionId);
       // Transfere propriedades oferecidas (proponente → alvo)
       // Verifica posse atual dentro da transação para detectar transferências concorrentes
       for (const item of offerProps) {
         const result = await tx.sessionPosses.updateMany({
           where: { id: item.sessionPossesId!, playerId: negotiation.fromPlayerId },
-          data: { playerId: negotiation.toPlayerId, negociando: false, casas: 0 },
+          data: { playerId: negotiation.toPlayerId, negociando: false, casas: 0, ultimaAtividadeRodada: rodada },
         });
         if (result.count === 0) {
           throw new AppError(409, "Uma propriedade oferecida já não pertence ao proponente. A negociação foi cancelada.");
@@ -240,7 +242,7 @@ export class NegociacaoService {
       for (const item of wantProps) {
         const result = await tx.sessionPosses.updateMany({
           where: { id: item.sessionPossesId!, playerId: negotiation.toPlayerId },
-          data: { playerId: negotiation.fromPlayerId, negociando: false, casas: 0 },
+          data: { playerId: negotiation.fromPlayerId, negociando: false, casas: 0, ultimaAtividadeRodada: rodada },
         });
         if (result.count === 0) {
           throw new AppError(409, "Uma propriedade solicitada já não pertence ao alvo. A negociação foi cancelada.");

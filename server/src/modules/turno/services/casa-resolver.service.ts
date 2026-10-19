@@ -37,6 +37,10 @@ class CasaResolverService {
         const posse = await propriedadeRepository.findSessionPosses(sessionId, casa.propId);
         if (!posse || !posse.propriedade) break;
 
+        // Terreno ocioso: qualquer jogador (inclusive o dono) terminar o
+        // movimento aqui conta como visita e zera o contador.
+        await propriedadeRepository.registrarVisita(posse.id, sessionId);
+
         // Hipotecada com lastOwnerId ainda tem "dono" pra fins de jogo —
         // playerId é limpo no momento da hipoteca (hipotecarPropriedade),
         // então checar só `!posse.playerId` trata isso como propriedade

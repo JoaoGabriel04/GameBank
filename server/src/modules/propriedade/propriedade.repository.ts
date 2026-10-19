@@ -1,5 +1,13 @@
 import { prisma } from "../../lib/prisma.js";
-import type { NotificationStatus } from "../../../generated/prisma/index.js";
+import type { NotificationStatus, Prisma } from "../../../generated/prisma/index.js";
+
+/** Rodada atual da sessão — valor gravado em SessionPosses.ultimaAtividadeRodada
+ *  sempre que uma posse tem atividade (visita, compra, casa, hipoteca, troca),
+ *  zerando o contador de terreno ocioso. Aceita o `tx` da transação. */
+export async function lerRodadaAtual(db: Pick<Prisma.TransactionClient, "session">, sessionId: number) {
+  const s = await db.session.findUnique({ where: { id: Number(sessionId) }, select: { rodadaAtual: true } });
+  return s?.rodadaAtual ?? 0;
+}
 
 export class PropriedadeRepository {
   async findPropriedadeById(id: number) {
@@ -8,6 +16,14 @@ export class PropriedadeRepository {
 
   async findPlayerById(id: number) {
     return prisma.sessionPlayer.findUnique({ where: { id } });
+  }
+
+  /** Visita (jogador terminou o movimento na casa): zera o contador de ocioso. */
+  async registrarVisita(sessionPossesId: number, sessionId: number) {
+    return prisma.sessionPosses.update({
+      where: { id: sessionPossesId },
+      data: { ultimaAtividadeRodada: await lerRodadaAtual(prisma, sessionId) },
+    });
   }
 
   async findSessionPosses(sessionId: number, propId: number) {

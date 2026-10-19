@@ -1,4 +1,5 @@
 import { UserRepository } from "./user.repository.js";
+import { lerRodadaAtual } from "../propriedade/propriedade.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js";
 
@@ -35,7 +36,10 @@ export class UserService {
       // que o delete abaixo quebre por causa da referência de lastOwnerId.
       await tx.sessionPosses.updateMany({
         where: { OR: [{ playerId }, { lastOwnerId: playerId }] },
-        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
+        data: {
+          playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false,
+          ultimaAtividadeRodada: await lerRodadaAtual(tx, session.id),
+        },
       });
       await tx.sessionPlayer.delete({ where: { id: playerId } });
     });

@@ -256,7 +256,7 @@ class TurnoService {
       // presas a um jogador que já saiu da partida).
       await tx.sessionPosses.updateMany({
         where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
-        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
+        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false, ultimaAtividadeRodada: session.rodadaAtual },
       });
       await tx.sessionPlayer.update({
         where: { id: player.id },

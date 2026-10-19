@@ -1,5 +1,5 @@
 import { EmprestimoRepository } from "./emprestimo.repository.js";
-import { PropriedadeRepository } from "../propriedade/propriedade.repository.js";
+import { PropriedadeRepository, lerRodadaAtual } from "../propriedade/propriedade.repository.js";
 import { turnoRepository } from "../turno/turno.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { withLock } from "../../middleware/lock.middleware.js";
@@ -220,6 +220,7 @@ export class EmprestimoService {
 
     const { prisma } = await import("../../lib/prisma.js");
     await prisma.$transaction(async (tx) => {
+      const rodada = await lerRodadaAtual(tx, sessionId);
       // Busca a propriedade-garantia para saber o grupo de cor
       const garantia = await tx.sessionPosses.findFirst({
         where: { sessionId, propId: emp.garantiaPropId },
@@ -253,7 +254,7 @@ export class EmprestimoService {
               playerId,
               propId: { in: afetados.map(p => p.propId) },
             },
-            data: { casas: 0 },
+            data: { casas: 0, ultimaAtividadeRodada: rodada },
           });
 
           await tx.sessionPlayer.update({
@@ -274,7 +275,7 @@ export class EmprestimoService {
 
       await tx.sessionPosses.updateMany({
         where: { sessionId, propId: emp.garantiaPropId, playerId },
-        data: { playerId: null, casas: 0, hipotecada: false, negociando: false },
+        data: { playerId: null, casas: 0, hipotecada: false, negociando: false, ultimaAtividadeRodada: rodada },
       });
 
       await tx.emprestimo.update({

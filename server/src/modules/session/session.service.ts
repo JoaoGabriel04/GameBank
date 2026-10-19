@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { SessionRepository } from "./session.repository.js";
+import { lerRodadaAtual } from "../propriedade/propriedade.repository.js";
 import { AppError } from "../../middleware/error-handler.middleware.js";
 import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
@@ -434,6 +435,7 @@ export class SessionService {
             casas: 0,
             hipotecada: false,
             negociando: false,
+            ultimaAtividadeRodada: await lerRodadaAtual(tx, sessionId),
           },
         });
 
@@ -562,6 +564,7 @@ export class SessionService {
           casas: 0,
           hipotecada: false,
           negociando: false,
+          ultimaAtividadeRodada: await lerRodadaAtual(tx, sessionId),
         },
       });
 
@@ -620,7 +623,10 @@ export class SessionService {
       // indefinidamente, presas a um jogador que já saiu da partida.
       await tx.sessionPosses.updateMany({
         where: { sessionId, OR: [{ playerId: player.id }, { lastOwnerId: player.id }] },
-        data: { playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false },
+        data: {
+          playerId: null, lastOwnerId: null, casas: 0, hipotecada: false, negociando: false,
+          ultimaAtividadeRodada: await lerRodadaAtual(tx, sessionId),
+        },
       });
       await tx.sessionPlayer.update({
         where: { id: player.id },
