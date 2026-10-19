@@ -14,6 +14,10 @@ jest.unstable_mockModule("../../lib/prisma.js", () => ({
   },
 }));
 
+// docker-compose.dev.yml liga DISABLE_ANTI_FARM no container de dev — sem
+// limpar aqui, calcularRecompensa pula toda a lógica que este teste cobre.
+delete process.env.DISABLE_ANTI_FARM;
+
 const { calcularRecompensa } = await import("../../modules/session/reward.service.js");
 
 describe("calcularRecompensa", () => {

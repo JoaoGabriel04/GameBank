@@ -113,9 +113,9 @@ test:
 	@echo "=== Health Check ==="
 	@echo ""
 	@echo "--- Server API ---"
-	@curl -s --max-time 5 http://localhost:7000/api/sessions/test > nul 2>&1 && (echo "  OK") || (echo "  FALHOU")
+	@curl -s --max-time 5 http://localhost:7000/api/sessions/test > /dev/null 2>&1 && (echo "  OK") || (echo "  FALHOU")
 	@echo "--- Client ---"
-	@curl -s --max-time 5 http://localhost:3000 > nul 2>&1 && (echo "  OK") || (echo "  FALHOU")
+	@curl -s --max-time 5 http://localhost:3000 > /dev/null 2>&1 && (echo "  OK") || (echo "  FALHOU")
 
 test-ci:
 	docker compose -f docker-compose.dev.yml exec -T server env DOTENV_CONFIG_QUIET=true npm test -- --passWithNoTests
@@ -137,8 +137,8 @@ status:
 	docker ps --filter "name=sgp-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 clean:
-	docker compose -f docker-compose.dev.yml down -v 2>nul; true
-	docker compose down -v 2>nul; true
+	docker compose -f docker-compose.dev.yml down -v 2>/dev/null; true
+	docker compose down -v 2>/dev/null; true
 
 prune:
 	docker system prune -a --volumes -f
