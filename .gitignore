@@ -28,3 +28,11 @@ Thumbs.db
 
 # Saídas temporárias dos scripts de medição (contêm tokens JWT)
 scripts/otimizacao/.*.json
+
+# Sem package.json na raiz: cliente e servidor têm os próprios
+/node_modules/
+/package.json
+/package-lock.json
+
+# Ponto de montagem criado pelo docker-compose.dev.yml (teste do espelho do economia-core)
+server/client-economia-core.ts
