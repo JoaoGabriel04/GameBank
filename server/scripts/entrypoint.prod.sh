@@ -11,7 +11,8 @@ echo "[startup] DIRECT_URL set: $([ -n "$DIRECT_URL" ] && echo YES || echo NO)"
 # destruir colunas e dados de produção sem aviso. Para recuperar uma
 # migration com falha, resolver à mão:
 #   npx prisma migrate resolve --rolled-back <nome_da_migration>
-if npx prisma migrate deploy; then
+# Binário local em vez de npx: o npx gasta 0,3–1,2 s só para resolver o pacote.
+if ./node_modules/.bin/prisma migrate deploy; then
   echo "[startup] Migrations aplicadas com sucesso"
 else
   echo "[startup] ERRO: prisma migrate deploy falhou — abortando o boot" >&2

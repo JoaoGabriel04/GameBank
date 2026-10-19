@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "npx prisma generate && tsc",
-    "start": "npx prisma migrate deploy && node dist/index.js",
+    "start": "prisma migrate deploy && node dist/index.js",
     "purge-users": "tsx scripts/purge-users.ts",
     "purge-missions": "tsx scripts/purge-missions.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --forceExit",
