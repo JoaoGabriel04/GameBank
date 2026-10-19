@@ -1,7 +1,6 @@
 /* eslint-disable */
 'use client';
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { animateStaggerIn } from "@/lib/animations";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
@@ -16,12 +15,10 @@ import { getProfileHistoryApi, clearProfileHistoryApi } from "@/services/api/pro
 import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 import UserName from "@/components/UserName";
+import EditProfileModal from "@/components/EditProfileModal";
 import { Progress, Chip, Panel, PanelHead, xpForLevel } from "@/components/user/UserUI";
 import type { GameResult } from "@/types/shop";
 import GameResultDetailModal from "@/components/GameResultDetailModal";
-
-// Só abre ao clicar em "Editar perfil".
-const EditProfileModal = dynamic(() => import("@/components/EditProfileModal"), { ssr: false });
 
 /* --- Hero ---------------------------------------------------------------- */
 function ProfileHero({ onEdit, onOpenRank }: { onEdit: () => void; onOpenRank: () => void }) {

@@ -39,6 +39,7 @@ import EndGameVoteModal from "@/components/EndGameVoteModal";
 import Chat from "@/components/Chat";
 import { preloadSfx } from "@/utils/sfx";
 import GameSfxLayer from "@/components/GameSfxLayer";
+import NegotiationResponseModal from "@/components/NegotiationResponseModal";
 import Link from "next/link";
 import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
@@ -50,9 +51,7 @@ import type { RankedPlayer, Player } from "@/types/game";
 import { toApiErr, apiErrMsg } from "@/lib/api-error";
 import { PLAYER_COLORS } from "@/types/game";
 
-// Fora do bundle inicial: o pódio só aparece no fim da partida e a resposta
-// de negociação só quando chega uma proposta.
-const NegotiationResponseModal = dynamic(() => import("@/components/NegotiationResponseModal"), { ssr: false });
+// Fora do bundle inicial: o pódio só aparece no fim da partida.
 const PodiumModal = dynamic(() => import("@/components/PodiumModal"));
 
 const linksNavBanca = ["Visão", "Imóveis", "Banco", "Chat", "Ranking", "Loja"];

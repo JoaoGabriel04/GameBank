@@ -1,13 +1,14 @@
 'use client'
 
-import dynamic from "next/dynamic"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCrosshairs, faExpand } from "@fortawesome/free-solid-svg-icons"
 import BoardTile from "./BoardTile"
 import TurnoBanner from "./TurnoBanner"
+import TurnoModal from "./TurnoModal"
 import EventoEconomicoBar from "./EventoEconomicoBar"
 import EventoModal from "./EventoModal"
+import LeilaoModal from "./LeilaoModal"
 import LeilaoResultadoModal from "./LeilaoResultadoModal"
 import Pawns from "./Pawns"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
@@ -22,11 +23,6 @@ import { playSfx, stopSfx } from "@/utils/sfx"
 import { withTimeout } from "@/utils/withTimeout"
 import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import type { Casa, GameSession } from "@/types/game"
-
-// Só aparecem durante uma jogada ou um leilão: saem do bundle inicial da
-// tela de jogo e carregam depois da hidratação.
-const TurnoModal = dynamic(() => import("./TurnoModal"), { ssr: false })
-const LeilaoModal = dynamic(() => import("./LeilaoModal"), { ssr: false })
 
 const MIN_SCALE = 0.3
 const MAX_SCALE = 2.5
