@@ -5,9 +5,9 @@ import { Clock, Loader2 } from "lucide-react"
 import type { BauAdquirido } from "@/stores/bauStore"
 
 const BAU_IMAGENS: Record<string, string> = {
-  comum:    "/images/Cofrinho.png",
-  premium:  "/images/Cofre Premium.png",
-  lendario: "/images/Cofre Lendário.png",
+  comum:    "/images/cofrinho.webp",
+  premium:  "/images/cofre-premium.webp",
+  lendario: "/images/cofre-lendario.webp",
 }
 
 const BAU_CORES: Record<string, string> = {
@@ -62,7 +62,7 @@ export default function BauAdquiridoCard({ bau, onAbrir, abrindo }: Props) {
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: cor }} />
         ) : (
           <img
-            src={BAU_IMAGENS[bau.bau.tipo] ?? "/images/Cofrinho.png"}
+            src={BAU_IMAGENS[bau.bau.tipo] ?? "/images/cofrinho.webp"}
             alt={bau.bau.tipo}
             className="w-16 h-16 object-contain"
           />

@@ -11,8 +11,8 @@ import UserAvatar from "@/components/UserAvatar"
 import UserBadge from "@/components/UserBadge"
 
 const BAU_IMAGENS: Record<string, string> = {
-  comum:   "/images/Cofrinho.png",
-  premium: "/images/Cofre Premium.png",
+  comum:   "/images/cofrinho.webp",
+  premium: "/images/cofre-premium.webp",
 }
 
 interface PodiumModalProps {

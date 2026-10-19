@@ -48,9 +48,9 @@ type BauAberturaProps = {
 }
 
 const BAU_IMAGENS: Record<string, string> = {
-  comum:    "/images/Cofrinho.png",
-  premium:  "/images/Cofre Premium.png",
-  lendario: "/images/Cofre Lendário.png",
+  comum:    "/images/cofrinho.webp",
+  premium:  "/images/cofre-premium.webp",
+  lendario: "/images/cofre-lendario.webp",
 }
 
 export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
@@ -540,7 +540,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             ref={pigRef}
-            src={BAU_IMAGENS[resultado.tipoBau] ?? "/images/Cofrinho.png"}
+            src={BAU_IMAGENS[resultado.tipoBau] ?? "/images/cofrinho.webp"}
             alt="cofrinho"
             style={{ width: 160, height: 160, objectFit: "contain", zIndex: 2 }}
           />

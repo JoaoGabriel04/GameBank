@@ -283,12 +283,12 @@ function CosmeticCard({
 
 /* --- Coin pack card ------------------------------------------------------ */
 const COIN_IMGS: Record<string, string> = {
-  c1: "/images/coin-shop-1.png",
-  c2: "/images/coin-shop-2.png",
-  c3: "/images/coin-shop-3.png",
-  c4: "/images/coin-shop-4.png",
-  c5: "/images/coin-shop-5.png",
-  c6: "/images/coin-shop-6.png",
+  c1: "/images/coin-shop-1.webp",
+  c2: "/images/coin-shop-2.webp",
+  c3: "/images/coin-shop-3.webp",
+  c4: "/images/coin-shop-4.webp",
+  c5: "/images/coin-shop-5.webp",
+  c6: "/images/coin-shop-6.webp",
 };
 
 function CoinPackCard({
@@ -336,12 +336,12 @@ function CoinPackCard({
 
 /* --- Diamond pack card --------------------------------------------------- */
 const DIAMOND_IMGS: Record<string, string> = {
-  d1: "/images/diamond-shop-1.png",
-  d2: "/images/diamond-shop-2.png",
-  d3: "/images/diamond-shop-3.png",
-  d4: "/images/diamond-shop-4.png",
-  d5: "/images/diamond-shop-5.png",
-  d6: "/images/diamond-shop-6.png",
+  d1: "/images/diamond-shop-1.webp",
+  d2: "/images/diamond-shop-2.webp",
+  d3: "/images/diamond-shop-3.webp",
+  d4: "/images/diamond-shop-4.webp",
+  d5: "/images/diamond-shop-5.webp",
+  d6: "/images/diamond-shop-6.webp",
 };
 
 function DiamondPackCard({

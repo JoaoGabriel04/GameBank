@@ -104,7 +104,7 @@ export default function Home() {
 
       <LandingHeader />
 
-      <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.png')] bg-bottom bg-cover bg-no-repeat z-10">
+      <section style={{ height: vh }} className="relative w-full bg-[url('/images/ceu-cidade-vistacima.webp')] bg-bottom bg-cover bg-no-repeat z-10">
         <div className="w-full h-full flex flex-col justify-center items-center gap-6">
           <div className="flex w-full justify-center items-center font-jaro text-4xl sm:text-5xl lg:text-7xl z-20 px-4">
             <h1 className="bg-linear-to-r from-[#1F9900] via-[#33FF00] to-[#00BE39] bg-clip-text text-transparent text-shadow-sm">Game</h1>

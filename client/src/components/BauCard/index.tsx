@@ -14,9 +14,9 @@ type BauCardProps = {
 }
 
 const IMAGENS: Record<string, string> = {
-  comum:    "/images/Cofrinho.png",
-  premium:  "/images/Cofre Premium.png",
-  lendario: "/images/Cofre Lendário.png",
+  comum:    "/images/cofrinho.webp",
+  premium:  "/images/cofre-premium.webp",
+  lendario: "/images/cofre-lendario.webp",
 }
 
 const COR: Record<string, string> = {
@@ -48,7 +48,7 @@ export default function BauCard({ bau, onAbrir }: BauCardProps) {
           style={{ background: `linear-gradient(90deg, transparent, ${cor}, transparent)`, opacity: 0.85 }}
         />
         <img
-          src={IMAGENS[bau.tipo] ?? "/images/Cofrinho.png"}
+          src={IMAGENS[bau.tipo] ?? "/images/cofrinho.webp"}
           alt={bau.nome}
           className="w-12 h-12 object-contain"
         />

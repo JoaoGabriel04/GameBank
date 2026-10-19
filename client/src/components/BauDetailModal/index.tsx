@@ -10,9 +10,9 @@ import DiamondIcon from "@/components/DiamondIcon"
 import { useState, useEffect } from "react"
 
 const IMAGENS: Record<string, string> = {
-  comum:    "/images/Cofrinho.png",
-  premium:  "/images/Cofre Premium.png",
-  lendario: "/images/Cofre Lendário.png",
+  comum:    "/images/cofrinho.webp",
+  premium:  "/images/cofre-premium.webp",
+  lendario: "/images/cofre-lendario.webp",
 }
 
 const BAU_CORES: Record<string, string> = {
@@ -94,7 +94,7 @@ export default function BauDetailModal({ bau, onClose, onAbrir, abrindo }: BauDe
               }}
             >
               <img
-                src={IMAGENS[bau.tipo] ?? "/images/Cofrinho.png"}
+                src={IMAGENS[bau.tipo] ?? "/images/cofrinho.webp"}
                 alt={bau.nome}
                 className="w-24 h-24 object-contain"
               />

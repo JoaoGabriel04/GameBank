@@ -16,7 +16,7 @@ export default function UserMainLayout({ children }: { children: React.ReactNode
         <div
           className="pointer-events-none fixed inset-0 z-0 opacity-[0.04]"
           style={{
-            backgroundImage: "url(/images/hexa-background.png)",
+            backgroundImage: "url(/images/hexa-background.webp)",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
