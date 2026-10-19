@@ -2,8 +2,8 @@
 // Fase 5 (P2.3): conta re-renders por componente na tela de jogo enquanto
 // medir-partida.mjs joga, sem tocar no código do app. Instala um stub do
 // __REACT_DEVTOOLS_GLOBAL_HOOK__ antes de a página carregar: a cada commit,
-// percorre a árvore e conta os componentes que renderizaram de fato (fiber
-// novo, ou props/estado diferentes do commit anterior — bailouts não contam).
+// percorre a árvore e conta os componentes que renderizaram de fato (flag
+// PerformedWork, como as React DevTools — bailouts e memo não contam).
 // Usar contra o servidor de DEV (nomes de componente não minificados).
 //
 //   CREDENCIAIS_ARQ=/repo/cred.json node scripts/otimizacao/medir-partida.mjs &
@@ -35,13 +35,13 @@ const STUB = `(() => {
       if (!f) continue;
       const n = typeof f.type === "function" ? nome(f.type)
         : f.type && typeof f.type === "object" ? nome(f.type.type || f.type.render) : null;
-      if (n) {
-        const a = f.alternate;
-        const renderizou = !a || a.memoizedProps !== f.memoizedProps || a.memoizedState !== f.memoizedState;
-        if (renderizou) contagem[n] = (contagem[n] || 0) + 1;
-      }
+      // Mesmo critério das React DevTools: renderizou neste commit se tem a
+      // flag PerformedWork (1). Subárvore reaproveitada por bailout
+      // (child === alternate.child) não foi tocada — não desce nela.
+      if (n && (f.flags & 1) === 1) contagem[n] = (contagem[n] || 0) + 1;
       if (f.sibling) pilha.push(f.sibling);
-      if (f.child) pilha.push(f.child);
+      const reaproveitada = f.alternate && f.child === f.alternate.child;
+      if (f.child && !reaproveitada) pilha.push(f.child);
     }
   }
   window.__renders = contagem;
