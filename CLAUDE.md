@@ -205,8 +205,6 @@ Specs, design docs and fix plans live in `docs/` (`docs/mapa-2d/` for the 2D map
 | `client/src/lib/asyncAction.ts` | Never imported |
 | `client/src/hooks/useBannerCatalog.ts` | Never imported |
 | `client/src/constants/badges.ts` | Never imported |
-| `INSTRUCOES.md` (root) | Obsolete design notes / terminal log |
-| `ANIMACOES.md` (root) | Animation implementation plan — already executed |
 | `GameBank Design System/` (root) | Design mockups |
 | `screenshots/` (root) | Unreferenced screenshots |
 
