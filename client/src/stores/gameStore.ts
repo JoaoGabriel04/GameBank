@@ -140,6 +140,36 @@ let pendingCallbacks: (() => void)[] = [];
 let holdWatchdog: ReturnType<typeof setTimeout> | null = null;
 const HOLD_MAX_MS = 6000;
 
+// Catálogo estático da partida: os broadcasts "session:updated" chegam sem
+// os dados de cada propriedade (sessionPosses[].propriedade) e sem o
+// tabuleiro — só o carregamento REST da sessão traz (ver emitSessionUpdated
+// no servidor). Aprende de todo payload completo e recompõe os broadcasts,
+// então o resto do app continua lendo sp.propriedade como sempre.
+const catalogoPropriedades = new Map<number, Propriedade>();
+let recarregandoSessaoCompleta = false;
+
+function aprenderCatalogo(session: GameSession | null | undefined) {
+  for (const sp of session?.sessionPosses ?? []) {
+    if (sp.propriedade) catalogoPropriedades.set(sp.propId, sp.propriedade);
+  }
+}
+
+function hidratarSessao(session: GameSession, anterior: GameSession | null) {
+  aprenderCatalogo(anterior);
+  aprenderCatalogo(session);
+  let incompleta = false;
+  const sessionPosses = session.sessionPosses?.map((sp) => {
+    if (sp.propriedade) return sp;
+    const propriedade = catalogoPropriedades.get(sp.propId);
+    if (!propriedade) incompleta = true;
+    return propriedade ? { ...sp, propriedade } : sp;
+  });
+  let tabuleiro = session.tabuleiro;
+  if (!tabuleiro && anterior?.id === session.id) tabuleiro = anterior.tabuleiro;
+  if (!tabuleiro && session.tipoJogo === "tabuleiro") incompleta = true;
+  return { session: { ...session, sessionPosses, tabuleiro }, incompleta };
+}
+
 // --- Utilitário de erro (fora do create, criado uma única vez) -----------------
 
 function extractErrorMessage(err: unknown): string {
@@ -659,10 +689,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
-  applyOrBufferSession: (session) => {
+  applyOrBufferSession: (recebida) => {
     // Recalibra o relógio mesmo se a sessão ficar retida no buffer — o
     // offset é global e não deve esperar o hold liberar.
-    syncServerClock(session);
+    syncServerClock(recebida);
+    const { session, incompleta } = hidratarSessao(recebida, pendingSessionUpdate ?? get().currentSession);
+    // Broadcast chegou antes de qualquer carregamento REST desta sessão (sem
+    // catálogo para recompor): busca a sessão completa uma vez e recompõe o
+    // estado mais recente com ela.
+    if (incompleta && !recarregandoSessaoCompleta) {
+      recarregandoSessaoCompleta = true;
+      loadSessionApi(session.id)
+        .then((completa) => {
+          const atual = get().currentSession;
+          if (atual?.id === completa.id) set({ currentSession: hidratarSessao(atual, completa).session });
+        })
+        .catch(() => {})
+        .finally(() => { recarregandoSessaoCompleta = false; });
+    }
     if (get().holdSessionUpdates) {
       pendingSessionUpdate = session;
     } else {

@@ -14,8 +14,22 @@ export interface PlayerUpdateData {
   frameScale: number;
 }
 
+// O broadcast não leva o catálogo estático da partida — os dados de cada
+// propriedade (sessionPosses[].propriedade) e o tabuleiro: eles só mudam
+// entre deploys, já vêm no carregamento REST da sessão e o cliente os
+// recompõe (gameStore.applyOrBufferSession). ~14 KB a menos por broadcast.
+// Copia em vez de mutar: o mesmo objeto também vira resposta REST.
+function semCatalogoEstatico(data: unknown) {
+  if (!data || typeof data !== "object") return data;
+  const { tabuleiro: _tabuleiro, ...resto } = data as Record<string, unknown>;
+  if (Array.isArray(resto.sessionPosses)) {
+    resto.sessionPosses = resto.sessionPosses.map(({ propriedade: _propriedade, ...posse }) => posse);
+  }
+  return resto;
+}
+
 export function emitSessionUpdated(sessionId: number, data: unknown) {
-  getIO().of("/game").to(`session:${sessionId}`).emit("session:updated", data);
+  getIO().of("/game").to(`session:${sessionId}`).emit("session:updated", semCatalogoEstatico(data));
 }
 
 export function emitSessionClosed(sessionId: number, ranking?: unknown) {

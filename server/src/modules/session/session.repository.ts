@@ -42,10 +42,11 @@ export class SessionRepository {
           },
         },
         times: true,
+        // Sem `player`: a linha inteira do jogador já vem em `jogadores`
+        // (o cliente usa só playerId).
         sessionPosses: {
           include: {
             propriedade: true,
-            player: true,
           },
         },
       },
@@ -99,10 +100,11 @@ export class SessionRepository {
           },
         },
         times: true,
+        // Sem `player`: a linha inteira do jogador já vem em `jogadores`
+        // (o cliente usa só playerId).
         sessionPosses: {
           include: {
             propriedade: true,
-            player: true,
           },
         },
         historico: ultimasDoHistorico,
@@ -153,10 +155,11 @@ export class SessionRepository {
           },
         },
         times: true,
+        // Sem `player`: a linha inteira do jogador já vem em `jogadores`
+        // (o cliente usa só playerId).
         sessionPosses: {
           include: {
             propriedade: true,
-            player: true,
           },
         },
         historico: ultimasDoHistorico,
