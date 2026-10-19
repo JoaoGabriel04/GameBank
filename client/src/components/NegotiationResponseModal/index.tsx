@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Modal from "../Modal";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/components/Toast";
 import {
@@ -38,7 +39,7 @@ function getPropColorHex(grupoCor: string | null | undefined): string {
 
 export default function NegotiationResponseModal() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
-  const { currentSession, loadSession } = useGameStore();
+  const { currentSession, loadSession } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession })));
   const authUser = useAuthStore((s) => s.user);
   const {
     activeNegotiation, setActive, removePendente,

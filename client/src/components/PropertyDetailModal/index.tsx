@@ -5,6 +5,7 @@ import Modal from "../Modal"
 import ConfirmationModal from "../ConfirmationModal"
 import { Propriedade, SessionPropriedade, PROPERTY_COLORS } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
+import { useShallow } from "zustand/react/shallow"
 import { useToast } from "@/components/Toast"
 import Button1 from "../Button01"
 import { toApiErr } from "@/lib/api-error"
@@ -54,7 +55,7 @@ export default function PropertyDetailModal({
   onActionSuccess,
 }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  const { hipotecarProp, sellPropriedade, getAluguel, getAluguelBase, currentSession } = useGameStore()
+  const { hipotecarProp, sellPropriedade, getAluguel, getAluguelBase, currentSession } = useGameStore(useShallow((s) => ({ hipotecarProp: s.hipotecarProp, sellPropriedade: s.sellPropriedade, getAluguel: s.getAluguel, getAluguelBase: s.getAluguelBase, currentSession: s.currentSession })))
 
   const [confirmAction, setConfirmAction] = useState<{
     type: string

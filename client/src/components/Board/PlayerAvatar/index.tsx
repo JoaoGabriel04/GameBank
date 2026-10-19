@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { memo, useState } from "react"
 import { resolvePreset } from "@/constants/avatars"
 import type { Player } from "@/types/game"
 
@@ -12,7 +12,7 @@ type Props = {
   showFrame?: boolean
 }
 
-export default function PlayerAvatar({ player, size = 24, showFrame = true }: Props) {
+function PlayerAvatar({ player, size = 24, showFrame = true }: Props) {
   const [imgFailed, setImgFailed] = useState(false)
   const frameInset = Math.max(1, Math.round(size * 0.08))
   const avatarUrl = player.avatarUrl
@@ -99,3 +99,18 @@ export default function PlayerAvatar({ player, size = 24, showFrame = true }: Pr
     </div>
   )
 }
+
+// O objeto `player` é novo a cada broadcast da sessão, então o memo padrão
+// (por referência) não evitaria nada: compara só o que aparece na tela.
+// Sem isto, todo avatar do tabuleiro re-renderizava a cada atualização.
+function mesmoAvatar(a: Props, b: Props) {
+  return a.size === b.size && a.showFrame === b.showFrame
+    && a.player.avatarUrl === b.player.avatarUrl
+    && a.player.avatarUpdatedAt === b.player.avatarUpdatedAt
+    && a.player.nome === b.player.nome
+    && a.player.frame === b.player.frame
+    && a.player.frameType === b.player.frameType
+    && a.player.frameAnimated === b.player.frameAnimated
+}
+
+export default memo(PlayerAvatar, mesmoAvatar)

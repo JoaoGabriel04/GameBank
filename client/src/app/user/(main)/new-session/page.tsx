@@ -5,6 +5,7 @@ import Loading from "@/components/Loading";
 import UserAvatar from "@/components/UserAvatar";
 import UserName from "@/components/UserName";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 
 import Lenis from "lenis";
@@ -27,7 +28,7 @@ interface TeamForm {
 export default function NewSession() {
   const router = useRouter();
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast()
-  const { createSession } = useGameStore();
+  const { createSession } = useGameStore(useShallow((s) => ({ createSession: s.createSession })));
   const { user: authUser } = useAuthStore();
 
   const [reqLoading, setReqLoading] = useState(false);

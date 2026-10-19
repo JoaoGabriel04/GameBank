@@ -10,6 +10,7 @@ import ImoveisSection from "@/components/Game/sections/ImoveisSection";
 import BancoSection from "@/components/Game/sections/BancoSection";
 import RankingSection from "@/components/Game/sections/RankingSection";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 
@@ -89,7 +90,7 @@ export default function Game() {
   const { session: swrSession, isLoading, isError, mutate } = useSession(sessionId);
 
   // Store Zustand — usada pelos componentes filhos
-  const { currentSession, endSession, startSession, loadSession } = useGameStore();
+  const { currentSession, endSession, startSession, loadSession } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, endSession: s.endSession, startSession: s.startSession, loadSession: s.loadSession })));
   const { user: authUser, loadFromStorage: loadAuth } = useAuthStore();
 
   // Carrega authUser do localStorage (substitui o auto-load removido do authStore)

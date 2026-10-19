@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faHourglassHalf, faDice, faLock, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons"
 import type { GameSession } from "@/types/game"
 import { useGameStore } from "@/stores/gameStore"
+import { useShallow } from "zustand/react/shallow"
 import { useToast } from "@/components/Toast"
 import { playSfx } from "@/utils/sfx"
 import { serverNow } from "@/utils/clock"
@@ -20,7 +21,7 @@ type Props = {
 }
 
 export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDados }: Props) {
-  const { sairPrisaoComCarta } = useGameStore()
+  const { sairPrisaoComCarta } = useGameStore(useShallow((s) => ({ sairPrisaoComCarta: s.sairPrisaoComCarta })))
   const { success: toastSuccess, error: toastError } = useToast()
   const [restante, setRestante] = useState(TURNO_TIMEOUT_S)
   const [usandoCarta, setUsandoCarta] = useState(false)

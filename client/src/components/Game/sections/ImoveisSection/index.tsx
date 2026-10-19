@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import { PROPERTY_COLORS } from "@/types/game";
@@ -36,7 +37,7 @@ type ModalType = "casas" | "venderCasas" | "aluguel" | "emprestimo" | "negociar"
 
 export default function ImoveisSection({ currentPlayer, isOwner, onNavigate }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast();
-  const { currentSession, loadSession, getAluguel, getAluguelBase, buyHousesBatch, sellHousesBatch, aluguel, aluguelAcao } = useGameStore();
+  const { currentSession, loadSession, getAluguel, getAluguelBase, buyHousesBatch, sellHousesBatch, aluguel, aluguelAcao } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession, getAluguel: s.getAluguel, getAluguelBase: s.getAluguelBase, buyHousesBatch: s.buyHousesBatch, sellHousesBatch: s.sellHousesBatch, aluguel: s.aluguel, aluguelAcao: s.aluguelAcao })));
   const { user: authUser } = useAuthStore();
   const { pendentes, setActive, minhaNegociacaoPendente, setMinhaNegociacaoAberto } = useNegotiationStore();
 

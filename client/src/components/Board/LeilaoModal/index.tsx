@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useGameStore } from "@/stores/gameStore"
+import { useShallow } from "zustand/react/shallow"
 import { useLeilaoStore } from "@/stores/socketStore"
 import { formatCurrency } from "@/utils/format"
 import type { GameSession } from "@/types/game"
@@ -24,7 +25,7 @@ type Props = {
 // meio do leilão. Sem esse fallback, recarregar a página deixaria o
 // jogador sem nenhuma forma de dar o lance.
 export default function LeilaoModal({ session, meuPlayerId }: Props) {
-  const { darLance } = useGameStore()
+  const { darLance } = useGameStore(useShallow((s) => ({ darLance: s.darLance })))
   const { decididos } = useLeilaoStore()
 
   const [valor, setValor] = useState("")

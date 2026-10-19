@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { useNegotiationStore } from "@/stores/negotiationStore";
 import {
@@ -165,7 +166,7 @@ function PropertyCard({ item, selected, onClick, getAluguel, owner }: { item: { 
 
 export default function Inicio({ onNavigate }: InicioProps) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
-  const { currentSession, loadSession, getAluguel, getAluguelBase, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore();
+  const { currentSession, loadSession, getAluguel, getAluguelBase, deposito, saque, transferencia, aluguel, aluguelAcao, sortearCarta, usarCartaPrisao, pagarDivida, buyHousesBatch, sellHousesBatch } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession, getAluguel: s.getAluguel, getAluguelBase: s.getAluguelBase, deposito: s.deposito, saque: s.saque, transferencia: s.transferencia, aluguel: s.aluguel, aluguelAcao: s.aluguelAcao, sortearCarta: s.sortearCarta, usarCartaPrisao: s.usarCartaPrisao, pagarDivida: s.pagarDivida, buyHousesBatch: s.buyHousesBatch, sellHousesBatch: s.sellHousesBatch })));
   const { user: authUser } = useAuthStore();
   const { pendentes, setActive, minhaNegociacaoPendente, setMinhaNegociacao, setMinhaNegociacaoAberto } = useNegotiationStore();
 

@@ -14,6 +14,7 @@ import Pawns from "./Pawns"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import { ARTE_CENTRAL, FUNDO_TABULEIRO, GRUPO_IMAGENS_PRELOAD } from "@/utils/tabuleiro-images"
 import { useGameStore } from "@/stores/gameStore"
+import { useShallow } from "zustand/react/shallow"
 import { useToast } from "@/components/Toast"
 import { useEventoStore } from "@/stores/socketStore"
 import { getEvento } from "@/constants/eventos"
@@ -47,7 +48,7 @@ type Props = {
 }
 
 export default function Board({ tabuleiro, session, meuPlayerId, interativo = true, onMaximize }: Props) {
-  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, revelarDados, setHoldSessionUpdates } = useGameStore()
+  const { rolarDados, escolherMovimento, comprarCasaAtual, recusarCompra, revelarDados, setHoldSessionUpdates } = useGameStore(useShallow((s) => ({ rolarDados: s.rolarDados, escolherMovimento: s.escolherMovimento, comprarCasaAtual: s.comprarCasaAtual, recusarCompra: s.recusarCompra, revelarDados: s.revelarDados, setHoldSessionUpdates: s.setHoldSessionUpdates })))
   const { success: toastSuccess, error: toastError } = useToast()
   const viewportRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 })

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft, LoaderCircle } from "lucide-react";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/components/Toast";
 import { formatCurrency } from "@/utils/format";
@@ -106,7 +107,7 @@ function PropertyCard({ item, selected, onClick, getAluguel, owner }: {
 
 export default function BancoSection({ currentPlayer, onNavigate }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
-  const { currentSession, loadSession, getAluguel, deposito, saque, transferencia, aluguel, aluguelAcao, pagarDivida } = useGameStore();
+  const { currentSession, loadSession, getAluguel, deposito, saque, transferencia, aluguel, aluguelAcao, pagarDivida } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession, getAluguel: s.getAluguel, deposito: s.deposito, saque: s.saque, transferencia: s.transferencia, aluguel: s.aluguel, aluguelAcao: s.aluguelAcao, pagarDivida: s.pagarDivida })));
   const { user: authUser } = useAuthStore();
 
   const [activeModal, setActiveModal] = useState<"deposito" | "saque" | "transferencia" | "aluguel" | null>(null);

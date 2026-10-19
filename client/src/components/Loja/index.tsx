@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from "react"
 import { useGameStore } from "@/stores/gameStore"
+import { useShallow } from "zustand/react/shallow"
 import { useAuthStore } from "@/stores/authStore"
 import { useNotificationStore } from "@/stores/socketStore"
 import { LoaderCircle, ShoppingCart, Bell, Check, X as XIcon } from "lucide-react"
@@ -36,7 +37,7 @@ for (const c of PROPERTY_COLORS) COLOR_LABELS[c.value] = c.label
 
 export default function Loja() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast()
-  const { currentSession, loadSession, buyProperty, comprarHipotecada, responderNotificacao } = useGameStore()
+  const { currentSession, loadSession, buyProperty, comprarHipotecada, responderNotificacao } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession, buyProperty: s.buyProperty, comprarHipotecada: s.comprarHipotecada, responderNotificacao: s.responderNotificacao })))
   const authUser = useAuthStore((s) => s.user)
 
   const currentPlayer = useMemo(

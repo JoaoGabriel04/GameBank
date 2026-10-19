@@ -7,6 +7,7 @@ import { PLAYER_COLORS } from "@/types/game"
 import { getGroupColorHex } from "@/utils/properties"
 import { getGrupoImagem, getCasaImagem } from "@/utils/tabuleiro-images"
 import PlayerAvatar from "@/components/Board/PlayerAvatar"
+import { memo } from "react"
 
 type Props = {
   casa: Casa
@@ -15,7 +16,7 @@ type Props = {
   destaque?: boolean
 }
 
-export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
+function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
   const isPropriedade = casa.tipo === "propriedade" || casa.tipo === "acao"
   const cor = isPropriedade ? getGroupColorHex(sessionPosse?.propriedade?.grupo_cor) : null
   const donoCor = donoJogador ? PLAYER_COLORS.find(p => p.value === donoJogador.cor) : null
@@ -124,3 +125,21 @@ export default function BoardTile({ casa, sessionPosse, donoJogador, destaque }:
     </div>
   )
 }
+
+// As 40 casas re-renderizavam a cada atualização do tabuleiro, mesmo sem
+// mudança nelas: posse e dono chegam como objetos novos a cada broadcast.
+// Compara só os campos que a casa exibe.
+function mesmaCasa(a: Props, b: Props) {
+  const pa = a.sessionPosse
+  const pb = b.sessionPosse
+  const da = a.donoJogador
+  const db = b.donoJogador
+  return a.casa === b.casa && a.destaque === b.destaque
+    && pa?.playerId === pb?.playerId && pa?.casas === pb?.casas && pa?.hipotecada === pb?.hipotecada
+    && pa?.propriedade?.grupo_cor === pb?.propriedade?.grupo_cor
+    && pa?.propriedade?.custo_compra === pb?.propriedade?.custo_compra
+    && da?.id === db?.id && da?.cor === db?.cor && da?.nome === db?.nome
+    && da?.avatarUrl === db?.avatarUrl && da?.avatarUpdatedAt === db?.avatarUpdatedAt
+}
+
+export default memo(BoardTile, mesmaCasa)

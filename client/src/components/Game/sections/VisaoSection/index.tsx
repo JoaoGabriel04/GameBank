@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useGameStore } from "@/stores/gameStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import type { Player } from "@/types/game";
 import type { SorteRevesCard } from "@/types/game";
@@ -36,7 +37,7 @@ type Props = {
 
 export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Props) {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
-  const { currentSession, loadSession, sortearCarta, usarCartaPrisao, pagarDivida } = useGameStore();
+  const { currentSession, loadSession, sortearCarta, usarCartaPrisao, pagarDivida } = useGameStore(useShallow((s) => ({ currentSession: s.currentSession, loadSession: s.loadSession, sortearCarta: s.sortearCarta, usarCartaPrisao: s.usarCartaPrisao, pagarDivida: s.pagarDivida })));
   const { user: authUser } = useAuthStore();
 
   const [showSaldo, setShowSaldo] = useState(true);
