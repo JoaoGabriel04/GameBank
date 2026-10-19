@@ -75,7 +75,7 @@ export default function UserAvatar({
         avatarUrl.startsWith("data:image"))
     ) {
       return (
-        <img
+        <img loading="lazy" decoding="async"
           src={withCacheBust(avatarUrl, avatarUpdatedAt)}
           alt={nome}
           className={`${dim} rounded-full object-cover shrink-0 ${ringClass} ${className}`}
@@ -146,7 +146,7 @@ export default function UserAvatar({
       </div>
 
       {resolvedFrameType === "image" && (
-        <img
+        <img loading="lazy" decoding="async"
           src={frame!}
           alt=""
           aria-hidden

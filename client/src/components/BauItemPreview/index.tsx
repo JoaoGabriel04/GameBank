@@ -54,7 +54,7 @@ export default function BauItemPreview({ item, size = 100 }: BauItemPreviewProps
           👤
         </div>
         {src ? (
-          <img
+          <img loading="lazy" decoding="async"
             src={src}
             alt=""
             style={{
@@ -96,7 +96,7 @@ export default function BauItemPreview({ item, size = 100 }: BauItemPreviewProps
     }}>
       {item.type === "badge" && item.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <img loading="lazy" decoding="async"
           src={item.imageUrl}
           alt={item.name}
           style={{ width: "65%", height: "65%", objectFit: "contain" }}

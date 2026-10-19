@@ -119,7 +119,7 @@ function BadgeBuilder({
             </p>
             <div className="rounded-2xl border border-zinc-800 overflow-hidden p-8 bg-zinc-900/50 flex items-center justify-center">
               {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-24 h-24 object-contain" />
+                <img loading="lazy" decoding="async" src={previewUrl} alt="Preview" className="w-24 h-24 object-contain" />
               ) : (
                 <div className="w-24 h-24 rounded-xl bg-zinc-800 grid place-items-center text-zinc-600">
                   <ImageIcon size={32} />
@@ -158,7 +158,7 @@ function BadgeBuilder({
             } ${uploading ? "pointer-events-none opacity-60" : ""}`}
           >
             {localPreviewUrl ? (
-              <img src={localPreviewUrl} alt="" className="w-full max-h-32 object-contain" />
+              <img loading="lazy" decoding="async" src={localPreviewUrl} alt="" className="w-full max-h-32 object-contain" />
             ) : (
               <>
                 <Upload size={20} className="text-zinc-500 mx-auto" />
@@ -246,7 +246,7 @@ export default function AdminBadgesPage() {
             <div key={b.id} className="group rounded-xl overflow-hidden border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-colors">
               <div className="h-24 bg-zinc-950 flex items-center justify-center relative">
                 {b.imageUrl ? (
-                  <img src={b.imageUrl} alt={b.nome} className="w-20 h-20 object-contain" />
+                  <img loading="lazy" decoding="async" src={b.imageUrl} alt={b.nome} className="w-20 h-20 object-contain" />
                 ) : (
                   <div className="w-20 h-20 rounded-xl bg-zinc-800 grid place-items-center text-zinc-600">
                     <ImageIcon size={24} />

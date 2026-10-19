@@ -47,7 +47,7 @@ export default function BauCard({ bau, onAbrir }: BauCardProps) {
           className="absolute top-0 left-0 right-0 h-0.5"
           style={{ background: `linear-gradient(90deg, transparent, ${cor}, transparent)`, opacity: 0.85 }}
         />
-        <img
+        <img loading="lazy" decoding="async"
           src={IMAGENS[bau.tipo] ?? "/images/cofrinho.webp"}
           alt={bau.nome}
           className="w-12 h-12 object-contain"

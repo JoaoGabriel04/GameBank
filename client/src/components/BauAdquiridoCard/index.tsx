@@ -61,7 +61,7 @@ export default function BauAdquiridoCard({ bau, onAbrir, abrindo }: Props) {
         {abrindo ? (
           <Loader2 className="w-8 h-8 animate-spin" style={{ color: cor }} />
         ) : (
-          <img
+          <img loading="lazy" decoding="async"
             src={BAU_IMAGENS[bau.bau.tipo] ?? "/images/cofrinho.webp"}
             alt={bau.bau.tipo}
             className="w-16 h-16 object-contain"

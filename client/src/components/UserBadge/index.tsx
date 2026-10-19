@@ -34,7 +34,7 @@ export default function UserBadge({
   return (
     <div className="inline-flex flex-col items-center gap-1">
       {imageUrl ? (
-        <img
+        <img loading="lazy" decoding="async"
           src={imageUrl}
           alt=""
           width={parseInt(config.className.match(/\d+/)?.[0] ?? "8") * 4}

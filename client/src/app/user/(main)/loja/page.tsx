@@ -222,7 +222,7 @@ function CosmeticCard({
                 </div>
                 {(() => {
                   const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
                   if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
                   return null;
                 })()}
@@ -231,7 +231,7 @@ function CosmeticCard({
               <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
                 {item.type === "title" && <Crown size={40} />}
                 {item.type === "badge" && item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+                  <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
                 ) : item.type === "badge" ? (
                   <Shield size={40} />
                 ) : null}
@@ -318,7 +318,7 @@ function CoinPackCard({
           <div className="absolute top-0 left-0 right-0 h-0.5"
             style={{ background: "linear-gradient(90deg,transparent,#fbbf24,transparent)", opacity: 0.8 }} />
           {imgSrc && (
-            <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
+            <img loading="lazy" decoding="async" src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
           )}
         </div>
         <div
@@ -389,7 +389,7 @@ function DiamondPackCard({
           <div className="absolute top-0 left-0 right-0 h-0.5"
             style={{ background: "linear-gradient(90deg,transparent,#22d3ee,transparent)", opacity: 0.85 }} />
           {imgSrc && (
-            <img src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
+            <img loading="lazy" decoding="async" src={imgSrc} alt="" className="w-3/5 h-4/5 object-cover" />
           )}
         </div>
 
@@ -462,7 +462,7 @@ function DetailSheet({
                 </div>
                 {(() => {
                   const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
                   if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
                   return null;
                 })()}
@@ -621,13 +621,13 @@ function DailyOfferCard({
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#71717a" }}>👤</div>
               {(() => {
                 const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
                 if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
                 return null;
               })()}
             </div>
           ) : item.type === "badge" && item.imageUrl ? (
-            <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
+            <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-10 h-10 object-contain z-10" style={{ filter: `drop-shadow(0 0 10px ${glow}88)` }} />
           ) : (
             <div className="relative z-10" style={{ color: glow, filter: `drop-shadow(0 0 12px ${glow}99)`, opacity: 0.7 }}>
               {item.type === "title" && <Crown size={38} />}
@@ -699,7 +699,7 @@ function DailyOfferSheet({
                 <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#3f3f46", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, color: "#71717a" }}>👤</div>
                 {(() => {
                   const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                  if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                  if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
                   if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
                   return null;
                 })()}
@@ -707,7 +707,7 @@ function DailyOfferSheet({
             ) : item.type === "badge" && item.imageUrl ? (
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
                 style={{ background: accent + "22", boxShadow: `0 0 36px -8px ${accent}` }}>
-                <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+                <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
               </div>
             ) : item.type === "title" ? (
               <div className="shrink-0 flex items-center">

@@ -124,7 +124,7 @@ function ItemCard({
               </div>
               {(() => {
                 const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-                if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
+                if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />;
                 if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />;
                 return null;
               })()}
@@ -133,7 +133,7 @@ function ItemCard({
             <div style={{ color: glowColor, filter: `drop-shadow(0 0 12px ${glowColor}99)` }}>
               {item.type === "title" && <Crown size={40} />}
               {item.type === "badge" && item.imageUrl ? (
-                <img src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
+                <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-10 h-10 object-contain" />
               ) : item.type === "badge" ? (
                 <Shield size={40} />
               ) : null}
@@ -236,7 +236,7 @@ function ItemPreview({ form, bannerCss, badgeImageUrl }: { form: Partial<ItemInp
         <div className="flex items-start justify-between">
           <div className="w-12 h-12 rounded-xl grid place-items-center bg-zinc-900/80 text-zinc-200">
             {isBadge && badgeImage ? (
-              <img src={badgeImage} alt="" className="w-10 h-10 object-contain" />
+              <img loading="lazy" decoding="async" src={badgeImage} alt="" className="w-10 h-10 object-contain" />
             ) : isBanner ? (
               <ImageIcon size={22} />
             ) : form.type === "title" ? (

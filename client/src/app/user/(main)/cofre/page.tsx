@@ -103,7 +103,7 @@ function VaultItemCard({
             {(() => {
               const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
               if (src) {
-                return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+                return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
               }
               if (item.value) {
                 return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
@@ -115,7 +115,7 @@ function VaultItemCard({
           <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)` }}>
             {item.type === "title"  && <Crown  size={44} />}
             {item.type === "badge"  && (item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+              <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
             ) : (
               <Shield size={44} />
             ))}
@@ -200,7 +200,7 @@ function DetailPanel({
             {(() => {
               const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
               if (src) {
-                return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+                return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
               }
               if (item.value) {
                 return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
@@ -215,7 +215,7 @@ function DetailPanel({
               boxShadow: `0 0 36px -8px ${glowColor}`,
             }}
           >
-            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+            <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
           </div>
         ) : item.type === "title" ? (
           <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800">
@@ -374,7 +374,7 @@ function UnownedItemCard({
             {(() => {
               const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
               if (src) {
-                return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+                return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
               }
               if (item.value) {
                 return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
@@ -386,7 +386,7 @@ function UnownedItemCard({
           <div className="relative z-10" style={{ color: glowColor, filter: `drop-shadow(0 0 14px ${glowColor}99)`, opacity: 0.55 }}>
             {item.type === "title"  && <Crown  size={44} />}
             {item.type === "badge"  && (item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
+              <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-11 h-11 object-contain" />
             ) : (
               <Shield size={44} />
             ))}
@@ -457,7 +457,7 @@ function UnownedDetailPanel({
             </div>
             {(() => {
               const src = item.value?.startsWith("http") ? item.value : item.imageUrl?.startsWith("http") ? item.imageUrl : null;
-              if (src) return <img src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
+              if (src) return <img loading="lazy" decoding="async" src={src} alt="" className="absolute pointer-events-none" style={{ top: "50%", left: "50%", width: "136%", height: "136%", maxWidth: "none", transform: "translate(-50%, -50%)", objectFit: "contain" }} />
               if (item.value) return <div className="absolute" style={{ inset: -3, borderRadius: "50%", padding: 3, backgroundImage: item.value, WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", WebkitMaskComposite: "xor", maskComposite: "exclude" }} />
               return null;
             })()}
@@ -469,7 +469,7 @@ function UnownedDetailPanel({
               boxShadow: `0 0 36px -8px ${glowColor}`,
             }}
           >
-            <img src={item.imageUrl} alt="" className="w-11 h-11 object-contain" style={{ opacity: 0.7 }} />
+            <img loading="lazy" decoding="async" src={item.imageUrl} alt="" className="w-11 h-11 object-contain" style={{ opacity: 0.7 }} />
           </div>
         ) : item.type === "title" ? (
           <div className="shrink-0 w-[190px] rounded-xl overflow-hidden border border-zinc-800" style={{ opacity: 0.7 }}>

@@ -46,7 +46,7 @@ function PlayerRow({
       >
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover" />
+          <img loading="lazy" decoding="async" src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover" />
         ) : (
           name.charAt(0).toUpperCase()
         )}

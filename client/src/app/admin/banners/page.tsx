@@ -30,7 +30,7 @@ function BannerPreview({
   return (
     <div className="rounded-2xl overflow-hidden border border-zinc-800">
       {previewImage ? (
-        <img src={previewImage} alt="" className="h-28 w-full object-cover" />
+        <img loading="lazy" decoding="async" src={previewImage} alt="" className="h-28 w-full object-cover" />
       ) : (
         <UserBanner banner={css} animated={animated} className="h-28 w-full" />
       )}
@@ -324,7 +324,7 @@ function BannerBuilder({
             } ${uploading ? "pointer-events-none opacity-60" : ""}`}
           >
             {localPreviewUrl && pendingFile ? (
-              <img src={localPreviewUrl} alt="" className="w-full h-32 object-cover rounded-lg" />
+              <img loading="lazy" decoding="async" src={localPreviewUrl} alt="" className="w-full h-32 object-cover rounded-lg" />
             ) : (
               <>
                 <Upload size={20} className="text-zinc-500 mx-auto" />

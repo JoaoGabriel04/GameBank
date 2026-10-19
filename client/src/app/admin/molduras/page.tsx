@@ -34,7 +34,7 @@ function FramePreview({
             👤
           </div>
           {imageUrl ? (
-            <img src={imageUrl} alt="" style={{
+            <img loading="lazy" decoding="async" src={imageUrl} alt="" style={{
               position: "absolute",
               top: "50%",
               left: "50%",
@@ -374,7 +374,7 @@ function FrameBuilder({
             } ${uploading ? "pointer-events-none opacity-60" : ""}`}
           >
             {localPreviewUrl && pendingFile ? (
-              <img src={localPreviewUrl} alt="" className="w-full max-h-32 object-contain" />
+              <img loading="lazy" decoding="async" src={localPreviewUrl} alt="" className="w-full max-h-32 object-contain" />
             ) : (
               <>
                 <Upload size={20} className="text-zinc-500 mx-auto" />
@@ -447,7 +447,7 @@ export default function AdminMoldurasPage() {
             <div key={f.id} className="group rounded-xl overflow-hidden border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-colors">
               <div className="h-24 bg-zinc-950 flex items-center justify-center relative">
                 {f.imageUrl ? (
-                  <img src={f.imageUrl} alt={f.nome} className="w-20 h-20 object-contain" />
+                  <img loading="lazy" decoding="async" src={f.imageUrl} alt={f.nome} className="w-20 h-20 object-contain" />
                 ) : f.css ? (
                   <div
                     className="w-20 h-20 rounded-full"
