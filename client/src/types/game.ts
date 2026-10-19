@@ -30,6 +30,7 @@ export interface SessionPropriedade {
   casas: number;
   hipotecada: boolean;
   negociando?: boolean;
+  ultimaAtividadeRodada?: number; // Modo Tabuleiro: base do terreno ocioso
   propriedade?: Propriedade;
 }
 

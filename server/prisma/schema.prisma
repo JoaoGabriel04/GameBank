@@ -324,6 +324,10 @@ model SessionPosses {
   hipotecada Boolean @default(false)
   negociando Boolean @default(false)
 
+  // Terreno ocioso (Modo Tabuleiro): rodada da última visita/compra/
+  // construção/hipoteca/troca. Tempo ocioso = Session.rodadaAtual - isto.
+  ultimaAtividadeRodada Int @default(0)
+
   notifications    Notification[]
   negotiationItems NegotiationItem[]
 
