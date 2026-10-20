@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { backdrop, modalBox } from "@/lib/animations";
+import { backdrop, modalBox } from "@/lib/motion";
 import Board from "@/components/Board";
 import type { GameSession } from "@/types/game";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

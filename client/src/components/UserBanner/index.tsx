@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { animateGradientLoop } from "@/lib/animations";
+import { animateGradientLoop } from "@/lib/motion/utilitarios";
 import { resolveBannerBackground } from "@/constants/banners";
 import BannerParticulas from "@/components/BannerParticulas";
 import { useBannerGlow } from "@/hooks/useBannerGlow";

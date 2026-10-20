@@ -4,7 +4,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { slideUp, animateStaggerIn } from "@/lib/animations";
+import { slideUp } from "@/lib/motion";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {

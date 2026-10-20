@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { animateStaggerIn } from "@/lib/animations";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import {
   Building2, Home, Coins, Gamepad2, Crown, Trophy, Sparkles,
 } from "lucide-react";

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from "framer-motion"
-import { backdrop, modalBox } from "@/lib/animations"
+import { backdrop, modalBox } from "@/lib/motion"
 import { X, Trophy, Star, Home, Crown, Package } from "lucide-react"
 import type { GameResult } from "@/types/shop"
 

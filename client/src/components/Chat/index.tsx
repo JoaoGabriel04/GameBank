@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { slideUp } from "@/lib/animations";
+import { slideUp } from "@/lib/motion";
 import {
   useChatStore,
   sendChatMessage,

@@ -5,7 +5,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle, animateStaggerIn } from "@/lib/animations";
+import { backdrop, slideUp, modalBox, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/motion";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Coins, Check, X, Ban, AlertTriangle, Clock } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";

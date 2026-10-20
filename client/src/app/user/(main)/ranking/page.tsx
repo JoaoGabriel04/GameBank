@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import UserName from "@/components/UserName";
-import { animateStaggerIn } from "@/lib/animations";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X, Star } from "lucide-react";
 import RankBadge from "@/components/RankBadge";
 import TrophyCount from "@/components/TrophyCount";

@@ -4,7 +4,6 @@ import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
 import { CustomEase } from "gsap/CustomEase";
 import { CustomWiggle } from "gsap/CustomWiggle";
-import { duracao } from "./tokens";
 
 // Ponto único de registro do GSAP (padrão do SkillHub, lib/gsap.ts): todo
 // componente que precisa de plugin ou curva própria importa daqui. Só no
@@ -75,28 +74,5 @@ export function createTimeline(vars: gsap.TimelineVars = {}, { limiteMs, instant
   return { tl, dispose };
 }
 
-// ── Utilitários (vieram de lib/animations.ts, mesmos valores) ────────────
-
-export function animateStaggerIn(els: NodeListOf<Element> | Element[], delay = 0) {
-  if (!els.length) return;
-  gsap.killTweensOf(els);
-  return gsap.fromTo(
-    els,
-    { opacity: 0, y: 12 },
-    { opacity: 1, y: 0, duration: duracao.base, ease: "power2.out", stagger: 0.04, delay }
-  );
-}
-
-export function animateGradientLoop(el: Element, duration = 3) {
-  return gsap.fromTo(
-    el,
-    { backgroundPosition: "0% 50%" },
-    { backgroundPosition: "100% 50%", duration, ease: "none", repeat: -1, yoyo: true }
-  );
-}
-
-export function animateProgressBar(el: Element, pct: number, delay = 0.2) {
-  return gsap.fromTo(el, { width: "0%" }, { width: `${pct}%`, duration: 0.8, ease: "power2.out", delay });
-}
-
+export { animateStaggerIn, animateGradientLoop, animateProgressBar } from "./utilitarios";
 export { gsap, useGSAP };

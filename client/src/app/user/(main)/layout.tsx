@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn } from "@/lib/animations";
+import { fadeIn } from "@/lib/motion";
 import UserNav from "@/components/UserNav";
 
 export default function UserMainLayout({ children }: { children: React.ReactNode }) {

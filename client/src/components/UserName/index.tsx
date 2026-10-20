@@ -2,7 +2,7 @@
 
 import UserBadge from '@/components/UserBadge';
 import { Chip } from '@/components/user/UserUI';
-import { shimmerTitleStyle } from '@/lib/animations';
+import { shimmerTitleStyle } from '@/lib/motion';
 import LegendaryTitle from '@/components/LegendaryTitle';
 
 interface UserNameProps {

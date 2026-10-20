@@ -10,7 +10,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { backdrop, modalBox } from "@/lib/animations";
+import { backdrop, modalBox } from "@/lib/motion";
 
 /* --- Progress bar --- */
 export function Progress({

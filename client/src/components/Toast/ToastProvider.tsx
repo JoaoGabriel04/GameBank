@@ -2,7 +2,7 @@
 
 import { useEffect, useState, createContext, useContext, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { staggerItem } from "@/lib/animations"
+import { staggerItem } from "@/lib/motion"
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react"
 import { registerToastFns } from "@/lib/toast"
 

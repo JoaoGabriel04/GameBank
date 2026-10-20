@@ -3,7 +3,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { backdrop, modalBox, animateStaggerIn } from "@/lib/animations"
+import { backdrop, modalBox } from "@/lib/motion"
+import { animateStaggerIn } from "@/lib/motion/utilitarios"
 import { Loader2, ShoppingCart, CheckCircle, History, X } from "lucide-react"
 import { useAuthStore } from "@/stores/authStore"
 import { useToast } from "@/components/Toast"

@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { backdrop, modalBox } from "@/lib/animations"
+import { backdrop, modalBox } from "@/lib/motion"
 import { BAU_CONFIG, type TipoBau } from "@/constants/baus"
 import { RARIDADES } from "@/constants/raridade"
 import CoinIcon from "@/components/CoinIcon"

@@ -2,7 +2,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { animateGradientLoop } from "@/lib/animations";
+import { animateGradientLoop } from "@/lib/motion/utilitarios";
 import { resolvePreset } from "@/constants/avatars";
 
 type UserAvatarProps = {

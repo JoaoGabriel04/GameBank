@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { animateStaggerIn } from "@/lib/animations";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import { useRouter } from "next/navigation";
 import {
   Plus, Search, Lock, Users, ChevronRight, Eye, LogIn,

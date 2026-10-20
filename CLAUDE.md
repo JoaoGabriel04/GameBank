@@ -168,7 +168,7 @@ UserNav bottom nav has 5 tabs (grid-cols-5): Dashboard, Cofre, Loja, Recompensas
 | `canvas-confetti` | Celebration effects |
 | `lenis` | Smooth scroll |
 
-Reusable Framer Motion variants (`backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`) are centralized in `client/src/lib/animations.ts`. Import from there instead of defining inline.
+Motion tokens, Framer Motion variants (`backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`, `pageFade`, `pageSlide`, `popIn`, `pulse`, `shake`) and the per-rarity effect table live in `client/src/lib/motion/` (import from `@/lib/motion`). GSAP plugins and `createTimeline()` come from `@/lib/motion/gsap`; plugin-free GSAP helpers from `@/lib/motion/utilitarios`; the effects level (completo/reduzido/desligado) from `@/lib/motion/prefs`. Read `docs/motion.md` before touching animations.
 
 ### Next.js App Router rules
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn } from "@/lib/animations";
+import { fadeIn } from "@/lib/motion";
 import { ChevronDown } from 'lucide-react';
 import { PlayerColor, PLAYER_COLORS } from '@/types/game';
 

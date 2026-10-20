@@ -30,7 +30,7 @@ import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn } from "@/lib/animations";
+import { fadeIn } from "@/lib/motion";
 import { useToast } from "@/components/Toast";
 
 import { formatCurrency } from "@/utils/format";

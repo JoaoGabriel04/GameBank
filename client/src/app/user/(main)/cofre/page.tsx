@@ -4,7 +4,8 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle, animateStaggerIn } from "@/lib/animations";
+import { backdrop, slideUp, shimmerTitleStyle, legendaryTitleStyle } from "@/lib/motion";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import { Loader2, Crown, Shield, Image as ImageIcon, Sparkles, Check, X, Coins } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";

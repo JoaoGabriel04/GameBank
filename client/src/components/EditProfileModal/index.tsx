@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { backdrop, modalBox } from "@/lib/animations";
+import { backdrop, modalBox } from "@/lib/motion";
 import { X, Camera } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";

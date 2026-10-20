@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { slideUp } from "@/lib/animations";
+import { slideUp } from "@/lib/motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";

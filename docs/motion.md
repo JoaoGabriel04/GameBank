@@ -20,10 +20,11 @@ Guia curto para qualquer pessoa (ou agente) que for mexer em animação. O plano
 | `tokens.ts` | `duracao` (s) e `duracaoMs`, `curva` (Framer), `curvaGsap`, `mola`, `distancia`, `cascata`, tipo `NivelEfeitos` |
 | `variants.ts` | Variantes do Framer: `backdrop`, `modalBox`, `slideUp`, `fadeIn`, `staggerContainer`, `staggerItem`, `pageFade`, `pageSlide`, `popIn`, `pulse`, `shake` |
 | `raridade.ts` | `efeitoRaridade(raridade, nivel)` (cor, partículas, raios, intensidade, antecipação, vibração), `melhorRaridade()`, estilos de título |
-| `gsap.ts` | Registro único do GSAP (CustomEase, CustomWiggle, curvas `gb-shake`, `gb-tremor`, `gb-pop`, `gb-flash`), `createTimeline()`, utilitários |
+| `gsap.ts` | Registro único do GSAP (CustomEase, CustomWiggle, curvas `gb-shake`, `gb-tremor`, `gb-pop`, `gb-flash`) e `createTimeline()` |
+| `utilitarios.ts` | `animateStaggerIn`, `animateGradientLoop`, `animateProgressBar` (GSAP puro, sem plugins) |
 | `prefs.ts` | `useMotionPrefs()`, `useEfeitosStore`, `nivelEfeitosAtual()`, `porNivel()` |
 
-`@/lib/motion` (index) exporta tokens, variantes e raridade. O GSAP e as preferências se importam pelo caminho completo (`@/lib/motion/gsap`, `@/lib/motion/prefs`), para não puxar código de navegador onde não precisa. `@/lib/animations` continua reexportando o que existia antes.
+`@/lib/motion` (index) exporta tokens, variantes e raridade, sem GSAP. O resto se importa pelo caminho completo (`@/lib/motion/gsap`, `@/lib/motion/utilitarios`, `@/lib/motion/prefs`): os plugins do GSAP (~5 KB gz) só entram nas páginas que importam `@/lib/motion/gsap`. O antigo `@/lib/animations` foi removido; todos os imports já apontam para `lib/motion`.
 
 ## Níveis de efeitos
 

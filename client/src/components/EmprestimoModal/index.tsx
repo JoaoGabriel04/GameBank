@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { backdrop, modalBox } from "@/lib/animations";
+import { backdrop, modalBox } from "@/lib/motion";
 import { useToast } from "@/components/Toast";
 import { getLimiteApi, pegarEmprestimoApi, quitarEmprestimoApi, type LimiteData } from "@/services/api/emprestimos";
 import { formatCurrency } from "@/utils/format";

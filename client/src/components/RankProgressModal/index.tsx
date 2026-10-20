@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Lock, ChevronRight } from "lucide-react";
-import { animateProgressBar } from "@/lib/animations";
+import { animateProgressBar } from "@/lib/motion/utilitarios";
 import { TROPHY_TIERS, getTierInfo, getTrophyAssetName, getTrophyLabel, type TrophyRank } from "@/utils/trophies";
 
 interface Props {

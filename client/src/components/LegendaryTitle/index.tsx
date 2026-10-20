@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useEffect } from "react"
 import gsap from "gsap"
-import { legendaryTitleStyle } from "@/lib/animations"
+import { legendaryTitleStyle } from "@/lib/motion"
 import { porNivel, useMotionPrefs } from "@/lib/motion/prefs"
 
 const PARTICLE_COUNT = 12

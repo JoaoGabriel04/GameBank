@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from "framer-motion"
-import { backdrop, modalBox } from "@/lib/animations"
+import { backdrop, modalBox } from "@/lib/motion"
 import Button1 from "../Button01"
 
 type Props = {

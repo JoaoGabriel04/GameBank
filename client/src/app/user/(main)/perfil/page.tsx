@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
-import { animateStaggerIn } from "@/lib/animations";
+import { animateStaggerIn } from "@/lib/motion/utilitarios";
 import { Loader2, Pencil, Settings, Gamepad2, Crown, Trophy, TrendingUp } from "lucide-react";
 import RankBadge from "@/components/RankBadge";
 import TrophyCount from "@/components/TrophyCount";
