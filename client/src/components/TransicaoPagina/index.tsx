@@ -13,6 +13,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { curvaCss, distancia, duracaoMs } from "@/lib/motion";
 import { useMotionPrefs } from "@/lib/motion/prefs";
+import { direcaoEntre, type Direcao } from "./rotas";
 
 // Transição entre as páginas da área logada (layout (main)). Adaptado da
 // transição "suave" do SkillHub (components/motion/page-transition.tsx),
@@ -29,6 +30,16 @@ import { useMotionPrefs } from "@/lib/motion/prefs";
 // não navegou, navegação cancelada), o conteúdo volta a aparecer.
 
 const LIMITE_MS = 1500;
+
+// Quadros por direção. Irmãs: sem deslocamento, só uma escala sutil.
+function quadrosSaida(dir: Direcao, comMovimento: boolean): Keyframe[] {
+  const fim = !comMovimento ? "none" : dir === 0 ? "scale(0.99)" : `translateX(${-dir * (distancia.sm / 2)}px)`;
+  return [{ opacity: 1, transform: "none" }, { opacity: 0, transform: fim }];
+}
+function quadrosEntrada(dir: Direcao, comMovimento: boolean): Keyframe[] {
+  const inicio = !comMovimento ? "none" : dir === 0 ? "scale(0.99)" : `translateX(${dir * distancia.sm}px)`;
+  return [{ opacity: 0, transform: inicio }, { opacity: 1, transform: "none" }];
+}
 
 // Web Animations API direta, não o animate() do Framer: cancel() tira o
 // efeito na hora sem deixar estilo inline, e nada sobra no fim. Um
@@ -72,6 +83,7 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
   const animRef = useRef<Animation | null>(null);
   const limiteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const primeiraRef = useRef(true);
+  const anteriorRef = useRef(pathname);
   const [destino, setDestino] = useState<string | null>(null);
 
   const reaparecer = useCallback(() => {
@@ -93,10 +105,9 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
       const el = conteudoRef.current;
       if (el && nivelRef.current !== "desligado") {
         animRef.current?.cancel();
-        const dx = nivelRef.current === "completo" ? -distancia.sm / 2 : 0;
         animRef.current = animar(
           el,
-          [{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${dx}px)` }],
+          quadrosSaida(direcaoEntre(window.location.pathname, alvo), nivelRef.current === "completo"),
           duracaoMs.saida,
           curvaCss.easeIn,
           "forwards"
@@ -132,6 +143,8 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
 
   // Página nova montou: entrada.
   useLayoutEffect(() => {
+    const de = anteriorRef.current;
+    anteriorRef.current = pathname;
     if (primeiraRef.current) {
       primeiraRef.current = false;
       return;
@@ -144,10 +157,10 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
     animRef.current = null;
     const n = nivelRef.current;
     if (!el || n === "desligado") return;
-    const dx = n === "completo" ? distancia.sm : 0;
+    // Calculada da rota anterior: cobre também o voltar do navegador.
     animRef.current = animar(
       el,
-      [{ opacity: 0, transform: `translateX(${dx}px)` }, { opacity: 1, transform: "none" }],
+      quadrosEntrada(direcaoEntre(de, pathname), n === "completo"),
       n === "completo" ? duracaoMs.base : duracaoMs.fast,
       curvaCss.easeOut,
       "backwards"
