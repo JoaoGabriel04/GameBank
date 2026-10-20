@@ -355,12 +355,15 @@ function CofresSection() {
   const { adquiridos, loading, abrindoId, ultimoResultado, loadAdquiridos, abrirAdquirido, limparUltimoResultado } = useBauStore();
   const { success: toastSuccess, error: toastError } = useToast();
   const [resultado, setResultado] = useState<BauResultado | null>(null);
+  // Veio da recuperação (F5 no meio da animação): abre direto no resumo.
+  const [recuperado, setRecuperado] = useState(false);
 
   useEffect(() => { loadAdquiridos(); }, [loadAdquiridos]);
 
   // Recovery: se o usuário deu refresh durante a animação, reexibe
   useEffect(() => {
     if (ultimoResultado && !resultado) {
+      setRecuperado(true);
       setResultado(ultimoResultado);
     }
   }, [ultimoResultado, resultado]);
@@ -392,6 +395,7 @@ function CofresSection() {
                     carregarBauAbertura();
                     try {
                       const res = await abrirAdquirido(b.id);
+                      setRecuperado(false);
                       setResultado(res);
                     } catch (err: unknown) {
                       const msg = err instanceof Error ? err.message : "Erro ao abrir baú";
@@ -417,6 +421,7 @@ function CofresSection() {
       {resultado && (
         <BauAbertura
           resultado={resultado}
+          inicio={recuperado ? "resumo" : "animacao"}
           onClose={() => {
             const res = resultado;
             setResultado(null);

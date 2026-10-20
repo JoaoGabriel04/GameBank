@@ -65,12 +65,12 @@ export default function Resumo({ titulo, subtitulo, coins, xp, itens, nivel, onF
         display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px 120px",
       }}
     >
-      <div className="res-titulo" style={{ textAlign: "center", marginBottom: 18, opacity: 0 }}>
+      <div className="res-titulo" style={{ textAlign: "center", marginBottom: 18, opacity: 0, flexShrink: 0 }}>
         <p style={{ fontFamily: "var(--font-jaro)", fontSize: 22, color: "#f4f4f5", margin: 0 }}>{titulo}</p>
         {subtitulo && <p style={{ fontFamily: "var(--font-inconsolata)", fontSize: 12, color: "#71717a", marginTop: 4 }}>{subtitulo}</p>}
       </div>
 
-      <div className="res-moedas" style={{ display: "flex", gap: 10, marginBottom: 22, opacity: 0 }}>
+      <div className="res-moedas" style={{ display: "flex", gap: 10, marginBottom: 22, opacity: 0, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#111113", border: "1px solid #fbbf2433", borderRadius: 12, padding: "10px 18px" }}>
           <CoinIcon size={20} />
           <Contador
@@ -93,7 +93,9 @@ export default function Resumo({ titulo, subtitulo, coins, xp, itens, nivel, onF
         <div
           className="res-destaque"
           style={{
-            position: "relative", width: "100%", maxWidth: 340, marginBottom: 18, padding: "22px 16px 18px", opacity: 0,
+            // flexShrink 0: no flex em coluna com rolagem, muitos itens
+            // encolhiam o destaque e o overflow cortava nome e fragmentos.
+            position: "relative", width: "100%", maxWidth: 340, marginBottom: 18, padding: "22px 16px 18px", opacity: 0, flexShrink: 0,
             borderRadius: 18, background: `radial-gradient(ellipse at 50% 35%, ${corDestaque}26, #0d0d10 70%)`,
             border: `1px solid ${corDestaque}66`, boxShadow: `0 0 40px ${corDestaque}22`,
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10, overflow: "hidden",
@@ -115,7 +117,7 @@ export default function Resumo({ titulo, subtitulo, coins, xp, itens, nivel, onF
       )}
 
       {demais.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 w-full max-w-sm sm:max-w-xl md:max-w-2xl">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 w-full max-w-sm sm:max-w-xl md:max-w-2xl shrink-0">
           {demais.map((i, idx) => {
             const cor = RARIDADES[i.raridade]?.cor ?? "#a1a1aa"
             return (

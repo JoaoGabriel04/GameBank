@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
+import { FastForward } from "lucide-react"
 import { efeitoRaridade, melhorRaridade } from "@/lib/motion"
 import { useMotionPrefs } from "@/lib/motion/prefs"
 import { preloadSonsBau } from "@/utils/sfx"
@@ -28,15 +29,22 @@ type Fase = "luz" | "coins" | "itens" | "resumo"
 type BauAberturaProps = {
   resultado: BauResultado | null
   onClose: () => void
+  /** "resumo": abre direto no resumo (recuperação depois de um F5). */
+  inicio?: "animacao" | "resumo"
 }
 
-export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
-  const [fase, setFase]       = useState<Fase>("luz")
+// Dois toques dentro disso pulam para o resumo.
+const TOQUE_DUPLO_MS = 300
+
+export default function BauAbertura({ resultado, onClose, inicio = "animacao" }: BauAberturaProps) {
+  const faseInicial: Fase = inicio === "resumo" ? "resumo" : "luz"
+  const [fase, setFase]       = useState<Fase>(faseInicial)
   const [itemIdx, setItemIdx] = useState(0)
   const [estourando, setEstourando] = useState(false)
   const cenaRef  = useRef<HTMLDivElement>(null)
   const cartaRef = useRef<CartaHandle>(null)
   const saindoRef = useRef(false)
+  const ultimoToqueRef = useRef(0)
 
   const { nivel } = useMotionPrefs()
   const melhor = melhorRaridade(resultado?.itens.map(i => i.raridade) ?? [])
@@ -46,15 +54,41 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   // Reset ao receber novo resultado
   useEffect(() => {
     if (!resultado) return
-    setFase("luz")
+    setFase(faseInicial)
     setItemIdx(0)
     setEstourando(false)
-  }, [resultado])
+  }, [resultado, faseInicial])
 
   useEffect(() => { preloadSonsBau() }, [])
 
+  // Pular: vai direto ao resumo (a recompensa já foi concedida).
+  const pular = useCallback(() => {
+    setEstourando(false)
+    setFase("resumo")
+  }, [])
+
+  // Esc: pula; no resumo, fecha.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      if (fase === "resumo") onClose()
+      else pular()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [fase, onClose, pular])
+
   const avancar = useCallback(() => {
     if (!resultado) return
+
+    // Toque duplo: pula tudo.
+    const agora = performance.now()
+    if (fase !== "resumo" && agora - ultimoToqueRef.current < TOQUE_DUPLO_MS) {
+      ultimoToqueRef.current = 0
+      pular()
+      return
+    }
+    ultimoToqueRef.current = agora
 
     if (fase === "luz") {
       // Toque na antecipação adianta o estouro; durante o estouro, nada.
@@ -85,7 +119,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     }
 
     // Resumo: só os botões agem (Resumo.tsx).
-  }, [fase, itemIdx, resultado, estourando])
+  }, [fase, itemIdx, resultado, estourando, pular])
 
   if (!resultado) return null
 
@@ -139,6 +173,21 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
           />
         )}
       </div>
+
+      {fase !== "resumo" && (
+        <button
+          type="button"
+          aria-label="Pular para o resumo"
+          onClick={(e) => { e.stopPropagation(); pular() }}
+          style={{
+            position: "absolute", top: 16, right: 16, zIndex: 70, display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(24,24,27,0.7)", border: "1px solid #3f3f46", borderRadius: 999, padding: "7px 14px",
+            fontFamily: "var(--font-inconsolata)", fontSize: 12, color: "#d4d4d8", cursor: "pointer", backdropFilter: "blur(4px)",
+          }}
+        >
+          Pular <FastForward size={13} />
+        </button>
+      )}
 
       {estourando && (
         <Estouro
