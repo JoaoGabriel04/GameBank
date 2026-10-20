@@ -234,6 +234,39 @@
   animation: bau-suspense 1.6s ease-in-out infinite;
 }
 
+/* ── Esqueletos de carregamento (components/Skeleton) ──
+   O brilho atravessa em transform (GPU). Reduzido: pulso de opacidade, sem
+   movimento. Desligado: parado. */
+.gb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(39 39 42 / 0.7);
+}
+.gb-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  animation: gb-skeleton-brilho 1.4s ease-in-out infinite;
+}
+@keyframes gb-skeleton-brilho {
+  to { transform: translateX(100%); }
+}
+@keyframes gb-skeleton-pulso {
+  50% { opacity: 0.55; }
+}
+:root[data-efeitos="reduzido"] .gb-skeleton::after,
+:root[data-efeitos="desligado"] .gb-skeleton::after {
+  display: none;
+}
+:root[data-efeitos="reduzido"] .gb-skeleton {
+  animation: gb-skeleton-pulso 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-efeitos]) .gb-skeleton::after { display: none; }
+}
+
 /* ── Nível de efeitos (lib/motion/prefs.ts, <html data-efeitos>) ──
    Só animações decorativas: brilhos, shimmer e pulsos de baú. Carregadores
    (animate-spin, skeletons) e o embaralhar de cartas ficam: são informação.

@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import {
   Plus, Search, Lock, Users, ChevronRight, Eye, LogIn,
 } from "lucide-react";
-import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { useSessions } from "@/hooks/useApi";
 import { sessionsApi } from "@/services/api/sessions";
@@ -27,6 +26,7 @@ import { Segmented, LiveDot, UModal, UBtn } from "@/components/user/UserUI";
 import type { GameSession } from "@/types/game";
 import { apiErrMsg } from "@/lib/api-error";
 import { useToast } from "@/components/Toast";
+import { SkeletonCarregando, SkeletonGrade } from "@/components/Skeleton";
 
 /* -- Join modal (mantém lógica existente, visual redesenhado) -- */
 function JoinModal({
@@ -388,9 +388,9 @@ export default function SessionsPage() {
 
       {/* Grid */}
       {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-        </div>
+        <SkeletonCarregando label="Carregando as salas">
+          <SkeletonGrade qtd={4} altura={170} className="grid grid-cols-1 sm:grid-cols-2 gap-4" />
+        </SkeletonCarregando>
       ) : list.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-3">
           <Users size={40} />

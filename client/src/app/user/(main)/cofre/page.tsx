@@ -16,6 +16,7 @@ import UserBanner from "@/components/UserBanner";
 import LegendaryTitle from "@/components/LegendaryTitle";
 import { Chip } from "@/components/user/UserUI";
 import MarqueeText from "@/components/MarqueeText";
+import { Skeleton, SkeletonCarregando, SkeletonGrade } from "@/components/Skeleton";
 import { RARIDADES } from "@/constants/raridade";
 import type { UserItem } from "@/types/shop";
 
@@ -647,9 +648,13 @@ export default function CofrePage() {
 
   if (loading.profile || !profile) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-      </div>
+      <SkeletonCarregando label="Carregando o cofre" className="px-4 py-6 pt-16 lg:pt-6 space-y-4">
+        <div className="flex gap-2 overflow-hidden">
+          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-8 w-20 rounded-full shrink-0" />)}
+        </div>
+        <Skeleton className="h-3 w-28 rounded" />
+        <SkeletonGrade qtd={9} altura={150} colunas="repeat(auto-fill, minmax(118px, 1fr))" />
+      </SkeletonCarregando>
     );
   }
 

@@ -218,6 +218,7 @@ Specs, design docs and fix plans live in `docs/` (`docs/mapa-2d/` for the 2D map
 | `setMessages is not a function` | Zustand store created before hot-reload; new method missing | Use `useXxxStore.setState()` instead of store method |
 | `ERR_ERL_KEY_GEN_IPV6` in rate limiter | `keyGenerator` passing `req.ip` directly — v8 requires the helper | `ipKeyGenerator(req.ip ?? "")` — takes `string` not `Request` |
 | Import `Cannot find module '…/lib/cloudinary.js'` | Wrong relative path after moving file | Count `../` from `modules/avatar/` → `../../lib/` |
+| Dev server keeps serving an old `globals.css` (new rules missing even after restart) | Turbopack's on-disk dev cache in `client/.next/dev/cache` went stale | Stop `sgp-client-dev`, delete `client/.next/dev/cache` (root-owned: `docker run --rm -v "$PWD/client/.next:/n" alpine:3 rm -rf /n/dev/cache`), start it again. A production build is the source of truth |
 
 ## CSP (helmet)
 

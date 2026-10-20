@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import UserName from "@/components/UserName";
 import { animateStaggerIn } from "@/lib/motion/utilitarios";
-import { Loader2, TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X, Star } from "lucide-react";
+import { TrendingUp, Gamepad2, Crown, Trophy, ChevronRight, X, Star } from "lucide-react";
 import RankBadge from "@/components/RankBadge";
 import TrophyCount from "@/components/TrophyCount";
 import { getTrophyLabel } from "@/utils/trophies";
@@ -24,6 +24,7 @@ import UserAvatar from "@/components/UserAvatar";
 import UserBanner from "@/components/UserBanner";
 
 import { Chip, Progress, Segmented, UModal, xpForLevel } from "@/components/user/UserUI";
+import { Skeleton, SkeletonCarregando, SkeletonLinha } from "@/components/Skeleton";
 import type { RankingUser } from "@/types/shop";
 
 /* -- Metric config -- */
@@ -340,9 +341,24 @@ export default function RankingPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-        </div>
+        <SkeletonCarregando label="Carregando o ranking" className="space-y-4">
+          {/* Pódio: 2º, 1º e 3º com alturas diferentes */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl px-4 pt-8 pb-4 flex items-end justify-center gap-3">
+            {[110, 140, 90].map((altura, i) => (
+              <div key={i} className="flex flex-col items-center gap-2 w-24">
+                <Skeleton className={`rounded-full ${i === 1 ? "w-16 h-16" : "w-12 h-12"}`} />
+                <Skeleton className="h-3 w-16 rounded" />
+                <Skeleton className="w-full rounded-t-xl" style={{ height: altura }} />
+              </div>
+            ))}
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-zinc-800">
+              <Skeleton className="h-3 w-36 rounded" />
+            </div>
+            {Array.from({ length: 6 }, (_, i) => <SkeletonLinha key={i} />)}
+          </div>
+        </SkeletonCarregando>
       ) : (
         <>
           {/* Podium */}

@@ -26,6 +26,7 @@ import { getDailyOffersApi, buyDailyOfferApi } from "@/services/api/shop";
 import type { DailyOffer } from "@/services/api/shop";
 import BauCard from "@/components/BauCard";
 import BauDetailModal from "@/components/BauDetailModal";
+import { Skeleton, SkeletonCarregando, SkeletonGrade } from "@/components/Skeleton";
 
 // A abertura de baú (GSAP + 900 linhas) só aparece depois de abrir um baú:
 // fica fora do bundle da página e o chunk é pedido junto com a API de abrir.
@@ -1439,9 +1440,14 @@ export default function LojaPage() {
 
   if ((loading.shop || loading.profile) && !shopItems.length) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-600" />
-      </div>
+      <SkeletonCarregando label="Carregando a loja" className="max-w-lg mx-auto px-4 py-6 pt-16 lg:pt-6">
+        {[0, 1].map((secao) => (
+          <section key={secao} className="mb-10">
+            <Skeleton className="h-9 w-full rounded-r-xl my-6 first:mt-0" />
+            <SkeletonGrade qtd={6} altura={150} colunas="repeat(3, 1fr)" />
+          </section>
+        ))}
+      </SkeletonCarregando>
     );
   }
 
