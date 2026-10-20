@@ -145,7 +145,7 @@ export default function Estouro({ efeito, nivel, duplo = false, alvoTremor, onPi
       <div
         className="est-posimagem est-centrado gb-luz"
         style={{
-          position: "absolute", left: "50%", top: "50%", width: "120vmax", height: "120vmax", opacity: 0, borderRadius: "50%",
+          position: "absolute", left: "50%", top: "50%", width: "100vmax", height: "100vmax", opacity: 0, borderRadius: "50%",
           background: `radial-gradient(circle, ${cor}aa 0%, ${cor}55 18%, ${cor}22 34%, transparent 55%)`,
         }}
       />
@@ -154,7 +154,7 @@ export default function Estouro({ efeito, nivel, duplo = false, alvoTremor, onPi
         <div
           className="est-raios est-centrado gb-luz"
           style={{
-            position: "absolute", left: "50%", top: "50%", width: "160vmax", height: "160vmax", opacity: 0, borderRadius: "50%",
+            position: "absolute", left: "50%", top: "50%", width: "120vmax", height: "120vmax", opacity: 0, borderRadius: "50%",
             background: `repeating-conic-gradient(from 0deg, ${corClara}cc 0deg, ${cor}66 ${fatia * 0.08}deg, transparent ${fatia * 0.22}deg, transparent ${fatia}deg)`,
             WebkitMaskImage: "radial-gradient(circle, #000 4%, rgba(0,0,0,0.6) 22%, transparent 50%)",
             maskImage: "radial-gradient(circle, #000 4%, rgba(0,0,0,0.6) 22%, transparent 50%)",
@@ -166,7 +166,7 @@ export default function Estouro({ efeito, nivel, duplo = false, alvoTremor, onPi
         <div
           className="est-raios-2 est-centrado gb-luz"
           style={{
-            position: "absolute", left: "50%", top: "50%", width: "170vmax", height: "170vmax", opacity: 0, borderRadius: "50%",
+            position: "absolute", left: "50%", top: "50%", width: "125vmax", height: "125vmax", opacity: 0, borderRadius: "50%",
             background: `repeating-conic-gradient(from ${fatia / 3}deg, ${corClara}99 0deg, transparent ${fatia * 0.06}deg, transparent ${fatia * 0.67}deg)`,
             WebkitMaskImage: "radial-gradient(circle, #000 3%, rgba(0,0,0,0.45) 18%, transparent 42%)",
             maskImage: "radial-gradient(circle, #000 3%, rgba(0,0,0,0.45) 18%, transparent 42%)",

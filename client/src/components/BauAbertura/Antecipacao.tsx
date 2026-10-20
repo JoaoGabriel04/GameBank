@@ -119,7 +119,6 @@ export default function Antecipacao({ imagem, efeito, nivel, onPronto }: Props) 
                 width: f.largura, height: f.comprimento, transformOrigin: "50% 100%", opacity: 0,
                 borderRadius: f.largura,
                 background: `linear-gradient(to top, rgba(${LUZ},1), rgba(${LUZ},0.35) 55%, rgba(${LUZ},0))`,
-                filter: "blur(0.6px)",
               }}
             />
           </div>
