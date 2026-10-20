@@ -3,6 +3,7 @@ import "./globals.css";
 import localFont from 'next/font/local'
 import { ToastProvider } from "@/components/Toast";
 import MusicProvider from "@/components/MusicProvider";
+import MotionPrefsProvider from "@/components/MotionPrefsProvider";
 
 export const metadata: Metadata = {
   title: "GameBank",
@@ -31,10 +32,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`dark ${jaro.variable} ${inconsolata.variable}`}>
       <body>
-        <ToastProvider>
-          <MusicProvider />
-          {children}
-        </ToastProvider>
+        <MotionPrefsProvider>
+          <ToastProvider>
+            <MusicProvider />
+            {children}
+          </ToastProvider>
+        </MotionPrefsProvider>
       </body>
     </html>
   );

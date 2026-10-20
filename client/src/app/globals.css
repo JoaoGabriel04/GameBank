@@ -234,6 +234,29 @@
   animation: bau-suspense 1.6s ease-in-out infinite;
 }
 
+/* ── Nível de efeitos (lib/motion/prefs.ts, <html data-efeitos>) ──
+   Só animações decorativas: brilhos, shimmer e pulsos de baú. Carregadores
+   (animate-spin, skeletons) e o embaralhar de cartas ficam: são informação.
+   "reduzido" para o que se move; "desligado" para tudo. Antes do JS
+   hidratar (sem data-efeitos), vale o prefers-reduced-motion do sistema. */
+:root[data-efeitos="reduzido"] :is(.banner-shimmer-pass, [style*="gb-shimmer"], [style*="gb-legendary-shimmer"], [style*="bau-lendario-bg"]),
+:root[data-efeitos="desligado"] :is(.banner-shimmer-pass, .bau-suspense-pulse, .bau-suspense-lendario, .pig-shaking, [style*="gb-shimmer"], [style*="gb-legendary-shimmer"], [style*="bau-lendario-bg"]) {
+  animation: none !important;
+}
+:root[data-efeitos="desligado"] [style*="bau-sparkle"] {
+  animation: none !important;
+  opacity: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-efeitos]) :is(.banner-shimmer-pass, .bau-suspense-pulse, .bau-suspense-lendario, .pig-shaking, [style*="gb-shimmer"], [style*="gb-legendary-shimmer"], [style*="bau-lendario-bg"]) {
+    animation: none !important;
+  }
+  :root:not([data-efeitos]) [style*="bau-sparkle"] {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

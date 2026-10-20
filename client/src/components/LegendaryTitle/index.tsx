@@ -3,15 +3,17 @@
 import { useId, useMemo, useRef, useEffect } from "react"
 import gsap from "gsap"
 import { legendaryTitleStyle } from "@/lib/animations"
+import { porNivel, useMotionPrefs } from "@/lib/motion/prefs"
 
 const PARTICLE_COUNT = 12
 
 export default function LegendaryTitle({ text }: { text: string }) {
   const uid = useId()
   const containerRef = useRef<HTMLSpanElement>(null)
+  const { nivel } = useMotionPrefs()
 
   const particles = useMemo(() =>
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+    Array.from({ length: porNivel(PARTICLE_COUNT, nivel) }, (_, i) => ({
       key: `${uid}-${i}`,
       left: Math.random() * 80 + 10,
       top: Math.random() * 80 + 10,
@@ -22,7 +24,7 @@ export default function LegendaryTitle({ text }: { text: string }) {
       travelX: Math.random() * 8 - 4,
     })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [nivel]
   )
 
   useEffect(() => {

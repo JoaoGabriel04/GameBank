@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useRef } from "react"
 import { gsap } from "gsap"
+import { porNivel, useMotionPrefs } from "@/lib/motion/prefs"
 
 type Faisca = {
   id: number
@@ -28,6 +29,7 @@ type BannerParticulasProps = {
 
 export default function BannerParticulas({ cor = "#fbbf24", ativo = true }: BannerParticulasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { nivel } = useMotionPrefs()
 
   const faiscas = useMemo<Faisca[]>(() =>
     Array.from({ length: 12 }, (_, i) => ({
@@ -37,9 +39,8 @@ export default function BannerParticulas({ cor = "#fbbf24", ativo = true }: Bann
       dur: 2.5 + Math.random() * 2,
       size: 8 + Math.random() * 16,
       drift: (Math.random() - 0.5) * 30,
-    })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    })).slice(0, porNivel(12, nivel)),
+    [nivel]
   )
 
   const sparkles = useMemo<Sparkle[]>(() =>
@@ -50,9 +51,8 @@ export default function BannerParticulas({ cor = "#fbbf24", ativo = true }: Bann
       delay: Math.random() * 4,
       dur: 1.5 + Math.random() * 2,
       size: 8 + Math.random() * 10,
-    })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    })).slice(0, porNivel(16, nivel)),
+    [nivel]
   )
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function BannerParticulas({ cor = "#fbbf24", ativo = true }: Bann
     return () => { ctx.revert() }
   }, [ativo, faiscas, sparkles])
 
-  if (!ativo) return null
+  if (!ativo || nivel === "desligado") return null
 
   const svgSparkle = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='${encodeURIComponent(cor)}' d='M12 0 L13.5 10.5 L24 12 L13.5 13.5 L12 24 L10.5 13.5 L0 12 L10.5 10.5 Z'/%3E%3C/svg%3E")`
 

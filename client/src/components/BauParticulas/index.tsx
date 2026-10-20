@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from "react"
+import { porNivel, useMotionPrefs } from "@/lib/motion/prefs"
 
 type Sparkle = {
   id: number
@@ -20,9 +21,11 @@ type BauParticulasProps = {
 }
 
 export default function BauParticulas({ cor, ativo, qtd = 12 }: BauParticulasProps) {
+  const { nivel } = useMotionPrefs()
+  const total = porNivel(qtd, nivel)
   const sparkles: Sparkle[] = useMemo(() =>
     ativo
-      ? Array.from({ length: qtd }, (_, i) => ({
+      ? Array.from({ length: total }, (_, i) => ({
           id: i,
           top: 10 + Math.random() * 80,
           left: 8 + Math.random() * 84,
@@ -33,7 +36,7 @@ export default function BauParticulas({ cor, ativo, qtd = 12 }: BauParticulasPro
           driftY: (Math.random() - 0.5) * 80,
         }))
       : [],
-    [ativo, qtd],
+    [ativo, total],
   )
 
   if (!ativo || sparkles.length === 0) return null
