@@ -12,7 +12,10 @@ echo "[startup] DIRECT_URL set: $([ -n "$DIRECT_URL" ] && echo YES || echo NO)"
 # migration com falha, resolver à mão:
 #   npx prisma migrate resolve --rolled-back <nome_da_migration>
 # Binário local em vez de npx: o npx gasta 0,3–1,2 s só para resolver o pacote.
-if ./node_modules/.bin/prisma migrate deploy; then
+# O Prisma 7 ignora o `directUrl` do prisma.config.ts, então o migrate usa o
+# DIRECT_URL (sem pooler) aqui: o pooler do Neon não segura o advisory lock
+# do `migrate deploy` (P1002). O app continua no DATABASE_URL.
+if DATABASE_URL="${DIRECT_URL:-$DATABASE_URL}" ./node_modules/.bin/prisma migrate deploy; then
   echo "[startup] Migrations aplicadas com sucesso"
 else
   echo "[startup] ERRO: prisma migrate deploy falhou — abortando o boot" >&2
