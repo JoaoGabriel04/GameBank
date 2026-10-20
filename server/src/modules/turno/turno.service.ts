@@ -237,11 +237,21 @@ class TurnoService {
     const dividaAtiva = await prisma.debt.findFirst({ where: { sessionId, playerId: player.id, pago: false } });
     if (!dividaAtiva) return null;
 
-    const atual = await prisma.sessionPlayer.findUnique({ where: { id: player.id }, select: { rodadasDevendo: true, saldo: true } });
+    const atual = await prisma.sessionPlayer.findUnique({
+      where: { id: player.id },
+      select: { rodadasDevendo: true, saldo: true, rodadaContagemDivida: true },
+    });
+    // Conta uma vez por turno: cada jogador tem um turno por rodada, e um
+    // duplo (ou a saída da prisão com duplo) chama rolarDados de novo no
+    // mesmo turno.
+    if (atual?.rodadaContagemDivida === session.rodadaAtual) return null;
     const rodadas = (atual?.rodadasDevendo ?? 0) + 1;
 
     if (rodadas < 3) {
-      await prisma.sessionPlayer.update({ where: { id: player.id }, data: { rodadasDevendo: rodadas } });
+      await prisma.sessionPlayer.update({
+        where: { id: player.id },
+        data: { rodadasDevendo: rodadas, rodadaContagemDivida: session.rodadaAtual },
+      });
       return null;
     }
 
@@ -282,13 +292,21 @@ class TurnoService {
       });
     });
 
+    const mensagem = `${player.nome} faliu após 3 rodadas sem quitar as dívidas — propriedades voltaram ao banco.`;
+
+    // Mesma regra de sair/desistir/expulsar: com metade ou menos dos
+    // jogadores ativos, a partida acaba (senão o último joga sozinho).
+    const { SessionService } = await import("../session/session.service.js");
+    const fim = await new SessionService().encerrarSePoucosAtivos(sessionId, session.jogadores.length);
+    if (fim.autoEnded) {
+      const { emitSessionClosed } = await import("../socket/socket.handler.js");
+      emitSessionClosed(sessionId, fim.ranking);
+      return { falido: true, mensagem, autoEnded: true, turnoAtualPlayerId: null, avancou: false };
+    }
+
     const avanco = await this.avancarTurno(sessionId, session);
 
-    return {
-      falido: true,
-      mensagem: `${player.nome} faliu após 3 rodadas sem quitar as dívidas — propriedades voltaram ao banco.`,
-      ...avanco,
-    };
+    return { falido: true, mensagem, ...avanco };
   }
 
   async comprarCasaAtual(sessionId: number, playerId: number) {

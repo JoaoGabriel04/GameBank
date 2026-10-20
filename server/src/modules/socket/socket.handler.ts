@@ -1,6 +1,7 @@
 import { getIO } from "../../lib/socket.js";
 import { emitirOuEnfileirar, enfileirarSnapshot } from "../../lib/fila-de-emits.js";
 import { socketLogger } from "../../lib/logger.js";
+import { AppError } from "../../middleware/error-handler.middleware.js";
 import { SessionService } from "../session/session.service.js";
 
 const sessionService = new SessionService();
@@ -69,7 +70,15 @@ export async function emitUpdatedSession(sessionId: number) {
 export async function emitirSnapshotAgora(sessionId: number) {
   const inicio = performance.now();
   await sessionService.invalidateCache(sessionId);
-  const session = await sessionService.loadSession(sessionId);
+  let session;
+  try {
+    session = await sessionService.loadSession(sessionId);
+  } catch (err) {
+    // A partida pode ter acabado dentro do mesmo escopo (falência que
+    // dispara o fim automático): a sessão já foi apagada, nada a emitir.
+    if (err instanceof AppError && err.statusCode === 404) return;
+    throw err;
+  }
   const payload = semCatalogoEstatico(session);
   const ms = Math.round(performance.now() - inicio);
   // Tamanho aproximado do que vai pela rede (o socket.io serializa de novo).

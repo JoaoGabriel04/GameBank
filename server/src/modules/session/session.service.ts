@@ -493,13 +493,8 @@ export class SessionService {
       await turnoService.passarVez(sessionId, player.id).catch(() => {});
     }
 
-    // Auto-end: quando restam metade ou menos dos jogadores, finaliza
-    const totalPlayers = session.jogadores.length;
-    const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount <= Math.floor(totalPlayers / 2)) {
-      const ranking = await this.endSession(sessionId);
-      return { autoEnded: true as const, ranking };
-    }
+    const fim = await this.encerrarSePoucosAtivos(sessionId, session.jogadores.length);
+    if (fim.autoEnded) return fim;
   });
   }
 
@@ -584,13 +579,8 @@ export class SessionService {
       await turnoService.passarVez(sessionId, player.id).catch(() => {});
     }
 
-    // Auto-end: quando restam metade ou menos dos jogadores, finaliza
-    const totalPlayers = session.jogadores.length;
-    const activeCount = await this.repo.countActivePlayers(sessionId);
-    if (activeCount <= Math.floor(totalPlayers / 2)) {
-      const ranking = await this.endSession(sessionId);
-      return { autoEnded: true as const, ranking };
-    }
+    const fim = await this.encerrarSePoucosAtivos(sessionId, session.jogadores.length);
+    if (fim.autoEnded) return fim;
   });
   }
 
@@ -644,14 +634,19 @@ export class SessionService {
       await turnoService.passarVez(sessionId, player.id).catch(() => {});
     }
 
-    const totalPlayers = session.jogadores.length;
+    return this.encerrarSePoucosAtivos(sessionId, session.jogadores.length);
+  });
+  }
+
+  // Auto-end: quando restam metade ou menos dos jogadores ativos, finaliza.
+  // Usado por sair, desistir, expulsar e falência.
+  async encerrarSePoucosAtivos(sessionId: number, totalPlayers: number) {
     const activeCount = await this.repo.countActivePlayers(sessionId);
     if (activeCount <= Math.floor(totalPlayers / 2)) {
       const ranking = await this.endSession(sessionId);
       return { autoEnded: true as const, ranking };
     }
     return { autoEnded: false as const };
-  });
   }
 
   private missionService = new MissionsService();

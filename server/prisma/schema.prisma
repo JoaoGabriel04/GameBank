@@ -276,6 +276,7 @@ model SessionPlayer {
   tentativasPrisao   Int      @default(0)   // tentativas de duplo na rodada atual
   pularProximaRodada Boolean  @default(false) // feriado
   rodadasDevendo     Int      @default(0)   // contador de falência
+  rodadaContagemDivida Int?               // rodada em que o contador de falência subiu pela última vez (conta 1× por turno)
   dividaBanco        Int      @default(0)   // valor devido ao banco
   creditoVisao       Int      @default(1)   // créditos para ver dados antes de escolher (Mecânica 3) — manter igual a VISAO_CREDITOS_MAX
   creditoRecargaEm   Int      @default(0)   // rodada em que os créditos são recarregados (0 = sem pendência)
