@@ -12,6 +12,8 @@ import LeilaoModal from "./LeilaoModal"
 import LeilaoResultadoModal from "./LeilaoResultadoModal"
 import Pawns from "./Pawns"
 import FluxoMoedas from "./FluxoMoedas"
+import { estadoOciosa } from "@/utils/terreno-ocioso"
+import { OCIOSA_CARENCIA_RODADAS } from "@/constants/economia"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import { ARTE_CENTRAL, FUNDO_TABULEIRO, GRUPO_IMAGENS_PRELOAD } from "@/utils/tabuleiro-images"
 import { useGameStore } from "@/stores/gameStore"
@@ -842,6 +844,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
               const donoJogador = sessionPosse?.playerId
                 ? jogadoresAtivos.find(p => p.id === sessionPosse.playerId)
                 : undefined
+              // Terreno ocioso: rodadas sem atividade (teto na carência + 1,
+              // para a casa não re-renderizar a cada rodada depois disso).
+              const ociosa = sessionPosse?.playerId && sessionPosse.propriedade
+                ? estadoOciosa(sessionPosse, sessionPosse.propriedade, session.rodadaAtual ?? 1, {})
+                : null
+              const ociosas = ociosa ? Math.min(ociosa.ociosas, OCIOSA_CARENCIA_RODADAS + 1) : null
               return (
                 <div key={casa.pos} style={{ gridRow: row, gridColumn: col }}>
                   <BoardTile
@@ -849,6 +857,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
                     sessionPosse={sessionPosse}
                     donoJogador={donoJogador}
                     destaque={casa.pos === (jogadorDaVez?.posicao ?? -1)}
+                    ociosas={ociosas}
                   />
                 </div>
               )

@@ -10,15 +10,18 @@ import PlayerAvatar from "@/components/Board/PlayerAvatar"
 import { memo, useLayoutEffect, useRef } from "react"
 import { gsap } from "gsap"
 import { useMotionPrefs } from "@/lib/motion/prefs"
+import { OCIOSA_CARENCIA_RODADAS } from "@/constants/economia"
 
 type Props = {
   casa: Casa
   sessionPosse?: SessionPropriedade
   donoJogador?: Player
   destaque?: boolean
+  /** Rodadas sem atividade (terreno ocioso); null fora do escopo. */
+  ociosas?: number | null
 }
 
-function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
+function BoardTile({ casa, sessionPosse, donoJogador, destaque, ociosas = null }: Props) {
   const isPropriedade = casa.tipo === "propriedade" || casa.tipo === "acao"
   const cor = isPropriedade ? getGroupColorHex(sessionPosse?.propriedade?.grupo_cor) : null
   const donoCor = donoJogador ? PLAYER_COLORS.find(p => p.value === donoJogador.cor) : null
@@ -34,18 +37,22 @@ function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
 
   const preco = sessionPosse?.propriedade?.custo_compra
   const semDono = isPropriedade && !sessionPosse?.playerId
+  // Desbota conforme as rodadas sem atividade (0 → carência); em cobrança,
+  // poeira por cima. A transição do filtro é a única animação aqui.
+  const desbote = ociosas == null ? 0 : Math.min(1, ociosas / OCIOSA_CARENCIA_RODADAS)
+  const cobrando = ociosas != null && ociosas >= OCIOSA_CARENCIA_RODADAS
 
   // Mudanças visíveis na casa (compra, construção, hipoteca) animam aqui,
   // comparando com a renderização anterior. O memo garante que só a casa
   // que mudou passa por isto. Primeira montagem: nada anima.
   const raiz = useRef<HTMLDivElement>(null)
-  const anterior = useRef<{ dono: number | null; casas: number; hipotecada: boolean } | null>(null)
+  const anterior = useRef<{ dono: number | null; casas: number; hipotecada: boolean; ociosas: number | null } | null>(null)
   const { nivel } = useMotionPrefs()
   const donoId = sessionPosse?.playerId ?? null
 
   useLayoutEffect(() => {
     const antes = anterior.current
-    anterior.current = { dono: donoId, casas, hipotecada }
+    anterior.current = { dono: donoId, casas, hipotecada, ociosas }
     if (!antes || nivel === "desligado" || !raiz.current) return
     const q = gsap.utils.selector(raiz)
     const completo = nivel === "completo"
@@ -57,6 +64,10 @@ function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
       gsap.fromTo(q(".casa-clarao"), { opacity: 0, backgroundColor: corDono }, { opacity: 0.75, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out" })
       if (completo) gsap.fromTo(q(".casa-selo"), { scale: 0, rotation: -25 }, { scale: 1, rotation: 0, duration: 0.5, ease: "back.out(2.6)", delay: 0.08 })
       else gsap.fromTo(q(".casa-selo"), { opacity: 0 }, { opacity: 1, duration: 0.3 })
+    }
+    // Terreno ocioso visitado: "reacende" (a cor volta com um clarão claro).
+    if (ociosas === 0 && (antes.ociosas ?? 0) >= 2) {
+      gsap.fromTo(q(".casa-clarao"), { opacity: 0, backgroundColor: "#fef9c3" }, { opacity: 0.5, duration: 0.2, yoyo: true, repeat: 1, ease: "power2.out" })
     }
     // Volta ao banco (falência, desistência, venda): clarão cinza.
     if (donoId == null && antes.dono != null) {
@@ -75,7 +86,7 @@ function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
       if (completo) gsap.fromTo(q(".casa-cadeado"), { y: -14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, delay: 0.15, ease: "bounce.out" })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [donoId, casas, hipotecada, nivel])
+  }, [donoId, casas, hipotecada, nivel, ociosas])
 
   return (
     <div
@@ -94,7 +105,21 @@ function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            filter: desbote > 0 ? `saturate(${1 - 0.8 * desbote}) brightness(${1 - 0.3 * desbote})` : undefined,
+            transition: "filter 0.8s ease",
+          }}
           draggable={false}
+        />
+      )}
+      {cobrando && (
+        <div
+          aria-hidden
+          className="casa-poeira absolute inset-0 pointer-events-none"
+          style={{
+            opacity: 0.45,
+            background: "radial-gradient(circle at 20% 30%, rgba(168,162,158,0.35) 0 1px, transparent 2px) 0 0/9px 9px, radial-gradient(circle at 70% 60%, rgba(168,162,158,0.3) 0 1px, transparent 2px) 0 0/13px 13px, linear-gradient(180deg, rgba(120,113,108,0.15), rgba(68,64,60,0.35))",
+          }}
         />
       )}
 
@@ -188,7 +213,7 @@ function mesmaCasa(a: Props, b: Props) {
   const pb = b.sessionPosse
   const da = a.donoJogador
   const db = b.donoJogador
-  return a.casa === b.casa && a.destaque === b.destaque
+  return a.casa === b.casa && a.destaque === b.destaque && a.ociosas === b.ociosas
     && pa?.playerId === pb?.playerId && pa?.casas === pb?.casas && pa?.hipotecada === pb?.hipotecada
     && pa?.propriedade?.grupo_cor === pb?.propriedade?.grupo_cor
     && pa?.propriedade?.custo_compra === pb?.propriedade?.custo_compra
