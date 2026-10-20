@@ -14,6 +14,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { curvaCss, distancia, duracaoMs } from "@/lib/motion";
 import { useMotionPrefs } from "@/lib/motion/prefs";
 import { direcaoEntre, type Direcao } from "./rotas";
+import BarraProgresso from "@/components/BarraProgresso";
+import { useRedeLenta, useRequisicoesAtivas } from "@/lib/atividade-rede";
 
 // Transição entre as páginas da área logada (layout (main)). Adaptado da
 // transição "suave" do SkillHub (components/motion/page-transition.tsx),
@@ -30,6 +32,11 @@ import { direcaoEntre, type Direcao } from "./rotas";
 // não navegou, navegação cancelada), o conteúdo volta a aparecer.
 
 const LIMITE_MS = 1500;
+// Teto para considerar a navegação em curso (barra e pílula do menu).
+const NAVEGACAO_MAX_MS = 10_000;
+// Logo após a troca de rota, a página nova costuma buscar dados: qualquer
+// requisição nessa janela mantém a barra, sem apagar e reacender.
+const POS_NAVEGACAO_MS = 800;
 
 // Quadros por direção. Irmãs: sem deslocamento, só uma escala sutil.
 function quadrosSaida(dir: Direcao, comMovimento: boolean): Keyframe[] {
@@ -82,14 +89,19 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
   const conteudoRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<Animation | null>(null);
   const limiteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navegacaoMaxRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [posNavegacao, setPosNavegacao] = useState(false);
   const primeiraRef = useRef(true);
   const anteriorRef = useRef(pathname);
   const [destino, setDestino] = useState<string | null>(null);
+  const redeLenta = useRedeLenta();
+  const requisicoesAtivas = useRequisicoesAtivas();
 
+  // Traz o conteúdo atual de volta. A navegação pode seguir em curso (rede
+  // lenta): destino e barra continuam até a rota mudar ou NAVEGACAO_MAX_MS.
   const reaparecer = useCallback(() => {
     const el = conteudoRef.current;
     const saida = animRef.current;
-    setDestino(null);
     if (!el || !saida) return;
     const opacidade = getComputedStyle(el).opacity;
     saida.cancel();
@@ -115,6 +127,8 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
       }
       if (limiteRef.current) clearTimeout(limiteRef.current);
       limiteRef.current = setTimeout(reaparecer, LIMITE_MS);
+      if (navegacaoMaxRef.current) clearTimeout(navegacaoMaxRef.current);
+      navegacaoMaxRef.current = setTimeout(() => setDestino(null), NAVEGACAO_MAX_MS);
     },
     [reaparecer]
   );
@@ -150,7 +164,9 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (limiteRef.current) clearTimeout(limiteRef.current);
+    if (navegacaoMaxRef.current) clearTimeout(navegacaoMaxRef.current);
     setDestino(null);
+    setPosNavegacao(true);
 
     const el = conteudoRef.current;
     animRef.current?.cancel();
@@ -167,16 +183,24 @@ export function TransicaoPaginaProvider({ children }: { children: ReactNode }) {
     );
   }, [pathname]);
 
+  useEffect(() => {
+    if (!posNavegacao) return;
+    const t = setTimeout(() => setPosNavegacao(false), POS_NAVEGACAO_MS);
+    return () => clearTimeout(t);
+  }, [posNavegacao]);
+
   useEffect(
     () => () => {
       animRef.current?.cancel();
       if (limiteRef.current) clearTimeout(limiteRef.current);
+      if (navegacaoMaxRef.current) clearTimeout(navegacaoMaxRef.current);
     },
     []
   );
 
   return (
     <TransicaoCtx.Provider value={{ navegar, destino }}>
+      <BarraProgresso ativa={destino !== null || redeLenta || (posNavegacao && requisicoesAtivas > 0)} />
       {/* O conteúdo da página fica num wrapper animável; menus ficam fora. */}
       <TransicaoConteudoCtx.Provider value={conteudoRef}>{children}</TransicaoConteudoCtx.Provider>
     </TransicaoCtx.Provider>

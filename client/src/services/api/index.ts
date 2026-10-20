@@ -1,6 +1,16 @@
 import axios from 'axios'
 import { getRoomToken, setRoomToken } from '@/stores/roomTokenStore'
 import { useAuthStore } from '@/stores/authStore'
+import { requisicaoIniciou, requisicaoTerminou } from '@/lib/atividade-rede'
+
+// Marca a requisição contada pela barra de progresso, para descontar uma vez só.
+type ConfigContada = { __contada?: boolean }
+function descontar(config?: ConfigContada) {
+  if (config?.__contada) {
+    config.__contada = false
+    requisicaoTerminou()
+  }
+}
 
 const resolvedBaseUrl =
   (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== "")
@@ -25,6 +35,8 @@ api.interceptors.request.use(
       if (roomToken) {
         config.headers['X-Room-Token'] = roomToken
       }
+      ;(config as ConfigContada).__contada = true
+      requisicaoIniciou()
     }
     return config
   },
@@ -33,12 +45,14 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    descontar(response.config as ConfigContada)
     if (response.data?.roomToken) {
       setRoomToken(response.data.roomToken)
     }
     return response
   },
   (error) => {
+    descontar(error.config as ConfigContada | undefined)
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const msg = error.response?.data?.message ?? error.response?.data?.error ?? ''
       const roomErrors = [
