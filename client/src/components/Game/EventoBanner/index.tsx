@@ -1,6 +1,7 @@
 "use client";
 
 import { getEvento } from "@/constants/eventos";
+import IconeEvento from "@/components/Game/IconeEvento";
 
 const CORES: Record<string, string> = {
   verde: "border-emerald-500/30 bg-emerald-500/8 text-emerald-300",
@@ -28,7 +29,7 @@ export default function EventoBanner({ eventoAtualCodigo, eventoProximoCodigo, r
   return (
     <div className={`flex items-center justify-between gap-2 px-4 py-2 rounded-lg border font-inconsolata text-xs ${cor}`}>
       <span className="flex items-center gap-1.5 truncate">
-        <span className="text-sm leading-none shrink-0">{alvo?.icone}</span>
+        <IconeEvento codigo={alvo?.codigo} size={14} className="shrink-0" />
         <span className="font-semibold shrink-0">{prefixo}</span>
         <span className="truncate">{alvo?.nome}</span>
       </span>

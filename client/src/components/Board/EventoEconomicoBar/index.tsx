@@ -1,6 +1,10 @@
 "use client"
 
+import { motion } from "framer-motion"
+import { AlertTriangle } from "lucide-react"
 import { getEvento } from "@/constants/eventos"
+import { mola } from "@/lib/motion"
+import IconeEvento from "@/components/Game/IconeEvento"
 
 const CORES_BANNER: Record<string, string> = {
   verde: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
@@ -36,22 +40,34 @@ export default function EventoEconomicoBar({ eventoProximoCodigo, eventoAtualCod
   return (
     <div className="mb-3 space-y-2">
       {eventoProximo && (
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-inconsolata text-xs ${CORES_BANNER[eventoProximo.cor]}`}>
-          <span className="text-lg leading-none">⚠️</span>
+        // key: um anúncio novo entra deslizando (o mesmo não reanima).
+        <motion.div
+          key={eventoProximo.codigo}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={mola.firme}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-inconsolata text-xs ${CORES_BANNER[eventoProximo.cor]}`}
+        >
+          <AlertTriangle size={16} className="shrink-0" aria-hidden />
           <span>
-            <span className="font-semibold">PRÓXIMA RODADA:</span> {eventoProximo.icone} {eventoProximo.nome} — {eventoProximo.dica}
+            <span className="font-semibold">PRÓXIMA RODADA:</span>{" "}
+            <IconeEvento codigo={eventoProximo.codigo} size={13} className="inline -mt-0.5" /> {eventoProximo.nome} — {eventoProximo.dica}
           </span>
-        </div>
+        </motion.div>
       )}
 
       {eventoAtual && (
-        <button
+        <motion.button
+          key={eventoAtual.codigo}
           type="button"
           onClick={onClickBadge}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", damping: 12, stiffness: 260 }}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full border font-inconsolata text-xs font-medium transition-colors cursor-pointer ${CORES_BADGE[eventoAtual.cor]}`}
         >
-          {eventoAtual.icone} {eventoAtual.nome}
-        </button>
+          <IconeEvento codigo={eventoAtual.codigo} size={14} /> {eventoAtual.nome}
+        </motion.button>
       )}
     </div>
   )
