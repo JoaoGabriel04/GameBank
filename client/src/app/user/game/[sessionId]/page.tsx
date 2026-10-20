@@ -73,6 +73,8 @@ export default function Game() {
   const [abaAtual, setAbaAtual] = useState("Visão");
   // Direção da troca de seção: índice da aba nova contra o da anterior.
   const [abaAnterior, setAbaAnterior] = useState(abaAtual);
+  // Só anima a seção a partir da primeira troca de aba (na montagem, não).
+  const [secaoJaTrocou, setSecaoJaTrocou] = useState(false);
   const [direcaoAba, setDirecaoAba] = useState(0);
   const [endLoading, setEndLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
@@ -719,6 +721,7 @@ export default function Game() {
     const para = linksNav.indexOf(abaAtual);
     setAbaAnterior(abaAtual);
     setDirecaoAba(de < 0 || para < 0 ? 0 : Math.sign(para - de));
+    setSecaoJaTrocou(true);
   }
 
   // Entrada da tela (só na montagem): header, jogador, conteúdo e barra em
@@ -889,15 +892,18 @@ export default function Game() {
             )}
 
             {/* Troca de seção: desliza na direção da aba. popLayout tira a
-                seção que sai do fluxo, então a nova não espera a saída. */}
+                seção que sai do fluxo, então a nova não espera a saída.
+                Sem initial={false} no AnimatePresence: ele propaga pelo
+                contexto de presença e desliga a entrada de todo motion
+                montado dentro das seções (modais de leilão, eventos...). */}
             <div className="relative">
-              <AnimatePresence mode="popLayout" initial={false} custom={direcaoAba}>
+              <AnimatePresence mode="popLayout" custom={direcaoAba}>
                 <motion.div
                   key={abaAtual}
                   data-secao-jogo={abaAtual}
                   custom={direcaoAba}
                   variants={secaoSlide}
-                  initial="hidden"
+                  initial={secaoJaTrocou ? "hidden" : false}
                   animate="visible"
                   exit="exit"
                 >
