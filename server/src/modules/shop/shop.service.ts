@@ -233,6 +233,7 @@ export class ShopService {
     if (!shopItem) throw new AppError(404, "Item não encontrado na loja.");
 
     const refund = Math.floor(shopItem.price / 2);
+    let estavaEquipado = false;
 
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
@@ -244,6 +245,7 @@ export class ShopService {
       const refs = parseUserItems(user.user_items);
       const target = refs.find((r) => r.item_id === itemId);
       if (!target) throw new AppError(404, "Item não encontrado no seu inventário.");
+      estavaEquipado = target.equipped;
 
       const filtered = refs.filter((r) => r.item_id !== itemId);
       const updateData: any = { user_items: filtered as any, coins: { increment: refund } };
@@ -267,6 +269,8 @@ export class ShopService {
     });
 
     await this.rankingService.invalidateCache();
+    // Vender um item equipado o desequipa: as partidas abertas precisam ver.
+    if (estavaEquipado) await this.emitPlayerUpdate(userId);
     return { message: `"${shopItem.name}" vendido por ${refund} coins.`, refund };
   }
 
