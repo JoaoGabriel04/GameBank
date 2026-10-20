@@ -44,6 +44,7 @@ import Link from "next/link";
 import Loading from "@/components/Loading";
 import Button1 from "@/components/Button01";
 import GameBottomNav from "@/components/GameBottomNav";
+import SaldoAnimado from "@/components/Game/SaldoAnimado";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPowerOff, faPlay, faUsers, faClock, faGamepad, faHouse, faStore, faTrophy, faChessBoard, faComments } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -856,7 +857,7 @@ export default function Game() {
                         )}
                         {!currentPlayer && <span>—</span>}
                         <span>·</span>
-                        <span>{showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}</span>
+                        <SaldoAnimado valor={currentPlayer?.saldo ?? 0} oculto={!showSaldo} flutuante={false} />
                       </div>
                     </div>
                   </div>

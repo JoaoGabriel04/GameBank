@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useMotionPrefs } from "@/lib/motion/prefs";
 
 // Número que conta de `de` até `valor` (moedas, XP, diamantes). Escreve
@@ -46,6 +46,14 @@ export default function Contador({
   tiqueRef.current = onTique;
   fimRef.current = onFim;
 
+  // Texto só imperativo (o React não renderiza o número): escrita direta
+  // num nó de texto do React o separaria dele. O primeiro valor entra antes
+  // de pintar.
+  useLayoutEffect(() => {
+    if (ref.current) ref.current.textContent = `${prefixo}${formatar(desligado ? valor : de)}${sufixo}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -89,9 +97,7 @@ export default function Contador({
 
   return (
     <span className={className} style={style}>
-      <span ref={ref} aria-hidden style={{ fontVariantNumeric: "tabular-nums" }}>
-        {`${prefixo}${formatar(de)}${sufixo}`}
-      </span>
+      <span ref={ref} aria-hidden style={{ fontVariantNumeric: "tabular-nums" }} />
       <span className="sr-only">{`${prefixo}${formatar(valor)}${sufixo}`}</span>
     </span>
   );

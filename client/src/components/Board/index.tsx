@@ -11,6 +11,7 @@ import EventoModal from "./EventoModal"
 import LeilaoModal from "./LeilaoModal"
 import LeilaoResultadoModal from "./LeilaoResultadoModal"
 import Pawns from "./Pawns"
+import FluxoMoedas from "./FluxoMoedas"
 import { GRID_SIZE, TILE_SIZE, BOARD_SIZE, posToGrid, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import { ARTE_CENTRAL, FUNDO_TABULEIRO, GRUPO_IMAGENS_PRELOAD } from "@/utils/tabuleiro-images"
 import { useGameStore } from "@/stores/gameStore"
@@ -854,6 +855,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
             })}
           </div>
           <Pawns players={jogadoresAtivos} />
+          <FluxoMoedas players={jogadoresAtivos} />
         </div>
       </div>
 

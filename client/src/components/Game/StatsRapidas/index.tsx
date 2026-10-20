@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useGameStore } from "@/stores/gameStore";
 import { formatCurrency } from "@/utils/format";
+import SaldoAnimado from "@/components/Game/SaldoAnimado";
 import { calcularPatrimonio } from "@/shared/economia-core";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -37,7 +38,7 @@ export default function StatsRapidas({ meuPlayerId }: Props) {
       <div className="flex-1">
         <span className="text-[10px] font-inconsolata text-zinc-500 uppercase tracking-wider">Saldo</span>
         <p className="text-lg font-jaro text-green-400">
-          {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
+          <SaldoAnimado valor={currentPlayer?.saldo ?? 0} oculto={!showSaldo} />
         </p>
       </div>
       <div className="w-px h-8 bg-zinc-800" />

@@ -19,6 +19,7 @@ import UserBanner from "@/components/UserBanner";
 import UserName from "@/components/UserName";
 import { getAccentHex, COLOR_LABELS, COLOR_HEX, QUICK_VALUES } from "@/components/Game/sections/shared";
 import UltimasJogadas from "./UltimasJogadas";
+import SaldoAnimado from "@/components/Game/SaldoAnimado";
 import {
   Eye,
   EyeOff,
@@ -220,7 +221,7 @@ export default function VisaoSection({ currentPlayer, isOwner, onNavigate }: Pro
             </button>
           </div>
           <p className="text-3xl font-jaro font-bold text-green-400 mb-4">
-            {showSaldo ? `R$ ${formatCurrency(currentPlayer?.saldo ?? 0)}` : "R$ •••••"}
+            <SaldoAnimado valor={currentPlayer?.saldo ?? 0} oculto={!showSaldo} />
           </p>
           <div className="border-t border-white/10 pt-3">
             <div className="flex justify-between items-center">
