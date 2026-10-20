@@ -1,15 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn } from "@/lib/motion";
 import UserNav from "@/components/UserNav";
+import { ConteudoDaPagina, TransicaoPaginaProvider } from "@/components/TransicaoPagina";
 
 export default function UserMainLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
   return (
-    <>
+    <TransicaoPaginaProvider>
       <UserNav />
       {/* pt-16 = altura do header desktop; pb-20 = altura do bottom nav mobile */}
       <div className="lg:pt-16 pb-20 lg:pb-0 min-h-screen bg-zinc-950 relative">
@@ -22,18 +18,9 @@ export default function UserMainLayout({ children }: { children: React.ReactNode
           }}
         />
         <div className="relative z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              variants={fadeIn}
-              initial={false}
-              animate="visible"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <ConteudoDaPagina>{children}</ConteudoDaPagina>
         </div>
       </div>
-    </>
+    </TransicaoPaginaProvider>
   );
 }

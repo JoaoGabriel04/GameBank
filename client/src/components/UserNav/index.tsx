@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { slideUp } from "@/lib/motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Store, Gift, Trophy,
   Bell, X,
@@ -29,6 +29,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
 import UserAvatar from "@/components/UserAvatar";
+import { useTransicaoPagina } from "@/components/TransicaoPagina";
 
 /* -- Nav tab definitions -- */
 const NAV_TABS = [
@@ -167,7 +168,7 @@ function NotifBell() {
 /* -- Main component -- */
 export default function UserNav() {
   const pathname = usePathname();
-  const router   = useRouter();
+  const { navegar } = useTransicaoPagina();
   const { user, token, loadFromStorage } = useAuthStore();
   const { profile, loadProfile } = useProfileStore();
 
@@ -360,7 +361,7 @@ export default function UserNav() {
               <li key={tab.path}>
                 <button
                   type="button"
-                  onClick={() => router.push(tab.path)}
+                  onClick={() => navegar(tab.path)}
                   className={`w-full flex flex-col items-center justify-center py-2.5 gap-0.5 cursor-pointer transition-colors select-none active:scale-95 ${
                     active ? "text-green-400" : "text-zinc-500 hover:text-zinc-300"
                   }`}

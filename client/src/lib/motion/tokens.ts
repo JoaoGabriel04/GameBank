@@ -24,6 +24,13 @@ export const curva = {
   easeInOut: [0.65, 0, 0.35, 1],
 } as const;
 
+/** As mesmas curvas em CSS (Web Animations API, transition). */
+export const curvaCss = {
+  easeOut: `cubic-bezier(${curva.easeOut.join(",")})`,
+  easeIn: `cubic-bezier(${curva.easeIn.join(",")})`,
+  easeInOut: `cubic-bezier(${curva.easeInOut.join(",")})`,
+} as const;
+
 /** As curvas equivalentes por nome, para GSAP. */
 export const curvaGsap = {
   easeOut: "power2.out",
