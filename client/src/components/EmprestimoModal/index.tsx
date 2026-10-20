@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { getLimiteApi, pegarEmprestimoApi, quitarEmprestimoApi, type LimiteData } from "@/services/api/emprestimos";
 import { formatCurrency } from "@/utils/format";
 import { LoaderCircle, Banknote, AlertTriangle } from "lucide-react";
+import PortalBody from "@/components/PortalBody";
 
 interface EmprestimoModalProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface EmprestimoModalProps {
   onSuccess: () => void;
 }
 
-export default function EmprestimoModal({ isOpen, onClose, sessionId, onSuccess }: EmprestimoModalProps) {
+function EmprestimoModalConteudo({ isOpen, onClose, sessionId, onSuccess }: EmprestimoModalProps) {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [reqLoading, setReqLoading] = useState(false);
@@ -222,5 +223,14 @@ export default function EmprestimoModal({ isOpen, onClose, sessionId, onSuccess 
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+// No document.body: fora de qualquer ancestral com transform (ver PortalBody).
+export default function EmprestimoModal(props: EmprestimoModalProps) {
+  return (
+    <PortalBody>
+      <EmprestimoModalConteudo {...props} />
+    </PortalBody>
   );
 }

@@ -7,6 +7,7 @@ import Board from "@/components/Board";
 import type { GameSession } from "@/types/game";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExpand, faCompress, faCrosshairs, faXmark } from "@fortawesome/free-solid-svg-icons";
+import PortalBody from "@/components/PortalBody";
 
 type Props = {
   session: GameSession;
@@ -15,7 +16,7 @@ type Props = {
   onClose: () => void;
 };
 
-export default function BoardModal({ session, meuPlayerId, isOpen, onClose }: Props) {
+function BoardModalConteudo({ session, meuPlayerId, isOpen, onClose }: Props) {
   const minhaVez = !!meuPlayerId && session.turnoAtualPlayerId === meuPlayerId;
 
   return (
@@ -79,5 +80,14 @@ export default function BoardModal({ session, meuPlayerId, isOpen, onClose }: Pr
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+// No document.body: fora de qualquer ancestral com transform (ver PortalBody).
+export default function BoardModal(props: Props) {
+  return (
+    <PortalBody>
+      <BoardModalConteudo {...props} />
+    </PortalBody>
   );
 }

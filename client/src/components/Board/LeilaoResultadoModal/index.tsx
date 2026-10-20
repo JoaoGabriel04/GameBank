@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useLeilaoStore } from "@/stores/socketStore"
 import { formatCurrency } from "@/utils/format"
 import type { GameSession } from "@/types/game"
+import PortalBody from "@/components/PortalBody"
 
 const AUTO_FECHA_MS = 6000
 
@@ -14,7 +15,7 @@ type Props = {
 
 // Revelação do Leilão Cego — só agora (nunca antes) os lances de todos
 // ficam visíveis. É o momento de tensão da mecânica.
-export default function LeilaoResultadoModal({ session, meuPlayerId }: Props) {
+function LeilaoResultadoModalConteudo({ session, meuPlayerId }: Props) {
   const { resultado, clearResultado } = useLeilaoStore()
 
   useEffect(() => {
@@ -92,5 +93,14 @@ export default function LeilaoResultadoModal({ session, meuPlayerId }: Props) {
         </button>
       </div>
     </div>
+  )
+}
+
+// No document.body: fora de qualquer ancestral com transform (ver PortalBody).
+export default function LeilaoResultadoModal(props: Props) {
+  return (
+    <PortalBody>
+      <LeilaoResultadoModalConteudo {...props} />
+    </PortalBody>
   )
 }

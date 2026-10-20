@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { X, ArrowLeft } from "lucide-react";
+import PortalBody from "@/components/PortalBody";
 
 type ModalProps = {
   isOpen: boolean;
@@ -13,7 +14,7 @@ type ModalProps = {
   children: React.ReactNode;
 };
 
-export default function Modal({
+function ModalConteudo({
   isOpen,
   onClose,
   title,
@@ -113,5 +114,14 @@ export default function Modal({
         onClick={handleClose}
       />
     </div>
+  );
+}
+
+// No document.body: fora de qualquer ancestral com transform (ver PortalBody).
+export default function Modal(props: ModalProps) {
+  return (
+    <PortalBody>
+      <ModalConteudo {...props} />
+    </PortalBody>
   );
 }

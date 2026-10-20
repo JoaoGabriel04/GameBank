@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow"
 import { useLeilaoStore } from "@/stores/socketStore"
 import { formatCurrency } from "@/utils/format"
 import type { GameSession } from "@/types/game"
+import PortalBody from "@/components/PortalBody"
 
 const LEILAO_TIMEOUT_S = 30
 
@@ -24,7 +25,7 @@ type Props = {
 // o "pulso" do evento leilao:iniciado e fica vazio depois de um F5 no
 // meio do leilão. Sem esse fallback, recarregar a página deixaria o
 // jogador sem nenhuma forma de dar o lance.
-export default function LeilaoModal({ session, meuPlayerId }: Props) {
+function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
   const { darLance } = useGameStore(useShallow((s) => ({ darLance: s.darLance })))
   const { decididos } = useLeilaoStore()
 
@@ -240,5 +241,14 @@ export default function LeilaoModal({ session, meuPlayerId }: Props) {
         </div>
       </div>
     </div>
+  )
+}
+
+// No document.body: fora de qualquer ancestral com transform (ver PortalBody).
+export default function LeilaoModal(props: Props) {
+  return (
+    <PortalBody>
+      <LeilaoModalConteudo {...props} />
+    </PortalBody>
   )
 }
