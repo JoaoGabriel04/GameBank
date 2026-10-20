@@ -58,6 +58,10 @@ function BoardTile({ casa, sessionPosse, donoJogador, destaque }: Props) {
       if (completo) gsap.fromTo(q(".casa-selo"), { scale: 0, rotation: -25 }, { scale: 1, rotation: 0, duration: 0.5, ease: "back.out(2.6)", delay: 0.08 })
       else gsap.fromTo(q(".casa-selo"), { opacity: 0 }, { opacity: 1, duration: 0.3 })
     }
+    // Volta ao banco (falência, desistência, venda): clarão cinza.
+    if (donoId == null && antes.dono != null) {
+      gsap.fromTo(q(".casa-clarao"), { opacity: 0, backgroundColor: "#a1a1aa" }, { opacity: 0.6, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out" })
+    }
     // Construção: a casa nova (ou o hotel) cresce com pop.
     if (casas > antes.casas && !hipotecada) {
       const alvo = casas >= 5 ? q(".casa-hotel") : q(".casa-casinha").slice(-1)

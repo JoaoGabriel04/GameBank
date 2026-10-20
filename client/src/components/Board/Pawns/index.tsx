@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useRef } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { gsap } from "gsap"
 import { TOTAL_CASAS, posToPixelCenter } from "@/utils/tabuleiro-layout"
 import PlayerAvatar from "@/components/Board/PlayerAvatar"
@@ -51,6 +51,37 @@ function offsetParaJogador(pos: number, players: Player[], playerId: number) {
   return { dx: Math.cos(angle) * raio, dy: Math.sin(angle) * raio }
 }
 
+// Peão de quem saiu do jogo (falência, desistência, expulsão): fica cinza,
+// cai girando e some, em vez de sumir de uma vez.
+function PeaoSaindo({ player, pos, onFim }: { player: Player; pos: number; onFim: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const fimRef = useRef(onFim)
+  fimRef.current = onFim
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const { x, y } = canto(pos)
+    const a = el.animate(
+      [
+        { transform: `translate(${x}px, ${y}px)`, filter: "grayscale(0)", opacity: 1 },
+        { transform: `translate(${x}px, ${y}px) scale(1.1)`, filter: "grayscale(1) brightness(0.7)", opacity: 1, offset: 0.35 },
+        { transform: `translate(${x}px, ${y + 34}px) scale(0.4) rotate(28deg)`, filter: "grayscale(1) brightness(0.5)", opacity: 0 },
+      ],
+      { duration: 1100, easing: "ease-in", fill: "forwards" },
+    )
+    a.onfinish = () => fimRef.current()
+    const t = setTimeout(() => fimRef.current(), 1600)
+    return () => { a.cancel(); clearTimeout(t) }
+  }, [pos])
+  return (
+    <div ref={ref} aria-hidden className="absolute" style={{ left: 0, top: 0, width: AVATAR_SIZE, height: AVATAR_SIZE, zIndex: 9, pointerEvents: "none" }}>
+      <div className="rounded-full ring-2 ring-white/50">
+        <PlayerAvatar player={player} size={AVATAR_SIZE} />
+      </div>
+    </div>
+  )
+}
+
 export default function Pawns({ players, vezDe }: Props) {
   const elRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   // Casa em que cada peão está DESENHADO (não a lógica do store).
@@ -58,6 +89,20 @@ export default function Pawns({ players, vezDe }: Props) {
   const animRefs = useRef<Map<number, gsap.core.Timeline>>(new Map())
   const pulsoRef = useRef<HTMLDivElement>(null)
   const { nivel } = useMotionPrefs()
+  const [saindo, setSaindo] = useState<{ player: Player; pos: number }[]>([])
+  const anterioresRef = useRef<Player[]>(players)
+
+  // Quem saiu da lista de ativos desde a última renderização.
+  useLayoutEffect(() => {
+    const ids = new Set(players.map(p => p.id))
+    const removidos = anterioresRef.current.filter(p => !ids.has(p.id))
+    anterioresRef.current = players
+    if (!removidos.length) return
+    const novos = removidos.map(p => ({ player: p, pos: posVisual.current.get(p.id) ?? p.posicao ?? 0 }))
+    removidos.forEach(p => { posVisual.current.delete(p.id); elRefs.current.delete(p.id); animRefs.current.get(p.id)?.kill() })
+    if (nivel !== "desligado") setSaindo(s => [...s, ...novos])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [players.map(p => p.id).join(",")])
 
   const pulsar = (pos: number, cor: string) => {
     const el = pulsoRef.current
@@ -151,6 +196,14 @@ export default function Pawns({ players, vezDe }: Props) {
           border: "4px solid #fff", opacity: 0, pointerEvents: "none", zIndex: 9,
         }}
       />
+      {saindo.map(({ player, pos }) => (
+        <PeaoSaindo
+          key={`saindo-${player.id}`}
+          player={player}
+          pos={pos}
+          onFim={() => setSaindo(s => s.filter(x => x.player.id !== player.id))}
+        />
+      ))}
       {players.map((player) => {
         const { dx, dy } = offsetParaJogador(player.posicao ?? 0, players, player.id)
         return (
