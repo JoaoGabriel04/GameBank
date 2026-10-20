@@ -9,6 +9,8 @@ import type { RolarDadosResult, EscolhaMovimento } from "@/services/api/turno"
 import type { Casa, GameSession } from "@/types/game"
 import ExtratoInicioModal from "../ExtratoInicioModal"
 import { playSfx } from "@/utils/sfx"
+import { useMotionPrefs } from "@/lib/motion/prefs"
+import type { NivelEfeitos } from "@/lib/motion"
 import { VISAO_CREDITOS_MAX, VISAO_RECARGA_RODADAS } from "@/constants/economia"
 
 const COUNTDOWN_SEGUNDOS = 10
@@ -42,6 +44,47 @@ function DiceFace({ value }: { value: number }) {
       </div>
     </div>
   )
+}
+
+// Rolagem com física: cada dado sobe girando, desacelera e cai quicando
+// (o segundo um pouco atrás), com a sombra embaixo encolhendo no alto e
+// voltando no chão. No ar, faces aleatórias trocam cada vez mais devagar;
+// a face real só aparece no pouso. Reduzido: só as trocas de face, com
+// fade; desligado: a face real na hora.
+function animarRolagem(
+  tl: gsap.core.Timeline,
+  dados: (HTMLElement | null)[],
+  { nivel, valores, onFace }: { nivel: NivelEfeitos; valores: [number, number]; onFace: (f: [number, number] | null) => void },
+) {
+  if (nivel === "desligado") {
+    tl.call(() => onFace(null))
+    return
+  }
+  const completo = nivel === "completo"
+  const aleatoria = () => 1 + Math.floor(Math.random() * 6)
+  const trocas = completo ? [0, 0.07, 0.14, 0.22, 0.31, 0.42, 0.55] : [0, 0.12, 0.26]
+  const pouso = completo ? 0.72 : 0.4
+  const inicio = tl.duration()
+  trocas.forEach((t) => tl.call(() => onFace([aleatoria(), aleatoria()]), [], inicio + t))
+  tl.call(() => onFace(valores), [], inicio + pouso)
+  dados.forEach((d, i) => {
+    if (!d) return
+    const sombra = d.nextElementSibling as HTMLElement | null
+    const t0 = inicio + i * 0.06
+    if (completo) {
+      const voltas = (i ? -1 : 1) * 360 * (2 + Math.round(Math.random()))
+      tl.fromTo(d, { rotation: 0, y: 0 }, { rotation: voltas, duration: pouso + 0.1, ease: "power3.out" }, t0)
+      tl.to(d, { y: -46, duration: 0.24, ease: "power2.out" }, t0)
+      tl.to(d, { y: 0, duration: pouso - 0.09, ease: "bounce.out" }, t0 + 0.24)
+      if (sombra) {
+        tl.fromTo(sombra, { scale: 1, opacity: 0.55 }, { scale: 0.5, opacity: 0.15, duration: 0.24, ease: "power2.out" }, t0)
+        tl.to(sombra, { scale: 1, opacity: 0.55, duration: pouso - 0.09, ease: "bounce.out" }, t0 + 0.24)
+      }
+    } else {
+      tl.fromTo(d, { opacity: 0.35 }, { opacity: 1, duration: pouso, ease: "power1.out" }, t0)
+    }
+  })
+  tl.call(() => onFace(null))
 }
 
 // Placeholder mostrado durante a fase "escolha" (às cegas) — mesmo
@@ -120,6 +163,9 @@ export default function TurnoModal({
   tabuleiro = [], posicaoAtual = 0, session, meuPlayerId,
 }: TurnoModalProps) {
   const [fase, setFase] = useState<FaseTurno>("rolando")
+  // Faces mostradas durante a rolagem (aleatórias no ar, a real no pouso).
+  const [facesRolando, setFacesRolando] = useState<[number, number] | null>(null)
+  const { nivel } = useMotionPrefs()
   const [countdown, setCountdown] = useState(COUNTDOWN_SEGUNDOS)
   const [escolhaRestante, setEscolhaRestante] = useState(ESCOLHA_TIMEOUT_S)
   const [escolhendo, setEscolhendo] = useState(false)
@@ -193,14 +239,9 @@ export default function TurnoModal({
 
       const tl = gsap.timeline()
       if (!jaRevelados) {
-        if (dado1Ref.current && dado2Ref.current) {
-          tl.to([dado1Ref.current, dado2Ref.current], {
-            rotation: 360,
-            duration: 0.3,
-            repeat: 3,
-            ease: "none",
-          })
-        }
+        animarRolagem(tl, [dado1Ref.current, dado2Ref.current], {
+          nivel, valores: [resultado.dado1 ?? 1, resultado.dado2 ?? 1], onFace: setFacesRolando,
+        })
         tl.call(() => {
           setFase("resultado")
           onDadosParados?.()
@@ -239,14 +280,9 @@ export default function TurnoModal({
           setRevelandoAnim(true)
           revelacaoTlRef.current?.kill()
           const tl = gsap.timeline()
-          if (dado1Ref.current && dado2Ref.current) {
-            tl.to([dado1Ref.current, dado2Ref.current], {
-              rotation: 360,
-              duration: 0.3,
-              repeat: 3,
-              ease: "none",
-            })
-          }
+          animarRolagem(tl, [dado1Ref.current, dado2Ref.current], {
+            nivel, valores: [resultado.dado1 ?? 1, resultado.dado2 ?? 1], onFace: setFacesRolando,
+          })
           tl.call(() => {
             setRevelandoAnim(false)
             onDadosParados?.()
@@ -282,14 +318,9 @@ export default function TurnoModal({
     // Rolagem sem escolha envolvida (ex.: 3 duplos seguidos → prisão
     // direta — não há escolha de movimento nesse caso).
     const tl = gsap.timeline()
-    if (dado1Ref.current && dado2Ref.current) {
-      tl.to([dado1Ref.current, dado2Ref.current], {
-        rotation: 360,
-        duration: 0.3,
-        repeat: 3,
-        ease: "none",
-      })
-    }
+    animarRolagem(tl, [dado1Ref.current, dado2Ref.current], {
+      nivel, valores: [resultado.dado1 ?? 1, resultado.dado2 ?? 1], onFace: setFacesRolando,
+    })
     tl.call(() => {
       setFase("resultado")
       onDadosParados?.()
@@ -469,12 +500,19 @@ export default function TurnoModal({
              condicionalmente removidos) — o GSAP anima esses mesmos
              elementos assim que a escolha é enviada. ── */}
         <div className="flex items-center justify-center gap-4 mb-4">
-          <div ref={dado1Ref}>
-            {fase === "escolha" && (!resultado.dado1 || revelandoAnim) ? <MysteryFace /> : <DiceFace value={resultado.dado1 ?? 1} />}
-          </div>
-          <div ref={dado2Ref}>
-            {fase === "escolha" && (!resultado.dado2 || revelandoAnim) ? <MysteryFace /> : <DiceFace value={resultado.dado2 ?? 1} />}
-          </div>
+          {[dado1Ref, dado2Ref].map((ref, i) => {
+            const valor = i === 0 ? resultado.dado1 : resultado.dado2
+            return (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div ref={ref}>
+                  {facesRolando ? <DiceFace value={facesRolando[i]} />
+                    : fase === "escolha" && (!valor || revelandoAnim) ? <MysteryFace /> : <DiceFace value={valor ?? 1} />}
+                </div>
+                {/* Sombra: encolhe com o dado no alto (animarRolagem). */}
+                <div aria-hidden className="w-12 h-2 rounded-full bg-black/60 blur-[2px]" style={{ opacity: 0.55 }} />
+              </div>
+            )
+          })}
         </div>
 
         {/* ── Fase: rolando ── */}
