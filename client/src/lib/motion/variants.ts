@@ -61,6 +61,20 @@ export const pageSlide: Variants = {
   }),
 };
 
+/**
+ * Troca de seção dentro da mesma tela (abas da partida): como pageSlide,
+ * com deslocamento maior. `custom` = direção da aba (1 direita, -1 esquerda).
+ */
+export const secaoSlide: Variants = {
+  hidden: (dir: number = 0) => ({ opacity: 0, x: dir * distancia.lg }),
+  visible: { opacity: 1, x: 0, transition: { duration: duracao.base, ease: curva.easeOut } },
+  exit: (dir: number = 0) => ({
+    opacity: 0,
+    x: -dir * (distancia.lg / 2),
+    transition: { duration: duracao.saida, ease: curva.easeIn },
+  }),
+};
+
 /** Aparece "estalando": selos, badges, contadores. */
 export const popIn: Variants = {
   hidden: { opacity: 0, scale: 0.6 },

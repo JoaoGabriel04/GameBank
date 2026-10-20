@@ -30,7 +30,7 @@ import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fadeIn } from "@/lib/motion";
+import { curva, duracao, secaoSlide } from "@/lib/motion";
 import { useToast } from "@/components/Toast";
 
 import { formatCurrency } from "@/utils/format";
@@ -70,6 +70,9 @@ export default function Game() {
   const { success: toastSuccess, error: toastError, warning: toastWarning, info: toastInfo } = useToast();
   const vh = useViewportHeight();
   const [abaAtual, setAbaAtual] = useState("Visão");
+  // Direção da troca de seção: índice da aba nova contra o da anterior.
+  const [abaAnterior, setAbaAnterior] = useState(abaAtual);
+  const [direcaoAba, setDirecaoAba] = useState(0);
   const [endLoading, setEndLoading] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
   const [quitLoading, setQuitLoading] = useState(false);
@@ -709,6 +712,22 @@ export default function Game() {
     (p) => p.userId === authUser?.id
   );
   const isSpectator = !!currentPlayer?.desistiu;
+
+  if (abaAtual !== abaAnterior) {
+    const de = linksNav.indexOf(abaAnterior);
+    const para = linksNav.indexOf(abaAtual);
+    setAbaAnterior(abaAtual);
+    setDirecaoAba(de < 0 || para < 0 ? 0 : Math.sign(para - de));
+  }
+
+  // Entrada da tela (só na montagem): header, jogador, conteúdo e barra em
+  // sequência curta, tudo pronto em até 400 ms. O conteúdo entra só com
+  // opacidade: ele contém o tabuleiro e seus modais.
+  const entrada = (atraso: number, y = 0) => ({
+    initial: { opacity: 0, y },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: duracao.fast + 0.04, delay: atraso, ease: curva.easeOut },
+  });
   const spectatorCount = currentSession?.jogadores?.filter((p) => p.desistiu).length ?? 0;
 
   return (
@@ -722,7 +741,7 @@ export default function Game() {
       <div className="flex flex-col w-full bg-zinc-950 overflow-hidden" style={{ height: vh }}>
 
         {/* LINHA 1 — Header (não rola) */}
-        <header className="shrink-0 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800">
+        <motion.header {...entrada(0, -6)} className="shrink-0 bg-zinc-950/95 backdrop-blur-md border-b border-zinc-800">
 
           {/* Barra superior: logo | nome da sessão | ações */}
           <div className="flex items-center justify-between px-4 h-12 gap-3">
@@ -795,7 +814,7 @@ export default function Game() {
               </ul>
             </nav>
           )}
-        </header>
+        </motion.header>
 
         {/* GameSfxLayer — sons de turno audíveis de qualquer aba */}
         {!isWaiting && currentSession.turnoAtualPlayerId != null && (
@@ -808,9 +827,9 @@ export default function Game() {
         {/* LINHA 2 — Conteúdo */}
         <section className="flex-1 w-full overflow-hidden">
           <section className="w-full h-full overflow-y-auto px-4">
-          <div className="pb-6">
+          <motion.div {...entrada(0.12)} className="pb-6">
             {!isWaiting && (
-              <div className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
+              <motion.div {...entrada(0.06, 6)} className="w-full flex flex-col mt-4 mb-2 border-b border-zinc-800 pb-4">
                 {/* Informações do jogador */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -865,20 +884,32 @@ export default function Game() {
                 <p className="text-zinc-500 font-inconsolata text-xs">
                   {formatDate(currentSession.dataInicio)} · {currentSession.jogadores.length} jogador{currentSession.jogadores.length !== 1 ? "es" : ""}
                 </p>
-              </div>
+              </motion.div>
             )}
 
-            <AnimatePresence mode="wait">
-              <motion.div key={abaAtual} variants={fadeIn} animate="visible">
-                {renderConteudo()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+            {/* Troca de seção: desliza na direção da aba. popLayout tira a
+                seção que sai do fluxo, então a nova não espera a saída. */}
+            <div className="relative">
+              <AnimatePresence mode="popLayout" initial={false} custom={direcaoAba}>
+                <motion.div
+                  key={abaAtual}
+                  data-secao-jogo={abaAtual}
+                  custom={direcaoAba}
+                  variants={secaoSlide}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                >
+                  {renderConteudo()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
           </section>
         </section>
 
         {/* LINHA 3 — Nav mobile (oculto no desktop via lg:hidden) */}
-        <div className="shrink-0 lg:hidden">
+        <motion.div {...entrada(0.12, 8)} className="shrink-0 lg:hidden">
           <GameBottomNav
             linksNav={linksNav}
             abaAtual={abaAtual}
@@ -887,7 +918,7 @@ export default function Game() {
               setAbaAtual(tab);
             }}
           />
-        </div>
+        </motion.div>
       </div>
 
       {/* Overlays position:fixed — fora do flex, funcionam normalmente */}
