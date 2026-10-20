@@ -6,7 +6,7 @@ import { prisma } from "../../lib/prisma.js"; // usado apenas em $transaction
 import { getRedis } from "../../lib/redis.js";
 import { sessionLogger } from "../../lib/logger.js";
 import { MissionsService } from "../missions/missions.service.js";
-import type { SessionModo, TipoJogo } from "../../../generated/prisma/index.js";
+import type { Prisma, SessionModo, TipoJogo } from "../../../generated/prisma/index.js";
 import { RankingService } from "../ranking/ranking.service.js";
 import { BauService } from "../bau/bau.service.js";
 import { pickPlayerColor } from "../../utils/player-color.js";
@@ -25,6 +25,25 @@ import type { MissoesJob } from "../../workers/missoes.worker.js";
 
 const BCRYPT_ROUNDS = 10;
 const CACHE_TTL_S = 60;
+
+// Apaga a sessão e tudo o que pende dela. Usado no fim normal da partida e
+// no encerramento por abandono (abandono.service.ts).
+export async function apagarDadosDaSessao(tx: Prisma.TransactionClient, sessionId: number) {
+  await tx.negotiationItem.deleteMany({ where: { negotiation: { sessionId } } });
+  await tx.negotiation.deleteMany({ where: { sessionId } });
+  await tx.notification.deleteMany({ where: { sessionId } });
+  await tx.message.deleteMany({ where: { sessionId } });
+  await tx.debt.deleteMany({ where: { sessionId } });
+  // sessionPosses ANTES de sessionPlayer: propriedades hipotecadas
+  // referenciam o jogador via lastOwnerId (playerId já é nulo desde a
+  // hipoteca), então apagar os jogadores primeiro violaria a FK sempre
+  // que alguma hipoteca ainda estivesse ativa ao fim da partida.
+  await tx.sessionPosses.deleteMany({ where: { sessionId } });
+  await tx.sessionPlayer.deleteMany({ where: { sessionId } });
+  await tx.sessionTeam.deleteMany({ where: { sessionId } });
+  await tx.historico.deleteMany({ where: { sessionId } });
+  await tx.session.delete({ where: { id: sessionId } });
+}
 
 export class SessionService {
   constructor(private repo = new SessionRepository()) {}
@@ -805,20 +824,7 @@ export class SessionService {
         }
       }
 
-      await tx.negotiationItem.deleteMany({ where: { negotiation: { sessionId } } });
-      await tx.negotiation.deleteMany({ where: { sessionId } });
-      await tx.notification.deleteMany({ where: { sessionId } });
-      await tx.message.deleteMany({ where: { sessionId } });
-      await tx.debt.deleteMany({ where: { sessionId } });
-      // sessionPosses ANTES de sessionPlayer: propriedades hipotecadas
-      // referenciam o jogador via lastOwnerId (playerId já é nulo desde a
-      // hipoteca), então apagar os jogadores primeiro violaria a FK sempre
-      // que alguma hipoteca ainda estivesse ativa ao fim da partida.
-      await tx.sessionPosses.deleteMany({ where: { sessionId } });
-      await tx.sessionPlayer.deleteMany({ where: { sessionId } });
-      await tx.sessionTeam.deleteMany({ where: { sessionId } });
-      await tx.historico.deleteMany({ where: { sessionId } });
-      await tx.session.delete({ where: { id: sessionId } });
+      await apagarDadosDaSessao(tx, sessionId);
     });
 
     // Invalida cache do ranking — XP/level dos jogadores mudou

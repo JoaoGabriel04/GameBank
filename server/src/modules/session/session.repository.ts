@@ -247,6 +247,21 @@ export class SessionRepository {
     });
   }
 
+  // Salas candidatas a abandono: em andamento, fora do Mapa 2D (ainda em
+  // desenvolvimento), com o dono e os jogadores ativos para checar presença.
+  async findEmAndamentoParaAbandono() {
+    return prisma.session.findMany({
+      where: { status: "Em Andamento", tipoJogo: { not: "mapa2d" } },
+      select: {
+        id: true,
+        ownerId: true,
+        tipoJogo: true,
+        rodadaAtual: true,
+        jogadores: { where: { desistiu: false }, select: { id: true } },
+      },
+    });
+  }
+
   async countActivePlayers(sessionId: number): Promise<number> {
     return prisma.sessionPlayer.count({
       where: { sessionId, desistiu: false },

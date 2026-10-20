@@ -18,6 +18,7 @@ import { errorHandler } from "./middleware/error-handler.middleware.js";
 import { initSocket, getIO } from "./lib/socket.js";
 import { turnoService } from "./modules/turno/turno.service.js";
 import { leilaoService } from "./modules/leilao/leilao.service.js";
+import { abandonoService } from "./modules/session/abandono.service.js";
 import { timerMapa2DService } from "./modules/mapa2d/services/timer.service.js";
 import { startNegotiationCleanup } from "./lib/negotiation-cleanup.js";
 import { startCronJobs } from "./lib/cron.js";
@@ -172,6 +173,11 @@ async function start() {
     });
     timerMapa2DService.varrerFechamentosExpirados().catch(err => {
       logger.error({ err }, "erro na varredura de fechamentos de mês do mapa2d");
+    });
+    // Salas sem ninguém conectado há SALA_ABANDONADA_MS: encerra sem
+    // recompensas (roda no máximo 1×/min).
+    abandonoService.varrerSalasAbandonadas().catch(err => {
+      logger.error({ err }, "erro na varredura de salas abandonadas");
     });
   }, 15_000);
   startCronJobs();

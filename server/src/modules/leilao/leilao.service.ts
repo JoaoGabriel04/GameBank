@@ -17,7 +17,7 @@ const propriedadeService = new PropriedadeService();
 // enquanto emLeilao for true.
 const leilaoTimers = new Map<number, NodeJS.Timeout>();
 
-function cancelLeilaoTimer(sessionId: number) {
+export function cancelLeilaoTimer(sessionId: number) {
   const timer = leilaoTimers.get(sessionId);
   if (timer) {
     clearTimeout(timer);
