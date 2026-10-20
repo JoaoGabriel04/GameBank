@@ -276,6 +276,34 @@
   :root:not([data-efeitos]) .gb-skeleton::after { display: none; }
 }
 
+/* ── Vez na partida: anel no peão da vez e contador urgente ── */
+@keyframes gb-anel-vez {
+  0%   { transform: scale(0.95); opacity: 0.9; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+.gb-anel-vez {
+  animation: gb-anel-vez 1.4s ease-out infinite;
+}
+@keyframes gb-pulso-urgente {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+.gb-urgente {
+  display: inline-block;
+  animation: gb-pulso-urgente 1s ease-in-out infinite;
+}
+/* Sem movimento: o anel fica parado (ainda indica a vez), o contador só fica vermelho. */
+:root[data-efeitos="reduzido"] .gb-anel-vez,
+:root[data-efeitos="desligado"] .gb-anel-vez {
+  animation: none;
+  transform: scale(1.25);
+  opacity: 0.7;
+}
+:root[data-efeitos="reduzido"] .gb-urgente,
+:root[data-efeitos="desligado"] .gb-urgente {
+  animation: none;
+}
+
 /* ── Nível de efeitos (lib/motion/prefs.ts, <html data-efeitos>) ──
    Só animações decorativas: brilhos, shimmer e pulsos de baú. Carregadores
    (animate-spin, skeletons) e o embaralhar de cartas ficam: são informação.

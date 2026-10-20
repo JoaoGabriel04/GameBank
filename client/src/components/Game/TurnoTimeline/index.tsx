@@ -79,7 +79,7 @@ export default function TurnoTimeline({ meuPlayerId }: Props) {
           <>
             <FontAwesomeIcon icon={faDice} className="text-green-400" />
             <span>SUA VEZ</span>
-            <span className="text-zinc-400">{restante}s</span>
+            <span className={restante > 0 && restante <= 10 ? "gb-urgente text-red-400 font-semibold" : "text-zinc-400"}>{restante}s</span>
           </>
         ) : (
           <>

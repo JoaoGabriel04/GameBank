@@ -9,6 +9,8 @@ import { useShallow } from "zustand/react/shallow"
 import { useToast } from "@/components/Toast"
 import { playSfx } from "@/utils/sfx"
 import { serverNow } from "@/utils/clock"
+import { corHexJogador } from "@/types/game"
+import FaixaVez from "../FaixaVez"
 
 const TURNO_TIMEOUT_S = 60
 const AVISO_TEMPO_S = 10
@@ -93,6 +95,11 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
 
   return (
     <div className="mb-3 space-y-2">
+      <FaixaVez
+        vezDe={session.turnoAtualPlayerId}
+        texto={minhaVez ? "Sua vez!" : jogadorDaVez ? `Vez de ${jogadorDaVez.nome}` : ""}
+        cor={corHexJogador(jogadorDaVez?.cor)}
+      />
       <div className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border font-inconsolata text-sm ${
         minhaVez ? "border-green-500/50 bg-green-500/10 text-green-300" : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
       }`}>
@@ -108,9 +115,10 @@ export default function TurnoBanner({ session, meuPlayerId, rolando, onRolarDado
         </span>
         <div className="flex items-center gap-3">
           <span className="text-xs text-zinc-500">Rodada {String(rodada).padStart(2, '0')}</span>
-          <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <span className={`flex items-center gap-1.5 text-xs ${restante > 0 && restante <= AVISO_TEMPO_S ? "text-red-400 font-semibold" : "text-zinc-500"}`}>
             <FontAwesomeIcon icon={faHourglassHalf} />
-            {restante}s
+            {/* Últimos segundos: vermelho e pulsando. */}
+            <span className={restante > 0 && restante <= AVISO_TEMPO_S ? "gb-urgente" : undefined}>{restante}s</span>
           </span>
           {minhaVez && (
             <>

@@ -30,6 +30,8 @@ const AVATAR_SIZE = 44
 
 type Props = {
   players: Player[]
+  /** Jogador da vez: o peão dele ganha um anel pulsante. */
+  vezDe?: number | null
 }
 
 function canto(pos: number) {
@@ -49,7 +51,7 @@ function offsetParaJogador(pos: number, players: Player[], playerId: number) {
   return { dx: Math.cos(angle) * raio, dy: Math.sin(angle) * raio }
 }
 
-export default function Pawns({ players }: Props) {
+export default function Pawns({ players, vezDe }: Props) {
   const elRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   // Casa em que cada peão está DESENHADO (não a lógica do store).
   const posVisual = useRef<Map<number, number>>(new Map())
@@ -159,7 +161,14 @@ export default function Pawns({ players }: Props) {
             className="absolute"
             style={{ left: 0, top: 0, width: AVATAR_SIZE, height: AVATAR_SIZE, zIndex: 10 }}
           >
-            <div style={{ marginLeft: dx, marginTop: dy }}>
+            <div style={{ marginLeft: dx, marginTop: dy, position: "relative" }}>
+              {player.id === vezDe && (
+                <div
+                  aria-hidden
+                  className="gb-anel-vez absolute inset-0 rounded-full"
+                  style={{ border: `3px solid ${corHexJogador(player.cor)}`, pointerEvents: "none" }}
+                />
+              )}
               <div
                 className="peao-corpo rounded-full ring-2 ring-white/80"
                 style={{ transformOrigin: "50% 100%", filter: "drop-shadow(0 3px 4px rgba(0,0,0,0.7))" }}

@@ -854,7 +854,7 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
               )
             })}
           </div>
-          <Pawns players={jogadoresAtivos} />
+          <Pawns players={jogadoresAtivos} vezDe={session.turnoAtualPlayerId} />
           <FluxoMoedas players={jogadoresAtivos} />
         </div>
       </div>
