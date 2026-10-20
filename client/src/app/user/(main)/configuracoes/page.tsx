@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Music, Volume2, VolumeX, Play, Pause, LogOut, Bell, BellOff } from "lucide-react";
+import { ArrowLeft, Music, Volume2, VolumeX, Play, Pause, LogOut, Bell, BellOff, Sparkles } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faInstagram,
@@ -15,16 +15,35 @@ import {
 import { useAuthStore } from "@/stores/authStore";
 import { useMusicStore } from "@/stores/musicStore";
 import { useSfxStore } from "@/stores/sfxStore";
+import { useEfeitosStore, useMotionPrefs, type MotivoNivel, type PreferenciaEfeitos } from "@/lib/motion/prefs";
 import { userMenuOptions as menuOptions } from "@/utils/menuOptions";
 
 
 
 const VERSION = process.env.NEXT_PUBLIC_GAME_VERSION ?? "1.0.0";
 
+const OPCOES_EFEITOS: { valor: PreferenciaEfeitos; titulo: string; descricao: string }[] = [
+  { valor: "auto", titulo: "Automático", descricao: "Ajusta ao aparelho" },
+  { valor: "completo", titulo: "Completo", descricao: "Todos os efeitos" },
+  { valor: "reduzido", titulo: "Reduzido", descricao: "Menos movimento" },
+  { valor: "desligado", titulo: "Desligado", descricao: "Só o essencial" },
+];
+
+const NOME_NIVEL = { completo: "Completo", reduzido: "Reduzido", desligado: "Desligado" } as const;
+
+const MOTIVO_NIVEL: Record<MotivoNivel, string> = {
+  escolha: "escolhido por você",
+  sistema: "o sistema pede menos movimento",
+  aparelho: "aparelho com pouca memória ou poucos núcleos",
+  padrao: "aparelho com bom desempenho",
+};
+
 export default function ConfiguracoesPage() {
   const { loadFromStorage, logout } = useAuthStore();
   const { volume, isPlaying, setVolume, togglePlaying } = useMusicStore();
   const { volume: sfxVolume, muted: sfxMuted, setVolume: setSfxVolume, toggleMuted: toggleSfxMuted } = useSfxStore();
+  const setPreferenciaEfeitos = useEfeitosStore((s) => s.setPreferencia);
+  const efeitos = useMotionPrefs();
   const router = useRouter();
 
   useEffect(() => {
@@ -169,6 +188,43 @@ export default function ConfiguracoesPage() {
               <span>100%</span>
             </div>
           </div>
+        </section>
+
+        {/* -- Efeitos visuais -- */}
+        <section className="bg-zinc-800 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-green-400" />
+            <h2 className="font-jaro text-base text-zinc-100">Efeitos visuais</h2>
+          </div>
+          <p className="font-inconsolata text-xs text-zinc-600 mb-4">
+            Animações, brilhos e partículas. O jogo funciona igual em qualquer opção.
+          </p>
+
+          <div role="radiogroup" aria-label="Efeitos visuais" className="grid grid-cols-2 gap-2">
+            {OPCOES_EFEITOS.map((op) => {
+              const ativo = efeitos.preferencia === op.valor;
+              return (
+                <button
+                  key={op.valor}
+                  role="radio"
+                  aria-checked={ativo}
+                  onClick={() => setPreferenciaEfeitos(op.valor)}
+                  className={`rounded-xl px-3 py-2.5 text-left border-2 transition-colors cursor-pointer ${
+                    ativo
+                      ? "bg-green-500/15 border-green-500"
+                      : "bg-zinc-700/50 border-zinc-700 hover:border-zinc-500"
+                  }`}
+                >
+                  <p className={`font-jaro text-sm ${ativo ? "text-green-400" : "text-zinc-200"}`}>{op.titulo}</p>
+                  <p className="font-inconsolata text-[11px] text-zinc-500 mt-0.5">{op.descricao}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="font-inconsolata text-xs text-zinc-500 mt-3" aria-live="polite">
+            Em uso: <span className="text-zinc-300">{NOME_NIVEL[efeitos.nivel]}</span> ({MOTIVO_NIVEL[efeitos.motivo]})
+          </p>
         </section>
 
         {/* -- Sobre -- */}
