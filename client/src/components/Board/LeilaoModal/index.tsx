@@ -7,6 +7,8 @@ import { useLeilaoStore } from "@/stores/socketStore"
 import { formatCurrency } from "@/utils/format"
 import type { GameSession } from "@/types/game"
 import PortalBody from "@/components/PortalBody"
+import { AlertTriangle, Gavel } from "lucide-react"
+import AnelContagem from "@/components/Game/AnelContagem"
 
 const LEILAO_TIMEOUT_S = 30
 
@@ -76,7 +78,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
     return (
       <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] px-4">
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center">
-          <p className="text-3xl mb-2">🔨</p>
+          <Gavel size={30} className="mx-auto mb-2 text-purple-300" aria-hidden />
           <p className="font-jaro text-lg text-zinc-100 mb-1">Leilão Cego</p>
           <p className="font-inconsolata text-sm text-zinc-400 mb-4">{nome}</p>
           <p className="font-inconsolata text-sm text-zinc-500">Aguardando os jogadores decidirem...</p>
@@ -134,7 +136,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
           onClick={() => setMinimizado(false)}
           className="mb-3 w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-purple-500/50 bg-purple-500/10 text-purple-300 font-inconsolata text-sm hover:bg-purple-500/20 transition-colors cursor-pointer"
         >
-          <span>🔨 Leilão em andamento: {nome}</span>
+          <span className="inline-flex items-center gap-1.5"><Gavel size={14} aria-hidden /> Leilão em andamento: {nome}</span>
           <span className="text-xs underline shrink-0">Ver</span>
         </button>
       )
@@ -142,7 +144,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
     return (
       <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] px-4">
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center">
-          <p className="text-3xl mb-2">🔨</p>
+          <Gavel size={30} className="mx-auto mb-2 text-purple-300" aria-hidden />
           <p className="font-jaro text-lg text-zinc-100 mb-1">Leilão Cego</p>
           <p className="font-inconsolata text-sm text-zinc-400 mb-4">{nome}</p>
           <p className="font-inconsolata text-sm text-emerald-400 mb-4">
@@ -156,7 +158,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
               </div>
             ))}
           </div>
-          <p className="font-inconsolata text-[10px] text-zinc-600 mb-3">⏱ {restante}s</p>
+          <div className="mb-3"><AnelContagem restante={restante} total={LEILAO_TIMEOUT_S} size={48} /></div>
           <button
             onClick={() => setMinimizado(true)}
             className="text-xs font-inconsolata text-zinc-500 hover:text-zinc-300 underline decoration-dotted cursor-pointer"
@@ -171,7 +173,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] px-4">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-sm w-full text-center">
-        <p className="text-3xl mb-2">🔨</p>
+        <Gavel size={30} className="mx-auto mb-2 text-purple-300" aria-hidden />
         <p className="font-jaro text-lg text-zinc-100 mb-1">Leilão Cego</p>
         <p className="font-inconsolata text-sm text-zinc-300 mb-3">{nome}</p>
 
@@ -209,7 +211,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
 
         <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg mb-4 text-left">
           <p className="font-inconsolata text-[11px] text-amber-300">
-            ⚠️ Lance vinculante — se vencer, você é obrigado a comprar. Ninguém vê seu lance.
+            <AlertTriangle size={12} className="inline -mt-0.5 mr-1" aria-hidden />Lance vinculante — se vencer, você é obrigado a comprar. Ninguém vê seu lance.
           </p>
         </div>
 
@@ -230,7 +232,7 @@ function LeilaoModalConteudo({ session, meuPlayerId }: Props) {
           </button>
         </div>
 
-        <p className="font-inconsolata text-[10px] text-zinc-600 mb-2">⏱ {restante}s</p>
+        <div className="mb-2"><AnelContagem restante={restante} total={LEILAO_TIMEOUT_S} size={48} /></div>
         <div className="space-y-1">
           {jogadoresAtivos.map(p => (
             <div key={p.id} className="flex items-center justify-between font-inconsolata text-[11px] text-zinc-500">
