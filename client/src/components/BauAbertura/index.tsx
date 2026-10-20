@@ -7,6 +7,11 @@ import { RARIDADES } from "@/constants/raridade"
 import BauItemPreview from "@/components/BauItemPreview"
 import BauParticulas from "@/components/BauParticulas"
 import CoinIcon from "@/components/CoinIcon"
+import { efeitoRaridade, melhorRaridade } from "@/lib/motion"
+import { useMotionPrefs } from "@/lib/motion/prefs"
+import { preloadSonsBau } from "@/utils/sfx"
+import Antecipacao from "./Antecipacao"
+import Estouro from "./Estouro"
 
 export type ItemResultado = {
   id: number
@@ -59,10 +64,12 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
   const [bloqueado, setBloqueado] = useState(false)
   const [resumoVisiveis, setResumoVisiveis] = useState<number[]>([])
 
-  // Fase: luz
-  const pigRef   = useRef<HTMLImageElement>(null)
-  const lightRef = useRef<HTMLDivElement>(null)
-  const flashRef = useRef<HTMLDivElement>(null)
+  // Fase: luz (antecipação + estouro)
+  const [estourando, setEstourando] = useState(false)
+  const cenaRef = useRef<HTMLDivElement>(null)
+  const { nivel } = useMotionPrefs()
+  const melhor = melhorRaridade(resultado?.itens.map(i => i.raridade) ?? [])
+  const efeitoMelhor = efeitoRaridade(melhor, nivel)
 
   // Fase: coins
   const coinsScreenRef = useRef<HTMLDivElement>(null)
@@ -93,61 +100,14 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     setItemIdx(0)
     setBloqueado(false)
     setResumoVisiveis([])
+    setEstourando(false)
   }, [resultado])
 
-  // ── FASE LUZ ──────────────────────────────────────────────────────
-  // resultado nas deps: o componente fica montado com resultado=null.
-  // Quando resultado se torna não-null, fase já é "luz" e não muda —
-  // sem resultado nas deps o efeito nunca re-dispara e a animação trava.
-  useEffect(() => {
-    if (fase !== "luz" || !resultado) return
-    if (!pigRef.current || !lightRef.current || !flashRef.current) return
+  useEffect(() => { preloadSonsBau() }, [])
 
-    gsap.set(lightRef.current, { scale: 0, opacity: 0 })
-
-    const tl = gsap.timeline({ onComplete: () => setFase("coins") })
-
-    tl.to(pigRef.current, {
-      keyframes: [
-        { scale: 1.05, rotation: -4, duration: 0.15 },
-        { scale: 1.05, rotation:  4, duration: 0.15 },
-        { scale: 1.10, rotation: -4, duration: 0.15 },
-        { scale: 1.10, rotation:  4, duration: 0.15 },
-        { scale: 1.20, rotation:  0, duration: 0.15 },
-        { scale: 0,    opacity: 0,   duration: 0.20 },
-      ],
-      ease: "none",
-    }, 0)
-
-    tl.to(lightRef.current, {
-      keyframes: [
-        { scale: 0.3, opacity: 0.7, duration: 0.15 },
-        { scale: 1,   opacity: 1,   duration: 0.20 },
-        { scale: 5,   opacity: 1,   duration: 0.35 },
-        { scale: 15,  opacity: 0,   duration: 0.40 },
-      ],
-      ease: "power2.out",
-    }, 0.5)
-
-    tl.to(flashRef.current, {
-      keyframes: [
-        { opacity: 0, duration: 0.05 },
-        { opacity: 1, duration: 0.12 },
-        { opacity: 1, duration: 0.06 },
-        { opacity: 0, duration: 0.30 },
-      ],
-      ease: "none",
-    }, 1.15)
-
-    // Fallback: garante transição mesmo se onComplete não disparar
-    const fallback = setTimeout(() => setFase("coins"), 2200)
-
-    return () => {
-      tl.kill()
-      clearTimeout(fallback)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fase, resultado])
+  // ── FASE LUZ: antecipação + estouro ───────────────────────────────
+  // Antecipacao.tsx e Estouro.tsx. O estouro é uma camada por cima da cena:
+  // no auge do clarão a fase troca para "coins" por baixo da luz.
 
   // ── FASE COINS ────────────────────────────────────────────────────
   useEffect(() => {
@@ -382,8 +342,8 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
     if (bloqueado || !resultado) return
 
     if (fase === "luz") {
-      gsap.killTweensOf([pigRef.current, lightRef.current, flashRef.current])
-      setFase("coins")
+      // Toque na antecipação adianta o estouro; durante o estouro, nada.
+      if (!estourando) setEstourando(true)
       return
     }
 
@@ -429,7 +389,7 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         onClose()
       }
     }
-  }, [fase, itemIdx, resultado, bloqueado, resumoVisiveis, onClose])
+  }, [fase, itemIdx, resultado, bloqueado, resumoVisiveis, onClose, estourando])
 
   if (!resultado) return null
 
@@ -527,50 +487,20 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
         zIndex: 200,
         cursor: bloqueado ? "default" : "pointer",
         userSelect: "none",
+        background: "#09090b",
+        overflow: "hidden",
       }}
     >
-      {/* ── FASE LUZ ──────────────────────────────────────────────── */}
+      {/* Cena: tudo o que treme no impacto. O estouro fica por cima dela. */}
+      <div ref={cenaRef} style={{ position: "absolute", inset: 0 }}>
+      {/* ── FASE LUZ: antecipação ─────────────────────────────────── */}
       {fase === "luz" && (
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "#09090b",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          overflow: "hidden",
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            ref={pigRef}
-            src={BAU_IMAGENS[resultado.tipoBau] ?? "/images/cofrinho.webp"}
-            alt="cofrinho"
-            style={{ width: 160, height: 160, objectFit: "contain", zIndex: 2 }}
-          />
-
-          {/* Esfera de luz — gradiente radial branco, GSAP anima scale e opacity */}
-          <div
-            ref={lightRef}
-            style={{
-              position: "absolute",
-              width: 80, height: 80,
-              borderRadius: "50%",
-              background: "radial-gradient(circle at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.7) 35%, rgba(255,255,255,0.15) 65%, transparent 100%)",
-              boxShadow: "0 0 80px 40px rgba(255,255,255,0.35)",
-              opacity: 0,
-              zIndex: 10,
-            }}
-          />
-
-          {/* Flash branco — gradiente radial, GSAP anima só opacity */}
-          <div
-            ref={flashRef}
-            style={{
-              position: "absolute", inset: 0,
-              background: "radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0.92) 35%, rgba(255,255,255,0.6) 65%, rgba(255,255,255,0.15) 100%)",
-              opacity: 0,
-              zIndex: 20,
-              pointerEvents: "none",
-            }}
-          />
-        </div>
+        <Antecipacao
+          imagem={BAU_IMAGENS[resultado.tipoBau] ?? "/images/cofrinho.webp"}
+          efeito={efeitoMelhor}
+          nivel={nivel}
+          onPronto={() => setEstourando(true)}
+        />
       )}
 
       {/* ── FASE COINS ────────────────────────────────────────────── */}
@@ -880,6 +810,18 @@ export default function BauAbertura({ resultado, onClose }: BauAberturaProps) {
             </button>
           )}
         </div>
+      )}
+      </div>
+
+      {estourando && (
+        <Estouro
+          efeito={efeitoMelhor}
+          nivel={nivel}
+          duplo={melhor === "LENDARIO"}
+          alvoTremor={cenaRef}
+          onPico={() => setFase(f => (f === "luz" ? "coins" : f))}
+          onFim={() => setEstourando(false)}
+        />
       )}
     </div>,
     document.body

@@ -60,9 +60,12 @@ export function createTimeline(vars: gsap.TimelineVars = {}, { limiteMs, instant
     queueMicrotask(concluir);
   } else if (limiteMs != null) {
     limite = setTimeout(concluir, limiteMs);
+    // O GSAP guarda o próprio `vars` e o eventCallback grava nele: pegar o
+    // callback original antes, senão o wrapper chama a si mesmo.
+    const original = vars.onComplete;
     tl.eventCallback("onComplete", () => {
       if (limite) clearTimeout(limite);
-      vars.onComplete?.call(tl);
+      original?.call(tl);
     });
   }
 

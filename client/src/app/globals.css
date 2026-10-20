@@ -234,6 +234,15 @@
   animation: bau-suspense 1.6s ease-in-out infinite;
 }
 
+/* ── Luz aditiva (abertura de baú) ──
+   Camadas de luz somam brilho em vez de cobrir. plus-lighter é a soma real;
+   screen é o fallback para navegadores sem ela (declaração inválida é
+   ignorada, então a segunda vence onde existe). */
+.gb-luz {
+  mix-blend-mode: screen;
+  mix-blend-mode: plus-lighter;
+}
+
 /* ── Esqueletos de carregamento (components/Skeleton) ──
    O brilho atravessa em transform (GPU). Reduzido: pulso de opacidade, sem
    movimento. Desligado: parado. */
