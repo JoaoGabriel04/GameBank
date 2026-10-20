@@ -809,7 +809,7 @@ export default function Game() {
                     <FontAwesomeIcon icon={tabIcons[link]} className="text-xs" />
                     {link}
                     {link === "Chat" && unreadChatCount > 0 && (
-                      <span className="w-4 h-4 bg-green-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                      <span key={unreadChatCount} className="gb-badge-pop w-4 h-4 bg-green-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
                         {unreadChatCount > 9 ? "9+" : unreadChatCount}
                       </span>
                     )}

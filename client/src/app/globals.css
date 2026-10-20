@@ -292,6 +292,15 @@
   display: inline-block;
   animation: gb-pulso-urgente 1s ease-in-out infinite;
 }
+/* Contador de não lidas: estala a cada número novo (key no React remonta o span). */
+@keyframes gb-badge-pop {
+  0%   { transform: scale(0.4); }
+  55%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.gb-badge-pop {
+  animation: gb-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 /* Sem movimento: o anel fica parado (ainda indica a vez), o contador só fica vermelho. */
 :root[data-efeitos="reduzido"] .gb-anel-vez,
 :root[data-efeitos="desligado"] .gb-anel-vez {
@@ -299,8 +308,8 @@
   transform: scale(1.25);
   opacity: 0.7;
 }
-:root[data-efeitos="reduzido"] .gb-urgente,
-:root[data-efeitos="desligado"] .gb-urgente {
+:root[data-efeitos="reduzido"] :is(.gb-urgente, .gb-badge-pop),
+:root[data-efeitos="desligado"] :is(.gb-urgente, .gb-badge-pop) {
   animation: none;
 }
 

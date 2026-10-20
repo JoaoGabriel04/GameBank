@@ -45,6 +45,16 @@ export default function Chat({ variant = "floating", onUnreadCount }: Props) {
   const session    = useGameStore((s) => s.currentSession);
   const authUser   = useAuthStore((s) => s.user);
   const bottomRef  = useRef<HTMLDivElement>(null);
+  // Mensagens já na tela ao abrir o chat, as que chegam em lote e o
+  // histórico (logo após montar) entram paradas; só as novas deslizam.
+  const vistasRef  = useRef<Set<number> | null>(null);
+  const [montadoEm] = useState(() => Date.now());
+  if (vistasRef.current === null) vistasRef.current = new Set(messages.map((m) => m.id));
+  const novas = messages.filter((m) => !vistasRef.current!.has(m.id));
+  const animarNovas = novas.length <= 3 && Date.now() - montadoEm > 1500;
+  useEffect(() => {
+    for (const m of messages) vistasRef.current!.add(m.id);
+  }, [messages]);
   const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const myPlayer = session?.jogadores?.find((p) => p.userId === authUser?.id);
@@ -235,7 +245,13 @@ export default function Chat({ variant = "floating", onUnreadCount }: Props) {
         {messages.map((msg) => {
           const isMe = msg.playerId === myPlayerId;
           return (
-            <div key={msg.id} className={`text-sm flex items-center gap-1 ${isMe ? "justify-end" : "justify-start"}`}>
+            <motion.div
+              key={msg.id}
+              initial={animarNovas && !vistasRef.current!.has(msg.id) ? { opacity: 0, x: isMe ? 16 : -16 } : false}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className={`text-sm flex items-center gap-1 ${isMe ? "justify-end" : "justify-start"}`}
+            >
               {isMe ? (
                 <>
                   <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>
@@ -251,7 +267,7 @@ export default function Chat({ variant = "floating", onUnreadCount }: Props) {
                   <span className="text-zinc-300 text-xs font-inconsolata">{msg.texto}</span>
                 </>
               )}
-            </div>
+            </motion.div>
           );
         })}
         <div ref={bottomRef} />

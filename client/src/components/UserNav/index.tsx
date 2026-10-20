@@ -87,7 +87,7 @@ function NotifBell() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 font-inconsolata text-[9px] text-white grid place-items-center leading-none">
+          <span key={unreadCount} className="gb-badge-pop absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-rose-500 font-inconsolata text-[9px] text-white grid place-items-center leading-none">
             {unreadCount}
           </span>
         )}
