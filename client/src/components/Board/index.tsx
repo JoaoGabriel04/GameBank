@@ -502,6 +502,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
   const handleEscolherMovimento = useCallback(async (escolha: EscolhaMovimento) => {
     escolhaFeitaRef.current = true
     setHoldSessionUpdates(true)
+    // Com a escolha confirmada, o hold continua até o TurnoModal mostrar os
+    // dados (handleResultadoRevelado): sem isso o peão andava enquanto os
+    // dados ainda giravam e o número de casas entregava o resultado.
+    // Rede de segurança: armarLiberacaoDeSeguranca (4s) e o watchdog do
+    // store (6s). Em qualquer outro desfecho, o finally libera na hora.
+    let aguardaRevelacao = false
     try {
       const r = await escolherMovimento(session.id, escolha)
       if (!r) return
@@ -511,6 +517,8 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
         playSfx("pagou-aluguel")
       }
       setResultado(r)
+      aguardaRevelacao = true
+      armarLiberacaoDeSeguranca()
     } catch (err: any) {
       toastError(err?.response?.data?.message || "Erro ao mover")
       // Se escolherMovimento falhar (ex.: perdeu a corrida pro timeout de
@@ -527,13 +535,12 @@ export default function Board({ tabuleiro, session, meuPlayerId, interativo = tr
       // FIX_TURNO_TRAVADO_CONTADOR (BUG A.1): antes só liberava dentro do
       // try/catch — se a promise nunca resolvesse nem rejeitasse (servidor
       // hibernando no free tier), o hold ficava preso pra sempre. `finally`
-      // libera em QUALQUER desfecho. Não há suspense a proteger aqui (o
-      // jogador acabou de clicar deliberadamente), então liberar já junto
-      // com o resultado não deixa o peão "pulando" fora de sincronia com
-      // a transição de fase do modal.
-      setHoldSessionUpdates(false)
+      // libera nos desfechos sem revelação pela frente (erro, resposta
+      // vazia). Com a escolha confirmada, quem libera é a revelação dos
+      // dados (ver o começo desta função).
+      if (!aguardaRevelacao) setHoldSessionUpdates(false)
     }
-  }, [session.id, escolherMovimento, toastError, setHoldSessionUpdates])
+  }, [session.id, escolherMovimento, toastError, setHoldSessionUpdates, armarLiberacaoDeSeguranca])
 
   // Sem guarda + feedback visual, um duplo-clique (ou o usuário reclicando
   // por achar que não funcionou, já que a resposta demora) disparava a
