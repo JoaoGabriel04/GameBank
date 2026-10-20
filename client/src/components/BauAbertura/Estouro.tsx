@@ -55,10 +55,14 @@ export default function Estouro({ efeito, nivel, duplo = false, alvoTremor, onPi
       const I = Math.max(0.35, efeito.intensidade);
       const q = gsap.utils.selector(raiz);
       // Pico e fim sempre acontecem, mesmo se a timeline for interrompida.
+      // Rodam fora deste contexto do GSAP (microtask): callbacks de tweens
+      // de um contexto executam dentro dele, e o que o pai animasse ali
+      // (o flip da carta lendária) seria desfeito quando este componente
+      // desmontasse e o useGSAP revertesse o contexto.
       let picou = false;
-      const pico = () => { if (!picou) { picou = true; picoRef.current(); } };
+      const pico = () => { if (!picou) { picou = true; queueMicrotask(() => picoRef.current()); } };
       const { tl, dispose } = createTimeline(
-        { onComplete: () => { pico(); fimRef.current(); } },
+        { onComplete: () => { pico(); queueMicrotask(() => fimRef.current()); } },
         { limiteMs: duplo ? 4500 : 3500, instantanea: nivel === "desligado" }
       );
 
