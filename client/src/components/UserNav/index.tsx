@@ -12,10 +12,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { slideUp } from "@/lib/motion";
+import { mola, slideUp } from "@/lib/motion";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Store, Gift, Trophy,
   Bell, X,
@@ -29,7 +28,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useProfileStore } from "@/stores/profileStore";
 import { useUserNotificationStore } from "@/stores/userNotificationStore";
 import UserAvatar from "@/components/UserAvatar";
-import { useTransicaoPagina } from "@/components/TransicaoPagina";
+import { useNavPathname, useTransicaoPagina } from "@/components/TransicaoPagina";
 
 /* -- Nav tab definitions -- */
 const NAV_TABS = [
@@ -167,7 +166,8 @@ function NotifBell() {
 
 /* -- Main component -- */
 export default function UserNav() {
-  const pathname = usePathname();
+  // Destino já no clique (a pílula desliza antes da página nova chegar).
+  const pathname = useNavPathname();
   const { navegar } = useTransicaoPagina();
   const { user, token, loadFromStorage } = useAuthStore();
   const { profile, loadProfile } = useProfileStore();
@@ -218,17 +218,26 @@ export default function UserNav() {
               <Link
                 key={tab.path}
                 href={tab.path}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-inconsolata text-sm transition-all whitespace-nowrap border ${
+                className={`relative flex items-center gap-2 px-3 py-2 rounded-xl font-inconsolata text-sm transition-colors whitespace-nowrap border border-transparent ${
                   active
-                    ? "bg-green-500/10 text-green-300 border-green-500/25"
-                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 border-transparent"
+                    ? "text-green-300"
+                    : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
                 }`}
               >
+                {active && (
+                  <motion.span
+                    layoutId="nav-ativo-desktop"
+                    data-nav-ativo="desktop"
+                    className="absolute -inset-px rounded-xl bg-green-500/10 border border-green-500/25"
+                    transition={mola.firme}
+                  />
+                )}
                 <Icon
                   size={15}
+                  className="relative"
                   style={active ? { filter: "drop-shadow(0 0 6px rgba(74,222,128,0.4))" } : undefined}
                 />
-                <span className="hidden xl:block">{tab.label}</span>
+                <span className="relative hidden xl:block">{tab.label}</span>
               </Link>
             );
           })}
@@ -362,11 +371,20 @@ export default function UserNav() {
                 <button
                   type="button"
                   onClick={() => navegar(tab.path)}
-                  className={`w-full flex flex-col items-center justify-center py-2.5 gap-0.5 cursor-pointer transition-colors select-none active:scale-95 ${
+                  className={`relative w-full flex flex-col items-center justify-center py-2.5 gap-0.5 cursor-pointer transition-colors select-none active:scale-95 ${
                     active ? "text-green-400" : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
+                  {active && (
+                    <motion.span
+                      layoutId="nav-ativo-mobile"
+                      data-nav-ativo="mobile"
+                      className="absolute inset-x-1.5 inset-y-1 rounded-xl bg-green-500/10 border border-green-500/20"
+                      transition={mola.firme}
+                    />
+                  )}
                   <Icon
+                    className="relative"
                     size={24}
                     style={
                       active
@@ -374,7 +392,7 @@ export default function UserNav() {
                         : undefined
                     }
                   />
-                  <span className="font-inconsolata text-[10px] font-medium leading-none">
+                  <span className="relative font-inconsolata text-[10px] font-medium leading-none">
                     {tab.label}
                   </span>
                 </button>
